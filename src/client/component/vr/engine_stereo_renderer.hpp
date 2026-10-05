@@ -79,12 +79,4 @@ namespace vr::engine_stereo_renderer
 		camera_observation_stage stage, const void* input, const void* output,
 		float scalar, std::uintptr_t caller) noexcept;
 
-	// Called only by the diagnostics control thread. Renderer/backend hooks publish
-	// bounded one-shot CPU snapshots into fixed storage; this checkpoint performs
-	// all file I/O and emits a complete evidence bundle without blocking H2's
-	// frontend, backend, Present, or OpenVR owners.
-	// Returns true only when the current terminal execution report and both its
-	// dedicated and aggregate manifests have been atomically persisted. A stale
-	// file from an earlier H2-MOD process never satisfies this result.
-	[[nodiscard]] bool checkpoint_observation_artifacts() noexcept;
 }

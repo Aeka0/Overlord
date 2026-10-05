@@ -10,7 +10,7 @@ Status formatting is split by subject:
 | --- | --- |
 | `runtime_status.cpp` | Runtime, controller input, display settings, and head pose |
 | `frontend_status.cpp` | View publication, scene input completion, culling, and target routing |
-| `execution_status.cpp` | Output merger, draw hooks, execution census, replay, and owner admission |
+| `execution_status.cpp` | Output merger, draw hooks, execution census and owner admission |
 | `scene_status.cpp` | Scene batches and dynamic upload observations |
 | `history_status.cpp` | SSR history, consumers, and eye-resource isolation |
 | `effect_status.cpp` | Census control and effect timeline comparisons |
@@ -38,3 +38,20 @@ render hooks nor live scene state, and performs no GPU or OpenVR calls.
 
 `native_flare_probe.cpp` remains a separate explicitly invoked sampling tool.
 Keep feature-specific probes separate from report formatting and runtime state.
+
+## Renderer evidence
+
+`renderer_evidence` owns bounded CPU capture storage, report formatting and
+evidence persistence. Native hooks publish a one-shot copy with release/acquire
+ordering. Once ready, the bytes and metadata remain immutable for the process.
+The diagnostics control thread performs file I/O; frontend, backend and Present
+callbacks never serialize reports or wait for persistence.
+
+Terminal readiness requires the current process to persist the exact execution
+report and its dedicated and aggregate manifests. Existing files from another
+process cannot satisfy readiness. Retirement manifests identify obsolete probe
+artifacts; the retired stereo replay implementation has no production entry.
+
+Native hook installation, rollback, owner-thread transactions and rendering stay
+in `engine_stereo_renderer.cpp`. The guarded baseline-registry capture retains
+its existing control-thread observation contract and does not mutate the game.

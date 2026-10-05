@@ -7,7 +7,6 @@
 #include "../engine_stereo_execution.hpp"
 #include "../engine_stereo_output_merger.hpp"
 #include "../engine_stereo_owner_pass.hpp"
-#include "../engine_stereo_replay.hpp"
 
 #include <algorithm>
 #include <iomanip>
@@ -19,7 +18,6 @@ namespace vr::diagnostics::detail
 		const engine_stereo_output_merger::status& output_merger_status,
 		const engine_stereo_draw_indexed::status& draw_indexed_status,
 		const engine_stereo_execution::status& execution_status,
-		const engine_stereo_replay::status& stereo_replay_status,
 		const engine_stereo_owner_pass::report& owner_pass_status)
 	{
 		output << "  backend_output_merger: state="
@@ -177,21 +175,6 @@ namespace vr::diagnostics::detail
 				<< execution_status.frame_per_api[index];
 		}
 		output << '\n';
-		output << "  backend_stereo_replay: state="
-			<< engine_stereo_replay::to_string(stereo_replay_status.state);
-		output << " error=" << engine_stereo_replay::to_string(stereo_replay_status.error);
-		output << " preparations=" << stereo_replay_status.preparations;
-		output << " attempts=" << stereo_replay_status.attempts;
-		output << " complete=" << stereo_replay_status.completions;
-		output << " failures=" << stereo_replay_status.failures;
-		output << " replay_dispatches=" << stereo_replay_status.replay_dispatches;
-		output << " replay_draws=" << stereo_replay_status.replay_draw_calls;
-		output << " readback_polls=" << stereo_replay_status.readback_polls;
-		output << " present=" << stereo_replay_status.started_present << "->"
-			<< stereo_replay_status.completed_present;
-		output << " publication=" << stereo_replay_status.latest_publication_sequence;
-		output << " record=0x" << std::hex << stereo_replay_status.latest_record
-			<< std::dec << '\n';
 		output << "  backend_owner_stereo_pass: state="
 			<< engine_stereo_owner_pass::to_string(owner_pass_status.state);
 		output << " error=" << engine_stereo_owner_pass::to_string(owner_pass_status.error);

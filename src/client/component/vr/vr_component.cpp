@@ -3,6 +3,7 @@
 #include "loader/component_loader.hpp"
 
 #include "diagnostics.hpp"
+#include "diagnostics/renderer_evidence.hpp"
 #include "debug_options.hpp"
 #include "desktop_mirror.hpp"
 #include "desktop_mirror_layout.hpp"
@@ -17,7 +18,6 @@
 #include "engine_stereo_output_merger.hpp"
 #include "engine_stereo_owner_pass.hpp"
 #include "engine_stereo_probe.hpp"
-#include "engine_stereo_replay.hpp"
 #include "engine_stereo_resource_ops.hpp"
 #include "engine_stereo_renderer.hpp"
 #include "engine_view_probe.hpp"
@@ -574,7 +574,7 @@ namespace vr
 					if (!has_persisted_terminal_status && graphics.generation != 0)
 					{
 						terminal_artifacts_written =
-							engine_stereo_renderer::checkpoint_observation_artifacts();
+							diagnostics::renderer_evidence::checkpoint();
 					}
 					bool terminal_after{};
 					const auto terminal_identity_after =

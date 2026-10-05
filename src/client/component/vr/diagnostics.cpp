@@ -21,7 +21,6 @@
 #include "engine_stereo_particle_buffer_probe.hpp"
 #include "engine_stereo_output_merger.hpp"
 #include "engine_stereo_owner_pass.hpp"
-#include "engine_stereo_replay.hpp"
 #include "engine_stereo_resource_ops.hpp"
 #include "engine_stereo_renderer.hpp"
 #include "engine_stereo_scene_batch_probe.hpp"
@@ -417,7 +416,6 @@ namespace vr::diagnostics
 		const auto output_merger_status = engine_stereo_output_merger::get_status();
 		const auto draw_indexed_status = engine_stereo_draw_indexed::get_status();
 		const auto execution_status = engine_stereo_execution::get_status();
-		const auto stereo_replay_status = engine_stereo_replay::get_status();
 		const auto owner_pass_status = engine_stereo_owner_pass::get_report();
 		auto scene_batch_storage =
 			std::make_unique<engine_stereo_scene_batch_probe::report>();
@@ -632,7 +630,7 @@ namespace vr::diagnostics
 			backend_probe_status, stereo_binding_status, backend_view_status, backend_target_status,
 			backend_target_frame_status, culling_status);
 		detail::append_execution_status(output, output_merger_status, draw_indexed_status,
-			execution_status, stereo_replay_status, owner_pass_status);
+			execution_status, owner_pass_status);
 		detail::append_scene_status(output, owner_pass_status, scene_batch_status);
 		detail::append_history_status(output, ssr_history_status, ssr_consumer_status,
 			eye_resource_status);

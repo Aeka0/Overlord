@@ -15,7 +15,6 @@ namespace vr::engine_stereo_backend_target { struct frame_status; }
 namespace vr::engine_stereo_output_merger { struct status; }
 namespace vr::engine_stereo_draw_indexed { struct status; }
 namespace vr::engine_stereo_execution { struct status; }
-namespace vr::engine_stereo_replay { struct status; }
 namespace vr::engine_stereo_owner_pass { struct report; }
 namespace vr::engine_stereo_renderer { struct culling_union_status; }
 namespace vr::engine_stereo_scene_batch_probe { struct report; }
@@ -51,7 +50,6 @@ namespace vr::diagnostics::detail
 		const engine_stereo_output_merger::status& output_merger_status,
 		const engine_stereo_draw_indexed::status& draw_indexed_status,
 		const engine_stereo_execution::status& execution_status,
-		const engine_stereo_replay::status& stereo_replay_status,
 		const engine_stereo_owner_pass::report& owner_pass_status);
 
 	void append_scene_status(std::ostringstream& output,
