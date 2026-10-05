@@ -21,6 +21,7 @@ headset acceptance where those boundaries matter.
 
 | Area | Guides |
 | --- | --- |
+| Native version bindings | [Build catalog, adaptation workflow and H2/H1 reuse](native-bindings.md) |
 | Gameplay | [Gameplay and interaction architecture](vr-gameplay-interaction-architecture.md), [controller interaction](vr-controller-interaction.md), [world interaction](vr-world-interaction.md) |
 | Weapons | [Weapon interaction and mechanical state](vr-weapon-interaction-architecture.md), [weapon registration](vr-weapon-registration.md), [variants and attachments](vr-weapon-variants.md), [weapon asset workflow](vr-weapon-asset-workflow.md), [weapon mechanics inventory](vr-weapon-mechanics.csv) |
 | Camera and tracking | [Camera policy](vr-camera-architecture.md), [runtime and rendering contracts](vr-runtime-rendering.md), [movement camera bob](vr-camera-bob.md), [headset resume heading](vr-hmd-resume-heading.md), [pose stabilization](vr-stabilization.md) |

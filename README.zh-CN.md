@@ -7,7 +7,7 @@
 Bilibili/Aeka0：https://space.bilibili.com/10077845
 允许转载，请附上本项目链接。
 
-H2-Mod-VR 是基于 [H2-Mod](https://github.com/alicealys/h2-mod) 开发的《使命召唤：现代战争 2 战役重制版》VR 模组。项目为原有战役加入原生双眼视差画面、6DOF头部与双手追踪、物理枪械操作，以及面向 VR 的装备、场景和剧情交互。适配以游戏原有的武器、弹药、动画和任务逻辑为基础，尽量保留原版的剧情表现。
+H2-Mod-VR 是基于 H2-Mod 开发的《使命召唤：现代战争 2 战役重制版》VR 模组。项目为原有战役加入原生双眼视差画面、6DOF头部与双手追踪、物理枪械操作，以及面向 VR 的装备、场景和剧情交互。适配以游戏原有的武器、弹药、动画和任务逻辑为基础，尽量保留原版的剧情表现。
 
 > 目前为 Beta 版本，在游玩期间很可能会出现部分场景/剧情脚本的适配问题。如遭遇问题或有改善游玩体验方面的建议欢迎进行反馈。请注意原 H2-Mod 的自定义 Mod 预期无法工作，同时现阶段可能进行大规模的代码调整和重构，不建议在现阶段进行 Mod 开发。同时请知悉版本更迭可能会破坏游戏存档和进度。
 
@@ -134,7 +134,9 @@ msbuild build\h2-mod.sln /t:client /m:2 /p:Configuration=RelWithDebInfo /p:Platf
 
 项目代码采用 [GNU GPLv3](LICENSE)。第三方代码、字体及其他资源保留各自的许可证与版权声明，详见[第三方声明](THIRD_PARTY_NOTICES.md)和[来源清单](docs/source-provenance.md)。
 
-VR 适配由 [Aeka0](https://github.com/Aeka0) 维护，基于 H2-Mod 及其贡献者的工作开发，包括 [alicealys/fedddddd](https://github.com/alicealys)，以及 [IW6x](https://git.alterware.dev/alterware/iw6-mod) 和 [S1x](https://git.alterware.dev/alterware/s1-mod) 项目。
+VR 适配由 [Aeka0](https://github.com/Aeka0) 独立维护。本分支与上游项目及其作者无隶属关系，也未获得其背书。VR 改动的维护与问题反馈由本项目负责。
+
+基础代码源自 H2-Mod 及其更早的上游项目 [IW6x](https://git.alterware.dev/alterware/iw6-mod) 和 [S1x](https://git.alterware.dev/alterware/s1-mod)。
 
 同时保留对以下项目和贡献者的致谢：
 [momo5502](https://github.com/momo5502)、

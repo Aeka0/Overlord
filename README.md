@@ -7,7 +7,7 @@ English | [简体中文](README.zh-CN.md)
 Bilibili/Aeka0: https://space.bilibili.com/10077845
 Reposting is welcome; please include a link to this GitHub Repo.
 
-H2-Mod-VR is a VR mod for *Call of Duty: Modern Warfare 2 Campaign Remastered*, built on [H2-Mod](https://github.com/alicealys/h2-mod). It adds native stereoscopic rendering, 6DOF head and hand tracking, physical weapon handling, and VR interactions for equipment, environments, and story sequences to the original campaign. The adaptations build on the game's existing weapon, ammunition, animation, and mission logic, preserving the original story presentation wherever possible.
+H2-Mod-VR is a VR mod for *Call of Duty: Modern Warfare 2 Campaign Remastered*, built on H2-Mod. It adds native stereoscopic rendering, 6DOF head and hand tracking, physical weapon handling, and VR interactions for equipment, environments, and story sequences to the original campaign. The adaptations build on the game's existing weapon, ammunition, animation, and mission logic, preserving the original story presentation wherever possible.
 
 > This is currently a Beta release. You are likely to encounter adaptation issues in some scenes or story scripts during play. Reports of problems and suggestions for improving the experience are welcome. Custom mods made for the original H2-Mod are not expected to work. Large code changes and refactoring may still take place, so developing mods at this stage is not recommended. Version updates may also break game saves and progress.
 
@@ -134,7 +134,9 @@ Read the [contributing guide](CONTRIBUTING.md) before working on the project. Ch
 
 The project code is licensed under [GNU GPLv3](LICENSE). Third-party code, fonts, and other resources retain their respective licenses and copyright notices. See the [third-party notices](THIRD_PARTY_NOTICES.md) and [source provenance](docs/source-provenance.md).
 
-The VR adaptation is maintained by [Aeka0](https://github.com/Aeka0), building on H2-Mod and the work of its contributors, including [alicealys/fedddddd](https://github.com/alicealys), as well as the [IW6x](https://git.alterware.dev/alterware/iw6-mod) and [S1x](https://git.alterware.dev/alterware/s1-mod) projects.
+The VR adaptation is independently maintained by [Aeka0](https://github.com/Aeka0). This fork is not affiliated with or endorsed by the upstream project or its authors. Maintenance and support for the VR changes are handled by this project.
+
+The underlying code builds on H2-Mod and its earlier upstream projects, [IW6x](https://git.alterware.dev/alterware/iw6-mod) and [S1x](https://git.alterware.dev/alterware/s1-mod).
 
 Thanks also to the following projects and contributors:
 [momo5502](https://github.com/momo5502),

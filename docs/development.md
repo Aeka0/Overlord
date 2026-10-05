@@ -70,12 +70,18 @@ Script tests can run directly from the repository root:
 ```bat
 python tests/config_validation_tests.py
 python tests/background_update_tests.py
+python tests/native_bindings_tests.py
+python tools/native_bindings/cli.py check --target h2-sp --repo .
 python tests/vr/test_region_capture_analysis.py
 python tests/vr/aim_assist_adapter_tests.py
 node tests/vr/launcher_settings_ui_tests.js
 python tests/vr/client_feature_parity_tests.py build/bin/x64/RelWithDebInfo/h2-mod-vr.exe
 python tests/vr/client_feature_parity_tests.py build/bin/x64/Debug/h2-mod-vr-debug.exe
 ```
+
+For native executable versions, source inventories and H2/H1 adapter boundaries,
+see [native bindings and version adaptation](native-bindings.md). These checks
+are offline and do not establish runtime or HMD compatibility.
 
 The config validation test compiles the production config namespace and public
 accessors in Debug and optimized Release modes, with in-memory file I/O and
