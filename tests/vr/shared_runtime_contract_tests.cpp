@@ -1,3 +1,4 @@
+#include "callback_registration_tests.hpp"
 #include "component/scene_submission_pool.hpp"
 #include "component/scene_pose_match.hpp"
 #include "component/vr/gameplay/weapon_runtime_lifecycle.hpp"
@@ -10,6 +11,7 @@ int main()
 {
 	int failures{};
 	const auto check=[&](bool value,const char* message){if(!value){++failures;std::cerr<<"FAIL: "<<message<<'\n';}};
+	callback_registration_tests::run(check);
 	using pool=scene_models::submission_pool<unsigned,2,2>;
 	pool submissions;const auto now=pool::clock::time_point{std::chrono::seconds(10)};
 	const auto first=submissions.acquire(11,now),second=submissions.acquire(22,now);

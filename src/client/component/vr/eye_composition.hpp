@@ -3,6 +3,7 @@
 #include "desktop_mirror_layout.hpp"
 #include "auxiliary_scene.hpp"
 #include "presentation_options.hpp"
+#include "callback_registration.hpp"
 #include <atomic>
 #include <cmath>
 #include <cstring>
@@ -24,28 +25,36 @@ namespace vr::eye_composition
 	// Native skinned placement has identity rotation/unit scale.
 	// Both eyes must share that placement before using a single world billboard.
 	[[nodiscard]] inline model_view_origins model_origins_for(
-		const engine_stereo_view::slot_pair& views,
-		const engine_stereo_view::scene_record_pair& records) noexcept
+	    const engine_stereo_view::slot_pair& views,
+	    const engine_stereo_view::scene_record_pair& records) noexcept
 	{
 		model_view_origins result;
-		if (!records.pair_id || !records.publication) return result;
+		if (!records.pair_id || !records.publication)
+			return result;
 		for (unsigned eye = 0; eye < 2; ++eye)
 		{
 			const auto& slot = views.eyes[eye];
 			if (slot.pair_id != records.pair_id || slot.publication != records.publication ||
-				slot.output_eye != eye) return {};
+			    slot.output_eye != eye)
+				return {};
 			const auto& record = eye == 0 ? records.left : records.right;
-			std::memcpy(result.eyes[eye].data(), record.data() +
-				engine_stereo_view::h2_view_origin_offset, sizeof(result.eyes[eye]));
+			std::memcpy(result.eyes[eye].data(),
+			            record.data() + engine_stereo_view::h2_view_origin_offset,
+			            sizeof(result.eyes[eye]));
 			for (const float value : result.eyes[eye])
-				if (!std::isfinite(value) || std::abs(value) > 1e7f) return {};
+				if (!std::isfinite(value) || std::abs(value) > 1e7f)
+					return {};
 			std::array<float, 3> placement{};
-			std::memcpy(placement.data(), record.data() +
-				engine_stereo_view::h2_current_model_placement_origin_offset, sizeof(placement));
+			std::memcpy(placement.data(),
+			            record.data() + engine_stereo_view::h2_current_model_placement_origin_offset,
+			            sizeof(placement));
 			for (const float value : placement)
-				if (!std::isfinite(value) || std::abs(value) > 1e7f) return {};
-			if (eye == 0) result.placement = placement;
-			else if (placement != result.placement) return {};
+				if (!std::isfinite(value) || std::abs(value) > 1e7f)
+					return {};
+			if (eye == 0)
+				result.placement = placement;
+			else if (placement != result.placement)
+				return {};
 		}
 		result.valid = true;
 		return result;
@@ -67,46 +76,91 @@ namespace vr::eye_composition
 	// the ring target. Runs on H2's serialized immediate-context owner. No waits,
 	// runtime IPC, native-session reentry or retained destination targets allowed.
 	// Source is display-encoded; destination is linear. Restore every D3D state.
-	using callback = void(*)(const event&, ID3D11DeviceContext*,
-		ID3D11ShaderResourceView*, ID3D11RenderTargetView*) noexcept;
+	using callback = void (*)(const event&,
+	                          ID3D11DeviceContext*,
+	                          ID3D11ShaderResourceView*,
+	                          ID3D11RenderTargetView*) noexcept;
 	// Ordered independent layers; a diagnostic must not replace the spatial HUD.
-	enum class layer : unsigned { world_equipment, weapon_guides, optics, weapon_display, screen_scope, spatial_hud, diagnostics, indicators, remote_hud, damage, narrative, interaction_diagnostics, menu_backdrop, recording_frame, count };
-	inline std::atomic<std::uint64_t(*)() noexcept> remote_camera_epoch{};
-	inline std::array<std::atomic<callback>, static_cast<unsigned>(layer::count)> consumers{};
+	enum class layer : unsigned
+	{
+		world_equipment,
+		weapon_guides,
+		optics,
+		weapon_display,
+		screen_scope,
+		spatial_hud,
+		diagnostics,
+		indicators,
+		remote_hud,
+		damage,
+		narrative,
+		interaction_diagnostics,
+		menu_backdrop,
+		recording_frame,
+		count
+	};
+	inline std::atomic<std::uint64_t (*)() noexcept> remote_camera_epoch{};
+	using consumer_registration = callback_registration<callback>;
+	namespace detail
+	{
+		inline std::array<std::atomic<callback>, static_cast<unsigned>(layer::count)> consumers{};
+	}
 	inline bool visible_on_weapon_display(layer slot) noexcept
 	{
 		// Its scene camera follows the launcher, while the viewer sees a separate
 		// plane. World-projected panels/markers cannot be pasted over that plane.
-		return slot==layer::weapon_display || slot==layer::screen_scope || slot==layer::damage ||
-			slot==layer::narrative || slot==layer::recording_frame;
+		return slot == layer::weapon_display || slot == layer::screen_scope || slot == layer::damage ||
+		       slot == layer::narrative || slot == layer::recording_frame;
 	}
 	// Optional scene registration BEFORE dispatching native backend jobs.
 	// Copy MOD metadata only; no native/GPU calls or waits.
-	using scene_record_callback = void(*)(const engine_stereo_view::slot_pair&, std::uintptr_t) noexcept;
-	inline std::atomic<scene_record_callback> scene_record_consumer{};
+	using scene_record_callback = void (*)(const engine_stereo_view::slot_pair&, std::uintptr_t) noexcept;
+	using scene_registration = callback_registration<scene_record_callback>;
+	namespace detail
+	{
+		inline std::atomic<scene_record_callback> scene_record_consumer{};
+	}
+	[[nodiscard]] inline scene_registration register_scene_consumer(scene_record_callback callback)
+	{
+		return {detail::scene_record_consumer, callback};
+	}
 	inline void register_scene(const engine_stereo_view::slot_pair& views, std::uintptr_t record) noexcept
 	{
 		// Register an address only while paired with its immutable publication.
 		// The consumer may bind native worker output later; never wait here.
-		if (record) if (const auto fn = scene_record_consumer.load()) fn(views, record);
+		if (record)
+			if (const auto fn = detail::scene_record_consumer.load())
+				fn(views, record);
 	}
-	inline void set_consumer(callback value, layer slot = layer::spatial_hud) noexcept
+	[[nodiscard]] inline consumer_registration register_consumer(callback value, layer slot)
 	{
 		const auto index = static_cast<unsigned>(slot);
-		if (index < consumers.size()) consumers[index].store(value);
+		if (index >= detail::consumers.size())
+			throw std::out_of_range("Invalid VR composition layer");
+		return {detail::consumers[index], value};
 	}
-	inline void compose(const event& value, ID3D11DeviceContext* context,
-		ID3D11ShaderResourceView* source, ID3D11RenderTargetView* output) noexcept
+	inline void compose(const event& value,
+	                    ID3D11DeviceContext* context,
+	                    ID3D11ShaderResourceView* source,
+	                    ID3D11RenderTargetView* output) noexcept
 	{
 		thread_local std::uint64_t visibility_pair{};
 		thread_local bool hidden{};
-		if(value.eye==0 || visibility_pair!=value.pair_id)
-		{visibility_pair=value.pair_id;hidden=!presentation_options::show_hud();}
-		for(unsigned i=0;i<consumers.size();++i)
+		if (value.eye == 0 || visibility_pair != value.pair_id)
 		{
-			if(hidden && (static_cast<layer>(i)==layer::spatial_hud || static_cast<layer>(i)==layer::indicators || static_cast<layer>(i)==layer::remote_hud))continue;
-			if(value.views.weapon_display_epoch && !visible_on_weapon_display(static_cast<layer>(i)))continue;
-			if(const auto fn=consumers[i].load())fn(value,context,source,output);
+			visibility_pair = value.pair_id;
+			hidden = !presentation_options::show_hud();
+		}
+		for (unsigned i = 0; i < detail::consumers.size(); ++i)
+		{
+			if (hidden &&
+			    (static_cast<layer>(i) == layer::spatial_hud || static_cast<layer>(i) == layer::indicators ||
+			     static_cast<layer>(i) == layer::remote_hud))
+				continue;
+			if (value.views.weapon_display_epoch && !visible_on_weapon_display(static_cast<layer>(i)))
+				continue;
+			if (const auto fn = detail::consumers[i].load())
+				fn(value, context, source, output);
 		}
 	}
 }

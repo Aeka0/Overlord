@@ -1026,7 +1026,7 @@ namespace
 		const auto conversion_baseline = session.get_status();
 		static unsigned composition_calls{}, composition_errors{}, composition_eye_mask{};
 		composition_calls = composition_errors = composition_eye_mask = 0;
-		vr::eye_composition::set_consumer([](const vr::eye_composition::event& event,
+		auto composition_registration_0 = vr::eye_composition::register_consumer([](const vr::eye_composition::event& event,
 			ID3D11DeviceContext* context, ID3D11ShaderResourceView* source,
 			ID3D11RenderTargetView* destination) noexcept {
 			++composition_calls;
@@ -1039,8 +1039,7 @@ namespace
 			source->GetResource(&input); destination->GetResource(&output);
 			if (input.Get() == output.Get()) ++composition_errors;
 			composition_eye_mask |= 1u << event.eye;
-		});
-		const auto reset_composition = gsl::finally([] { vr::eye_composition::set_consumer(nullptr); });
+		}, vr::eye_composition::layer::spatial_hud);
 		for (std::size_t format_index{}; format_index < destination_formats.size();
 			++format_index)
 		{

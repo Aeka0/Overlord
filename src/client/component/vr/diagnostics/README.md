@@ -55,3 +55,8 @@ artifacts; the retired stereo replay implementation has no production entry.
 Native hook installation, rollback, owner-thread transactions and rendering stay
 in `engine_stereo_renderer.cpp`. The guarded baseline-registry capture retains
 its existing control-thread observation contract and does not mutate the game.
+
+Composition observers use exclusive registration handles. A diagnostic owns its
+explicit layer and releases that handle during teardown; it cannot replace or
+clear another layer. Registration does not drain an in-flight renderer callback.
+Keep existing lifetime guards and owner-thread retirement in the component.

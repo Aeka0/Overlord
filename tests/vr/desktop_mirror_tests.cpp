@@ -272,7 +272,7 @@ vertex main(uint id : SV_VertexID) {
 		require(session.ensure_copy_ring(graphics, desc, DXGI_FORMAT_R11G11B10_FLOAT, error), error.c_str());
 		for (std::uint64_t id = 301; id <= 306; ++id)
 		{
-			vr::eye_composition::set_consumer(id==301 ? publish_test_recording_crop : nullptr,vr::eye_composition::layer::recording_frame);
+			auto recording_registration = id == 301 ? vr::eye_composition::register_consumer(publish_test_recording_crop, vr::eye_composition::layer::recording_frame) : vr::eye_composition::consumer_registration{};
 			require(session.admit_pair(id), "admit projection test pair");
 			auto views = make_views(id, id == 302);
 			const auto camera_time=views.camera_sampled_at;

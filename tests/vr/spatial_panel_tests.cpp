@@ -154,14 +154,14 @@ int main(int argc,char** argv)
 		}
 		static unsigned layer_order{};
 		vr::engine_stereo_view::slot_pair views{};
-		vr::eye_composition::set_consumer([](const auto&,auto*,auto*,auto*) noexcept { layer_order=layer_order*10+1; });
-		vr::eye_composition::set_consumer([](const auto&,auto*,auto*,auto*) noexcept { layer_order=layer_order*10+2; },vr::eye_composition::layer::diagnostics);
+		auto composition_registration_0 = vr::eye_composition::register_consumer([](const auto&,auto*,auto*,auto*) noexcept { layer_order=layer_order*10+1; }, vr::eye_composition::layer::spatial_hud);
+		auto composition_registration_1 = vr::eye_composition::register_consumer([](const auto&,auto*,auto*,auto*) noexcept { layer_order=layer_order*10+2; }, vr::eye_composition::layer::diagnostics);
 		vr::eye_composition::compose({views},nullptr,nullptr,nullptr);
 		check(layer_order==12,"diagnostic composes after HUD without replacing it");
-		vr::eye_composition::set_consumer(nullptr);
+		composition_registration_0.reset();
 		layer_order=0; vr::eye_composition::compose({views},nullptr,nullptr,nullptr);
 		check(layer_order==2,"HUD disabled does not disable diagnostic layer");
-		vr::eye_composition::set_consumer(nullptr,vr::eye_composition::layer::diagnostics);
+		composition_registration_1.reset();
 	}
 	// Live native command reads must be bounded and fault-contained without a
 	// VirtualQuery syscall per field. No mapping cache survives a protection change.
@@ -219,7 +219,7 @@ int main(int argc,char** argv)
 	foreign_scene = scene_a; foreign_scene.eyes[0].pair_id = foreign_scene.eyes[1].pair_id = 3;
 	check(scene_cache.put(foreign_scene, {100,0,0}) && !scene_cache.get(scene_a, frozen), "bounded eviction never returns foreign pose");
 	static std::uintptr_t observed_record{};
-	vr::eye_composition::scene_record_consumer.store([](const vr::engine_stereo_view::slot_pair&, std::uintptr_t record) noexcept { observed_record = record; });
+	auto scene_registration = vr::eye_composition::register_scene_consumer([](const vr::engine_stereo_view::slot_pair&, std::uintptr_t record) noexcept { observed_record = record; });
 	vr::eye_composition::register_scene(scene_a, 0);
 	check(!observed_record, "absent native record does not register a binding");
 	vr::eye_composition::register_scene(scene_a, 0x10000);
@@ -228,8 +228,8 @@ int main(int argc,char** argv)
 		using namespace vr::eye_composition;
 		static unsigned hud_draws{},menu_draws{};
 		const auto hud=+[](const event&,ID3D11DeviceContext*,ID3D11ShaderResourceView*,ID3D11RenderTargetView*) noexcept {++hud_draws;};
-		set_consumer(hud,layer::spatial_hud);set_consumer(hud,layer::indicators);
-		set_consumer(+[](const event&,ID3D11DeviceContext*,ID3D11ShaderResourceView*,ID3D11RenderTargetView*) noexcept {++menu_draws;},layer::menu_backdrop);
+		auto composition_registration_2 = vr::eye_composition::register_consumer(hud, layer::spatial_hud);auto composition_registration_3 = vr::eye_composition::register_consumer(hud, layer::indicators);
+		auto composition_registration_4 = vr::eye_composition::register_consumer(+[](const event&,ID3D11DeviceContext*,ID3D11ShaderResourceView*,ID3D11RenderTargetView*) noexcept {++menu_draws;}, layer::menu_backdrop);
 		vr::presentation_options::hide_hud=true;
 		compose(event{scene_a},nullptr,nullptr,nullptr);
 		check(hud_draws==0 && menu_draws==1,"hide HUD excludes spatial ammo, warnings and waypoints but preserves menu composition");
@@ -239,11 +239,11 @@ int main(int argc,char** argv)
 		menu_draws=1;
 		compose(event{scene_a},nullptr,nullptr,nullptr);
 		check(hud_draws==2 && menu_draws==2,"disabling hide HUD restores independent HUD layers");
-		set_consumer(nullptr,layer::spatial_hud);set_consumer(nullptr,layer::indicators);set_consumer(nullptr,layer::menu_backdrop);
+		composition_registration_2.reset();composition_registration_3.reset();composition_registration_4.reset();
 		check(!vr::presentation_options::capture_narrative(true,false) && vr::presentation_options::capture_narrative(true,true),
 			"hidden narrative ink retains native scene fades");
 	}
-	vr::eye_composition::scene_record_consumer.store(nullptr);
+	scene_registration.reset();
 	vr::eye_composition::register_scene(scene_a, 0x20000);
 	check(observed_record == 0x10000, "record observer lifetime");
 	{
