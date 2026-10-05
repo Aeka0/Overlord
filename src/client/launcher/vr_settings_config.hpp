@@ -27,6 +27,19 @@ namespace launcher_vr_settings
 		return result;
 	}
 
+	inline json choice_catalog()
+	{
+		json result=json::object();
+		for(const auto& field:vr::settings::choices)
+		{
+			json options=json::array();
+			for(std::size_t i=0;i<field.values.size() && field.values[i];++i)
+				options.push_back({{"value",field.values[i]},{"labelKey",field.label_keys[i]}});
+			result[field.name]=std::move(options);
+		}
+		return result;
+	}
+
 	inline json defaults()
 	{
 		json result=json::object();

@@ -191,3 +191,11 @@ changed together in the first follow-up, so that run cannot isolate their gains.
 Before deployment, confirm that the target game process has exited and record hashes for the build and installed artifacts. Matching files on disk prove that the copies match. Confirming the running build also requires checking the process start time and module identity.
 
 Hardware acceptance records should identify the level, actions, configuration, devices, and tested scope. For rendering changes, check both eyes, focus transitions, recentering, level transitions, and device lifecycle changes. Preserve results using the [diagnostics and acceptance workflow](vr-diagnostics-workflow.md); do not report offline PASS as hardware acceptance.
+
+## Launcher setting choices
+
+`src/client/component/vr/settings.hpp` defines native enum values, defaults and
+launcher localization keys together. `launcher_vr_settings::choice_catalog()`
+exports the ordered options through the settings JSON response; `app.js` and
+the first-use guide consume that catalog. Add an option to the native setting
+and its locale catalogs rather than maintaining a second option list in JavaScript.

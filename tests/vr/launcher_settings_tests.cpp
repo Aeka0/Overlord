@@ -59,6 +59,11 @@ int main(int argc, char** argv)
 			"Oversized launcher preferences are bounded");
 		require(!launcher_localization::supported("unknown") && !launcher_localization::supported(""),
 			"Unsupported locale IDs cannot be saved");
+		const auto catalog = choice_catalog();
+		require(catalog.size()==vr::settings::choices.size(), "Choice catalog exposes every native setting");
+		for(const auto& field:vr::settings::choices)
+			for(std::size_t i=0;i<field.values.size() && field.values[i];++i)
+				require(catalog[field.name][i]["value"]==field.values[i] && catalog[field.name][i]["labelKey"]==field.label_keys[i], "Frontend choices preserve native ordering and localized labels");
 		const auto initial = defaults();
 		require(validate(initial), "Shared defaults must be valid");
 		for(const auto& field:{vr::settings::cheat_health,vr::settings::cheat_notarget,vr::settings::cheat_ammo})

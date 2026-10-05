@@ -8,13 +8,7 @@ var settingsScrollAreas = {
     vr: { viewport: 'vr-settings-viewport', track: 'vr-scrollbar', thumb: 'vr-scrollbar-thumb' },
     oobe: { viewport: 'oobe-viewport', track: 'oobe-scrollbar', thumb: 'oobe-scrollbar-thumb' }
 };
-var settingsDropdownChoices = {
-    vr_turnMode: [{ value: 'smooth', labelKey: 'choice.smooth' }, { value: 'snap', labelKey: 'choice.snap' }],
-    vr_recoilPenalty: [{ value: 'all', labelKey: 'choice.allWeapons' }, { value: 'long', labelKey: 'choice.longWeapons' }, { value: 'off', labelKey: 'choice.off' }],
-    vr_cheatHealth: [{ value: 'off', labelKey: 'choice.disabled' }, { value: 'demigod', labelKey: 'choice.demigod' }, { value: 'god', labelKey: 'choice.god' }],
-    vr_cheatNotarget: [{ value: 'off', labelKey: 'choice.disabled' }, { value: 'on', labelKey: 'choice.enabled' }],
-    vr_cheatAmmo: [{ value: 'off', labelKey: 'choice.disabled' }, { value: 'reserve', labelKey: 'choice.infiniteReserve' }, { value: 'infinite', labelKey: 'choice.infiniteAmmo' }]
-};
+var settingsDropdownChoices = {};
 var settingsDropdown = null;
 
 
@@ -505,10 +499,27 @@ function markVRDirty() {
     vrStatus('status.dirty', false);
 }
 
+// Native settings define option order, values and localized labels for both editors.
+function loadSettingChoices(catalog) {
+    if (!catalog || typeof catalog !== 'object') throw new Error('error.loadVR');
+    for (var key in catalog) {
+        if (!catalog.hasOwnProperty(key)) continue;
+        var options = catalog[key];
+        if (key.indexOf('vr_') !== 0 || !Array.isArray(options) || !options.length || options.length > 4)
+            throw new Error('error.loadVR');
+        for (var i = 0; i < options.length; ++i) {
+            if (!options[i] || typeof options[i].value !== 'string' || typeof options[i].labelKey !== 'string')
+                throw new Error('error.loadVR');
+        }
+        settingsDropdownChoices[key] = options;
+    }
+}
+
 function loadVRSettings() {
     try {
         var response = JSON.parse(window.external.loadVRSettings());
         if (!response.ok) throw new Error(response.error);
+        loadSettingChoices(response.choices);
         vrSettings.defaults = response.defaults;
         vrSettings.limits = response.limits;
         vrSettings.build = response.build || null;

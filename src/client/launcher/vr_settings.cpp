@@ -34,6 +34,7 @@ namespace launcher_vr_settings
 			return json{{"ok", true}, {"values", values}, {"defaults", defaults()}, {"limits", limits},
 				{"onboarding", {{"gameAvailable", game_data::is_game_directory_available()}, {"hasVRConfig", has_vr_config}}},
 				{"controllerPresets",controller_presets()},
+				{"choices",choice_catalog()},
 				{"build", {{"configuration", build_config::name}, {"optimized", build_config::optimized}}}}.dump();
 		}
 	}

@@ -34,6 +34,13 @@ const quest3 = {
 };
 const alignmentKeys = Object.keys(quest3);
 const debugKeys = Object.keys(defaults).filter(key => key.startsWith('vr_debug') || key.endsWith('Debug'));
+const choiceCatalog = {
+    vr_turnMode: [{value: 'smooth',labelKey: 'choice.smooth'},{value: 'snap',labelKey: 'choice.snap'}],
+    vr_recoilPenalty: [{value: 'all',labelKey: 'choice.allWeapons'},{value: 'long',labelKey: 'choice.longWeapons'},{value: 'off',labelKey: 'choice.off'}],
+    vr_cheatHealth: [{value: 'off',labelKey: 'choice.disabled'},{value: 'demigod',labelKey: 'choice.demigod'},{value: 'god',labelKey: 'choice.god'}],
+    vr_cheatNotarget: [{value: 'off',labelKey: 'choice.disabled'},{value: 'on',labelKey: 'choice.enabled'}],
+    vr_cheatAmmo: [{value: 'off',labelKey: 'choice.disabled'},{value: 'reserve',labelKey: 'choice.infiniteReserve'},{value: 'infinite',labelKey: 'choice.infiniteAmmo'}]
+};
 const controllerPresets = [
     { id: 'none', label: 'None', values: Object.fromEntries(alignmentKeys.map(key => [key, 0])) },
     { id: 'meta_quest_3', label: 'Meta Quest 3', values: quest3 }
@@ -113,7 +120,7 @@ function setup(initialLanguage = 'en', build = { configuration: 'RelWithDebInfo'
                 return JSON.stringify({ ok: true, language });
             },
             loadVRSettings() { return JSON.stringify(failLoad ? { ok: false, error: 'Read failed' } :
-                { ok: true, values: stored, defaults, limits, controllerPresets, build, onboarding }); },
+                { ok: true, values: stored, defaults, limits, choices:choiceCatalog, controllerPresets, build, onboarding }); },
             saveVRSettings(payload) {
                 if (failSave) return JSON.stringify({ ok: false, error: 'Disk full' });
                 stored = JSON.parse(payload); ++writes;
