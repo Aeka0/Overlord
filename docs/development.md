@@ -35,10 +35,19 @@ Both `/m` and the project-level `MultiProcessorCompile` setting are enabled. Lar
 
 ## Select validation for the change
 
+Test target definitions live in `premake/vr_tests.lua`; the main script invokes
+its registration function in the root path context. `test_executable` centralizes
+executable kind, language and output layout; feature sources and dependencies stay
+explicit beside each target.
+
 These are registered standalone targets. Executable paths are relative to `build/bin/x64/<Configuration>/vr-tests/`. Select targets that cover the change; tests in headers are included by their corresponding `.cpp` entry points and are not run individually.
 
 | Change area | Project target | Relative executable path |
 | --- | --- | --- |
+| Native query signatures and live read-only globals | `vr-native-binding-tests` | `native-bindings/vr-native-binding-tests.exe` |
+| Campaign phases, camera policy and scripted use | `vr-campaign-policy-tests` | `campaign-policy/vr-campaign-policy-tests.exe` |
+| Hand arbitration and phase binding | `vr-hand-interaction-tests` | `hand-interaction/vr-hand-interaction-tests.exe` |
+| Underbarrel mechanics and support handoff | `vr-underbarrel-tests` | `underbarrel/vr-underbarrel-tests.exe` |
 | Controller input | `vr-controller-input-tests` | `controller-input/vr-controller-input-tests.exe` |
 | Hand poses / rigging | `vr-hand-pose-tests`, `vr-hand-rig-tests` | `hand-pose/vr-hand-pose-tests.exe`, `hand-rig/vr-hand-rig-tests.exe` |
 | Weapon registration / grip / carry | `vr-weapon-grip-tests` | `weapon-grip/vr-weapon-grip-tests.exe` |

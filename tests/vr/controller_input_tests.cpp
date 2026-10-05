@@ -9,8 +9,6 @@ using vr::hand;
 #include "component/vr/gameplay/weapon_feedback.hpp"
 #include "component/vr/gameplay/weapons/m9/feedback.hpp"
 #include "controller_orientation_tests.hpp"
-#include "scripted_sequence_tests.hpp"
-#include "oilrig_sequence_tests.hpp"
 #include "slow_simulation_input_tests.hpp"
 #include "sentry_input_tests.hpp"
 #include "controller_stance_tests.hpp"
@@ -39,8 +37,6 @@ int main()
 	remote_look_tests(check);
 	fixed_sniper_tests(check);
 	fixed_sniper_hand_aim_tests(check);
-	scripted_sequence_tests(check);
-	oilrig_sequence_tests(check);
 	slow_simulation_input_tests(check);
 	sentry_input_tests(check);
 	{

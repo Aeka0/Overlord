@@ -1,3 +1,4 @@
+#include "interaction_schedule_tests.hpp"
 #include "component/vr/hand.hpp"
 using vr::hand;
 #include "component/vr/gameplay/hand_interaction/core.hpp"
@@ -28,6 +29,7 @@ using hi::hand;
 int main()
 {
 	int checks=0,failures=0;const auto check=[&](bool ok,const char* text){++checks;if(!ok){++failures;std::cerr<<text<<'\n';}};
+	interaction_schedule_tests::run(check);
 	support_magazine_transfer_tests::run(check);
 	scripted_use_input_tests(check);
 	signal_flare_tests(check);

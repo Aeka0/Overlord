@@ -1,3 +1,4 @@
+#include "support_handoff_tests.hpp"
 #include "component/vr/hand.hpp"
 using vr::hand;
 #include "component/vr/gameplay/underbarrel_feed.hpp"
@@ -18,6 +19,7 @@ int main()
 {
 	namespace w=vr::gameplay::weapons;namespace u=w::underbarrel;
 	int failures{},checks{};auto check=[&](bool ok,const char* label){++checks;if(!ok){++failures;std::cerr<<"FAIL "<<label<<'\n';}};
+	support_handoff_tests::run(check);
 	for(auto rear:{vr::hand::left,vr::hand::right})for(auto type:{u::kind::m203,u::kind::shotgun})for(float units:{1.f,39.3701f})
 	{
 		using namespace vr::gameplay::hands;
