@@ -100,10 +100,22 @@ namespace lever_profile_tests
 			check(inventory.reconcile({&item,1}) && inventory.equip_definition(40,rear),"control reacquisition inventory fixture admitted");
 			const auto id=inventory.find_definition(40)->id;const auto other=hand(1-int(rear));inventory.support(id,other);
 			check(inventory.release(id,1u<<int(rear),carry::location::absent,true,[](const auto&){return false;}).action==carry::outcome::carry_only,"Grip release keeps supported gun with no synthetic control owner");
-			const auto claim=carry::claim_grip(inventory,rear,true,false,true,{},id,carry::location::absent,control_attachment::moving);
+			const auto claim = carry::claim_grip(inventory, {
+				.actor = rear,
+				.pressed = true,
+				.available = true,
+				.control = id,
+				.attachment = control_attachment::moving
+			});
 			check(claim.pose_changed && inventory.in_hand(rear)->owner.attachment==control_attachment::moving && inventory.invariant(),"accepted moving contact is recorded with the new carry owner revision");
 			inventory.release(id,1u<<int(rear),carry::location::absent,true,[](const auto&){return false;});
-			carry::claim_grip(inventory,rear,true,false,true,{},id,carry::location::absent,control_attachment::fixed);
+			carry::claim_grip(inventory, {
+				.actor = rear,
+				.pressed = true,
+				.available = true,
+				.control = id,
+				.attachment = control_attachment::fixed
+			});
 			check(inventory.in_hand(rear)->owner.attachment==control_attachment::fixed && inventory.invariant(),"regrasp can return to original grip without inheriting stale moving-contact ownership");
 		}
 

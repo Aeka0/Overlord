@@ -105,8 +105,13 @@ namespace weapon_carry_tests
 			for (int choice=0;choice<3;++choice)
 			{
 				auto state=initial;
-				const auto claim=claim_grip(state,other,true,false,true,choice==0 ? rifle : identity{}, {},
-					choice<2 ? location::right_waist : location::absent);
+				const auto claim = claim_grip(state, {
+					.actor = other,
+					.pressed = true,
+					.available = true,
+					.support = choice == 0 ? rifle : identity{},
+					.slot = choice < 2 ? location::right_waist : location::absent
+				});
 				check(claim.consumed==(choice<2),"support and occupied holster consume the press before ground pickup or F");
 				if(choice==0)check(state.in_hand(other)->id==rifle && state.in_slot(location::right_waist)->id.weapon==102,
 					"support wins a simultaneous support and holster contact without drawing the sidearm");
@@ -116,13 +121,34 @@ namespace weapon_carry_tests
 			}
 			for (int blocked=0;blocked<3;++blocked)
 			{
-				auto state=initial;const auto claim=claim_grip(state,other,blocked!=0,blocked==1,blocked!=2,rifle,{},location::right_waist);
+				auto state = initial;
+				const auto claim = claim_grip(state, {
+					.actor = other,
+					.pressed = blocked != 0,
+					.released = blocked == 1,
+					.available = blocked != 2,
+					.support = rifle,
+					.slot = location::right_waist
+				});
 				check(!claim.consumed && !state.in_hand(other),"no edge, release or leased/busy hand cannot acquire support or draw");
 			}
-			auto state=initial;const auto stale=claim_grip(state,other,true,false,true,{101,rifle.generation+1},{},location::right_waist);
+			auto state = initial;
+			const auto stale = claim_grip(state, {
+				.actor = other,
+				.pressed = true,
+				.available = true,
+				.support = {101, rifle.generation + 1},
+				.slot = location::right_waist
+			});
 			check(stale.consumed && !stale.pose_changed && !state.in_hand(other),"failed high-priority claim never falls through to another operation");
 			state=initial;state.support(rifle,other);state.release(rifle,1u<<static_cast<unsigned>(rear),location::absent,true,[](const auto&){return false;});
-			const auto control=claim_grip(state,rear,true,false,true,{},rifle,location::right_waist);
+			const auto control = claim_grip(state, {
+				.actor = rear,
+				.pressed = true,
+				.available = true,
+				.control = rifle,
+				.slot = location::right_waist
+			});
 			check(control.consumed && control.pose_changed && state.in_hand(rear)->id==rifle,"rear-grip reacquisition precedes holster and world actions");
 		}
 		{
