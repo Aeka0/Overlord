@@ -35,25 +35,25 @@ namespace vr::gameplay::hands
 		out.valid = true;
 		return out;
 	}
-	std::uint64_t present_interactions(const interaction_rig& parts,
-	                                   const rig& r,
-	                                   const controller_input::frame& input,
-	                                   const std::array<anchor, 2>& targets,
-	                                   const std::array<vec, 2>& shoulders,
-	                                   const std::array<vec, 3>& axes,
-	                                   float units,
-	                                   std::span<bone> solved,
-	                                   unsigned posed_hands,
-	                                   unsigned visible_hands,
-	                                   std::array<std::uint64_t, 2>* item_tokens) noexcept
+	presentation_result present_interactions(const interaction_rig& parts,
+	                                         const presentation_input& presentation) noexcept
 	{
+		const auto& r = presentation.skeleton;
+		const auto& input = presentation.controllers;
+		const auto& targets = presentation.targets;
+		const auto& shoulders = presentation.shoulders;
+		const auto& axes = presentation.axes;
+		const auto units = presentation.units_per_meter;
+		const auto solved = presentation.solved;
+		const auto posed_hands = presentation.posed_hands;
+		const auto visible_hands = presentation.visible_hands;
 		if (!parts.valid || solved.size() < std::size_t(r.count))
-			return 0;
+			return {};
 		if (cliffhanger_physical::independent_hands())
 		{
 			equipment::special::cliffhanger::present(
 			    parts, r, input, targets, shoulders, axes, units, solved, 0, visible_hands);
-			return 0;
+			return {};
 		}
 		if (sequences::independent_hands(game::CG_GetPredictedPlayerState(0)))
 		{
@@ -72,12 +72,12 @@ namespace vr::gameplay::hands
 					                            false,
 					                            solved);
 				}
-			return 0;
+			return {};
 		}
 		if (vehicles::presentation_allowed())
 		{
 			vehicles::present(parts, r, input, targets, shoulders, axes, units, solved);
-			return 0;
+			return {};
 		}
 		const auto knife_state = equipment::prepare_hand_pose(parts, r);
 		unsigned occupied_mask{};
@@ -118,8 +118,6 @@ namespace vr::gameplay::hands
 		    parts, r, input, targets, shoulders, axes, units, solved, posed_hands, visible_hands);
 		const auto tokens =
 		    reload_items::present(parts, r, input, targets, solved, posed_hands, visible_hands);
-		if (item_tokens)
-			*item_tokens = tokens;
-		return knife_state.knife.revision;
+		return {.knife_revision = knife_state.knife.revision, .reload_item_tokens = tokens};
 	}
 }

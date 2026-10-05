@@ -250,22 +250,22 @@ template<class Check> void scripted_sequence_tests(Check check)
 		for(const auto state:{sliding::classify(false,true,401,401),sliding::classify(true,false,401,401),
 			sliding::classify(true,true,402,401),sliding::classify(true,true,0,0),sliding::classify(true,true,401,0)})
 			check(state.stage==phase::none,"slide death, unlink, missing or stale slidemodel cannot own another camera");
-		const auto price=gulag::cinematic(true,true,"player_rig",gulag::same_entity(35371,35371),false,false);
-		const auto impact=gulag::cinematic(true,true,"worldbody",false,true,false);
-		const auto rock=gulag::cinematic(true,true,"player_rig",false,false,true);
+		const auto price=gulag::cinematic({.alive = true, .linked = true, .rig = "player_rig", .price_anchor = gulag::same_entity(35371,35371), .cafeteria = false, .evacuation_rig = false});
+		const auto impact=gulag::cinematic({.alive = true, .linked = true, .rig = "worldbody", .price_anchor = false, .cafeteria = true, .evacuation_rig = false});
+		const auto rock=gulag::cinematic({.alive = true, .linked = true, .rig = "player_rig", .price_anchor = false, .cafeteria = false, .evacuation_rig = true});
 		for(const auto state:{price,impact,rock})
 			check(state.scene==scenario::gulag && state.stage==phase::execution &&
 				state.camera==scene_cameras::gulag_later && state.rotation_tag==vr::game_view::scripted_camera_tag::player && !state.suspend_weapons &&
 				state.allow_turn && state.allow_movement && !state.retain_weapon && !state.hide_body_arms,
 				"Price knockdown, falling rock and rock removal own rotation only until the native rig unlinks");
 		check(!gulag::same_entity(0,0) && !gulag::same_entity(35371,35372),"empty or recycled story anchors cannot match");
-		for(const auto state:{gulag::cinematic(true,true,"worldbody",false,false,false),
-			gulag::cinematic(true,true,"player_rig",false,false,false),gulag::cinematic(true,true,"h2_active_breacher_rig",true,true,true),
-			gulag::cinematic(false,true,"player_rig",true,false,false),gulag::cinematic(true,false,"worldbody",false,true,false)})
+		for(const auto state:{gulag::cinematic({.alive = true, .linked = true, .rig = "worldbody", .price_anchor = false, .cafeteria = false, .evacuation_rig = false}),
+			gulag::cinematic({.alive = true, .linked = true, .rig = "player_rig", .price_anchor = false, .cafeteria = false, .evacuation_rig = false}),gulag::cinematic({.alive = true, .linked = true, .rig = "h2_active_breacher_rig", .price_anchor = true, .cafeteria = true, .evacuation_rig = true}),
+			gulag::cinematic({.alive = false, .linked = true, .rig = "player_rig", .price_anchor = true, .cafeteria = false, .evacuation_rig = false}),gulag::cinematic({.alive = true, .linked = false, .rig = "worldbody", .price_anchor = false, .cafeteria = true, .evacuation_rig = false})})
 			check(state.stage==phase::none,"unrelated worldbody, ordinary breach, death and unlink retain existing camera policy");
 	}
 	{
-		const auto helicopter=gulag::classify(true,true,true);
+		const auto helicopter=gulag::classify({.alive = true, .linked = true, .intro_controller = true});
 		check(helicopter.scene==scenario::gulag && helicopter.stage==phase::scripted_combat && helicopter.retain_weapon,
 			"Gulag intro helicopter retains the final hand on release");
 		check(!helicopter.suspend_weapons && helicopter.allow_movement && helicopter.allow_turn &&
@@ -279,18 +279,18 @@ template<class Check> void scripted_sequence_tests(Check check)
 			gulag::intro_tag(27230,27230,26799)==vr::game_view::scripted_camera_tag::aim &&
 			gulag::intro_tag(99,27230,26799)==vr::game_view::scripted_camera_tag::none,
 			"remastered and legacy helicopter controllers read their actual authored camera tags");
-		const auto attached=gulag::evacuation(true,true,"player_rig",true,true);
+		const auto attached=gulag::evacuation({.alive = true, .linked = true, .rig = "player_rig", .begun = true, .used = true});
 		check(attached.camera==scene_cameras::gulag_evacuation && attached.rotation_tag==vr::game_view::scripted_camera_tag::player &&
 			!attached.allow_world_use && !attached.independent_hands,
 			"accepted attachment uses authored camera/body presentation rather than interactive rope hands");
-		check(gulag::evacuation(true,true,"player_rig",true,false).stage==phase::none &&
-			gulag::evacuation(true,false,"player_rig",true,true).stage==phase::none &&
-			gulag::evacuation(true,true,"worldbody",true,true).stage==phase::none,
+		check(gulag::evacuation({.alive = true, .linked = true, .rig = "player_rig", .begun = true, .used = false}).stage==phase::none &&
+			gulag::evacuation({.alive = true, .linked = false, .rig = "player_rig", .begun = true, .used = true}).stage==phase::none &&
+			gulag::evacuation({.alive = true, .linked = true, .rig = "worldbody", .begun = true, .used = true}).stage==phase::none,
 			"rope camera requires accepted use plus a linked player rig, never the preceding rock scene");
-		check(!gulag::rope_ready(true,false,false,false) && !gulag::rope_ready(true,true,true,false),
+		check(!gulag::rope_ready({.alive = true, .evacuation_begun = false, .linked = false, .used = false}) && !gulag::rope_ready({.alive = true, .evacuation_begun = true, .linked = true, .used = false}),
 			"evac arrival and linked flare/rope animation cannot expose the attachment target");
-		check(gulag::rope_ready(true,true,false,false) && !gulag::rope_ready(true,true,false,true) &&
-			!gulag::rope_ready(false,true,false,false),"native animation end opens rope use until activation or death");
+		check(gulag::rope_ready({.alive = true, .evacuation_begun = true, .linked = false, .used = false}) && !gulag::rope_ready({.alive = true, .evacuation_begun = true, .linked = false, .used = true}) &&
+			!gulag::rope_ready({.alive = false, .evacuation_begun = true, .linked = false, .used = false}),"native animation end opens rope use until activation or death");
 		check(gulag::rope_target("player_uses_rig","") && gulag::rope_target("","ending_rope1") &&
 			gulag::rope_target("","ending_rope") && !gulag::rope_target("player_can_rappel","player_rappel"),
 			"rope gating covers the trigger and visual proxies without blocking other rappels");
@@ -299,42 +299,42 @@ template<class Check> void scripted_sequence_tests(Check check)
 			"captured adjacent legacy rope trigger remains excluded when the remastered target becomes ready");
 		// Live time 754899: actor unlinked, all evacuation readiness flags zero.
 		// Entity 1766 was player_uses_rig, entity 1978 was retired player_ropes.
-		check(!gulag::rope_ready(true,false,false,false) && gulag::retired_rope_target("player_ropes"),
+		check(!gulag::rope_ready({.alive = true, .evacuation_begun = false, .linked = false, .used = false}) && gulag::retired_rope_target("player_ropes"),
 			"both prematurely exposed native rope volumes reject the captured pre-evac frame");
 		// Live time 790450: native cursor type=1, entity=1766; weapon flags=0x80.
-		const auto ready=gulag::rope_use(true,true,false,false);
+		const auto ready=gulag::rope_use({.alive = true, .evacuation_begun = true, .linked = false, .used = false});
 		check(ready.stage==phase::scripted_use && ready.allow_world_use && ready.independent_hands && !vr::gameplay::scripted_control::permits_weapons(0x80) &&
 			ready.camera==vr::game_view::camera_profiles::gameplay && !ready.retain_weapon && !ready.hide_body_arms,
 			"captured rope-ready frame grants native world use without granting firearm permission or taking over the camera");
-		check(!gulag::rope_use(true,false,false,false).allow_world_use && !gulag::rope_use(true,true,true,false).allow_world_use &&
-			!gulag::rope_use(true,true,false,true).allow_world_use && !gulag::rope_use(false,true,false,false).allow_world_use,
+		check(!gulag::rope_use({.alive = true, .evacuation_begun = false, .linked = false, .used = false}).allow_world_use && !gulag::rope_use({.alive = true, .evacuation_begun = true, .linked = true, .used = false}).allow_world_use &&
+			!gulag::rope_use({.alive = true, .evacuation_begun = true, .linked = false, .used = true}).allow_world_use && !gulag::rope_use({.alive = false, .evacuation_begun = true, .linked = false, .used = false}).allow_world_use,
 			"world-use override is absent before readiness, while linked, after attachment and on death");
-		for(const auto state:{gulag::rope_use(true,false,false,false),gulag::rope_use(true,true,true,false),
-			gulag::rope_use(true,true,false,true),gulag::rope_use(false,true,false,false)})
+		for(const auto state:{gulag::rope_use({.alive = true, .evacuation_begun = false, .linked = false, .used = false}),gulag::rope_use({.alive = true, .evacuation_begun = true, .linked = true, .used = false}),
+			gulag::rope_use({.alive = true, .evacuation_begun = true, .linked = false, .used = true}),gulag::rope_use({.alive = false, .evacuation_begun = true, .linked = false, .used = false})})
 			check(!state.independent_hands,"tracked rope hands end with readiness and cannot override authored or dead-player arms");
 		// Captured Grip reached entity 1766/9 and native +activate, but the
 		// G_PlayerUse hook runs outside the scheduler's VM-safe callback scope.
 		auto published=ready;published.epoch=23;
 		const gulag::use_witness witness{23,9,gulag::use_kind::rope};
-		check(gulag::native_use_allowed(witness.current(23,9),published,false,true,false),
+		check(gulag::native_use_allowed(witness.current(23,9), published, {.weapon_permission = false, .alive = true, .linked = false}),
 			"native use consumes a VM-classified rope witness with guns disabled and no scheduler/VM call");
-		check(!gulag::native_use_allowed(witness.current(24,9),published,false,true,false) &&
-			!gulag::native_use_allowed(witness.current(23,10),published,false,true,false),
+		check(!gulag::native_use_allowed(witness.current(24,9), published, {.weapon_permission = false, .alive = true, .linked = false}) &&
+			!gulag::native_use_allowed(witness.current(23,10), published, {.weapon_permission = false, .alive = true, .linked = false}),
 			"checkpoint replacement and recycled entity cannot inherit rope authorization");
-		check(!gulag::native_use_allowed(gulag::use_kind::retired,published,true,true,false) &&
-			!gulag::native_use_allowed(gulag::use_kind::unknown,published,true,true,false),
+		check(!gulag::native_use_allowed(gulag::use_kind::retired, published, {.weapon_permission = true, .alive = true, .linked = false}) &&
+			!gulag::native_use_allowed(gulag::use_kind::unknown, published, {.weapon_permission = true, .alive = true, .linked = false}),
 			"legacy and unobserved targets stay rejected even when weapons are enabled");
-		check(!gulag::native_use_allowed(gulag::use_kind::rope,published,false,true,true) &&
-			!gulag::native_use_allowed(gulag::use_kind::rope,published,false,false,false) &&
-			!gulag::native_use_allowed(gulag::use_kind::rope,{},true,true,false),
+		check(!gulag::native_use_allowed(gulag::use_kind::rope, published, {.weapon_permission = false, .alive = true, .linked = true}) &&
+			!gulag::native_use_allowed(gulag::use_kind::rope, published, {.weapon_permission = false, .alive = false, .linked = false}) &&
+			!gulag::native_use_allowed(gulag::use_kind::rope, {}, {.weapon_permission = true, .alive = true, .linked = false}),
 			"native link/death and lost sequence ownership revoke a retained rope target");
-		check(!gulag::native_use_allowed(gulag::use_kind::ordinary,published,false,true,false) &&
-			gulag::native_use_allowed(gulag::use_kind::ordinary,{},true,true,false),
+		check(!gulag::native_use_allowed(gulag::use_kind::ordinary, published, {.weapon_permission = false, .alive = true, .linked = false}) &&
+			gulag::native_use_allowed(gulag::use_kind::ordinary, {}, {.weapon_permission = true, .alive = true, .linked = false}),
 			"rope-specific use permission does not grant ordinary interactions during weapon suppression");
-		for (const auto state:{gulag::classify(false,true,true),gulag::classify(true,false,true),gulag::classify(true,true,false)})
+		for (const auto state:{gulag::classify({.alive = false, .linked = true, .intro_controller = true}),gulag::classify({.alive = true, .linked = false, .intro_controller = true}),gulag::classify({.alive = true, .linked = true, .intro_controller = false})})
 			check(state.stage==phase::none && !state.retain_weapon,
 				"death, touchdown unlink and unrelated rappel/rescue controllers release helicopter retention");
-		check(gulag::classify(true,true,true).retain_weapon,
+		check(gulag::classify({.alive = true, .linked = true, .intro_controller = true}).retain_weapon,
 			"checkpoint entry can retain weapons without a preceding helicopter transition");
 	}
 	{

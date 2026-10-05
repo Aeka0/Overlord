@@ -107,7 +107,7 @@ template<class Check> void camera_policy_tests(Check check)
         // They share a sequence epoch. Banking from the helper must never seed
         // that epoch, nor consume the real camera's one-time alignment.
         namespace gulag=vr::gameplay::sequences::gulag;
-        auto legacy=gulag::classify(true,true,true,scripted_camera_tag::aim);
+        auto legacy=gulag::classify({.alive = true, .linked = true, .intro_controller = true, .tag = scripted_camera_tag::aim});
         legacy.epoch=55;legacy.position_epoch=550;
         camera_rig switching;
         camera_input view{axes(0,170,0),axes(12,30,5),{},170,30,30,100,1};
@@ -119,7 +119,7 @@ template<class Check> void camera_policy_tests(Check check)
         ++view.time;helper.axis=axes(71.14892f,-140.0584f,119.1992f);
         check(same(switching.compose(view,legacy_request,&helper).axis,axes(12,-170,5)),
             "legacy helper retains authored yaw without accepting its unrelated pitch/roll");
-        auto animated=gulag::classify(true,true,true,scripted_camera_tag::player);
+        auto animated=gulag::classify({.alive = true, .linked = true, .intro_controller = true, .tag = scripted_camera_tag::player});
         animated.epoch=55;animated.position_epoch=551;
         const auto animated_request=vr::gameplay::sequences::camera_request_for(animated);
         helper={551,axes(2.11236f,-130.58766f,8.56289f)};++view.time;
@@ -134,7 +134,7 @@ template<class Check> void camera_policy_tests(Check check)
             "corrected Gulag camera still follows native yaw/roll while excluding native pitch");
     }
 
-    auto helicopter=vr::gameplay::sequences::gulag::classify(true,true,true);
+    auto helicopter=vr::gameplay::sequences::gulag::classify({.alive = true, .linked = true, .intro_controller = true});
     helicopter.epoch=60;helicopter.position_epoch=601;
     request=vr::gameplay::sequences::camera_request_for(helicopter);
     rig={};input={axes(0,170,0),axes(12,30,5),{},170,30,30,100,1};
@@ -162,7 +162,7 @@ template<class Check> void camera_policy_tests(Check check)
     check(same(rig.compose(input,request,&source).axis,axes(12,90,5)),
         "Gulag checkpoint rollback rearms the one-time entry alignment");
 
-    auto evacuation=vr::gameplay::sequences::gulag::evacuation(true,true,"player_rig",true,true);
+    auto evacuation=vr::gameplay::sequences::gulag::evacuation({.alive = true, .linked = true, .rig = "player_rig", .begun = true, .used = true});
     evacuation.epoch=70;evacuation.position_epoch=701;
     request=vr::gameplay::sequences::camera_request_for(evacuation);rig={};
     input={axes(0,180,0),axes(15,45,7),{.4f,1.7f,-.2f},180,45,45,200,3};source={701,axes(25,-30,20)};

@@ -39,17 +39,17 @@ template<class Check> void oilrig_sequence_tests(Check check)
 	e.weapon_recovery=false;e.out_of_water=true;check(oil::classify(e)==phase::none,"restored weapon permission releases recovery camera");
 	for(bool boarded:{false,true})
 	{
-		const auto ride=oil::evacuation(true,17,17,boarded,true);
+		const auto ride=oil::evacuation({.alive = true, .parent = 17, .worldbody = 17, .boarded = boarded, .landed = true});
 		check(ride.camera==vr::game_view::camera_profiles::aligned && ride.retain_weapon && !ride.suspend_weapons,
 			"Oilrig boarding and helicopter ride reuse free look and weapon retention without overriding native disableweapons");
 	}
-	check(oil::evacuation(true,18,17,false,true,true).retain_weapon &&
-		oil::evacuation(true,18,17,true,true,true).stage==phase::none,
+	check(oil::evacuation({.alive = true, .parent = 18, .worldbody = 17, .boarded = false, .landed = true, .boarding_helper = true}).retain_weapon &&
+		oil::evacuation({.alive = true, .parent = 18, .worldbody = 17, .boarded = true, .landed = true, .boarding_helper = true}).stage==phase::none,
 		"temporary boarding origin is admitted only before the native boarded flag");
-	check(oil::evacuation(false,17,17,true,true).stage==phase::none &&
-		oil::evacuation(true,18,17,true,true).stage==phase::none &&
-		oil::evacuation(true,17,17,false,false).stage==phase::none &&
-		oil::evacuation(true,0,0,true,true).stage==phase::none,
+	check(oil::evacuation({.alive = false, .parent = 17, .worldbody = 17, .boarded = true, .landed = true}).stage==phase::none &&
+		oil::evacuation({.alive = true, .parent = 18, .worldbody = 17, .boarded = true, .landed = true}).stage==phase::none &&
+		oil::evacuation({.alive = true, .parent = 17, .worldbody = 17, .boarded = false, .landed = false}).stage==phase::none &&
+		oil::evacuation({.alive = true, .parent = 0, .worldbody = 0, .boarded = true, .landed = true}).stage==phase::none,
 		"death, unrelated parents, absent bodies and earlier scripted scenes cannot inherit helicopter policy");
 	check(oil::permits_equipment(oil::equipment::detonator,"c4") && !oil::permits_equipment(oil::equipment::detonator,"claymore") &&
 		!oil::permits_equipment(oil::equipment::claymore,"c4") && oil::permits_equipment(oil::equipment::claymore,"claymore"),
@@ -57,9 +57,9 @@ template<class Check> void oilrig_sequence_tests(Check check)
 	check(oil::permits_equipment(oil::equipment::unrestricted,"claymore") &&
 		!oil::permits_equipment(oil::equipment::unavailable,"c4") && oil::permits_equipment(oil::equipment::unavailable,"m4m203_reflex"),
 		"Oilrig equipment policy leaves other maps and firearms intact and fails closed on missing mission evidence");
-	check(oil::can_detonate(true,false,true,true,true) && !oil::can_detonate(false,false,true,true,true) &&
-		!oil::can_detonate(true,true,true,true,true) && !oil::can_detonate(true,false,false,true,true) &&
-		!oil::can_detonate(true,false,true,false,true) && !oil::can_detonate(true,false,true,true,false),
+	check(oil::can_detonate({.planted = true, .triggered = false, .native_c4 = true, .weapons_enabled = true, .empty_feed = true}) && !oil::can_detonate({.planted = false, .triggered = false, .native_c4 = true, .weapons_enabled = true, .empty_feed = true}) &&
+		!oil::can_detonate({.planted = true, .triggered = true, .native_c4 = true, .weapons_enabled = true, .empty_feed = true}) && !oil::can_detonate({.planted = true, .triggered = false, .native_c4 = false, .weapons_enabled = true, .empty_feed = true}) &&
+		!oil::can_detonate({.planted = true, .triggered = false, .native_c4 = true, .weapons_enabled = false, .empty_feed = true}) && !oil::can_detonate({.planted = true, .triggered = false, .native_c4 = true, .weapons_enabled = true, .empty_feed = false}),
 		"Oilrig remote requires native planting completion, selected zero-clip C4, weapon permission and an unconsumed ambush");
 	namespace breach=vr::gameplay::sequences::breach;
 	check(breach::classify(true,true,"h2_active_breacher_rig",false)==phase::breach_plant,"planting owns body even when native weapon-disable bit is clear");

@@ -55,3 +55,9 @@ Shared native queries use the [H2 SP typed entry points](../h2/README.md).
 Gameplay policies consume copied values; existing native adapters keep their
 executable, thread, object-generation and layout guards. A native selection
 request never replaces observation of the actual equipped player-state weapon.
+
+Campaign classifiers consume copied, named observations; VM reads and live
+entity witnesses remain in the native adapters. Hand presentation accepts a
+`hands::presentation_input` and returns a `presentation_result` containing the
+knife revision and reload-item tokens. These values are presentation metadata,
+not native ownership acknowledgements.
