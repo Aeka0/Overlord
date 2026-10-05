@@ -61,3 +61,8 @@ entity witnesses remain in the native adapters. Hand presentation accepts a
 `hands::presentation_input` and returns a `presentation_result` containing the
 knife revision and reload-item tokens. These values are presentation metadata,
 not native ownership acknowledgements.
+
+Rigid vectors, quaternions and transforms live in `../spatial_math.hpp`. Hand
+solving consumes those primitives; bone hierarchy and finger posing remain in
+`hand_pose_solver.hpp` and `hand_pose_math.hpp`. Generic renderers include the
+spatial primitives directly and do not depend on a hand rig or weapon schema.

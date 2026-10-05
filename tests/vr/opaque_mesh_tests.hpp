@@ -22,7 +22,7 @@ template<class Check> void opaque_mesh_tests(ID3D11Device* device,ID3D11DeviceCo
 	const auto placed=transform({{1,2,3},{0,0,.70710678f,.70710678f}},{10,0,0},{0,10,0},identity);
 	check(std::abs(placed[12]-11)<.0001f && std::abs(placed[13]+8)<.0001f &&
 		std::abs(placed[0])<.0001f && std::abs(placed[1]-1)<.0001f,"guide composes part rotation, current placement and eye origin");
-	mesh geometry;const std::array<hands::vec,3> vertices{{{-1,-1,.5f},{-1,1,.5f},{1,0,.5f}}};
+	mesh geometry;const std::array<vr::spatial_math::vec,3> vertices{{{-1,-1,.5f},{-1,1,.5f},{1,0,.5f}}};
 	const std::array<unsigned,3> indices{0,1,2};
 	D3D11_BUFFER_DESC buffer{};buffer.Usage=D3D11_USAGE_IMMUTABLE;buffer.BindFlags=D3D11_BIND_VERTEX_BUFFER;buffer.ByteWidth=sizeof(vertices);
 	D3D11_SUBRESOURCE_DATA data{vertices.data(),0,0};

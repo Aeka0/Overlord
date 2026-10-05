@@ -11,7 +11,7 @@ namespace vr::opaque_mesh
 		// Only the already validated rigid_part output is accepted here.
 		if(!model || model->numBones!=1 || model->numLods!=1 || !model->numsurfs ||
 			model->lodInfo[0].numsurfs!=model->numsurfs || !model->lodInfo[0].surfs)return {};
-		std::vector<hands::vec> positions;std::vector<unsigned> triangles;
+		std::vector<spatial_math::vec> positions;std::vector<unsigned> triangles;
 		Microsoft::WRL::ComPtr<ID3D11Device> device;
 		for(unsigned n=0;n<model->numsurfs;++n)
 		{
@@ -147,7 +147,7 @@ float4 ps(float4 position:SV_Position):SV_Target {
 			if(FAILED(deferred_->Map(constants_.Get(),0,D3D11_MAP_WRITE_DISCARD,0,&mapped))){deferred_->ClearState();return false;}
 			const constants data{d.clip_from_model,{tint,emission,0,0}};
 			std::memcpy(mapped.pData,&data,sizeof(data));deferred_->Unmap(constants_.Get(),0);
-			auto* vb=d.geometry->vertices.Get();const UINT stride=sizeof(hands::vec),offset=0;
+			auto* vb=d.geometry->vertices.Get();const UINT stride=sizeof(spatial_math::vec),offset=0;
 			deferred_->IASetVertexBuffers(0,1,&vb,&stride,&offset);deferred_->IASetIndexBuffer(d.geometry->indices.Get(),DXGI_FORMAT_R32_UINT,0);
 			deferred_->DrawIndexed(d.geometry->index_count,0,0);
 		}
