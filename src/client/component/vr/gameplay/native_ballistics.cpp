@@ -1,4 +1,5 @@
 #include <std_include.hpp>
+#include "../h2/entrypoints.hpp"
 #include "native_scripted_control.hpp"
 #include "native_ballistics.hpp"
 #include "official_cheats.hpp"
@@ -44,7 +45,7 @@ namespace vr::gameplay::weapons::native_ballistics
 		constexpr std::uint8_t trace[]{0x40,0x53,0x55,0x56,0x57,0x48,0x83,0xec,0x78};
 		constexpr std::uint8_t player_gate[]{0x41,0xf7,0x46,0x58,0x00,0x30,0x10,0x00};
 		verified=verify(bullet_address,wrapper) && verify(0x1404AAE27,descriptor) &&
-			verify(ads_spread_address,spread) && verify(0x1406A5440,type_entry) &&
+			verify(ads_spread_address,spread) && verify(vr::h2::sp::weapon_type.address(),type_entry) &&
 			verify(0x1404CBFE0,trace) && verify(0x140518A7F,player_gate) && native_ammunition::initialize();
 		return verified;
 	}
@@ -83,7 +84,7 @@ namespace vr::gameplay::weapons::native_ballistics
 		if (!valid(geometry)) return out;
 		out.status=outcome::unsupported_weapon;
 		const auto owned=native_ammunition::observe_carried(ps,id);
-		if (!owned.valid || utils::hook::invoke<int>(0x1406A5440,weapon,false)!=1) return out;
+		if (!owned.valid || vr::h2::sp::weapon_type(weapon,false)!=1) return out;
 		out.before=owned;
 		out.status=outcome::empty;
 		if (out.before.loaded<=0) return out;

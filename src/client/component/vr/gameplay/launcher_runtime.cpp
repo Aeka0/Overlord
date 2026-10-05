@@ -1,4 +1,5 @@
 #include <std_include.hpp>
+#include "../h2/entrypoints.hpp"
 #include "launcher_runtime.hpp"
 #include "launcher_targeting.hpp"
 #include "javelin_screen.hpp"
@@ -38,7 +39,7 @@ namespace vr::gameplay::weapons::launcher
 			{const std::lock_guard lock(mutex);if(const auto* i=find(id);i && owns_feed(owner,i->scene))p=i->scene.definition;}
 			const auto* name=game::weapon_defs[token]->szInternalName;
 			if(!p || !name || !p->matches({name,strnlen_s(name,64)}) || game::weapon_defs[token]->clipSize!=1 ||
-				utils::hook::invoke<int>(0x1406A5440,token,false)!=3)return nullptr;
+				vr::h2::sp::weapon_type(token,false)!=3)return nullptr;
 			return p;
 		}
 		bool settle_instance(instance& i,bool insert)
@@ -63,7 +64,7 @@ namespace vr::gameplay::weapons::launcher
 				if(!ammo.valid){i={};continue;}
 				const auto token=i.scene.owner.weapon;const auto* def=token<512?game::weapon_defs[token]:nullptr;
 				if(!def || !def->szInternalName || !i.scene.definition->matches({def->szInternalName,strnlen_s(def->szInternalName,64)}) ||
-					def->clipSize!=1 || utils::hook::invoke<int>(0x1406A5440,token,false)!=3){i.view.fault=true;continue;}
+					def->clipSize!=1 || vr::h2::sp::weapon_type(token,false)!=3){i.view.fault=true;continue;}
 				const auto live=std::find_if(owned.begin(),owned.end(),[&](const auto& x){return x.owner.id()==i.scene.owner.id();});
 				if(suspended || !ready() || !scripted_control::allowed(ps) || live==owned.end() || live->owner.rear!=i.view.owner.rear || live->owner.rear_revision!=i.view.owner.rear_revision)
 				{

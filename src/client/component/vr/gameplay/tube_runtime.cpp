@@ -1,4 +1,5 @@
 #include <std_include.hpp>
+#include "../h2/entrypoints.hpp"
 #include "hand_interaction/runtime.hpp"
 #include "hand_interaction/mechanical_contacts.hpp"
 #include "native_scripted_control.hpp"
@@ -117,7 +118,7 @@ namespace vr::gameplay::weapons::tube
 					scene.owner.id()!=observed.ammo.id() || !valid_hand(scene.owner.holding_hand()) ||
 					now<scene.input.sampled_at || now-scene.input.sampled_at>150ms || (!carry::active() && observed.ammo.weapon_state!=0))
 				{ reason="waiting for authored tracked tube scene and native idle"; return; }
-				if (utils::hook::invoke<int>(0x1406A3A60,ps,observed.ammo.weapon,false)!=p->ammunition.capacity)
+				if (vr::h2::sp::clip_capacity(ps,observed.ammo.weapon,false)!=p->ammunition.capacity)
 				{ reason="modified native capacity rejected"; return; }
 				const auto imported=import_native(p->ammunition,observed.ammo.weapon,++generation,
 					{observed.ammo.loaded,observed.ammo.reserve});
@@ -236,7 +237,7 @@ namespace vr::gameplay::weapons::tube
 				const auto* ps=game::g_entities[0].client;const auto observed=native_ammunition::observe_owned(ps,e.id);
 				const auto* p=observed.valid?native_tube_profile(observed.native_name.data(),observed.base_capacity,s.definition):nullptr;
 				if(!p || observed.ammo.id()!=e.id || (manual(p->ammunition) && !observed.bolt_action) ||
-					utils::hook::invoke<int>(0x1406A3A60,ps,e.id.weapon,false)!=p->ammunition.capacity)continue;
+					vr::h2::sp::clip_capacity(ps,e.id.weapon,false)!=p->ammunition.capacity)continue;
 				const auto preview=import_native(p->ammunition,e.id.weapon,generation+1,{observed.ammo.loaded,observed.ammo.reserve});
 				if(!valid(p->ammunition,preview))continue;
 				view.active=true;view.owner=live->owner;view.definition=p;view.ammo=preview;

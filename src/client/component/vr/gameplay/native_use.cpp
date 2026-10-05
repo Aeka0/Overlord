@@ -1,4 +1,5 @@
 #include <std_include.hpp>
+#include "../h2/entrypoints.hpp"
 #include "native_use.hpp"
 #include "native_use_range_bridge.hpp"
 #include "native_carry.hpp"
@@ -154,7 +155,7 @@ namespace vr::gameplay::interaction::native
 			// borrow a client DObj, cache zone pointers, or interpret the 1-unit entity
 			// collision box as the visible installation object's size.
 			if (read<std::uint8_t>(entity,0)!=5) return false;
-			const auto* object=utils::hook::invoke<const void*>(0x1405A6ED0,entity);
+			const auto* object=vr::h2::sp::server_entity_dobj(entity);
 			if (!object) return false;
 			volume.origin=read<vec>(entity,0xf4);
 			const auto angles=read<vec>(entity,0x100);
@@ -241,7 +242,7 @@ namespace vr::gameplay::interaction::native
 			!call_matches(0x140526D4D,0x140282800) || !call_matches(0x1405272A9,0x14061A750) ||
 			!call_matches(0x140526EC7,0x14067EA40) ||
 			!call_matches(0x140526762,0x140517DF0) ||
-			!call_matches(0x1405270D8,0x1405A6ED0) || !call_matches(0x1405270ED,0x140588250) ||
+			!call_matches(0x1405270D8,vr::h2::sp::server_entity_dobj.address()) || !call_matches(0x1405270ED,0x140588250) ||
 			!call_matches(0x140588294,0x140654B20) || !call_matches(0x1405271D5,0x1404CC070) ||
 			!verify(0x140654B20,model_bounds) || !verify(0x1404CC070,script_trace))
 		{reason="native use signatures rejected";return false;}
@@ -309,7 +310,7 @@ namespace vr::gameplay::interaction::native
 			const auto item=weapons::native_carry::pickup_item(key);
 			// Only the instance adapter admits supported physical firearm copies.
 			if (read<std::uint8_t>(entity,0)==2 && !item.weapon &&
-				utils::hook::invoke<int>(0x1406A5360,read<std::uint32_t>(entity,0x80),false)==0) continue;
+				vr::h2::sp::weapon_inventory_type(read<std::uint32_t>(entity,0x80),false)==0) continue;
 			const auto center=read<vec>(entity,0xdc);
 			oriented_volume volume;
 			vec trace_point=center;bool script_model=false;

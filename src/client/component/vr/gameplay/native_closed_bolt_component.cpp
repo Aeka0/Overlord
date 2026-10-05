@@ -1,4 +1,5 @@
 #include <std_include.hpp>
+#include "../h2/entrypoints.hpp"
 #include "native_closed_bolt_policy.hpp"
 #include "../debug_options.hpp"
 #include "native_ammunition.hpp"
@@ -20,7 +21,7 @@ namespace vr::gameplay::weapons::native_closed_bolt
 {
 	namespace
 	{
-		constexpr std::uintptr_t native_capacity = 0x1406A3A60;
+		constexpr std::uintptr_t native_capacity = vr::h2::sp::clip_capacity.address();
 		utils::hook::detour admission_hook, refill_hook;
 		game::dvar_t* enabled{};
 		bool installed{};

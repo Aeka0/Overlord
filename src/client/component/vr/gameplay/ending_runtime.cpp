@@ -1,4 +1,5 @@
 #include <std_include.hpp>
+#include "../h2/entrypoints.hpp"
 #include "ending_runtime.hpp"
 #include "ending_script.hpp"
 #include "ending_grips.hpp"
@@ -105,7 +106,7 @@ namespace vr::gameplay::ending
                 const auto e=entity(n);const auto p=e.call("gettagorigin",{name}),a=e.call("gettagangles",{name});
                 if(!p.is<scripting::vector>() || !a.is<scripting::vector>())return false;
                 out.position=vector(p);const auto angles=vector(a);
-                utils::hook::invoke<void>(0x140613590,angles.data(),out.rotation.data());
+                vr::h2::sp::angles_to_quaternion(angles.data(),out.rotation.data());
                 return free_climb::finite(out.position) && free_climb::rotation_valid(out.rotation);
             }
             catch(const std::exception&){return false;}
@@ -196,7 +197,7 @@ namespace vr::gameplay::ending
         bool revolver_center(int actor,vec& out)
         {
             if(!ground_ready || actor<=0 || actor>=4000)return false;
-            const auto* object=utils::hook::invoke<native_object*>(0x1405A6ED0,&game::g_entities[actor]);
+            const auto* object=reinterpret_cast<native_object*>(vr::h2::sp::server_entity_dobj(&game::g_entities[actor]));
             if(!object || !object->models || object->model_count!=1)return false;
             const auto* model=object->models[0];
             if(!model || !model->name || std::string_view(model->name)!="weapon_colt_anaconda_animated" ||
@@ -295,7 +296,7 @@ namespace vr::gameplay::ending
             grounding out{actor,gun,0,generation};if(!active || !ground_ready || actor<=0)return out;
             // Native per-bone mesh bounds include the boot sole. Do not guess an
             // ankle-to-ground offset or move the player's camera/scene origin.
-            auto* object=utils::hook::invoke<native_object*>(0x1405A6ED0,&game::g_entities[actor]);
+            auto* object=reinterpret_cast<native_object*>(vr::h2::sp::server_entity_dobj(&game::g_entities[actor]));
             if(!object || !object->models || !object->model_count || object->model_count>32)return out;
             float gap=10000;unsigned feet{};
             for(unsigned m=0;m<object->model_count;++m)
@@ -453,7 +454,7 @@ namespace vr::gameplay::ending
             {const std::lock_guard lock(pub_mutex);value=ground;}
             if(value.delta==0)return -1;
             for(unsigned i=0;i<2;++i){const int n=i?value.gun:value.actor;
-                if(n>0 && n<4000 && utils::hook::invoke<void*>(0x1405A6DD0,n,0)==object)return int(i);}
+                if(n>0 && n<4000 && vr::h2::sp::client_entity_dobj(n,0)==object)return int(i);}
             return -1;
         }
     }
@@ -505,7 +506,7 @@ namespace vr::gameplay::ending
             trace_ready=bool(utils::hook_validation::verify_masked_bytes(reinterpret_cast<void*>(0x1404CBFE0),{bytes,mask.data(),sizeof(bytes)}));
             constexpr std::uint8_t model_bytes[]{0x48,0x8d,0x05,0xc9,0x6e,0xd3,0x04,0x48,0x2b,0xc8};
             std::array<std::uint8_t,sizeof(model_bytes)> model_mask{};model_mask.fill(255);
-            ground_ready=bool(utils::hook_validation::verify_masked_bytes(reinterpret_cast<void*>(0x1405A6ED0),{model_bytes,model_mask.data(),sizeof(model_bytes)}));
+            ground_ready=bool(utils::hook_validation::verify_masked_bytes(reinterpret_cast<void*>(vr::h2::sp::server_entity_dobj.address()),{model_bytes,model_mask.data(),sizeof(model_bytes)}));
             gsc::register_virtual_source(std::string(script_name),std::string(script_source),"ending");
             gsc::add_function("vrendingknifehint",[]{
                 constexpr auto key=game_text::key::ending_knife_pull;

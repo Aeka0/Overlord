@@ -1,4 +1,5 @@
 #include <std_include.hpp>
+#include "../h2/entrypoints.hpp"
 #include "notebook_runtime.hpp"
 #include "vehicle_runtime.hpp"
 #include "cliffhanger_physical.hpp"
@@ -349,7 +350,7 @@ namespace vr::gameplay::hands::empty_native
             if ((std::to_integer<unsigned>(ps[2])>=2 && std::to_integer<unsigned>(ps[2])<=3) ||
                 (!climbing && (((*reinterpret_cast<const std::uint32_t*>(ps+0x58)&0x103000) && !vehicles::presentation_allowed()) ||
                 (!weapons::carry::active() && ((*reinterpret_cast<const std::uint32_t*>(ps+0x3bc)&0x1ff) ||
-                    *reinterpret_cast<const std::uint32_t*>(0x141E8A628))) ||
+                    vr::h2::sp::weapon_selection_request.read())) ||
                 (weapons::current_hold().weapon && !vehicles::presentation_allowed())))) return false;
 			const auto input=controller_input::latest();
 			const auto now=controller_input::clock::now();

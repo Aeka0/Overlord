@@ -1,4 +1,5 @@
 #include <std_include.hpp>
+#include "../h2/entrypoints.hpp"
 #ifdef DEBUG
 #include "native_ballistics.hpp"
 #include "component/command.hpp"
@@ -50,7 +51,7 @@ namespace vr::gameplay::weapons::independent_fire_probe
 		};
 		identity capture(const void* ps)
 		{
-			identity result{*reinterpret_cast<const std::uint32_t*>(0x141E8A628),
+			identity result{vr::h2::sp::weapon_selection_request.read(),
 				read<std::uint32_t>(&game::g_entities[0],0x80),read<std::uint32_t>(ps,0x3bc),
 				read<std::uint32_t>(ps,0x3c0),read<int>(ps,0x2c0),read<int>(ps,0x2b4)};
 			std::memcpy(result.inventory.data(),static_cast<const std::byte*>(ps)+0x2f8,result.inventory.size());

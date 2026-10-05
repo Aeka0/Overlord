@@ -1,4 +1,5 @@
 #include <std_include.hpp>
+#include "../h2/entrypoints.hpp"
 #include "native_carry.hpp"
 #include "underbarrel_runtime.hpp"
 #include "native_carry_model.hpp"
@@ -114,7 +115,7 @@ namespace vr::gameplay::weapons::native_carry
 				// hide-parts path as native single-weapon spawn (0x1404C5BA2..C24).
 				utils::hook::invoke<void>(0x140518280,item,splitting->single_model->name);
 				utils::hook::invoke<void>(0x1405166B0,item,1);
-				if(auto* object=utils::hook::invoke<void*>(0x1405A6ED0,item))
+				if(auto* object=vr::h2::sp::server_entity_dobj(item))
 					utils::hook::invoke<void>(0x1406A8FA0,object,splitting->item.weapon,0);
 				splitting->retained=true;return;
 			}
@@ -131,19 +132,19 @@ namespace vr::gameplay::weapons::native_carry
 			if(def && def->szInternalName && special_melee::supported(def->szInternalName))return true;
 			// 0 is the native primary inventory class; grenades/mission props remain
 			// in their existing authorities. Native akimbo is not a pair of instances.
-			return utils::hook::invoke<int>(0x1406A5360,token,false)==0;
+			return vr::h2::sp::weapon_inventory_type(token,false)==0;
 		}
 		bool duplicate_supported(std::uint32_t token) noexcept
 		{
 			// The physical firing adapter owns primary bullet feeds. Native akimbo,
 			// auxiliary launchers and aliased definition clips require their own feeds.
-			return eligible(token) && utils::hook::invoke<int>(0x1406A5440,token,false)==1 &&
-				!utils::hook::invoke<int>(0x1406A5610,token) && native_ammunition::exclusive_loaded_feed(game::g_entities[0].client,token);
+			return eligible(token) && vr::h2::sp::weapon_type(token,false)==1 &&
+				!vr::h2::sp::weapon_dual_wield_flag(token) && native_ammunition::exclusive_loaded_feed(game::g_entities[0].client,token);
 		}
 		bool split_supported(std::uint32_t token)noexcept
 		{
-			return eligible(token) && utils::hook::invoke<int>(0x1406A5440,token,false)==1 &&
-				!utils::hook::invoke<int>(0x1406A5610,token) && native_ammunition::exclusive_pickup_feed(game::g_entities[0].client,token);
+			return eligible(token) && vr::h2::sp::weapon_type(token,false)==1 &&
+				!vr::h2::sp::weapon_dual_wield_flag(token) && native_ammunition::exclusive_pickup_feed(game::g_entities[0].client,token);
 		}
 		int take_stub(void* ps,std::uint32_t token)
 		{
@@ -185,7 +186,7 @@ namespace vr::gameplay::weapons::native_carry
 			const auto token=read<std::uint32_t>(item,0x80);
 			const bool admitted=acquiring.weapon==token && acquiring.key==entity_key(number(item));
 			const bool firearm=read<std::uint8_t>(item,0)==2 && (token&511u) &&
-				utils::hook::invoke<int>(0x1406A5360,token,false)==0;
+				vr::h2::sp::weapon_inventory_type(token,false)==0;
 			return carry::suppress_weapon_touch(true,true,firearm,admitted);
 		}
 		void pickup_stub(game::gentity_s* item,game::gentity_s* actor,int automatic)
@@ -301,12 +302,12 @@ namespace vr::gameplay::weapons::native_carry
 			!verify(0x1404C6010,pickup_entry) || !verify(0x1404C71B0,scavenge_entry) || !verify(0x1404C686D,full_call) || !verify(0x14051C0D0,select_entry) ||
 			!verify(0x1404C3AE0,physics_entry) || !verify(0x1404CBFE0,trace_entry) ||
 			!verify(0x1405182C0,origin_entry) || !verify(0x140518180,angles_entry) || !verify(0x1406A5510,model_entry) || !verify(0x1406A8FA0,hide_entry) ||
-			!verify(0x1406A8100,variation_entry) || !verify(0x1406A5360,class_entry) || !verify(0x1406B6830,link_entry) ||
+			!verify(0x1406A8100,variation_entry) || !verify(vr::h2::sp::weapon_inventory_type.address(),class_entry) || !verify(0x1406B6830,link_entry) ||
 			!verify(0x1406A8E90,take_entry) || !verify(0x14051B660,give_entry) || !verify(0x1404C34D9,take_call) ||
-			!verify(0x14051B78F,existing_give) || !verify(0x1404C5FAB,manual_pickup) || !verify(0x1406A5610,secondary_entry) ||
+			!verify(0x14051B78F,existing_give) || !verify(0x1404C5FAB,manual_pickup) || !verify(vr::h2::sp::weapon_dual_wield_flag.address(),secondary_entry) ||
 			!verify(0x1404C5EDA,admission_call) || !verify(0x140683678,script_gate) ||
 			!verify(0x1404C5FE9,pickup_free_call) || !verify(0x1404C6697,dual_payload_loop) ||
-			!verify(0x140518280,set_model_entry) || !verify(0x1405166D7,dobj_update_call) || !verify(0x1405A6ED0,entity_dobj_entry)) return false;
+			!verify(0x140518280,set_model_entry) || !verify(0x1405166D7,dobj_update_call) || !verify(vr::h2::sp::server_entity_dobj.address(),entity_dobj_entry)) return false;
 		free_hook.create(0x140517890,free_stub);
 		world_model_hook.create(0x1406A5510,world_model_stub);
 		hide_parts_hook.create(0x1406A8FA0,hide_parts_stub);
@@ -336,11 +337,11 @@ namespace vr::gameplay::weapons::native_carry
 			const auto* entity=&game::g_entities[saved.key.entity];
 			hands::anchor world;world.position=read<hands::vec>(entity,0xdc);
 			const auto angles=read<hands::vec>(entity,0xe8);
-			utils::hook::invoke<void>(0x140613590,angles.data(),world.rotation.data());
+			vr::h2::sp::angles_to_quaternion(angles.data(),world.rotation.data());
 			if (finite(world.position)) drop_presentation::update(saved.key,world);
 		}
 		out.player=game::g_entities[0].client;out.time=game::CG_GetGameTime(0);
-		out.selected=*reinterpret_cast<const std::uint32_t*>(0x141E8A628);
+		out.selected=vr::h2::sp::weapon_selection_request.read();
 		std::array<std::uint32_t,15> definitions{};
 		std::array<carry::rules,15> policies{};std::size_t count{};
 		const auto action_slots=equipment::special::weapon_slots({static_cast<const std::byte*>(out.player),0x1fc0});
@@ -373,7 +374,7 @@ namespace vr::gameplay::weapons::native_carry
 		if (!token) {game::G_SelectWeapon(0,game::Weapon{});return true;}
 		// Grip transfers on the same gun are not new equipment requests. Do not
 		// restart its native action or interrupt its mechanical state.
-		if (*reinterpret_cast<const std::uint32_t*>(0x141E8A628)==token &&
+		if (vr::h2::sp::weapon_selection_request.read()==token &&
 			(read<std::uint32_t>(game::g_entities[0].client,0x3bc)&511)==token) return true;
 		const auto* native_name=name(token);const auto length=native_name ? strnlen_s(native_name,128) : 0;
 		if (!length || length>=128) return false;

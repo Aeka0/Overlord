@@ -1,4 +1,5 @@
 #include <std_include.hpp>
+#include "../h2/entrypoints.hpp"
 #ifdef DEBUG
 #include "native_ammunition.hpp"
 #include "native_carry.hpp"
@@ -27,7 +28,7 @@ namespace vr::gameplay::weapons::carry_probe
 		{
 			if (!game::CL_IsCgameInitialized() || !game::g_entities[0].client) {out << stage << " no_world\n";return;}
 			const auto* ps=game::g_entities[0].client;
-			out << stage << " selected=" << *reinterpret_cast<const std::uint32_t*>(0x141E8A628)
+			out << stage << " selected=" << vr::h2::sp::weapon_selection_request.read()
 				<< " ps=" << read<std::uint32_t>(ps,0x3bc) << " entity=" << read<std::uint32_t>(&game::g_entities[0],0x80)
 				<< " state=" << read<int>(ps,0x2c0) << " flags=" << read<std::uint32_t>(ps,0x3c0) << " owned=";
 			for (unsigned i=0;i<15;++i)

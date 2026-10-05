@@ -1,4 +1,5 @@
 #include <std_include.hpp>
+#include "../h2/entrypoints.hpp"
 #include "native_ammunition.hpp"
 #include "weapon_carry_runtime.hpp"
 #include "native_ammunition_storage.hpp"
@@ -30,7 +31,7 @@ namespace vr::gameplay::weapons::native_ammunition
 		{
 			if(!weapon || weapon>=512 || !game::weapon_defs[weapon])return true;
 			const auto* name=game::weapon_defs[weapon]->szInternalName;
-			return special_melee::uses_ammunition(utils::hook::invoke<int>(0x1406A5440,weapon,false),name ? name : "");
+			return special_melee::uses_ammunition(vr::h2::sp::weapon_type(weapon,false),name ? name : "");
 		}
 		std::mutex instance_mutex;
 		clip_ledger clips;

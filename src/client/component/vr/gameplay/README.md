@@ -50,3 +50,8 @@ establish independent source provenance or change the applicable licenses.
 
 Weapon configuration fields, units, shared defaults and verification boundaries
 are documented in [the weapon configuration guide](weapons/README.md).
+
+Shared native queries use the [H2 SP typed entry points](../h2/README.md).
+Gameplay policies consume copied values; existing native adapters keep their
+executable, thread, object-generation and layout guards. A native selection
+request never replaces observation of the actual equipped player-state weapon.

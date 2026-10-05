@@ -1,4 +1,5 @@
 #include <std_include.hpp>
+#include "../h2/entrypoints.hpp"
 #include "component/vr/gameplay/hand_rig_builder.hpp"
 #include "mounted_turret.hpp"
 #include "mounted_turret_pose.hpp"
@@ -350,7 +351,8 @@ namespace vr::gameplay::mounted
 			const float pitch=control.angles[0]*.00872664625997f,yaw=control.angles[1]*.00872664625997f;
 			const auto rotation=normalize(multiply(from_axis(root),multiply(quat{0,0,std::sin(yaw),std::cos(yaw)},quat{0,std::sin(pitch),0,std::cos(pitch)})));
 			const std::array<vec,3> axis{rotate(rotation,{1,0,0}),rotate(rotation,{0,1,0}),rotate(rotation,{0,0,1})};
-			utils::hook::invoke<void>(0x14060D410,axis.data(),angles.data());return finite(angles);
+			static_assert(sizeof(axis) == 9 * sizeof(float));
+			game::AxisToAngles(reinterpret_cast<const float(*)[3]>(axis.data()),angles.data());return finite(angles);
 		}
 		void vehicle_target_stub(game::gentity_s* vehicle)
 		{
@@ -397,7 +399,7 @@ namespace vr::gameplay::mounted
 	camera_view prepare_camera(float* origin,float (*axis)[3]) noexcept
 	{
 		const auto p=latest();if(!origin || !axis || p.profile!=&blackhawk || !admitted(p))return {};
-		auto* object=utils::hook::invoke<void*>(0x1405A6DD0,p.entity,0);
+		auto* object=vr::h2::sp::client_entity_dobj(p.entity,0);
 		if(mounted_model(object).profile!=&blackhawk)return {};
 		// Blackhawk's default vehicle-camera mode skips CG_VehicleView. Use the
 		// existing final native-camera boundary, before HMD composition, in every
@@ -406,7 +408,8 @@ namespace vr::gameplay::mounted
 		camera_geometry(reinterpret_cast<void*>(0x141C328F0ull+std::uintptr_t(p.entity)*0x200),object,seat.data(),basis[0].data());
 		if(!valid_offset_axis(basis))return {};
 		camera_view view;view.epoch=p.instance|(1ull<<62);
-		utils::hook::invoke<void>(0x14060D410,basis.data(),view.angles.data());
+		static_assert(sizeof(basis) == 9 * sizeof(float));
+		game::AxisToAngles(reinterpret_cast<const float(*)[3]>(basis.data()),view.angles.data());
 		std::copy(seat.begin(),seat.end(),origin);std::memcpy(axis,basis.data(),sizeof(basis));return view;
 	}
 	bool owns_model(const void* object) noexcept
@@ -419,7 +422,7 @@ namespace vr::gameplay::mounted
 		if (!ps || !assembly.profile || !attached(ps->e_flags,assembly.profile->kind)) return false;
 		const int entity=read<std::uint16_t>(ps,0x1e);
 		return entity>0 && entity<4000 && object &&
-			object==utils::hook::invoke<void*>(0x1405A6DD0,entity,0);
+			object==vr::h2::sp::client_entity_dobj(entity,0);
 	}
 	void apply_pose(void* object,bool rebuilt) noexcept
 	{

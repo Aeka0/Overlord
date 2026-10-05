@@ -1,4 +1,5 @@
 #include <std_include.hpp>
+#include "../h2/entrypoints.hpp"
 #include "component/vr/gameplay/hand_rig_builder.hpp"
 #include "component/vr/gameplay/weapon_pose_library.hpp"
 #include "scripted_arms_runtime.hpp"
@@ -33,7 +34,7 @@ namespace vr::gameplay::scripted_arms
             static const bool valid=[] {
                 constexpr std::uint8_t bytes[]{0x48,0x63,0xc1,0x48,0x8d,0x0d,0xa6,0xc2,0xb6,0x0a,0x0f,0xbf,0x0c,0x41,0x85,0xc9};
                 std::array<std::uint8_t,sizeof(bytes)> mask{};mask.fill(255);
-                return bool(utils::hook_validation::verify_masked_bytes(reinterpret_cast<void*>(0x1405A6DD0),{bytes,mask.data(),sizeof(bytes)}));
+                return bool(utils::hook_validation::verify_masked_bytes(reinterpret_cast<void*>(vr::h2::sp::client_entity_dobj.address()),{bytes,mask.data(),sizeof(bytes)}));
             }();
             return valid;
         }
@@ -49,7 +50,7 @@ namespace vr::gameplay::scripted_arms
         bool matches(const void* object,const sequences::view& state)
         {
             return object && state.arms.reserved() && lookup_ready() &&
-                object==utils::hook::invoke<void*>(0x1405A6DD0,state.arms.entity,0);
+                object==vr::h2::sp::client_entity_dobj(state.arms.entity,0);
         }
         struct binding_key
         {

@@ -56,7 +56,7 @@ namespace vr::gameplay::interaction
 			// discards fresh bindings while paused, so defer the matching release
 			// until the queue can accept it rather than losing a script notification.
 			const auto* paused=game::Dvar_FindVar("cl_paused");
-			return ready && utils::hook::invoke<bool>(0x1406B3860) && paused && !paused->current.integer &&
+			return ready && game::SV_Loaded() && paused && !paused->current.integer &&
 				!utils::hook::invoke<bool>(0x1406B0120) && !utils::hook::invoke<int>(0x1404C8700);
 		}
 		target query_target(int hand,const ray& aim,target_key held,const controller_input::frame& input)

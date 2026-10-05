@@ -1,4 +1,5 @@
 #include <std_include.hpp>
+#include "../h2/entrypoints.hpp"
 #include "cliffhanger_runtime.hpp"
 #include "cliffhanger_model.hpp"
 #include "cliffhanger_physical.hpp"
@@ -296,7 +297,7 @@ namespace vr::gameplay::equipment::special::cliffhanger
         // Includes the native raising/drop interval. Retained VR guns must not
         // emit independent shots while the story has selected its detonator.
         return (field<unsigned>(game::CG_GetPredictedPlayerState(0),0x3bc)&511)==c.weapon ||
-            field<unsigned>(reinterpret_cast<const void*>(0x141E8A628),0)==c.weapon;
+            field<unsigned>(vr::h2::sp::weapon_selection_request.get(),0)==c.weapon;
     }
     bool preserve_native_selection(unsigned requested)noexcept
     {

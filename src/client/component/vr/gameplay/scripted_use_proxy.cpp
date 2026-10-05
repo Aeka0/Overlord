@@ -1,4 +1,5 @@
 #include <std_include.hpp>
+#include "../h2/entrypoints.hpp"
 #include "scripted_use_proxy.hpp"
 #include "native_carry.hpp"
 #include "native_use.hpp"
@@ -33,7 +34,7 @@ namespace vr::gameplay::interaction::scripted_use
 		bool observe_visual(const scripting::entity& model_entity,snapshot& out,std::string_view required_tag={})
 		{
 			out.visual=key(model_entity);if(!out.visual)return false;
-			const auto* object=utils::hook::invoke<const void*>(0x1405A6ED0,&game::g_entities[out.visual.entity]);
+			const auto* object=vr::h2::sp::server_entity_dobj(&game::g_entities[out.visual.entity]);
 			if(!object || read<unsigned char>(object,15)!=1)return false;
 			const auto models=read<game::XModel* const*>(object,0xd8);if(!models || !models[0])return false;
 			const auto* model=models[0];

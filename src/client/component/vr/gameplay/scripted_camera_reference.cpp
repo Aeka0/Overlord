@@ -1,4 +1,5 @@
 #include <std_include.hpp>
+#include "../h2/entrypoints.hpp"
 #include "scripted_camera_reference.hpp"
 #include <utils/native_memory.hpp>
 #include "../pose_filter.hpp"
@@ -20,7 +21,7 @@ namespace vr::gameplay::sequences::camera_reference
         {
             // The same H2 client object/tag-matrix ABI used by mounted turret
             // camera tags, verified by a bounded read on 2026-09-30.
-            static const bool valid=verify(0x1405A6DD0,std::array<std::uint8_t,16>{0x48,0x63,0xc1,0x48,0x8d,0x0d,0xa6,0xc2,0xb6,0x0a,0x0f,0xbf,0x0c,0x41,0x85,0xc9}) &&
+            static const bool valid=verify(vr::h2::sp::client_entity_dobj.address(),std::array<std::uint8_t,16>{0x48,0x63,0xc1,0x48,0x8d,0x0d,0xa6,0xc2,0xb6,0x0a,0x0f,0xbf,0x0c,0x41,0x85,0xc9}) &&
                 verify(0x140370E10,std::array<std::uint8_t,12>{0x40,0x53,0x48,0x81,0xec,0x90,0,0,0,0x49,0x8b,0xd9});
             return valid;
         }
@@ -41,7 +42,7 @@ namespace vr::gameplay::sequences::camera_reference
         if(!ready())return reject("native camera tag contract rejected");
         auto* centity=reinterpret_cast<void*>(0x141C328F0ull+std::uintptr_t(v.linked_entity)*0x200);
         unsigned short entity{};if(!read(centity,0x1b4,entity) || entity!=v.linked_entity)return reject("client camera entity mismatch");
-        auto* object=utils::hook::invoke<void*>(0x1405A6DD0,v.linked_entity,0);
+        auto* object=vr::h2::sp::client_entity_dobj(v.linked_entity,0);
         unsigned char count{};game::XModel** model_array{};std::array<game::XModel*,32> models{};
         if(!read(object,15,count) || !count || count>models.size() || !read(object,0xd8,model_array) ||
             !utils::native_memory::read_bytes(models.data(),model_array,count*sizeof(models[0])))return reject("client camera model unavailable");
@@ -68,7 +69,7 @@ namespace vr::gameplay::sequences::camera_reference
         if(!cached.tag)return reject("authored camera tag missing");
         game_view::scripted_rotation_reference out;std::array<float,3> origin{};
         if(!utils::hook::invoke<int>(0x140370E10,centity,object,cached.tag,out.axis.data(),origin.data()))return reject("authored camera pose unavailable");
-        if(utils::hook::invoke<void*>(0x1405A6DD0,v.linked_entity,0)!=object)return reject("camera object changed during sample");
+        if(vr::h2::sp::client_entity_dobj(v.linked_entity,0)!=object)return reject("camera object changed during sample");
         if(!pose_filter::valid({{},out.axis}))return reject("invalid authored camera basis");
         out.source=cached.source;++samples;reason="authored camera tag sampled";return out;
     }

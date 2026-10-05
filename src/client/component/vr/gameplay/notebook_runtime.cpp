@@ -1,4 +1,5 @@
 #include <std_include.hpp>
+#include "../h2/entrypoints.hpp"
 #include "notebook_runtime.hpp"
 #include "notebook_model.hpp"
 #include "abdominal_interaction.hpp"
@@ -60,7 +61,7 @@ namespace vr::gameplay::equipment::special::notebook
 			if(state.requested() || !game::CL_IsCgameInitialized() || game::g_entities[0].client!=completed_player ||
 				weapons::native_ammunition::timeline()!=completed_timeline){completed_weapon=0;return;}
 			unsigned actual{};std::memcpy(&actual,static_cast<const std::byte*>(completed_player)+0x3bc,4);
-			const auto desired=*reinterpret_cast<const unsigned*>(0x141E8A628);
+			const auto desired=vr::h2::sp::weapon_selection_request.read();
 			if(!needs_empty_return(completed_weapon,weapons::carry::current_hold().weapon,desired,actual))
 			{completed_weapon=0;return;}
 			// Wait for native script ownership to end, then use the same verified

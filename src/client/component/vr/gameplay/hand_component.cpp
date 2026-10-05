@@ -1,4 +1,5 @@
 #include <std_include.hpp>
+#include "../h2/entrypoints.hpp"
 #include "component/vr/gameplay/hand_rig_builder.hpp"
 #include "component/vr/gameplay/weapon_pose_library.hpp"
 #include "vehicle_runtime.hpp"
@@ -58,7 +59,7 @@ namespace vr::gameplay::hands
 	namespace
 	{
 		constexpr std::uintptr_t calc_skeleton_address = 0x140657D80;
-		constexpr std::uintptr_t client_object_address = 0x1405A6DD0;
+		constexpr std::uintptr_t client_object_address = vr::h2::sp::client_entity_dobj.address();
 		constexpr int primary_viewmodel_handle = 4000;
 		using object_layout=native_object;
 		utils::hook::detour calc_skeleton_hook;
@@ -585,7 +586,7 @@ namespace vr::gameplay::hands
 				if (!matched) {reason="native receiver has no held owner";++skipped;original();return;}
 				selection_transition=true;probe.owner=owner;
 			}
-			if (!empty && !independent && weapons::carry::active() && owner.weapon!=*reinterpret_cast<const std::uint32_t*>(0x141E8A628))
+			if (!empty && !independent && weapons::carry::active() && owner.weapon!=vr::h2::sp::weapon_selection_request.read())
 				selection_transition=true;
 			const auto* render_view = *reinterpret_cast<const std::byte* const*>(0x141E39D30);
 			if (!render_view)

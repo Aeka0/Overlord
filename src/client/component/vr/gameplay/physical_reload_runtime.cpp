@@ -1,4 +1,5 @@
 #include <std_include.hpp>
+#include "../h2/entrypoints.hpp"
 #include "../debug_options.hpp"
 #include "component/scene_models.hpp"
 #include "native_scripted_control.hpp"
@@ -199,7 +200,7 @@ namespace vr::gameplay::weapons::physical_reload
 					if (!scene.gameplay) return "scene input is paused or captured by UI";
 					if (now < scene.input.sampled_at || now-scene.input.sampled_at > 150ms)
 						return "waiting for fresh tracked scene input";
-					live_capacity=utils::hook::invoke<int>(0x1406A3A60,ps,selected,false);
+					live_capacity=vr::h2::sp::clip_capacity(ps,selected,false);
 					if (live_capacity != definition->ammunition.magazine_capacity)
 						return "modified native capacity rejected";
 					return nullptr;
@@ -424,7 +425,7 @@ namespace vr::gameplay::weapons::physical_reload
 				const auto* definition=observed.valid?native_reload_profile(observed.native_name.data(),observed.base_capacity,s.definition):nullptr;
 				if (!definition) continue;
 				const auto preview=import_native_feed(*definition,entry.id,observed,
-					utils::hook::invoke<int>(0x1406A3A60,ps,entry.id.weapon,false),generation+1);
+					vr::h2::sp::clip_capacity(ps,entry.id.weapon,false),generation+1);
 				if (!preview) continue;
 				view.active=true;view.definition=definition;view.owner=live->owner;view.ammo=*preview;
 			}

@@ -55,6 +55,7 @@ using vr::hand;
 #include "support_only_reload_tests.hpp"
 #include "interaction_schedule_tests.hpp"
 #include "support_handoff_tests.hpp"
+#include "native_binding_tests.hpp"
 #include "tube_reload_tests.hpp"
 #include "fixed_drum_tests.hpp"
 #include "belt_reload_tests.hpp"
@@ -248,6 +249,7 @@ int main()
 	support_only_reload_tests::run<fixture>(check);
 	interaction_schedule_tests::run(check);
 	support_handoff_tests::run(check);
+	native_binding_tests::run(check);
 	belt_reload_tests::run<fixture>(check);
 	belt_cover_push_tests::run<fixture>(check);
 	rpd_reload_tests::run<fixture>(check);

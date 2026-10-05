@@ -1,4 +1,5 @@
 #include <std_include.hpp>
+#include "../h2/entrypoints.hpp"
 #include "designator_events.hpp"
 #include "native_scripted_control.hpp"
 #include "component/command.hpp"
@@ -44,11 +45,8 @@ namespace vr::gameplay::weapons
 		std::atomic<const char*> reason{"waiting for shot"};
 		constexpr std::uintptr_t fire_address = 0x140518A40;
 		constexpr std::uintptr_t parameter_address = 0x140518880;
-		constexpr std::uintptr_t weapon_type_address = 0x1406A5440;
 		constexpr auto bullet_address = native_ballistics::bullet_address;
 		constexpr auto ads_spread_address = native_ballistics::ads_spread_address;
-		// Verified FinishMove loads this token into usercmd.weapon at +0x14.
-		constexpr std::uintptr_t selected_weapon_address = 0x141E8A628;
 		using native_parameters = native_ballistics::parameters;
 		struct shot_context
 		{
@@ -262,7 +260,7 @@ namespace vr::gameplay::weapons
 		if (carry::active()) return carry::current_hold();
 		const auto token =
 			identity_verified && alive.load(std::memory_order_relaxed) && game::CL_IsCgameInitialized()
-				? *reinterpret_cast<const std::uint32_t*>(selected_weapon_address)
+				? vr::h2::sp::weapon_selection_request.read()
 				: 0;
 		const std::lock_guard lock(state_mutex);
 		const auto before = holding.current();
@@ -327,7 +325,7 @@ namespace vr::gameplay::weapons
 		if (!hooks_installed || !index || !game::weapon_defs[index]) return fire_delivery::unsupported;
 		if(game::weapon_defs[index]->szInternalName && std::string_view(game::weapon_defs[index]->szInternalName)=="usp_laserdesignator")return fire_delivery::scripted_device;
 		const auto* name=game::weapon_defs[index]->szInternalName;
-		const auto delivery=native_fire_delivery(utils::hook::invoke<int>(weapon_type_address,weapon,alternate),name ? name : "");
+		const auto delivery=native_fire_delivery(vr::h2::sp::weapon_type(weapon,alternate),name ? name : "");
 		return delivery==fire_delivery::native_projectile && !projectile_verified ? fire_delivery::unsupported : delivery;
 	}
 	bool firing_ready(const hold& owner, std::uint64_t reference,
@@ -375,7 +373,7 @@ namespace vr::gameplay::weapons
 			constexpr std::uint8_t trace_mask[]{0xc7, 0x44, 0x24, 0x20, 0x31, 0xe8, 0x80, 0x02};
 			if (!identity_verified || !verify(0x1404AD1ED, event_call) ||
 				!verify(0x140518B91, parameter_call) || !verify(parameter_address, parameter_entry) ||
-				!verify(weapon_type_address, type_entry) || !verify(0x1403CEDFC, attack) ||
+				!verify(vr::h2::sp::weapon_type.address(), type_entry) || !verify(0x1403CEDFC, attack) ||
 				!verify(0x1404CBFE0, trace_entry) || !verify(0x1404AC57B, trace_mask))
 			{
 				reason = "native shot hook signature mismatch";

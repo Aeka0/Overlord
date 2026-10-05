@@ -1,4 +1,5 @@
 #include <std_include.hpp>
+#include "../h2/entrypoints.hpp"
 #include "weapon_interaction.hpp"
 #include "designator_events.hpp"
 #include "designator_event_policy.hpp"
@@ -147,7 +148,7 @@ namespace vr::gameplay::equipment::special::designator_events
 		{
 			if(!bound || !game::CL_IsCgameInitialized() || !weapons::carry::active() || !scripted_control::allowed(game::g_entities[0].client))return;
 			const auto* ps=reinterpret_cast<const std::byte*>(game::g_entities[0].client);unsigned actual{};std::memcpy(&actual,ps+0x3bc,4);
-			const auto desired=*reinterpret_cast<const unsigned*>(0x141E8A628);
+			const auto desired=vr::h2::sp::weapon_selection_request.read();
 			if(recovering_weapon)
 			{
 				const auto state=activation(recovering_weapon);

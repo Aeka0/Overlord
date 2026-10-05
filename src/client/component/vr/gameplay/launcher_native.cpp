@@ -56,7 +56,9 @@ namespace vr::gameplay::weapons::launcher
 			hands::vec eye{};std::memcpy(eye.data(),reinterpret_cast<const std::byte*>(actor)+0xf4,sizeof(eye));
 			eye[2]+=reinterpret_cast<const game::playerState_s*>(actor->client)->viewHeightCurrent;
 			std::array<hands::vec,3> axis{};
-			utils::hook::invoke<void>(0x140613090,reinterpret_cast<const std::byte*>(actor)+0x40,axis.data());
+			static_assert(sizeof(axis) == 9 * sizeof(float));
+			game::AnglesToAxis(reinterpret_cast<const float*>(reinterpret_cast<const std::byte*>(actor)+0x40),
+				reinterpret_cast<float(*)[3]>(axis.data()));
 			const auto corrected=reticle_delta({delta[0],delta[1],delta[2]},eye,muzzle,axis);
 			for(float x:corrected)if(!std::isfinite(x))return false;
 			++projected;

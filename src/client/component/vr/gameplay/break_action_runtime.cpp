@@ -1,4 +1,5 @@
 #include <std_include.hpp>
+#include "../h2/entrypoints.hpp"
 #include "hand_interaction/runtime.hpp"
 #include "hand_interaction/mechanical_contacts.hpp"
 #include "native_scripted_control.hpp"
@@ -111,7 +112,7 @@ namespace vr::gameplay::weapons::break_action
 					scene.owner.id()!=observed.ammo.id() || !valid_hand(scene.owner.holding_hand()) ||
 					now<scene.input.sampled_at || now-scene.input.sampled_at>150ms || (!carry::active() && observed.ammo.weapon_state!=0))
 				{ reason="waiting for authored tracked break_action scene and native idle"; return; }
-				if (utils::hook::invoke<int>(0x1406A3A60,ps,observed.ammo.weapon,false)!=int(p->ammunition.capacity))
+				if (vr::h2::sp::clip_capacity(ps,observed.ammo.weapon,false)!=int(p->ammunition.capacity))
 				{ reason="modified native capacity rejected"; return; }
 				const auto imported=import_native(p->ammunition,observed.ammo.weapon,++generation,
 					{observed.ammo.loaded,observed.ammo.reserve});
