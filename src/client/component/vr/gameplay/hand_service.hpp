@@ -1,0 +1,22 @@
+#pragma once
+#include "hand_pose_library.hpp"
+#include "bar_hand_pose.hpp"
+#include "../controller_input.hpp"
+
+namespace vr::gameplay::hands
+{
+	struct interaction_rig
+	{
+		hands::pose_library library{};
+		std::array<hands::pose_library,2> vehicle_poses{};
+		hands::pose_library vehicle_handles{};
+		std::array<hands::quat,2> basis{};
+		std::array<bar_grip::binding,2> bar_grips{};
+		bool valid{};
+	};
+	interaction_rig bind_interaction_rig(const rig&,std::span<const bone_definition>) noexcept;
+	std::uint64_t present_interactions(const interaction_rig&,const rig&,const controller_input::frame&,
+		const std::array<anchor,2>& targets,const std::array<vec,2>& shoulders,
+		const std::array<vec,3>& axes,float units,std::span<bone>,unsigned posed=0,unsigned visible=3,
+		std::array<std::uint64_t,2>* reload_items=nullptr) noexcept;
+}

@@ -1,0 +1,2 @@
+require("credits")
+require("victoryscreen")

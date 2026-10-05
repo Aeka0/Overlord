@@ -1,0 +1,79 @@
+{
+  "name": "H2 VR vive_controller",
+  "description": "Left trackpad moves and clicks to sprint; right trackpad turns and clicks to jump; independent hand poses.",
+  "controller_type": "vive_controller",
+  "bindings": {
+    "/actions/gameplay": {
+      "haptics": [
+        { "output": "/actions/gameplay/out/left_haptic", "path": "/user/hand/left/output/haptic" },
+        { "output": "/actions/gameplay/out/right_haptic", "path": "/user/hand/right/output/haptic" }
+      ],
+      "poses": [
+        {
+          "output": "/actions/gameplay/in/left_grip",
+          "path": "/user/hand/left/pose/raw"
+        },
+        {
+          "output": "/actions/gameplay/in/left_aim",
+          "path": "/user/hand/left/pose/tip"
+        },
+        {
+          "output": "/actions/gameplay/in/right_grip",
+          "path": "/user/hand/right/pose/raw"
+        },
+        {
+          "output": "/actions/gameplay/in/right_aim",
+          "path": "/user/hand/right/pose/tip"
+        }
+      ],
+      "sources": [
+        {
+          "path": "/user/hand/left/input/application_menu", "mode": "button",
+          "inputs": { "click": { "output": "/actions/gameplay/in/menu_toggle" } }
+        },
+        {
+          "path": "/user/hand/left/input/grip", "mode": "button",
+          "inputs": { "click": { "output": "/actions/gameplay/in/left_squeeze" } }
+        },
+        {
+          "path": "/user/hand/right/input/grip", "mode": "button",
+          "inputs": { "click": { "output": "/actions/gameplay/in/right_squeeze" } }
+        },
+        {
+          "path": "/user/hand/left/input/trigger",
+          "mode": "trigger",
+          "inputs": { "click": { "output": "/actions/gameplay/in/left_trigger" } }
+        },
+        {
+          "path": "/user/hand/right/input/trigger",
+          "mode": "trigger",
+          "inputs": { "click": { "output": "/actions/gameplay/in/right_trigger" } }
+        },
+        {
+          "path": "/user/hand/left/input/trackpad",
+          "mode": "trackpad",
+          "inputs": {
+            "position": {
+              "output": "/actions/gameplay/in/move"
+            },
+            "click": {
+              "output": "/actions/gameplay/in/sprint"
+            }
+          }
+        },
+        {
+          "path": "/user/hand/right/input/trackpad",
+          "mode": "trackpad",
+          "inputs": {
+            "position": {
+              "output": "/actions/gameplay/in/turn"
+            },
+            "click": {
+              "output": "/actions/gameplay/in/jump"
+            }
+          }
+        }
+      ]
+    }
+  }
+}

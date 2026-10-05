@@ -1,0 +1,114 @@
+{
+  "action_sets": [
+    {
+      "name": "/actions/gameplay",
+      "usage": "leftright"
+    }
+  ],
+  "actions": [
+    { "name": "/actions/gameplay/in/menu_toggle", "type": "boolean", "requirement": "optional" },
+    { "name": "/actions/gameplay/in/menu_recenter", "type": "boolean", "requirement": "optional" },
+    { "name": "/actions/gameplay/in/left_trigger_touch", "type": "boolean", "requirement": "optional" },
+    { "name": "/actions/gameplay/in/right_trigger_touch", "type": "boolean", "requirement": "optional" },
+    { "name": "/actions/gameplay/out/left_haptic", "type": "vibration", "requirement": "optional" },
+    { "name": "/actions/gameplay/out/right_haptic", "type": "vibration", "requirement": "optional" },
+    { "name": "/actions/gameplay/in/left_secondary", "type": "boolean", "requirement": "optional" },
+    { "name": "/actions/gameplay/in/right_secondary", "type": "boolean", "requirement": "optional" },
+    { "name": "/actions/gameplay/in/left_primary", "type": "boolean", "requirement": "optional" },
+    { "name": "/actions/gameplay/in/right_primary", "type": "boolean", "requirement": "optional" },
+    { "name": "/actions/gameplay/in/left_squeeze", "type": "boolean", "requirement": "suggested" },
+    { "name": "/actions/gameplay/in/right_squeeze", "type": "boolean", "requirement": "suggested" },
+    {
+      "name": "/actions/gameplay/in/left_trigger",
+      "type": "boolean",
+      "requirement": "suggested"
+    },
+    {
+      "name": "/actions/gameplay/in/right_trigger",
+      "type": "boolean",
+      "requirement": "suggested"
+    },
+    {
+      "name": "/actions/gameplay/in/sprint",
+      "type": "boolean",
+      "requirement": "suggested"
+    },
+    {
+      "name": "/actions/gameplay/in/jump",
+      "type": "boolean",
+      "requirement": "suggested"
+    },
+    {
+      "name": "/actions/gameplay/in/move",
+      "type": "vector2",
+      "requirement": "suggested"
+    },
+    {
+      "name": "/actions/gameplay/in/turn",
+      "type": "vector2",
+      "requirement": "suggested"
+    },
+    {
+      "name": "/actions/gameplay/in/left_grip",
+      "type": "pose",
+      "requirement": "suggested"
+    },
+    {
+      "name": "/actions/gameplay/in/right_grip",
+      "type": "pose",
+      "requirement": "suggested"
+    },
+    {
+      "name": "/actions/gameplay/in/left_aim",
+      "type": "pose",
+      "requirement": "suggested"
+    },
+    {
+      "name": "/actions/gameplay/in/right_aim",
+      "type": "pose",
+      "requirement": "suggested"
+    }
+  ],
+  "default_bindings": [
+    {
+      "controller_type": "oculus_touch",
+      "binding_url": "oculus_touch.json"
+    },
+    {
+      "controller_type": "knuckles",
+      "binding_url": "knuckles.json"
+    },
+    {
+      "controller_type": "vive_controller",
+      "binding_url": "vive_controller.json"
+    }
+  ],
+  "localization": [
+    {
+      "language_tag": "en_US",
+      "/actions/gameplay/in/menu_toggle": "Pause / menu back",
+      "/actions/gameplay/in/menu_recenter": "Pause / menu back (tap), recenter (hold 1 second)",
+      "/actions/gameplay/in/left_trigger_touch": "Left trigger contact (index finger pose)",
+      "/actions/gameplay/in/right_trigger_touch": "Right trigger contact (index finger pose)",
+      "/actions/gameplay/out/left_haptic": "Left hand feedback",
+      "/actions/gameplay/out/right_haptic": "Right hand feedback",
+      "/actions/gameplay": "H2 VR",
+      "/actions/gameplay/in/left_secondary": "Left secondary (magazine/slide release at rear grip)",
+      "/actions/gameplay/in/right_secondary": "Right secondary (magazine/slide release at rear grip)",
+      "/actions/gameplay/in/left_primary": "Left primary (weapon HUD when holding rear grip)",
+      "/actions/gameplay/in/right_primary": "Right primary (weapon HUD when holding rear grip)",
+      "/actions/gameplay/in/move": "move",
+      "/actions/gameplay/in/turn": "turn",
+      "/actions/gameplay/in/sprint": "Sprint (left stick click)",
+      "/actions/gameplay/in/jump": "Jump (right stick click)",
+      "/actions/gameplay/in/left_trigger": "Left trigger (fire when holding rear grip)",
+      "/actions/gameplay/in/right_trigger": "Right trigger (fire when holding rear grip)",
+      "/actions/gameplay/in/left_squeeze": "Left side grip (hold near support anchor)",
+      "/actions/gameplay/in/right_squeeze": "Right side grip (hold near support anchor)",
+      "/actions/gameplay/in/left_grip": "left grip",
+      "/actions/gameplay/in/right_grip": "right grip",
+      "/actions/gameplay/in/left_aim": "left aim",
+      "/actions/gameplay/in/right_aim": "right aim"
+    }
+  ]
+}

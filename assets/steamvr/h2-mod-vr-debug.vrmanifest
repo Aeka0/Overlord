@@ -1,0 +1,20 @@
+{
+  "source": "h2-mod-vr",
+  "applications": [
+    {
+      "app_key": "h2mod.vr.debug",
+      "launch_type": "binary",
+      "binary_path_windows": "h2-mod-vr-debug.exe",
+      "working_directory": ".",
+      "arguments": "-singleplayer",
+      "image_path": "steamvr/cover.png",
+      "image_path_capsule": "steamvr/cover-capsule.png",
+      "action_manifest_path": "vr_input/actions.json",
+      "strings": {
+        "en_us": {
+          "name": "H2-MOD VR (Debug)"
+        }
+      }
+    }
+  ]
+}

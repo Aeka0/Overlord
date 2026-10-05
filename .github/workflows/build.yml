@@ -1,0 +1,60 @@
+name: Build
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: build-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: Windows x64 / ${{ matrix.configuration }}
+    runs-on: windows-2022
+    strategy:
+      fail-fast: false
+      matrix:
+        configuration: [RelWithDebInfo, Debug]
+    steps:
+      - name: Check out source and dependencies
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+          fetch-depth: 0
+
+      - name: Set up MSBuild
+        uses: microsoft/setup-msbuild@v2
+
+      - name: Generate projects
+        run: tools/premake5.exe vs2022 --with-vr-tests
+
+      - name: Build client
+        run: msbuild build/h2-mod.sln /t:client /m:2 /v:minimal /p:Configuration=${{ matrix.configuration }} /p:Platform=x64 /p:PreferredToolArchitecture=x64 /p:CL_MPCount=4
+
+      - name: Build no-loader smoke test
+        run: msbuild build/vr-runtime-no-loader-smoke.vcxproj /m:2 /v:minimal /p:Configuration=${{ matrix.configuration }} /p:Platform=x64 /p:PreferredToolArchitecture=x64 /p:CL_MPCount=4
+
+      - name: Run no-loader smoke test
+        run: build/bin/x64/${{ matrix.configuration }}/vr-tests/no-loader/vr-runtime-no-loader-smoke.exe
+
+      - name: Validate launcher scripts
+        if: matrix.configuration == 'Debug'
+        run: node tests/vr/launcher_settings_ui_tests.js
+
+      - name: Package client overlay
+        run: python tools/package_client.py --configuration ${{ matrix.configuration }}
+
+      - name: Upload client overlay
+        uses: actions/upload-artifact@v4
+        with:
+          name: h2-mod-vr-${{ matrix.configuration }}-${{ github.sha }}
+          path: output/packages/**/*.zip
+          if-no-files-found: error
+          retention-days: 14

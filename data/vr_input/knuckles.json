@@ -1,0 +1,91 @@
+{
+  "name": "H2 VR knuckles",
+  "description": "Left stick moves and clicks to sprint; right stick turns and clicks to jump; independent hand poses.",
+  "controller_type": "knuckles",
+  "bindings": {
+    "/actions/gameplay": {
+      "haptics": [
+        { "output": "/actions/gameplay/out/left_haptic", "path": "/user/hand/left/output/haptic" },
+        { "output": "/actions/gameplay/out/right_haptic", "path": "/user/hand/right/output/haptic" }
+      ],
+      "poses": [
+        {
+          "output": "/actions/gameplay/in/left_grip",
+          "path": "/user/hand/left/pose/raw"
+        },
+        {
+          "output": "/actions/gameplay/in/left_aim",
+          "path": "/user/hand/left/pose/tip"
+        },
+        {
+          "output": "/actions/gameplay/in/right_grip",
+          "path": "/user/hand/right/pose/raw"
+        },
+        {
+          "output": "/actions/gameplay/in/right_aim",
+          "path": "/user/hand/right/pose/tip"
+        }
+      ],
+      "sources": [
+        {
+          "path": "/user/hand/left/input/b", "mode": "button",
+          "inputs": { "click": { "output": "/actions/gameplay/in/left_secondary" } }
+        },
+        {
+          "path": "/user/hand/right/input/b", "mode": "button",
+          "inputs": { "click": { "output": "/actions/gameplay/in/right_secondary" } }
+        },
+        {
+          "path": "/user/hand/left/input/a", "mode": "button",
+          "inputs": { "click": { "output": "/actions/gameplay/in/left_primary" } }
+        },
+        {
+          "path": "/user/hand/right/input/a", "mode": "button",
+          "inputs": { "click": { "output": "/actions/gameplay/in/right_primary" } }
+        },
+        {
+          "path": "/user/hand/left/input/grip", "mode": "grab",
+          "inputs": { "grab": { "output": "/actions/gameplay/in/left_squeeze" } }
+        },
+        {
+          "path": "/user/hand/right/input/grip", "mode": "grab",
+          "inputs": { "grab": { "output": "/actions/gameplay/in/right_squeeze" } }
+        },
+        {
+          "path": "/user/hand/left/input/trigger",
+          "mode": "trigger",
+          "inputs": { "click": { "output": "/actions/gameplay/in/left_trigger" } }
+        },
+        {
+          "path": "/user/hand/right/input/trigger",
+          "mode": "trigger",
+          "inputs": { "click": { "output": "/actions/gameplay/in/right_trigger" } }
+        },
+        {
+          "path": "/user/hand/left/input/joystick",
+          "mode": "joystick",
+          "inputs": {
+            "position": {
+              "output": "/actions/gameplay/in/move"
+            },
+            "click": {
+              "output": "/actions/gameplay/in/sprint"
+            }
+          }
+        },
+        {
+          "path": "/user/hand/right/input/joystick",
+          "mode": "joystick",
+          "inputs": {
+            "position": {
+              "output": "/actions/gameplay/in/turn"
+            },
+            "click": {
+              "output": "/actions/gameplay/in/jump"
+            }
+          }
+        }
+      ]
+    }
+  }
+}

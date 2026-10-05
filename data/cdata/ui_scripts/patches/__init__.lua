@@ -1,0 +1,2 @@
+require("unlockall")
+require("pausequit")

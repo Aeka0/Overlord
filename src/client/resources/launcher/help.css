@@ -1,0 +1,57 @@
+/* Reuse the launcher's panel, sidebar and category controls; prose stays scoped. */
+.menus > ._help { height: 100%; padding-top: 14px; }
+.help-page { color: #ededed; }
+.help-page .settings-sidebar { flex-basis: 164px; padding: 20px 10px; }
+.help-page .settings-main { min-height: 0; }
+.help-page .help-sidebar-title { font-size: 23px; margin: 0 12px 20px; }
+.help-page .help-toolbar { flex: 0 0 auto; padding: 20px 28px 16px; border-bottom: 1px solid #454545; }
+.help-page .help-search-row { display: flex; align-items: center; margin-bottom: 18px; }
+.help-page .help-search-label { flex: 0 0 auto; margin-right: 12px; font-size: 14px; }
+.help-page #help-search { flex: 1 1 auto; min-width: 0; width: 100%; padding: 9px 12px; background: #303030; border: 1px solid #666; border-radius: 4px; color: inherit; }
+.help-page .help-search-row button { flex: 0 0 auto; margin-left: 10px; padding: 8px; background: transparent; border: 1px solid #666; border-radius: 4px; }
+.help-page #help-title { margin: 0; font-size: 24px; }
+.help-page .help-viewport { flex: 1 1 auto; min-height: 0; overflow: auto; overflow-x: hidden; -ms-overflow-style: scrollbar; padding: 8px 28px 24px; }
+.help-page .help-article { max-width: 850px; padding: 14px 0; border-bottom: 1px solid #454545; }
+.help-page .help-article h3 { margin: 0; }
+.help-page .help-article-toggle { display: flex; align-items: center; justify-content: space-between; width: 100%; padding: 6px 0; text-align: left; font-size: 18px; line-height: 1.6; border: 0; background: transparent; }
+.help-page .help-article-toggle span { cursor: inherit; }
+.help-page .help-article-toggle:hover { color: #acd8b2; }
+.help-page .help-disclosure { flex: 0 0 24px; margin-left: 12px; text-align: center; font-size: 22px; color: #bcbcbc; }
+.help-page p { font-size: 14px; line-height: 1.7; margin: 6px 0; color: inherit; text-shadow: none; }
+.help-page .help-summary { color: #bcbcbc; }
+.help-page .help-steps { margin: 14px 0; padding-left: 24px; font-size: 15px; }
+.help-page .help-steps li { padding-left: 4px; margin: 10px 0; line-height: 1.8; }
+.help-page .help-keyword { color: #c5edbe; text-shadow: 0 0 3px rgba(35, 97, 35, .85), 0 0 10px rgba(79, 161, 66, .65); }
+.help-page .help-note { padding: 10px 14px; border-left: 2px solid #90b697; background: #303830; color: #d8e6db; }
+.help-page .help-related { display: flex; align-items: baseline; flex-wrap: wrap; margin-top: 14px; font-size: 12px; color: #bcbcbc; }
+.help-page .help-related a { margin: 4px 0 4px 12px; text-decoration: underline; color: #70b7ff; text-shadow: none; font-size: 13px; }
+.help-page .help-related a:hover { color: #a5d4ff; }
+.help-page .help-empty { max-width: 600px; margin-top: 24px; }
+.help-page .help-viewport-locked { display: flex; flex-direction: column; padding: 24px; }
+.help-page .help-story-gate { flex: 1 0 auto; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; }
+.help-page .help-story-message { max-width: 32em; margin: 0 0 24px; font-size: 18px; line-height: 1.8; }
+.help-page .help-story-confirm { min-width: 110px; padding: 10px 24px; border: 1px solid #dedede; border-radius: 4px; background: #dedede; color: #252525; }
+.help-page .help-story-confirm:hover { background: #fff; border-color: #fff; }
+.help-page .help-article-body, .help-page .help-article-body * { user-select: text; -ms-user-select: text; cursor: text; }
+.help-page .help-related a { cursor: pointer; }
+.help-page, .help-page * { overflow-wrap: break-word; word-wrap: break-word; }
+@media (max-width: 720px) {
+    .help-page .settings-sidebar { flex-basis: 132px; padding: 16px 6px; }
+    .help-page .help-toolbar { padding: 18px 20px 14px; }
+    .help-page .help-viewport { padding-left: 20px; padding-right: 20px; }
+    .help-page #help-title { font-size: 21px; }
+}
+@media (max-width: 560px) {
+    .help-page { flex-direction: column; }
+    .help-page .settings-sidebar { flex: 0 0 auto; padding: 8px; border-right: 0; border-bottom: 1px solid #454545; }
+    .help-page .help-sidebar-title { display: none; }
+    .help-page .help-categories { display: flex; flex-wrap: wrap; }
+    .help-page .category-tab { width: auto; padding: 7px; font-size: 12px; }
+    .help-page .help-search-label { font-size: 12px; }
+}
+@media (forced-colors: active), (-ms-high-contrast: active) {
+    .help-page .help-note { border-color: Highlight; }
+    .help-page .help-keyword { color: WindowText; text-shadow: none; text-decoration: underline; }
+    .help-page .help-related a { color: WindowText; }
+    .help-page .help-article-toggle { border: 1px solid ButtonText; }
+}

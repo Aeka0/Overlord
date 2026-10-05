@@ -1,0 +1,151 @@
+// Microsoft Visual C++ generated resource script.
+//
+#pragma code_page(65001)
+
+#define APSTUDIO_READONLY_SYMBOLS
+/////////////////////////////////////////////////////////////////////////////
+//
+// Generated from the TEXTINCLUDE 2 resource.
+//
+#include "windows.h"
+#include "version.h"
+#include "resource.hpp"
+
+/////////////////////////////////////////////////////////////////////////////
+#undef APSTUDIO_READONLY_SYMBOLS
+
+/////////////////////////////////////////////////////////////////////////////
+// English (United States) resources
+
+#if !defined(AFX_RESOURCE_DLL) || defined(AFX_TARG_ENU)
+LANGUAGE LANG_ENGLISH, SUBLANG_ENGLISH_US
+
+#ifdef APSTUDIO_INVOKED
+/////////////////////////////////////////////////////////////////////////////
+//
+// TEXTINCLUDE
+//
+
+1 TEXTINCLUDE 
+BEGIN
+    "#include ""windows.h""\r\n"
+    "\0"
+END
+
+2 TEXTINCLUDE 
+BEGIN
+    "\r\n"
+    "\0"
+END
+
+#endif    // APSTUDIO_INVOKED
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// Version
+//
+
+VS_VERSION_INFO VERSIONINFO
+ FILEVERSION VERSION_FILE_RC
+ PRODUCTVERSION VERSION_PRODUCT_RC
+ FILEFLAGSMASK 0x3fL
+#ifdef _DEBUG
+ FILEFLAGS VS_FF_DEBUG
+#else
+#ifdef PRERELEASE
+ FILEFLAGS VS_FF_PRERELEASE
+#else
+#ifndef CI
+ FILEFLAGS VS_FF_PRIVATEBUILD
+#else
+ FILEFLAGS 0x0L
+#endif
+#endif
+#endif
+ FILEOS 0x40004L
+ FILETYPE VFT_APP
+ FILESUBTYPE 0x0L
+BEGIN
+    BLOCK "StringFileInfo"
+    BEGIN
+        BLOCK "040904b0"
+        BEGIN
+            VALUE "CompanyName", "Aeka0 / h2-mod-vr contributors"
+            VALUE "FileDescription", "h2-mod-vr"
+            VALUE "FileVersion", VERSION_FILE
+            VALUE "InternalName", "h2-mod-vr"
+            VALUE "LegalCopyright", "Copyright (C) 2026 Aeka0 and h2-mod-vr contributors; original h2-mod authors."
+            VALUE "Licence", "GPLv3"
+            VALUE "Info", "https://github.com/Aeka0/h2-mod-vr"
+#ifdef _DEBUG
+            VALUE "OriginalFilename", "h2-mod-vr-debug.exe"
+#else
+            VALUE "OriginalFilename", "h2-mod-vr.exe"
+#endif
+            VALUE "ProductName", "h2-mod-vr"
+            VALUE "ProductVersion", VERSION_PRODUCT
+        END
+    END
+    BLOCK "VarFileInfo"
+    BEGIN
+        VALUE "Translation", 0x409, 1200
+    END
+END
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// Binary Data
+//
+
+ID_ICON               ICON   "resources/icon.ico"
+
+MENU_MAIN             RCDATA "resources/main.html"
+LAUNCHER_APP          RCDATA "resources/launcher/app.js"
+LAUNCHER_I18N         RCDATA "resources/launcher/i18n.js"
+LAUNCHER_EN           RCDATA "resources/launcher/locales/en.json"
+LAUNCHER_ZH_CN        RCDATA "resources/launcher/locales/zh-CN.json"
+LAUNCHER_ZH_TW        RCDATA "resources/launcher/locales/zh-TW.json"
+LAUNCHER_RU           RCDATA "resources/launcher/locales/ru.json"
+LAUNCHER_FR           RCDATA "resources/launcher/locales/fr.json"
+LAUNCHER_DE           RCDATA "resources/launcher/locales/de.json"
+LAUNCHER_ES           RCDATA "resources/launcher/locales/es.json"
+LAUNCHER_JA           RCDATA "resources/launcher/locales/ja.json"
+LAUNCHER_KO           RCDATA "resources/launcher/locales/ko.json"
+LAUNCHER_HELP         RCDATA "resources/launcher/help.js"
+LAUNCHER_HELP_STYLE   RCDATA "resources/launcher/help.css"
+LAUNCHER_HELP_CONTENT RCDATA "resources/launcher/help-content.json"
+LAUNCHER_ONBOARDING   RCDATA "resources/launcher/onboarding.js"
+LAUNCHER_ONBOARDING_STYLE RCDATA "resources/launcher/onboarding.css"
+
+LUI_COMMON            RCDATA "resources/ui_scripts/common.lua"
+LUI_UPDATER           RCDATA "resources/ui_scripts/updater.lua"
+
+LUA_JSON              RCDATA "resources/json.lua"
+
+DVAR_LIST              RCDATA "resources/dvar_list.json"
+
+#ifdef _DEBUG
+TLS_DLL               RCDATA "../../build/bin/x64/Debug/tlsdll.dll"
+#elif defined(H2VR_PROFILE_BUILD)
+TLS_DLL               RCDATA "../../build/bin/x64/RelWithDebInfo/tlsdll.dll"
+#else
+TLS_DLL               RCDATA "../../build/bin/x64/Release/tlsdll.dll"
+#endif
+
+ICON_IMAGE            RCDATA "resources/icon.png"
+
+#endif    // English (United States) resources
+/////////////////////////////////////////////////////////////////////////////
+
+
+
+#ifndef APSTUDIO_INVOKED
+/////////////////////////////////////////////////////////////////////////////
+//
+// Generated from the TEXTINCLUDE 3 resource.
+//
+
+
+/////////////////////////////////////////////////////////////////////////////
+#endif    // not APSTUDIO_INVOKED
+

@@ -1,0 +1,107 @@
+# Underbarrel VR interaction
+
+The underbarrel adapter adds physical firing and reload interaction for
+explicitly admitted launcher and shotgun assemblies. The host firearm retains
+its control hand, primary ammunition, and native firing path. The secondary
+module owns its ammunition feed, mode, projectile, and moving parts. See
+[native module contracts](vr-underbarrel-native-contracts.md) for identity and
+native feed rules.
+
+## Input and ownership
+
+The control hand aims and fires the host. A support hand may retain its normal
+foregrip role or acquire the admitted module's firing contact. Firing a secondary
+module requires its current mode, module identity, hand lease, and valid tracking
+generation. One Trigger edge produces at most one request; it cannot fire both
+the host and module.
+
+The module firing grip may be acquired with the same hand's Grip and Trigger
+chord. A squeeze alone does not create a support lease. Existing support,
+magazine, action, and module leases remain exclusive. Arbitration reserves a
+new secondary acquisition against conflicting primary-part contacts regardless
+of whether input or rendering evaluates first. A blocked edge cannot replay
+later while Trigger remains held.
+
+The body-supply modifier uses the existing belt interaction and escrow rules.
+The secondary module receives the round only after the host, module, hand, and
+native capacity have been validated. Reserve changes do not convert to loaded
+ammunition implicitly. The primary feed remains unchanged when the module fires
+or reloads.
+
+## Physical actions
+
+### M203
+
+The firing hand acquires the reviewed M203 grip. A separate hand opens the
+forward slider, obtains a grenade from the admitted supply point, inserts it,
+and closes the action. An empty action may be opened without a shot or dry fire.
+Grasping an open firing contact is valid, but open or moving state blocks
+firing. A completed close retains support while Grip remains held, allowing a
+new opening stroke without reacquiring the hand. The native M203 owns shot
+acceptance and grenade behavior.
+
+### Underbarrel shotgun
+
+The adapter presents the shell feed as a per-round transaction and retains the
+native four-shell capacity and eight-pellet shot definition. The pump has its
+own rearward and forward stages; pump travel does not spend a second shell.
+Empty and nonempty reloads retain their distinct native stages. Each shell
+commit occurs once at the approved feed boundary, and the final end animation
+may continue after the tube is full.
+
+### GP-25
+
+GP-25 retains its separate support and reload contract. It does not inherit the
+M203 slider or underbarrel-shotgun pump behavior solely because its model has
+similarly named grenade parts.
+
+## Pose and presentation
+
+Contact admission is based on the current tracking frame, calibrated controller
+axes in the weapon frame, the selected hand role, and the authored host/module
+geometry. Visual wrist offsets do not change physical orientation tests. A
+support pose cannot steal a module firing contact, and an open action cannot
+fire because a render pose appears closed.
+
+Moving-part presentation consumes the latest admitted stroke state and current
+render-frame controller pose. Support wrist, constrained hand, and moving part
+use the same evaluated presentation, preventing visible stepping between server
+updates. Render workers never spend ammunition, emit projectiles, or complete a
+reload. Release, stale tracking, focus loss, host-generation changes, invalid
+reference space, or an assembly change stops projected motion.
+
+Muzzle candidates come from the admitted rigid barrel geometry, excluding
+grenade, trigger, and sight groups. A GP-25 sight is not a barrel endpoint.
+Shotgun sound feedback uses the module's native aliases; M203 and GP-25 retain
+their own native notetrack mappings. Sound and haptic delivery are presentation
+events and cannot authorize a shot or change ammunition.
+
+## Admission, state, and diagnostics
+
+Admission checks the native host and secondary definition, alternate mode,
+attachment topology, model parents, muzzle, ammo keys, capacities, and supported
+feed type. Similar names or a loaded model do not admit an unreviewed assembly.
+Duplicate copies of one host and concurrent hosts sharing the same secondary
+loaded cell remain unsupported until native instance ownership is explicit.
+
+All VM access and native commits stay on their validated game-thread boundary.
+Input and render consumers receive bounded value snapshots. Invalid identity,
+ambiguous ownership, stale input, or an out-of-range native count fails closed
+and reports a reason.
+
+`vr_underbarrel_status` reports host/module identity, mode, ammunition, held
+round, action state, travel, grasp, and fault status. It does not force admission,
+change ammunition, or clear a fault. The underbarrel regression suite covers
+both hands, all three mechanisms, identity rejection, transaction limits,
+escrow conservation, input arbitration, attachment topology, and stale-frame
+handling.
+
+## Acceptance boundaries
+
+Headset acceptance should verify each admitted host and mode, firing and reload
+with both primary hands, Grip-modifier changes, rolled weapons, partial action
+travel, one-hand tracking loss, pause, focus changes, host switching, and
+checkpoint restoration. Check primary ammunition while firing and reloading the
+module, visible slider/pump travel, contact reach, sound, and haptics separately.
+Offline tests, native signature checks, and client builds do not establish
+end-to-end headset behavior.
