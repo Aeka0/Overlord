@@ -1,6 +1,6 @@
 #pragma once
 #include "physical_reload_runtime.hpp"
-#include "component/vr/gameplay/hand_pose_mirror.hpp"
+#include "component/vr/gameplay/hands/pose_mirror.hpp"
 #include "belt_presentation.hpp"
 #include "magazine_grip_selection.hpp"
 

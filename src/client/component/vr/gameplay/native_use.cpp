@@ -6,7 +6,7 @@
 #include "native_carry_model.hpp"
 #include "scripted_use_proxy.hpp"
 #include "pickup_visibility.hpp"
-#include "sequences/gulag.hpp"
+#include "campaign/sequences/gulag.hpp"
 #include "interaction_debug.hpp"
 #include "../head_pose_bridge.hpp"
 #include "../controller_input.hpp"

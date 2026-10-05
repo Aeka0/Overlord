@@ -2,7 +2,7 @@
 #include "belt_profile.hpp"
 #include "belt_feed.hpp"
 #include "../controller_input.hpp"
-#include "component/vr/gameplay/hand_pose_math.hpp"
+#include "component/vr/gameplay/hands/pose_math.hpp"
 
 namespace vr::gameplay::weapons::belt_feed
 {

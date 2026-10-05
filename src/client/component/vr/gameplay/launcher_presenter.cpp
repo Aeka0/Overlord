@@ -2,7 +2,7 @@
 #include "component/scene_model_record.hpp"
 #include "launcher_presenter.hpp"
 #include "falling_item_presenter.hpp"
-#include "component/vr/gameplay/hand_pose_mirror.hpp"
+#include "component/vr/gameplay/hands/pose_mirror.hpp"
 #include "physical_reload_geometry.hpp"
 #include "weapon_render_pose.hpp"
 #include "viewmodel_visibility.hpp"

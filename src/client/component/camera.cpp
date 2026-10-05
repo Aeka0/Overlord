@@ -1,6 +1,6 @@
 #include <std_include.hpp>
 #include "vr/gameplay/notebook_runtime.hpp"
-#include "vr/gameplay/scripted_sequences.hpp"
+#include "vr/gameplay/campaign/scripted_sequences.hpp"
 #include "vr/gameplay/scripted_camera_reference.hpp"
 #include "vr/gameplay/fixed_sniper.hpp"
 #include "vr/gameplay/mounted_turret.hpp"

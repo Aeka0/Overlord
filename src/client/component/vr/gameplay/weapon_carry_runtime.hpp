@@ -3,7 +3,7 @@
 #include "weapon_scene.hpp"
 #include "holster_presentation.hpp"
 #include "support_carry_rotation.hpp"
-#include "hand_pose_solver.hpp"
+#include "hands/pose_solver.hpp"
 #include "arm_geometry.hpp"
 #include "../controller_input.hpp"
 #include "weapon_ejection.hpp"

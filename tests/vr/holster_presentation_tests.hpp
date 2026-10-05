@@ -1,6 +1,6 @@
 #pragma once
 #include "component/vr/gameplay/holster_presentation.hpp"
-#include "component/vr/gameplay/hand_attachment_pose.hpp"
+#include "component/vr/gameplay/hands/attachment_pose.hpp"
 #include "component/vr/gameplay/stowed_reload_pose.hpp"
 #include "component/vr/gameplay/weapons/m9/profile.hpp"
 #include "component/vr/gameplay/weapons/miniuzi/profile.hpp"

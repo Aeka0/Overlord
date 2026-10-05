@@ -3,7 +3,7 @@
 #include "falling_item_presenter.hpp"
 #include "weapon_instance_cache.hpp"
 #include "weapon_carry_runtime.hpp"
-#include "component/vr/gameplay/hand_pose_mirror.hpp"
+#include "component/vr/gameplay/hands/pose_mirror.hpp"
 #include "part_hand_constraint.hpp"
 #include "part_return_transition.hpp"
 #include "tube_profiles.hpp"

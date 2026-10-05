@@ -1,7 +1,7 @@
 #pragma once
-#include "component/vr/gameplay/sequences/oilrig.hpp"
-#include "component/vr/gameplay/sequences/breach.hpp"
-#include "component/vr/gameplay/sequences/estate.hpp"
+#include "component/vr/gameplay/campaign/sequences/oilrig.hpp"
+#include "component/vr/gameplay/campaign/sequences/breach.hpp"
+#include "component/vr/gameplay/campaign/sequences/estate.hpp"
 #include <limits>
 
 template<class Check> void oilrig_sequence_tests(Check check)

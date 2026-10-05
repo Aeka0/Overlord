@@ -1,5 +1,5 @@
 #pragma once
-#include "component/vr/gameplay/hand_rig_builder.hpp"
+#include "component/vr/gameplay/hands/rig_builder.hpp"
 namespace m200_live_assembly
 {
 // Live desert M200, TF141 glove, silencer_03 and desert scope; native alias parents applied.

@@ -1,6 +1,6 @@
 #pragma once
 #include "weapon_holding.hpp"
-#include "component/vr/gameplay/hand_pose_math.hpp"
+#include "component/vr/gameplay/hands/pose_math.hpp"
 #include "body_reach_volume.hpp"
 #include "../head_pose_bridge.hpp"
 #include "../controller_input.hpp"

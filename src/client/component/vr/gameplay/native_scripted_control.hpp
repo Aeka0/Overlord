@@ -1,9 +1,9 @@
 #pragma once
 #include "scripted_control.hpp"
 #include "mounted_turret_policy.hpp"
-#include "scripted_sequences.hpp"
+#include "campaign/scripted_sequences.hpp"
 #include "native_player_life.hpp"
-#include "sequences/airport_opening.hpp"
+#include "campaign/sequences/airport_opening.hpp"
 #include <utils/native_memory.hpp>
 #include "game/game.hpp"
 #include <array>

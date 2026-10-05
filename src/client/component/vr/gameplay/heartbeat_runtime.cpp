@@ -4,7 +4,7 @@
 #include "heartbeat_native_mode.hpp"
 #include "weapon_instance_cache.hpp"
 #include "part_hand_constraint.hpp"
-#include "component/vr/gameplay/hand_pose_mirror.hpp"
+#include "component/vr/gameplay/hands/pose_mirror.hpp"
 #include "weapon_feedback.hpp"
 #include "part_return_transition.hpp"
 #include <utils/native_memory.hpp>

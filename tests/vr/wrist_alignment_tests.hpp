@@ -1,5 +1,5 @@
 #pragma once
-#include "component/vr/gameplay/hand_position_offset.hpp"
+#include "component/vr/gameplay/hands/position_offset.hpp"
 
 template<class Check>
 void wrist_alignment_tests(Check check,const vr::gameplay::hands::rig& rig,

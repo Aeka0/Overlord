@@ -1,9 +1,9 @@
 #pragma once
 #include "component/vr/camera_rig.hpp"
-#include "component/vr/gameplay/scripted_sequences.hpp"
-#include "component/vr/gameplay/sequences/estate.hpp"
-#include "component/vr/gameplay/sequences/gulag.hpp"
-#include "component/vr/gameplay/sequences/airport.hpp"
+#include "component/vr/gameplay/campaign/scripted_sequences.hpp"
+#include "component/vr/gameplay/campaign/sequences/estate.hpp"
+#include "component/vr/gameplay/campaign/sequences/gulag.hpp"
+#include "component/vr/gameplay/campaign/sequences/airport.hpp"
 #include <limits>
 
 template<class Check> void camera_policy_tests(Check check)

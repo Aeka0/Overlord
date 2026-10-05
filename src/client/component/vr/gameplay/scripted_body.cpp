@@ -1,6 +1,6 @@
 #include <std_include.hpp>
 #include "scripted_body.hpp"
-#include "scripted_sequences.hpp"
+#include "campaign/scripted_sequences.hpp"
 #include "viewmodel_visibility.hpp"
 #include <utils/native_memory.hpp>
 #include "component/fastfiles.hpp"

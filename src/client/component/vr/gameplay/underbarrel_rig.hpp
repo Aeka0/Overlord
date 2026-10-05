@@ -2,8 +2,8 @@
 #include "underbarrel_feed.hpp"
 #include "underbarrel_grip.hpp"
 #include "weapons/attachments/underbarrel_poses.hpp"
-#include "component/vr/gameplay/hand_pose_math.hpp"
-#include "component/vr/gameplay/hand_pose_mirror.hpp"
+#include "component/vr/gameplay/hands/pose_math.hpp"
+#include "component/vr/gameplay/hands/pose_mirror.hpp"
 
 namespace vr::gameplay::weapons::underbarrel
 {

@@ -7,7 +7,7 @@
 #include "component/vr/gameplay/physical_reload_rig.hpp"
 #include "component/vr/gameplay/tube_presenter.hpp"
 #include "component/vr/gameplay/tube_profiles.hpp"
-#include "component/vr/gameplay/hand_pose_mirror.hpp"
+#include "component/vr/gameplay/hands/pose_mirror.hpp"
 #include "p90_striker_data.hpp"
 #include <vector>
 namespace p90_striker_profile_tests

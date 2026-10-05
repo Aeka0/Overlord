@@ -9,7 +9,7 @@
 #include "component/vr/gameplay/weapon_profiles.hpp"
 #include "component/vr/gameplay/weapon_reload_profiles.hpp"
 #include "component/vr/gameplay/physical_reload_rig.hpp"
-#include "component/vr/gameplay/hand_pose_mirror.hpp"
+#include "component/vr/gameplay/hands/pose_mirror.hpp"
 #include "dragunov_data.hpp"
 #include <iostream>
 #include <vector>

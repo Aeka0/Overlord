@@ -1,6 +1,6 @@
 #pragma once
 #include <array>
-#include "component/vr/gameplay/hand_pose_solver.hpp"
+#include "component/vr/gameplay/hands/pose_solver.hpp"
 namespace vector_release_data
 {
 // Boundary vertices of the exposed native j_switch left surface; native units.

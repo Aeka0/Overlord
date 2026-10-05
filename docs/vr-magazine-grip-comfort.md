@@ -63,7 +63,7 @@ The M4 base hand pose previously contained only 30 finger nodes for both hands. 
 - `magazine_grip_selection.hpp` returns transform, contact, hand shape, and index. Bottom pinch/wrap use the body-relative palm policy; P90 continues to use its wrist-facing policy relative to the gun.
 - `physical_reload_contact_sample.hpp` selects the candidate within the same tracked frame before calculating in-hand magazine and insertion geometry. Simulation uses the existing latch-on-acquisition mechanism.
 - The presenter uses the same resolver and latched index. Hand IK uses the magazine's own wrist reference while held, and raw geometry uses that reference too. Rigid magazine submission checks the pose index to prevent a new grasp from reusing an old hand-bone frame.
-- `hand_pose_mirror.hpp` preserves rigid magazine coordinates while mirroring the hand and in-wrist contact. Pose selection does not alter ammunition rules, weapon mechanical axes, or insertion tolerance.
+- `hands/pose_mirror.hpp` preserves rigid magazine coordinates while mirroring the hand and in-wrist contact. Pose selection does not alter ammunition rules, weapon mechanical axes, or insertion tolerance.
 - `vr_reload_interaction_status` reports `magazine_pose`, `magazine_candidate`, and `magazine_pose_count` for later headset comparisons.
 
 Each weapon has only two constant candidates. Selection performs bounded vector operations; model fitting, surface queries, and optimization all remain in offline tools.

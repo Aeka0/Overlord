@@ -1,6 +1,6 @@
 #pragma once
 #include "hand_interaction/frame.hpp"
-#include "hand_service.hpp"
+#include "hands/service.hpp"
 #include <string>
 namespace vr::gameplay::ladders
 {

@@ -1,7 +1,7 @@
 #pragma once
-#include "native_hand_schema.hpp"
+#include "hands/native_schema.hpp"
 #include "body_equipment.hpp"
-#include "component/vr/gameplay/hand_pose_mirror.hpp"
+#include "component/vr/gameplay/hands/pose_mirror.hpp"
 #include "knife_magazine_pose.hpp"
 #include "knife_slide_pose.hpp"
 #include "knife_hand_pose.hpp"

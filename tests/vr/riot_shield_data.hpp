@@ -1,5 +1,5 @@
 #pragma once
-#include "component/vr/gameplay/hand_rig_builder.hpp"
+#include "component/vr/gameplay/hands/rig_builder.hpp"
 namespace riot_shield_data
 {
 // Exported skeleton names and bind transforms only; no meshes or animation curves.

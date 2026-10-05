@@ -238,7 +238,7 @@ recent stored impulse, which continues to expire by time.
 
 ### Wrist, fingers, and muzzle
 
-[hand_component.cpp](../src/client/component/vr/gameplay/hand_component.cpp)
+[hands/component.cpp](../src/client/component/vr/gameplay/hands/component.cpp)
 applies recoil after its normal grip solve and before publishing the weapon
 scene, muzzle, and skinned pose. The profiled route supplies the actual solved
 support hand; the generic route supplies no support hand.

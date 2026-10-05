@@ -1,7 +1,7 @@
 #pragma once
 #include "weapon_holsters.hpp"
 #include "weapon_profile.hpp"
-#include "component/vr/gameplay/hand_pose_math.hpp"
+#include "component/vr/gameplay/hands/pose_math.hpp"
 namespace vr::gameplay::weapons::carry
 {
  struct stowed_part {identity id{};location at{location::absent};hands::anchor local{};};

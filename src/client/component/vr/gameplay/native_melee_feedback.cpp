@@ -3,7 +3,7 @@
 #include "equipment_runtime.hpp"
 #include "knife_profile.hpp"
 #include "special_melee.hpp"
-#include "cliffhanger_runtime.hpp"
+#include "campaign/cliffhanger/runtime.hpp"
 #include "native_scripted_control.hpp"
 #include <utils/native_memory.hpp>
 #include "component/scheduler.hpp"

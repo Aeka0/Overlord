@@ -2,7 +2,7 @@
 #include "weapon_holding.hpp"
 #include "weapon_recoil_tuning.hpp"
 #include "controller_stance.hpp"
-#include "hand_pose_solver.hpp"
+#include "hands/pose_solver.hpp"
 #include "../controller_input.hpp"
 #include <array>
 #include <algorithm>

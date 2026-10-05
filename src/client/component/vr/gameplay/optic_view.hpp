@@ -1,6 +1,6 @@
 #pragma once
 #include "weapon_model_anchor.hpp"
-#include "hand_pose_solver.hpp"
+#include "hands/pose_solver.hpp"
 #include <array>
 #include <cstdint>
 

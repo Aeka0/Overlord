@@ -2,7 +2,7 @@
 #include "../cylinder_runtime.hpp"
 #include "../tube_runtime.hpp"
 #include "../break_action_runtime.hpp"
-#include "component/vr/gameplay/hand_pose_mirror.hpp"
+#include "component/vr/gameplay/hands/pose_mirror.hpp"
 
 namespace vr::gameplay::hand_interaction
 {

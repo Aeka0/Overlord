@@ -1,7 +1,7 @@
 #pragma once
 #include "launcher_profile.hpp"
 #include "weapon_holding.hpp"
-#include "component/vr/gameplay/hand_pose_math.hpp"
+#include "component/vr/gameplay/hands/pose_math.hpp"
 #include <cmath>
 
 namespace vr::gameplay::weapons::launcher

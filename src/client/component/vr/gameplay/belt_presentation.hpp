@@ -1,8 +1,8 @@
 #pragma once
 #include "belt_gesture.hpp"
-#include "component/vr/gameplay/hand_pose_mirror.hpp"
+#include "component/vr/gameplay/hands/pose_mirror.hpp"
 #include "physical_reload_rig.hpp"
-#include "component/vr/gameplay/hand_pose_math.hpp"
+#include "component/vr/gameplay/hands/pose_math.hpp"
 
 namespace vr::gameplay::weapons::belt_feed
 {

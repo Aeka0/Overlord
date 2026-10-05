@@ -3,7 +3,7 @@
 #include "physical_reload_configuration.hpp"
 #include "detachable_magazine.hpp"
 #include "component/vr/digital_button_gate.hpp"
-#include "hand_pose_solver.hpp"
+#include "hands/pose_solver.hpp"
 #include "physical_reload_geometry.hpp"
 #include "part_grip_pose.hpp"
 #include "magazine_manipulation.hpp"

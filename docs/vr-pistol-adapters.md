@@ -20,7 +20,7 @@ shared boundaries.
   validates the full assembly and returns its static cosmetic mask and optional
   visible-attachment muzzle. Hidden knife props cannot supply a firing origin.
 - `viewmodel_visibility.cpp` is a shared native render adapter, independent of
-  reload instances and gesture logic. `hand_component.cpp` combines assembly and
+  reload instances and gesture logic. `hands/component.cpp` combines assembly and
   optional mechanical masks and publishes once for the exact solved bone epoch.
   No reload adapter or active reload is required to suppress an authored prop.
 - The reload presenter returns only its mechanical hidden-part mask alongside
@@ -184,7 +184,7 @@ Final M1911 and USP finger-front targets are +2.5 cm and -1.5 cm respectively. T
 
 ## Verification and next HMD pass
 
-### Fast magazine approach correction 
+### Fast magazine approach correction
 
 The common gesture controller discards the untrusted sweep and rebases its
 history when a discontinuity ends outside. It only requires exit/reentry when

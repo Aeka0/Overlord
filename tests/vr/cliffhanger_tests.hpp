@@ -1,9 +1,9 @@
 #pragma once
-#include "component/vr/gameplay/cliffhanger_policy.hpp"
-#include "component/vr/gameplay/cliffhanger_profile.hpp"
+#include "component/vr/gameplay/campaign/cliffhanger/policy.hpp"
+#include "component/vr/gameplay/campaign/cliffhanger/profile.hpp"
 #include "component/vr/gameplay/hand_interaction/core.hpp"
 #include "component/vr/gameplay/hand_interaction/pose_plan.hpp"
-#include "component/vr/gameplay/cliffhanger_pickaxe_policy.hpp"
+#include "component/vr/gameplay/campaign/cliffhanger/pickaxe_policy.hpp"
 
 template<class Check>void cliffhanger_tests(Check& check)
 {

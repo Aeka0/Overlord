@@ -1,6 +1,6 @@
 #pragma once
 
-#include "hand_pose_solver.hpp"
+#include "hands/pose_solver.hpp"
 #include "../head_pose_bridge.hpp"
 
 namespace vr::gameplay::hands

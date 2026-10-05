@@ -1,5 +1,5 @@
 #pragma once
-#include "component/vr/gameplay/hand_rig_builder.hpp"
+#include "component/vr/gameplay/hands/rig_builder.hpp"
 #include "component/vr/gameplay/weapon_pose_library.hpp"
 #include "component/vr/gameplay/weapons/scar/profile.hpp"
 #include "component/vr/gameplay/weapon_profiles.hpp"

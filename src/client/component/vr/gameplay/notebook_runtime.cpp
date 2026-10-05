@@ -5,7 +5,7 @@
 #include "abdominal_interaction.hpp"
 #include "notebook_profile.hpp"
 #include "part_hand_constraint.hpp"
-#include "hand_position_offset.hpp"
+#include "hands/position_offset.hpp"
 #include "hand_interaction/runtime.hpp"
 #include "native_scripted_control.hpp"
 #include "native_ammunition.hpp"

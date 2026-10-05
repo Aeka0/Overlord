@@ -1,7 +1,7 @@
 #pragma once
 #include "cylinder_runtime.hpp"
 #include "part_presentation.hpp"
-#include "component/vr/gameplay/hand_pose_math.hpp"
+#include "component/vr/gameplay/hands/pose_math.hpp"
 #include "reload_item_visual.hpp"
 
 namespace vr::gameplay::weapons::cylinder

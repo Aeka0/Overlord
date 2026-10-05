@@ -4,7 +4,7 @@
 #include "native_scripted_control.hpp"
 #include "designator_events.hpp"
 #include "native_action_slots.hpp"
-#include "sequences/oilrig.hpp"
+#include "campaign/sequences/oilrig.hpp"
 #include <utils/native_memory.hpp>
 #include "component/scheduler.hpp"
 #include "component/command.hpp"

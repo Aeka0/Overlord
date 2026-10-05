@@ -1,5 +1,5 @@
 #pragma once
-#include "hand_rig_builder.hpp"
+#include "hands/rig_builder.hpp"
 #include "physical_reload_profile.hpp"
 #include "weapon_ejection.hpp"
 

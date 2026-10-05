@@ -5,7 +5,7 @@
 #include "component/vr/gameplay/weapon_profiles.hpp"
 #include "component/vr/gameplay/weapon_reload_profiles.hpp"
 #include "component/vr/gameplay/physical_reload_rig.hpp"
-#include "component/vr/gameplay/hand_pose_library.hpp"
+#include "component/vr/gameplay/hands/pose_library.hpp"
 #include "component/vr/gameplay/rigid_part_visibility.hpp"
 #include <iostream>
 #include <vector>

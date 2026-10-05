@@ -2,7 +2,7 @@
 #include "component/vr/pose_filter.hpp"
 #include "component/vr/stabilization.hpp"
 #include "component/vr/controller_input.hpp"
-#include "component/vr/gameplay/hand_position_offset.hpp"
+#include "component/vr/gameplay/hands/position_offset.hpp"
 #include "component/vr/desktop_stabilization.hpp"
 #include <limits>
 

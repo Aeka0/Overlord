@@ -11,7 +11,7 @@
 #include "component/vr/gameplay/weapons/tavor/reload_profile.hpp"
 #include "component/vr/gameplay/weapons/fn2000/reload_profile.hpp"
 #include "component/vr/gameplay/weapons/p90/reload_profile.hpp"
-#include "component/vr/gameplay/hand_pose_mirror.hpp"
+#include "component/vr/gameplay/hands/pose_mirror.hpp"
 
 namespace manual_magazine_reload_tests
 {

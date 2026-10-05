@@ -4,7 +4,7 @@
 #include "native_carry.hpp"
 #include "native_use.hpp"
 #include "weapon_carry_runtime.hpp"
-#include "component/vr/gameplay/hand_pose_math.hpp"
+#include "component/vr/gameplay/hands/pose_math.hpp"
 #include "component/scheduler.hpp"
 #include "component/scripting.hpp"
 #include "game/game.hpp"

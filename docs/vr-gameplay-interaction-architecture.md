@@ -35,7 +35,7 @@ The subsystem table records their current responsibilities and boundaries.
 | Server interaction phases | `gameplay/interaction_schedule.hpp`, `interaction_coordinator.cpp` | Named phase lists select callbacks from one checked provider inventory. Acquisition and reconciliation retain their distinct orders; lifecycle groups have explicit ownership. H2 server scheduling stays in the implementation adapter. |
 | Arbitration and input history | `gameplay/hand_interaction/runtime.cpp` | Owns grants, witnessed outcomes and publication; does not schedule or call domain runtimes. |
 | Carry and inventory | `gameplay/carry_interaction.hpp`, `weapon_carry_runtime.cpp` | Admits a server-owned frame and exposes carry candidates, grip commits, pickup and presentation publication. Native inventory, selection and drop transactions remain here. |
-| Common hands | `gameplay/hand_service.*`, `hand_skeleton.hpp`, `hand_pose_schema.hpp`, `hand_pose_library.hpp` | Owns neutral/bilateral binding and hand presentation dispatch. Generic hand descriptors, transforms and mirroring do not require weapon admission rules. |
+| Common hands | `gameplay/hand_service.*`, `hands/skeleton.hpp`, `hands/pose_schema.hpp`, `hands/pose_library.hpp` | Owns neutral/bilateral binding and hand presentation dispatch. Generic hand descriptors, transforms and mirroring do not require weapon admission rules. |
 | Weapon pose adaptation | `gameplay/weapon_pose_library.hpp` | Adds weapon rest assembly and measured trigger-index policy to common hand bindings. |
 | Hand and interaction identity | `vr/hand.hpp`, `hand_interaction/object_identity.hpp` | Hand side is independent of weapon holding. Interaction objects use provider-local values/generations, including initial world entities and head gestures without firearm tokens. |
 | Native memory and renderer ABI | `common/utils/native_memory.hpp`, `vr/native_render_contract.hpp` | Bounded guarded reads and verified H2 layout constants are shared infrastructure; diagnostics consume these contracts. Memory readability does not establish asset lifetime or thread ownership. |
@@ -82,7 +82,7 @@ The hand service freezes the knife presentation state before composing wrists,
 fingers and empty-hand poses. Knife equipment no longer owns the global hand rig
 or dispatches vehicle, grenade, special-equipment and reload-item presentation.
 Its original H2 reference joint ordering and rotations are retained in
-`native_hand_schema.hpp`; the knife still owns its blade, attachment and co-grasp
+`hands/native_schema.hpp`; the knife still owns its blade, attachment and co-grasp
 data.
 
 Catalog capacity is explicit and checked against the compiled registration

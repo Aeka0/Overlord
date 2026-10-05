@@ -1,7 +1,7 @@
 #pragma once
 #include "break_action_runtime.hpp"
 #include "part_presentation.hpp"
-#include "component/vr/gameplay/hand_pose_math.hpp"
+#include "component/vr/gameplay/hands/pose_math.hpp"
 
 namespace vr::gameplay::weapons::break_action
 {

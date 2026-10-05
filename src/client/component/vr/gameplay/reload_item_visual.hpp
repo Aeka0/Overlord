@@ -1,5 +1,5 @@
 #pragma once
-#include "hand_pose_library.hpp"
+#include "hands/pose_library.hpp"
 #include <array>
 namespace game {struct XModel;}
 namespace vr::gameplay::reload_items

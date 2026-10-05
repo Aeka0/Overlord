@@ -1,6 +1,6 @@
 #pragma once
 #include "grenade_state.hpp"
-#include "component/vr/gameplay/hand_pose_mirror.hpp"
+#include "component/vr/gameplay/hands/pose_mirror.hpp"
 namespace vr::gameplay::grenades::authored
 {
 // Original grenade idle (frame 0) and pull-pin (frame 8) local hand poses.

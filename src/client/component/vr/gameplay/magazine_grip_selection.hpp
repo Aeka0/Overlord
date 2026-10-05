@@ -1,6 +1,6 @@
 #pragma once
 #include "physical_reload_profile.hpp"
-#include "component/vr/gameplay/hand_pose_mirror.hpp"
+#include "component/vr/gameplay/hands/pose_mirror.hpp"
 #include "controller_palm.hpp"
 
 namespace vr::gameplay::weapons

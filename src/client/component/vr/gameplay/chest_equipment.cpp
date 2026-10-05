@@ -6,7 +6,7 @@
 #include "native_ammunition.hpp"
 #include "weapon_carry_runtime.hpp"
 #include "native_scripted_control.hpp"
-#include "hand_attachment_pose.hpp"
+#include "hands/attachment_pose.hpp"
 #include <utils/native_memory.hpp>
 #include "../engine_stereo_view.hpp"
 #include "component/scene_models.hpp"

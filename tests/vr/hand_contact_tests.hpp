@@ -1,8 +1,8 @@
 #pragma once
 #include "component/vr/gameplay/weapon_pose_library.hpp"
-#include "component/vr/gameplay/hand_contact.hpp"
+#include "component/vr/gameplay/hands/contact.hpp"
 #include "component/vr/gameplay/weapons/mp5/profile.hpp"
-#include "component/vr/gameplay/hand_pose_mirror.hpp"
+#include "component/vr/gameplay/hands/pose_mirror.hpp"
 #include "component/vr/gameplay/weapons/hand_poses/right_handle.hpp"
 
 namespace hand_contact_tests

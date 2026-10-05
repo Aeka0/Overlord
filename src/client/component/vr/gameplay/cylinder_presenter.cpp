@@ -1,6 +1,6 @@
 #include <std_include.hpp>
 #include "component/scene_model_record.hpp"
-#include "component/vr/gameplay/hand_pose_mirror.hpp"
+#include "component/vr/gameplay/hands/pose_mirror.hpp"
 #include "cylinder_presenter.hpp"
 #include "falling_item_presenter.hpp"
 #include "weapon_instance_cache.hpp"

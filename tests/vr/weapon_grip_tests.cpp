@@ -10,7 +10,7 @@ using vr::hand;
 #include "component/vr/gameplay/magazine_grip_selection.hpp"
 #include "component/vr/gameplay/weapons/m9/slide_grips.hpp"
 #include "component/vr/gameplay/weapon_profiles.hpp"
-#include "component/vr/gameplay/hand_position_offset.hpp"
+#include "component/vr/gameplay/hands/position_offset.hpp"
 #include "component/vr/gameplay/weapon_actions.hpp"
 #include "component/vr/gameplay/weapon_carry_pose.hpp"
 #include "component/vr/gameplay/weapon_recoil.hpp"

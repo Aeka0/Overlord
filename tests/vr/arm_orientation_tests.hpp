@@ -1,5 +1,5 @@
 #pragma once
-#include "component/vr/gameplay/hand_pose_solver.hpp"
+#include "component/vr/gameplay/hands/pose_solver.hpp"
 
 namespace arm_orientation_tests
 {

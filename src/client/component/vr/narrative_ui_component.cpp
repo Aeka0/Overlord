@@ -6,7 +6,7 @@
 #include "component/command.hpp"
 #include "component/console.hpp"
 #include "component/scheduler.hpp"
-#include "gameplay/scripted_sequences.hpp"
+#include "gameplay/campaign/scripted_sequences.hpp"
 #include "component/game_text.hpp"
 #include "game/game.hpp"
 #include "loader/component_loader.hpp"

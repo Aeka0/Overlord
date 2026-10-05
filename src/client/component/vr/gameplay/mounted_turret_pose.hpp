@@ -1,6 +1,6 @@
 #pragma once
-#include "hand_rig_builder.hpp"
-#include "component/vr/gameplay/hand_pose_math.hpp"
+#include "hands/rig_builder.hpp"
+#include "component/vr/gameplay/hands/pose_math.hpp"
 #include "mounted_turret_profile.hpp"
 #include <cstring>
 

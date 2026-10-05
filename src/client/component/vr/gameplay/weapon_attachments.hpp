@@ -1,6 +1,6 @@
 #pragma once
 #include "viewmodel_policy.hpp"
-#include "hand_rig_builder.hpp"
+#include "hands/rig_builder.hpp"
 
 namespace vr::gameplay::weapons
 {

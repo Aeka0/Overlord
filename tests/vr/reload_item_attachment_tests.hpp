@@ -1,5 +1,5 @@
 #pragma once
-#include "component/vr/gameplay/hand_attachment_pose.hpp"
+#include "component/vr/gameplay/hands/attachment_pose.hpp"
 #include "component/vr/engine_stereo_view.hpp"
 #include <cstring>
 

@@ -1,7 +1,7 @@
 #pragma once
 #include "component/vr/gameplay/free_climb.hpp"
-#include "component/vr/gameplay/cliffhanger_physical.hpp"
-#include "component/vr/gameplay/cliffhanger_surface.hpp"
+#include "component/vr/gameplay/campaign/cliffhanger/physical.hpp"
+#include "component/vr/gameplay/campaign/cliffhanger/level_rules.hpp"
 #include "component/vr/gameplay/climb_checkpoint.hpp"
 #include "component/vr/gameplay/climb_collision.hpp"
 #include "component/vr/gameplay/climb_exit.hpp"

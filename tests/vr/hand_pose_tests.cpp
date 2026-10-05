@@ -1,8 +1,8 @@
 #include "component/vr/hand.hpp"
 using vr::hand;
-#include "component/vr/gameplay/hand_pose_solver.hpp"
+#include "component/vr/gameplay/hands/pose_solver.hpp"
 #include "component/vr/gameplay/shoulder_anchors.hpp"
-#include "component/vr/gameplay/hand_position_offset.hpp"
+#include "component/vr/gameplay/hands/position_offset.hpp"
 #include "wrist_alignment_tests.hpp"
 #include "forearm_twist_tests.hpp"
 #include "arm_orientation_tests.hpp"
@@ -11,7 +11,7 @@ using vr::hand;
 #include "scripted_arms_tests.hpp"
 #include "free_climb_tests.hpp"
 #include "ladder_tests.hpp"
-#include "component/vr/gameplay/hand_pose_math.hpp"
+#include "component/vr/gameplay/hands/pose_math.hpp"
 #include <cstring>
 #include <iostream>
 #include <limits>

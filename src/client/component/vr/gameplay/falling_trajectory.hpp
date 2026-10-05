@@ -1,5 +1,5 @@
 #pragma once
-#include "hand_pose_math.hpp"
+#include "hands/pose_math.hpp"
 #include <chrono>
 
 namespace vr::gameplay::motion

@@ -1,5 +1,5 @@
 #pragma once
-#include "component/vr/gameplay/hand_rig_builder.hpp"
+#include "component/vr/gameplay/hands/rig_builder.hpp"
 // Read-only Gulag capture, 2026-09-27: m4m203_reflex_arctic (30 rounds).
 // Model-space bind poses; attachment roots compose at receiver tags.
 namespace m4_arctic_data {

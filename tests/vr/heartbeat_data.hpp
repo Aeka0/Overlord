@@ -1,5 +1,5 @@
 #pragma once
-#include "component/vr/gameplay/hand_rig_builder.hpp"
+#include "component/vr/gameplay/hands/rig_builder.hpp"
 namespace heartbeat_test_data {
 // Native arctic XBoneInfo[2] on 2026-10-01, in the moving Z bone's frame.
 // Same attachment bind SHA256 as the nine-bone fixture below.

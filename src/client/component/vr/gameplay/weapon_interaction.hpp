@@ -1,6 +1,6 @@
 #pragma once
 #include "../controller_input.hpp"
-#include "hand_pose_solver.hpp"
+#include "hands/pose_solver.hpp"
 #include "weapon_holding.hpp"
 #include "weapon_model_anchor.hpp"
 #include "weapon_fire_delivery.hpp"

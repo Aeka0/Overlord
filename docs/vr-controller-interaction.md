@@ -81,7 +81,7 @@ hand-name whitelists. An admitted assembly must provide:
 - A root-relative muzzle direction within the profile's conservative forward
   tolerance.
 
-`hand_rig_builder.hpp` combines XModel parent lists, DObj model attachment
+`hands/rig_builder.hpp` combines XModel parent lists, DObj model attachment
 parents, and native duplicate-bone aliases. It validates the whole graph before
 publishing an ownership mask. Missing, cyclic, or ambiguous links reject the
 assembly. Appended arm or sleeve models do not automatically become weapon

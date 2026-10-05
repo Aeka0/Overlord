@@ -3,7 +3,7 @@
 #include "native_ammunition.hpp"
 #include "physical_reload_profile.hpp"
 #include "hand_interaction/frame.hpp"
-#include "hand_contact.hpp"
+#include "hands/contact.hpp"
 #include "quick_reload.hpp"
 
 namespace vr::gameplay::weapons::physical_reload

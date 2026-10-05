@@ -1,5 +1,5 @@
 #pragma once
-#include "component/vr/gameplay/hand_rig_builder.hpp"
+#include "component/vr/gameplay/hands/rig_builder.hpp"
 #include "component/vr/gameplay/mounted_turret_policy.hpp"
 #include "component/vr/gameplay/mounted_turret_pose.hpp"
 

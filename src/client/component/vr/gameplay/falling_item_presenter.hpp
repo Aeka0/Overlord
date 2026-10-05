@@ -1,6 +1,6 @@
 #pragma once
 #include "falling_trajectory.hpp"
-#include "component/vr/gameplay/hand_pose_math.hpp"
+#include "component/vr/gameplay/hands/pose_math.hpp"
 #include "ejection_scatter.hpp"
 #include "weapon_identity.hpp"
 

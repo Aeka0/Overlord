@@ -1,5 +1,5 @@
 #pragma once
-#include "component/vr/gameplay/vehicle_steering.hpp"
+#include "component/vr/gameplay/vehicles/steering.hpp"
 #include "component/vr/gameplay/snowmobile_handle_pose.hpp"
 #include <limits>
 

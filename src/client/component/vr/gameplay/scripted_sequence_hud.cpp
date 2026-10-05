@@ -1,5 +1,5 @@
 #include <std_include.hpp>
-#include "scripted_sequences.hpp"
+#include "campaign/scripted_sequences.hpp"
 #include "../hud_prompts.hpp"
 #include "../native_waypoints.hpp"
 #include "../engine_stereo_bridge.hpp"

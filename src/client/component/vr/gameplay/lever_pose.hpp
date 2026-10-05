@@ -1,6 +1,6 @@
 #pragma once
 #include "lever_gesture.hpp"
-#include "component/vr/gameplay/hand_pose_mirror.hpp"
+#include "component/vr/gameplay/hands/pose_mirror.hpp"
 
 namespace vr::gameplay::weapons::lever
 {

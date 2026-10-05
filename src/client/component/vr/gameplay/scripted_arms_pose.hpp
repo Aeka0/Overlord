@@ -1,6 +1,6 @@
 #pragma once
 #include "forearm_twist.hpp"
-#include "hand_pose_math.hpp"
+#include "hands/pose_math.hpp"
 #include "../pose_filter.hpp"
 
 namespace vr::gameplay::scripted_arms

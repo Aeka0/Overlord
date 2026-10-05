@@ -1,5 +1,5 @@
 #pragma once
-#include "component/vr/gameplay/hand_rig_builder.hpp"
+#include "component/vr/gameplay/hands/rig_builder.hpp"
 namespace marine_sniper_data
 {
 // Read-only H2 boneyard capture: 67-bone hand model, no j_webbing_le/ri.

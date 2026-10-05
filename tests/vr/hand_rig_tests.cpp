@@ -1,4 +1,4 @@
-#include "component/vr/gameplay/hand_rig_builder.hpp"
+#include "component/vr/gameplay/hands/rig_builder.hpp"
 #include "hand_rig_cache_tests.hpp"
 #include <iostream>
 #include <limits>

@@ -14,7 +14,7 @@ never when prediction reads that history.
 `interaction_coordinator.cpp` owns domain dispatch. `hand_interaction/runtime`
 owns arbitration/publication; `carry_interaction` exposes server-only carry
 operations and `weapon_scene.hpp` contains copied scene data without runtime
-calls. `hand_service` owns shared hand binding and presentation dispatch.
+calls. `hands/service` owns shared hand binding and presentation dispatch.
 
 `interaction_schedule.hpp` declares named phases without H2 types or scheduler
 calls. The coordinator binds their callbacks and retains the H2 server entry
@@ -64,5 +64,15 @@ not native ownership acknowledgements.
 
 Rigid vectors, quaternions and transforms live in `../spatial_math.hpp`. Hand
 solving consumes those primitives; bone hierarchy and finger posing remain in
-`hand_pose_solver.hpp` and `hand_pose_math.hpp`. Generic renderers include the
+`hands/pose_solver.hpp` and `hands/pose_math.hpp`. Generic renderers include the
 spatial primitives directly and do not depend on a hand rig or weapon schema.
+
+## Module navigation
+
+- [Hands](hands/README.md): rig binding, solving and presentation dispatch.
+- [Campaign](campaign/README.md): map classifiers, scripted context and mission interactions.
+- [Vehicles](vehicles/README.md): native controls, policies and presentation.
+- [Weapons](weapons/README.md): registered recipes, measured geometry and mechanics.
+
+Shared hand arbitration remains in `hand_interaction/`. Mechanical feed domains
+retain their separate runtimes and the coordinator owns their named phase order.

@@ -37,7 +37,7 @@ roll.
 | `camera_rig.hpp` | Rotation, limits, translation, reset, recenter, and exit handoff |
 | `scripted_view.hpp` | Heading continuity and native-command handoff state |
 | `scripted_position.hpp` | Translation baseline and limits |
-| `gameplay/sequences/camera_policies.hpp` | Scene-to-policy mapping |
+| `gameplay/campaign/sequences/camera_policies.hpp` | Scene-to-policy mapping |
 | `gameplay/sequences/*.cpp` | Native scene identity, phase, and permission adapters |
 | `gameplay/scripted_camera_reference.cpp` | H2 DObj/tag lookup |
 | `head_pose_bridge.cpp` | Tracking, command history, unit conversion, and core bridge |
@@ -68,7 +68,7 @@ stereo rendering keep their own responsibilities.
 | Fixed thermal optic | Fixed to the native optic pose | Fixed | Native optic rotation owns the view. |
 | Locked story impact | Full native tag rotation | Fixed or attenuated | HMD rotation is disabled only for the identified story phase. |
 
-The full scene mapping lives in `gameplay/sequences/camera_policies.hpp`. Scene
+The full scene mapping lives in `gameplay/campaign/sequences/camera_policies.hpp`. Scene
 adapters must identify the native owner and phase explicitly; a map name or
 generic animation label alone is not sufficient.
 

@@ -9,7 +9,7 @@
 #include "native_scripted_control.hpp"
 #include "weapon_feedback.hpp"
 #include "native_weapon_sound.hpp"
-#include "hand_attachment_pose.hpp"
+#include "hands/attachment_pose.hpp"
 #include "hand_interaction/runtime.hpp"
 #include "../engine_stereo_view.hpp"
 #include <utils/native_memory.hpp>

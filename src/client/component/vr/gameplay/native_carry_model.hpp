@@ -1,5 +1,5 @@
 #pragma once
-#include "hand_pose_solver.hpp"
+#include "hands/pose_solver.hpp"
 #include <cstdint>
 #include <span>
 namespace game {struct XModel;}

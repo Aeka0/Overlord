@@ -1,5 +1,5 @@
 #pragma once
-#include "component/vr/gameplay/hand_rig_cache.hpp"
+#include "component/vr/gameplay/hands/rig_cache.hpp"
 #include "component/vr/gameplay/optic_view.hpp"
 
 namespace hand_rig_cache_tests

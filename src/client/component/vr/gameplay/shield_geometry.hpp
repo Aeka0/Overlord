@@ -1,5 +1,5 @@
 #pragma once
-#include "component/vr/gameplay/hand_pose_math.hpp"
+#include "component/vr/gameplay/hands/pose_math.hpp"
 #include "arm_geometry.hpp"
 
 namespace vr::gameplay::weapons::shield

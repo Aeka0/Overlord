@@ -1,5 +1,5 @@
 #pragma once
-#include "component/vr/gameplay/hand_pose_mirror.hpp"
+#include "component/vr/gameplay/hands/pose_mirror.hpp"
 #include "knife_profile.hpp"
 namespace vr::gameplay::equipment::special::notebook::authored
 {

@@ -7,7 +7,7 @@
 #include "component/vr/gameplay/weapons/m82/reload_profile.hpp"
 #include "component/vr/gameplay/weapons/wa2000/reload_profile.hpp"
 #include "component/vr/gameplay/weapons/dragunov/reload_profile.hpp"
-#include "component/vr/gameplay/hand_pose_mirror.hpp"
+#include "component/vr/gameplay/hands/pose_mirror.hpp"
 
 namespace precision_reload_tests
 {

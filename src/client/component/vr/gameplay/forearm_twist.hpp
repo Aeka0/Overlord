@@ -1,5 +1,5 @@
 #pragma once
-#include "hand_rig_builder.hpp"
+#include "hands/rig_builder.hpp"
 #include <chrono>
 #include <cstdint>
 

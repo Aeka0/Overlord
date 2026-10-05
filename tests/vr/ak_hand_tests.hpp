@@ -3,7 +3,7 @@
 #include "component/vr/gameplay/weapons/ak47/profile.hpp"
 #include "component/vr/gameplay/grip_presenter.hpp"
 #include "component/vr/gameplay/part_hand_constraint.hpp"
-#include "component/vr/gameplay/hand_pose_math.hpp"
+#include "component/vr/gameplay/hands/pose_math.hpp"
 
 namespace ak_hand_tests
 {

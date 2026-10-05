@@ -1,5 +1,5 @@
 #pragma once
-#include "component/vr/gameplay/hand_pose_math.hpp"
+#include "component/vr/gameplay/hands/pose_math.hpp"
 #include "hinge_travel.hpp"
 #include "physical_reload_geometry.hpp"
 

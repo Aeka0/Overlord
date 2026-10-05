@@ -1,5 +1,5 @@
 #pragma once
-#include "component/vr/gameplay/hand_rig_builder.hpp"
+#include "component/vr/gameplay/hands/rig_builder.hpp"
 namespace p90_striker_data {
 // 75dc3b9f68351f6f2bb920c6aadd620a08bb3f65cca4c12bc710d621e28af1e1
 inline constexpr std::array<vr::gameplay::hands::bone_definition,37> p90{{

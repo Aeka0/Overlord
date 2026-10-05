@@ -1,5 +1,5 @@
 #pragma once
-#include "component/vr/gameplay/sequences/oilrig_angle_bridge.hpp"
+#include "component/vr/gameplay/campaign/sequences/oilrig_angle_bridge.hpp"
 #include <intrin.h>
 
 namespace oilrig_angle_bridge_tests

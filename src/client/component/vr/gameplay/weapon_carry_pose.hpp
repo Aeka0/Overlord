@@ -1,7 +1,7 @@
 #pragma once
 #include "weapon_profile.hpp"
 #include "weapon_carry.hpp"
-#include "component/vr/gameplay/hand_pose_mirror.hpp"
+#include "component/vr/gameplay/hands/pose_mirror.hpp"
 #include <optional>
 
 namespace vr::gameplay::weapons::carry

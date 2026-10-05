@@ -1,5 +1,5 @@
 #pragma once
-#include "scripted_sequences.hpp"
+#include "campaign/scripted_sequences.hpp"
 
 namespace vr::gameplay::sequences::camera_reference
 {

@@ -1,5 +1,5 @@
 #pragma once
-#include "hand_pose_schema.hpp"
+#include "hands/pose_schema.hpp"
 #include "forearm_mount.hpp"
 #include "viewmodel_policy.hpp"
 #include <string_view>

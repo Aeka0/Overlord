@@ -1,6 +1,6 @@
 #pragma once
 #include "physical_reload_rig.hpp"
-#include "component/vr/gameplay/hand_pose_math.hpp"
+#include "component/vr/gameplay/hands/pose_math.hpp"
 #include "chamber_cartridge.hpp"
 #include "part_presentation.hpp"
 #include "physical_reload_runtime.hpp"

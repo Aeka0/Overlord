@@ -1,5 +1,5 @@
 #pragma once
-#include "hand_pose_solver.hpp"
+#include "hands/pose_solver.hpp"
 #include <span>
 #include <string_view>
 

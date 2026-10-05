@@ -367,7 +367,7 @@ if _OPTIONS["with-vr-tests"] then
 	project "vr-hand-pose-tests"
 		kind "ConsoleApp"
 		language "C++"
-		files {"./tests/vr/hand_pose_tests.cpp", "./src/client/component/vr/gameplay/hand_pose_solver.hpp"}
+		files {"./tests/vr/hand_pose_tests.cpp", "./src/client/component/vr/gameplay/hands/pose_solver.hpp"}
 		includedirs {"./src/client"}
 		targetdir "%{wks.location}/bin/%{cfg.platform}/%{cfg.buildcfg}/vr-tests/hand-pose"
 
@@ -381,7 +381,7 @@ if _OPTIONS["with-vr-tests"] then
 	project "vr-hand-rig-tests"
 		kind "ConsoleApp"
 		language "C++"
-		files {"./tests/vr/hand_rig_tests.cpp", "./src/client/component/vr/gameplay/hand_rig_builder.hpp"}
+		files {"./tests/vr/hand_rig_tests.cpp", "./src/client/component/vr/gameplay/hands/rig_builder.hpp"}
 		includedirs {"./src/client"}
 		targetdir "%{wks.location}/bin/%{cfg.platform}/%{cfg.buildcfg}/vr-tests/hand-rig"
 
@@ -399,7 +399,7 @@ if _OPTIONS["with-vr-tests"] then
 		files {"./tests/vr/spatial_panel_tests.cpp", "./src/client/component/vr/spatial_panel_renderer.cpp",
 			"./src/client/component/vr/overlay_text_texture.cpp",
 			"./src/client/component/vr/native_caption_font.cpp",
-			"./src/client/component/vr/gameplay/hand_attachment_pose.cpp",
+			"./src/client/component/vr/gameplay/hands/attachment_pose.cpp",
 			"./src/client/component/vr/spatial_lines_renderer.cpp", "./src/client/component/vr/world_beam_renderer.cpp"}
 		includedirs {"./tests/vr", "./src/client"}
 		gsl.import()

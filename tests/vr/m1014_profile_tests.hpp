@@ -4,7 +4,7 @@
 #include "component/vr/gameplay/weapons/spas12/profile.hpp"
 #include "component/vr/gameplay/weapon_profiles.hpp"
 #include "component/vr/gameplay/tube_presenter.hpp"
-#include "component/vr/gameplay/hand_pose_mirror.hpp"
+#include "component/vr/gameplay/hands/pose_mirror.hpp"
 #include "m1014_data.hpp"
 #include <vector>
 #include <iostream>

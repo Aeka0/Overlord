@@ -1,6 +1,6 @@
 #pragma once
 #include "weapon_identity.hpp"
-#include "hand_pose_solver.hpp"
+#include "hands/pose_solver.hpp"
 namespace vr::gameplay::weapons::shield
 {
  bool enabled() noexcept;

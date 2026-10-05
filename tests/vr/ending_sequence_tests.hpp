@@ -1,6 +1,6 @@
 #pragma once
-#include "component/vr/gameplay/sequences/ending.hpp"
-#include "component/vr/gameplay/ending_grips.hpp"
+#include "component/vr/gameplay/campaign/sequences/ending.hpp"
+#include "component/vr/gameplay/campaign/ending/grips.hpp"
 #include "component/vr/camera_rig.hpp"
 
 namespace ending_sequence_tests

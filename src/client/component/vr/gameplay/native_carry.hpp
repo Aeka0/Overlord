@@ -1,6 +1,6 @@
 #pragma once
 #include "weapon_carry.hpp"
-#include "hand_pose_solver.hpp"
+#include "hands/pose_solver.hpp"
 #include "world_pickup_policy.hpp"
 #include <optional>
 namespace game {struct XModel;}

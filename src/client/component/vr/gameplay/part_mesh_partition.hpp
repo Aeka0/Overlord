@@ -1,5 +1,5 @@
 #pragma once
-#include "hand_pose_library.hpp"
+#include "hands/pose_library.hpp"
 #include "component/scene_face_partition.hpp"
 
 namespace vr::gameplay::weapons

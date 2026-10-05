@@ -14,7 +14,7 @@ using vr::hand;
 #include "skinned_part_tests.hpp"
 #include "opaque_mesh_tests.hpp"
 #include "component/vr/gameplay/immutable_surface_cache.hpp"
-#include "component/vr/gameplay/hand_pose_math.hpp"
+#include "component/vr/gameplay/hands/pose_math.hpp"
 
 int main()
 {

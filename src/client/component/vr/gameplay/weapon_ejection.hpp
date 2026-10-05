@@ -1,6 +1,6 @@
 #pragma once
-#include "hand_rig_builder.hpp"
-#include "component/vr/gameplay/hand_pose_math.hpp"
+#include "hands/rig_builder.hpp"
+#include "component/vr/gameplay/hands/pose_math.hpp"
 
 namespace vr::gameplay::weapons
 {

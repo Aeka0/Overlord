@@ -1,7 +1,7 @@
 #pragma once
 #include "component/vr/gameplay/heartbeat_rig.hpp"
 #include "component/vr/gameplay/heartbeat_native_mode.hpp"
-#include "component/vr/gameplay/hand_pose_mirror.hpp"
+#include "component/vr/gameplay/hands/pose_mirror.hpp"
 #include "heartbeat_data.hpp"
 #include <limits>
 

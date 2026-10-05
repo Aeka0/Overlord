@@ -1,5 +1,5 @@
 #pragma once
-#include "component/vr/gameplay/sequences/airport_opening.hpp"
+#include "component/vr/gameplay/campaign/sequences/airport_opening.hpp"
 
 template<class Check> void airport_opening_tests(Check check)
 {

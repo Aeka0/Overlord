@@ -1,6 +1,6 @@
 #pragma once
 #include "physical_reload_runtime.hpp"
-#include "hand_pose_library.hpp"
+#include "hands/pose_library.hpp"
 #include "physical_reload_rig.hpp"
 #include "part_presentation.hpp"
 #include <string>

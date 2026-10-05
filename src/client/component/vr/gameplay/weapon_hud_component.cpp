@@ -1,7 +1,7 @@
 #include <std_include.hpp>
 #include "weapons/m9/profile.hpp"
-#include "vehicle_hud.hpp"
-#include "vehicle_runtime.hpp"
+#include "vehicles/hud.hpp"
+#include "vehicles/runtime.hpp"
 #include "weapon_hud.hpp"
 #include "weapon_hud_policy.hpp"
 #include "weapon_hud_lifetime.hpp"

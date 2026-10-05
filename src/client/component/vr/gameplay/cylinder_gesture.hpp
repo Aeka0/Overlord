@@ -1,7 +1,7 @@
 #pragma once
 #include "cylinder_feed.hpp"
 #include "component/vr/digital_button_gate.hpp"
-#include "hand_pose_solver.hpp"
+#include "hands/pose_solver.hpp"
 #include "hand_interaction/access.hpp"
 
 namespace vr::gameplay::weapons::cylinder

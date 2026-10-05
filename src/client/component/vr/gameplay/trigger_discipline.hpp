@@ -1,6 +1,6 @@
 #pragma once
 #include "../controller_input.hpp"
-#include "component/vr/gameplay/hand_pose_math.hpp"
+#include "component/vr/gameplay/hands/pose_math.hpp"
 #include "weapon_holding.hpp"
 #include "weapon_pose_library.hpp"
 

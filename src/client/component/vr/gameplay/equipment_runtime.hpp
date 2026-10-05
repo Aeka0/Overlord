@@ -1,6 +1,6 @@
 #pragma once
 #include "body_equipment.hpp"
-#include "hand_service.hpp"
+#include "hands/service.hpp"
 #include "weapon_carry_runtime.hpp"
 #include "hand_interaction/frame.hpp"
 #include "hand_interaction/pose_plan.hpp"

@@ -3,7 +3,7 @@
 #include "optic_view.hpp"
 #include "ads_comfort.hpp"
 #include "weapon_holding.hpp"
-#include "hand_rig_builder.hpp"
+#include "hands/rig_builder.hpp"
 #include "../controller_input.hpp"
 #include <span>
 namespace game {struct XModel; struct XSurface;}

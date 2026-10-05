@@ -151,7 +151,7 @@ The findings below describe the pre-fix implementation.
    script notification would not satisfy this sequence's state predicate.
 4. **Duplicate arms:** native weapon permission resumes before scripted body
    ownership ends. `native_scripted_control.hpp`, `empty_hands_native.cpp` and
-   `hand_component.cpp` gate VR objects/posing on that permission. The capture
+   `hands/component.cpp` gate VR objects/posing on that permission. The capture
 proves an early reopening of the gate; headset observation supplies the
    visual evidence. The capture does not identify every duplicated draw.
 5. **Braking:** the descent explicitly accepts ADS/attack while normal weapons

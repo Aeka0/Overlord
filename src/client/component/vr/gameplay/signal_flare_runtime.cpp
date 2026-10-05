@@ -4,7 +4,7 @@
 #include "signal_flare_profile.hpp"
 #include "signal_flare_mission.hpp"
 #include "abdominal_interaction.hpp"
-#include "hand_attachment_pose.hpp"
+#include "hands/attachment_pose.hpp"
 #include "hand_interaction/runtime.hpp"
 #include "part_hand_constraint.hpp"
 #include "native_scripted_control.hpp"

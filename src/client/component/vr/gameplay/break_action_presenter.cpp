@@ -5,7 +5,7 @@
 #include "weapon_carry_runtime.hpp"
 #include "weapon_instance_cache.hpp"
 #include "weapon_render_pose.hpp"
-#include "component/vr/gameplay/hand_pose_mirror.hpp"
+#include "component/vr/gameplay/hands/pose_mirror.hpp"
 #include "part_hand_constraint.hpp"
 #include "ejection_scatter.hpp"
 #include "viewmodel_visibility.hpp"

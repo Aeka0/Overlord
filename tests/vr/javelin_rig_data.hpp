@@ -1,5 +1,5 @@
 #pragma once
-#include "component/vr/gameplay/hand_rig_builder.hpp"
+#include "component/vr/gameplay/hands/rig_builder.hpp"
 namespace javelin_rig_data
 {
 // Exported skeleton/bind metadata for the exact two models witnessed live.

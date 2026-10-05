@@ -1,5 +1,5 @@
 #pragma once
-#include "component/vr/gameplay/hand_rig_builder.hpp"
+#include "component/vr/gameplay/hands/rig_builder.hpp"
 namespace belt_weapon_data {
 inline constexpr std::array<vr::gameplay::hands::bone_definition,38> m240{{
 {"j_gun",-1,{{0.00000000f, 0.00000000f, 0.00000000f, 1.00000000f},{0.00000000f, 0.00000000f, 0.00000000f},2.f}},

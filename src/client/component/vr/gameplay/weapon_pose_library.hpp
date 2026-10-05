@@ -1,5 +1,5 @@
 #pragma once
-#include "hand_pose_library.hpp"
+#include "hands/pose_library.hpp"
 #include "weapon_profile.hpp"
 #include "trigger_discipline_profiles.hpp"
 

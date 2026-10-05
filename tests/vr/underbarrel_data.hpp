@@ -1,5 +1,5 @@
 #pragma once
-#include "component/vr/gameplay/hand_rig_builder.hpp"
+#include "component/vr/gameplay/hands/rig_builder.hpp"
 namespace underbarrel_test_data {
 // Native bind capture 2026-09-15; no model-local origin is treated as a receiver mount.
 inline constexpr std::array<vr::gameplay::hands::bone_definition,28> m16{{

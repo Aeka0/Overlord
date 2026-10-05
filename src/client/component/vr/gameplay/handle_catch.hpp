@@ -1,6 +1,6 @@
 #pragma once
 #include "swept_impact.hpp"
-#include "hand_contact.hpp"
+#include "hands/contact.hpp"
 #include "slap_diagnostic.hpp"
 #include "palm_contact.hpp"
 

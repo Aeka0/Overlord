@@ -4,7 +4,7 @@
 #include "launcher_targeting.hpp"
 #include "javelin_screen.hpp"
 #include "hand_interaction/runtime.hpp"
-#include "component/vr/gameplay/hand_pose_mirror.hpp"
+#include "component/vr/gameplay/hands/pose_mirror.hpp"
 #include "weapon_carry_runtime.hpp"
 #include "weapon_interaction.hpp"
 #include "native_scripted_control.hpp"

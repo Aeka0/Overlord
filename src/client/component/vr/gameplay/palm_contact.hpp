@@ -1,5 +1,5 @@
 #pragma once
-#include "hand_contact.hpp"
+#include "hands/contact.hpp"
 #include "swept_box_contact.hpp"
 #include <optional>
 

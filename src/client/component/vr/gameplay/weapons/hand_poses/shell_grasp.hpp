@@ -1,5 +1,5 @@
 #pragma once
-#include "component/vr/gameplay/hand_pose_math.hpp"
+#include "component/vr/gameplay/hands/pose_math.hpp"
 
 namespace vr::gameplay::weapons::hand_poses::shell_grasp
 {

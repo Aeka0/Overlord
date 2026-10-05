@@ -10,7 +10,7 @@ is controller-driven axial rotation of the forearm's existing deformation bones.
 
 ## Confirmed chain
 
-`hand_pose_solver.hpp::solve_pose` derives the shoulder/elbow/wrist positions
+`hands/pose_solver.hpp::solve_pose` derives the shoulder/elbow/wrist positions
 from a two-segment IK solve. Its `lower_delta` only aligns the old elbow-to-wrist
 direction with the solved direction. Holding these positions fixed while rotating
 the wrist leaves `lower_delta` unchanged. Wrist descendants receive the tracked
@@ -45,7 +45,7 @@ tracks. Some also contain `j_wristtwist_back_*` channels, but those nodes are no
 present in the four audited model skeletons. An animation channel name alone
 must not admit or synthesize an extra runtime bone.
 
-An isolated C++ probe including the actual `hand_pose_solver.hpp` reproduced
+An isolated C++ probe including the actual `hands/pose_solver.hpp` reproduced
 the issue with an elbow-parented twist sibling. Rotating the target 90 degrees
 around the solved forearm axis, while holding wrist position fixed, produced:
 
@@ -67,7 +67,7 @@ change that orientation again. The deformation pass should consume the final
 anatomical wrist orientation immediately before the native matrix commit.
 
 There are separate empty-hand, normal/independent-weapon and selection-transition
-commit paths in `hand_component.cpp`; all must call the same implementation.
+commit paths in `hands/component.cpp`; all must call the same implementation.
 The completed solved matrices are already copied to the native skeleton, so a
 new rendering or skinning hook is not indicated by this evidence.
 

@@ -1,7 +1,7 @@
 #include <std_include.hpp>
 #include "native_carry_model.hpp"
 #include "native_carry.hpp"
-#include "component/vr/gameplay/hand_pose_math.hpp"
+#include "component/vr/gameplay/hands/pose_math.hpp"
 #include "special_melee.hpp"
 #include "pickup_visibility.hpp"
 #include <utils/native_memory.hpp>

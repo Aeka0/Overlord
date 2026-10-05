@@ -1,6 +1,6 @@
 #pragma once
 #include "underbarrel_feed.hpp"
-#include "hand_pose_solver.hpp"
+#include "hands/pose_solver.hpp"
 #include "controller_palm.hpp"
 
 namespace vr::gameplay::weapons::underbarrel

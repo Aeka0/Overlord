@@ -12,7 +12,7 @@
 #include "weapon_feedback.hpp"
 #include "weapon_interaction.hpp"
 #include "component/vr/digital_button_gate.hpp"
-#include "component/vr/gameplay/hand_pose_mirror.hpp"
+#include "component/vr/gameplay/hands/pose_mirror.hpp"
 #include "part_hand_constraint.hpp"
 #include "physical_reload_geometry.hpp"
 #include "physical_reload_runtime.hpp"

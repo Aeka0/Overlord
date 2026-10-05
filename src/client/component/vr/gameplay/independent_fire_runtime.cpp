@@ -12,7 +12,7 @@
 #include "weapon_interaction.hpp"
 #include "empty_hands_native.hpp"
 #include "aim_assist.hpp"
-#include "component/vr/gameplay/hand_pose_math.hpp"
+#include "component/vr/gameplay/hands/pose_math.hpp"
 #include "component/scheduler.hpp"
 #include "component/command.hpp"
 #include "component/console.hpp"

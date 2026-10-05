@@ -1,7 +1,7 @@
 #pragma once
 #include "launcher_runtime.hpp"
 #include "part_presentation.hpp"
-#include "component/vr/gameplay/hand_pose_math.hpp"
+#include "component/vr/gameplay/hands/pose_math.hpp"
 namespace vr::gameplay::weapons::launcher
 {
 	struct part_rig {bool valid{};int rocket{-1};};

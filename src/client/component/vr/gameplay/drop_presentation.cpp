@@ -1,6 +1,6 @@
 #include <std_include.hpp>
 #include "drop_presentation.hpp"
-#include "component/vr/gameplay/hand_pose_math.hpp"
+#include "component/vr/gameplay/hands/pose_math.hpp"
 #include <utils/native_memory.hpp>
 #include "component/scene_models.hpp"
 #include "component/fastfiles.hpp"

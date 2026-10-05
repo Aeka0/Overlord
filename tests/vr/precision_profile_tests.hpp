@@ -1,5 +1,5 @@
 #pragma once
-#include "component/vr/gameplay/hand_rig_builder.hpp"
+#include "component/vr/gameplay/hands/rig_builder.hpp"
 #include "component/vr/gameplay/weapon_pose_library.hpp"
 #include "component/vr/gameplay/weapons/cheytac/profile.hpp"
 #include "component/vr/gameplay/weapons/m14ebr/profile.hpp"
@@ -10,7 +10,7 @@
 #include "component/vr/gameplay/weapon_profiles.hpp"
 #include "component/vr/gameplay/physical_reload_rig.hpp"
 #include "component/vr/gameplay/weapon_reload_profiles.hpp"
-#include "component/vr/gameplay/hand_pose_mirror.hpp"
+#include "component/vr/gameplay/hands/pose_mirror.hpp"
 #include <iostream>
 #include <stdexcept>
 #include <vector>

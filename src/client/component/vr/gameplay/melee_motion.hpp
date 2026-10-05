@@ -1,5 +1,5 @@
 #pragma once
-#include "component/vr/gameplay/hand_pose_math.hpp"
+#include "component/vr/gameplay/hands/pose_math.hpp"
 #include "../controller_input.hpp"
 
 namespace vr::gameplay::melee
