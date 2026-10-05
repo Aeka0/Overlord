@@ -17,7 +17,7 @@ initcredits_h2mod()
     maps\_credits::addspace();
     maps\_credits::addcenterheading("H2-Mod Developers");
     maps\_credits::addgap();
-    maps\_credits::addcenternamedouble("alicealys", &"CREDIT_H2MOD_VLAD");
+    maps\_credits::addcentername(&"CREDIT_H2MOD_VLAD");
     maps\_credits::addcenternamedouble(&"CREDIT_H2MOD_FUTURE", &"CREDIT_H2MOD_NETADR");
     maps\_credits::addgap();
     maps\_credits::addcenterheading(&"CREDIT_H2MOD_SPECIAL_THANKS");
