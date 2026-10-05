@@ -152,13 +152,10 @@ namespace vr::gameplay::weapons::physical_reload
 			++attachment_matches;
 			return result::replace;
 		}
-		anchor compose(anchor a, anchor b) noexcept
-		{ return hands::pose_math::compose(a,b); }
-		anchor as_anchor(const bone& b) noexcept { return {b.position,normalize(b.rotation)}; }
-		anchor inverse(anchor a) noexcept
-		{ return hands::pose_math::inverse(a); }
-		void move_part(const rig& r, int root, anchor target, std::span<bone> pose)
-		{ hands::pose_math::move_part(r,root,target,pose); }
+		using hands::pose_math::compose;
+		using hands::pose_math::as_anchor;
+		using hands::pose_math::inverse;
+		using hands::pose_math::move_part;
 		void pose_fingers(const rig& r, const pose_library& library, const weapons::profile& grip,
 			std::span<const joint_pose> fingers, int off, std::span<bone> pose)
 		{
