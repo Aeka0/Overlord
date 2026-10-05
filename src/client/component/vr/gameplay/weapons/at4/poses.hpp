@@ -54,5 +54,10 @@ inline constexpr std::array<part_pose,9> equip_rest{{
 {"j_safe_flip_handle",{{0.05499291f, 0.92275903f, 0.10776806f}, {0.00000000f, 0.00000000f, 0.00000000f, 1.00000000f}}},
 }};
 // Native campaign AT4 has MISSILE_GUIDANCE_NONE and no lock acquisition script.
-inline const launcher_profile feed{"at4","at4",launcher_loading::disposable,false};
+inline const launcher_profile feed{
+	.id = "at4",
+	.native_name = "at4",
+	.loading = launcher_loading::disposable,
+	.guided = false,
+};
 }

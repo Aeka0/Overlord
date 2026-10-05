@@ -1,4 +1,5 @@
 #pragma once
+#include "physical_reload_configuration.hpp"
 #include "physical_reload_geometry.hpp"
 #include "swept_box_contact.hpp"
 #include <optional>
@@ -6,34 +7,40 @@
 
 namespace vr::gameplay::weapons::physical_reload
 {
-	// Opt-in physical latch policy, in metres and gun-local directions. Authored
-	// mesh contacts live in reload_profile; no weapon names enter this controller.
-	struct magazine_manipulation
-	{
-		float grab_radius, pull_travel, pull_lateral_limit;
-		vec pull_axis;
-		float latch_radius, latch_rearm_radius, latch_min_speed, latch_min_travel;
-		vec latch_direction;
-		bool spare_strike{true};
-		// Resolve overlapping contacts using the tracked wrist's facing relative
-		// to the two authored grasps. Different finger points/box sizes do not
-		// provide comparable distances. Outside overlaps, contact alone suffices.
-		bool prefer_grasp_facing{};
-	};
 	// Shared AK-style spare-magazine latch strike. Keep intentional motion and
 	// rearm separation while allowing a four-centimetre contact radius.
-	inline constexpr magazine_manipulation rocking_magazine(vec pull_axis={0,0,-1}) noexcept
-	{return {.05f,.05f,.10f,pull_axis,.04f,.075f,.15f,.012f,{1,0,0},true};}
+	inline constexpr magazine_manipulation rocking_magazine(vec pull_axis = {0, 0, -1}) noexcept
+	{
+		return {.grab_radius = defaults::magazine_grab_radius_m,
+		        .pull_travel = defaults::magazine_pull_travel_m,
+		        .pull_lateral_limit = defaults::magazine_pull_lateral_limit_m,
+		        .pull_axis = pull_axis,
+		        .latch_radius = .04f,
+		        .latch_rearm_radius = .075f,
+		        .latch_min_speed = defaults::magazine_latch_min_speed_mps,
+		        .latch_min_travel = defaults::magazine_latch_min_travel_m,
+		        .latch_direction = {1, 0, 0},
+		        .spare_strike = true};
+	}
 
 	inline bool valid(const magazine_manipulation& p) noexcept
 	{
-		for (float v : {p.grab_radius,p.pull_travel,p.pull_lateral_limit,p.latch_radius,
-			p.latch_rearm_radius,p.latch_min_speed,p.latch_min_travel})
-			if (!std::isfinite(v) || v<=0 || v>1) return false;
-		for (auto axis : {p.pull_axis,p.latch_direction})
+		for (float v : {p.grab_radius,
+		                p.pull_travel,
+		                p.pull_lateral_limit,
+		                p.latch_radius,
+		                p.latch_rearm_radius,
+		                p.latch_min_speed,
+		                p.latch_min_travel})
+			if (!std::isfinite(v) || v <= 0 || v > 1)
+				return false;
+		for (auto axis : {p.pull_axis, p.latch_direction})
 		{
-			for (float v:axis) if (!std::isfinite(v)) return false;
-			if (std::abs(hands::dot(axis,axis)-1)>.001f) return false;
+			for (float v : axis)
+				if (!std::isfinite(v))
+					return false;
+			if (std::abs(hands::dot(axis, axis) - 1) > .001f)
+				return false;
 		}
 		return p.latch_rearm_radius>p.latch_radius && p.latch_min_travel<p.latch_rearm_radius;
 	}

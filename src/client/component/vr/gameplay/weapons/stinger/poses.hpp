@@ -48,8 +48,14 @@ inline constexpr std::array<part_pose,4> equip_rest{{
 {"tag_flash",{{24.53579039f, 0.00000000f, 4.97407988f}, {0.00000000f, 0.00000000f, 0.00000000f, 1.00000000f}}},
 {"tag_flash_silenced",{{24.53579039f, 0.00000000f, 4.97407988f}, {0.00000000f, 0.00000000f, 0.00000000f, 1.00000000f}}},
 }};
-inline const launcher_profile feed=[] {
-	launcher_profile p{"stinger","stinger",launcher_loading::disposable,true};
+inline const launcher_profile feed = []
+{
+	launcher_profile p{
+		.id = "stinger",
+		.native_name = "stinger",
+		.loading = launcher_loading::disposable,
+		.guided = true,
+	};
 	// Native idle circular sight center is 12.609456 cm left of tag_flash.
 	// Use the circular tube, not the outer glass pane, for coarse ADS intent.
 	p.sight_lateral_meters=.12609456f;

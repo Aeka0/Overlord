@@ -10,21 +10,34 @@ namespace vr::gameplay::weapons::m82
 	{
 		return base_equip_action(name, "h2_wpn_sni_m82_");
 	}
-	inline const std::array<profile, 1> assemblies = [] {
+	inline const std::array<profile, 1> assemblies = []
+	{
 		std::array<profile, 1> out;
 		for (size_t i = 0; i < skins.size(); ++i)
-			out[i] = {"m82",	   skins[i]->rigid_magazine_source,
-					  "handguard", aim_rule::two_hand,
-					  wrists,	   1,
-					  .10f,		   .22f,
-					  .10f,		   idle_fingers,
-					  equip_rest,  suppress_equip,
-					  skins[i],	   {part_visibility::rigid_groups}};
+			out[i] = {
+			    .id = "m82",
+			    .receiver = skins[i]->rigid_magazine_source,
+			    .variant = "handguard",
+			    .aiming = aim_rule::two_hand,
+			    .wrists = wrists,
+			    .authored_rear = 1,
+			    .acquire_meters = profile_defaults::acquire_meters,
+			    .release_meters = profile_defaults::release_meters,
+			    .blend_seconds = profile_defaults::blend_seconds,
+			    .fingers = idle_fingers,
+			    .equip_rest = equip_rest,
+			    .suppress_equip = suppress_equip,
+			    .reload = skins[i],
+			    .viewmodel =
+			        {
+			            .visibility = part_visibility::rigid_groups,
+			        },
+			};
 		return out;
 	}();
 	inline constexpr auto attachments = rifle_attachments::with_common(std::array<assembly_attachment, 2>{{
-		{{"attach_h2_m82_scope_vm", "tag_sight_on", "tag_sight_on"}, attachment_role::optic, 6},
-		{{"attach_h2_m82_bipod_vm", "tag_bipods", "tag_bipods"}, attachment_role::bipod, 3},
+	    {{"attach_h2_m82_scope_vm", "tag_sight_on", "tag_sight_on"}, attachment_role::optic, 6},
+	    {{"attach_h2_m82_bipod_vm", "tag_bipods", "tag_bipods"}, attachment_role::bipod, 3},
 	}});
 	inline int receiver_skin(std::string_view name) noexcept
 	{
@@ -34,8 +47,9 @@ namespace vr::gameplay::weapons::m82
 		return -1;
 	}
 	inline profile_match select(std::span<const hands::model_definition> models,
-								const hands::model_definition &receiver, const hands::rig &rig,
-								std::span<const hands::bone_definition> bones) noexcept
+	                            const hands::model_definition& receiver,
+	                            const hands::rig& rig,
+	                            std::span<const hands::bone_definition> bones) noexcept
 	{
 		const int skin = receiver_skin(receiver.name);
 		if (skin < 0 || receiver.count != 23)

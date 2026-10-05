@@ -1,5 +1,6 @@
 #pragma once
 
+#include "physical_reload_configuration.hpp"
 #include "detachable_magazine.hpp"
 #include "component/vr/digital_button_gate.hpp"
 #include "hand_pose_solver.hpp"
@@ -17,7 +18,6 @@ namespace vr::gameplay::weapons::physical_reload
 {
 	using clock = controller_input::clock;
 	using hands::vec;
-	enum class action_motion { reciprocating_slide, charging_handle, rotating_bolt };
 	struct geometry
 	{
 		bool valid{};
@@ -38,27 +38,6 @@ namespace vr::gameplay::weapons::physical_reload
 		bool knife_held{}; // Knife occupancy; only explicitly authored part co-grasps are allowed.
 		std::uint8_t magazine_pose{};
 		std::uint8_t attached_magazine_pose{};
-	};
-	struct profile
-	{
-		float waist_radius{}, slide_radius{}, slide_stroke{}, locked_travel{}, full_stroke{};
-		float slide_lateral_limit{}, well_radius{}, well_contact_depth{}, insertion_cosine{}, max_contact_step{};
-		vec slide_axis{}; // gun-local unit rearward direction
-		float well_capture_below{.012f}, part_release_distance{.35f};
-		float well_release_margin{.04f}; // hysteresis only AFTER a valid mouth contact
-		float close_travel{.003f}; // forward completion threshold, below full_stroke
-		std::uint8_t slide_pose_count{1};
-		action_motion motion{action_motion::reciprocating_slide};
-		const magazine_manipulation* manual_magazine{};
-		const handle_catch* manual_catch{};
-		const rotating_bolt::profile* manual_bolt{};
-		const belt_feed::profile* belt{};
-		std::uint8_t knife_slide_pose_count{}; // Separate pose set, latched at acquisition like ordinary styles.
-		const receiver_bolt_release* receiver_release{};
-		std::uint8_t magazine_pose_count{1};
-		float button_magazine_radius{.05f};
-		bool support_magazine_catch{}; // Enclosed pistol: exchange Grip support for a Trigger-maintained magazine.
-		float well_withdraw_margin{.015f}; // Exit/reentry gate, separate from staged-contact hysteresis.
 	};
 	// Explicit opt-in for the reviewed box-magazine families. Acquisition grows
 	// by 1 cm per boundary; alignment, retention and discontinuity rules retain
@@ -106,8 +85,6 @@ namespace vr::gameplay::weapons::physical_reload
 			(rules.last_round_lock && s.action == mechanics::action_state::held_open &&
 			 s.magazine_inserted && s.magazine_rounds == 0) ? p.locked_travel : 0;
 	}
-	inline constexpr bool native_action_recoil(const profile& p) noexcept
-	{ return p.motion==action_motion::reciprocating_slide; }
 	inline float attached_magazine_radius(const profile& p) noexcept
 	{return p.manual_magazine?p.manual_magazine->grab_radius:p.support_magazine_catch?0.f:p.button_magazine_radius;}
 	inline bool attached_magazine_contact(const profile& p,const mechanics::state& s,const geometry& g) noexcept

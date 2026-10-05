@@ -167,18 +167,25 @@ namespace vr::gameplay::weapons
 		bool matches_native(std::string_view name, int capacity) const noexcept
 		{ return capacity == ammunition.magazine_capacity && (native_family ? native_family(name) : name == native_name); }
 	};
-	inline reload_profile with_split_sounds(reload_profile profile,const char* cycle,
-		bool retain_close=false,bool split_removal=false) noexcept
+	inline reload_profile with_split_sounds(reload_profile profile,
+	                                        const split_sound_configuration& sound) noexcept
 	{
-		if(cycle)
+		if (sound.cycle_notetrack)
 		{
-			profile.rear_sound={cycle,sound_reference_kind::notetrack,sound_part::first};
-			if(!retain_close)profile.close_sound={cycle,sound_reference_kind::notetrack,sound_part::second};
+			profile.rear_sound = {.name = sound.cycle_notetrack,
+			                      .kind = sound_reference_kind::notetrack,
+			                      .part = sound_part::first};
+			if (!sound.retain_close)
+			{
+				profile.close_sound = {.name = sound.cycle_notetrack,
+				                       .kind = sound_reference_kind::notetrack,
+				                       .part = sound_part::second};
+			}
 		}
-		if(split_removal)
+		if (sound.split_removal)
 		{
-			profile.removal_sound=profile.interaction_sound(mechanics::effect::magazine_out);
-			profile.removal_sound.part=sound_part::first;
+			profile.removal_sound = profile.interaction_sound(mechanics::effect::magazine_out);
+			profile.removal_sound.part = sound_part::first;
 		}
 		return profile;
 	}
@@ -188,14 +195,15 @@ namespace vr::gameplay::weapons
 	}
 	inline bool valid_partition_profile(const reload_profile& p) noexcept
 	{
-		if(p.bolt_partition)
+		if (p.bolt_partition)
 		{
-			const auto& b=*p.bolt_partition;
-			return !p.bolt && !p.handle_fold && !p.handle_child_of_bolt && !p.concealed_bolt && !p.interaction.manual_bolt &&
-				p.ammunition.feed==mechanics::feed_type::closed_bolt && p.interaction.motion==physical_reload::action_motion::charging_handle &&
-				(b.motion.bone=="j_gun" || b.motion.bone==p.slide_bone) && valid_partition(b.mesh) &&
-				p.rigid_magazine_source && std::string_view(b.mesh.source)==p.rigid_magazine_source &&
-				valid_bolt(b.motion,p.interaction.slide_stroke) && b.motion.shot_stroke_m>0;
+			const auto& b = *p.bolt_partition;
+			return !p.bolt && !p.handle_fold && !p.handle_child_of_bolt && !p.concealed_bolt &&
+			       !p.interaction.manual_bolt && p.ammunition.feed == mechanics::feed_type::closed_bolt &&
+			       p.interaction.motion == physical_reload::action_motion::charging_handle &&
+			       (b.motion.bone == "j_gun" || b.motion.bone == p.slide_bone) && valid_partition(b.mesh) &&
+			       p.rigid_magazine_source && std::string_view(b.mesh.source) == p.rigid_magazine_source &&
+			       valid_bolt(b.motion, p.interaction.slide_stroke) && b.motion.shot_stroke_m > 0;
 		}
 		return !p.handle_fold || valid_fold(*p.handle_fold);
 	}

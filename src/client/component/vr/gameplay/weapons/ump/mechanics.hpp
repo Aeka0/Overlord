@@ -3,8 +3,18 @@
 
 namespace vr::gameplay::weapons::ump
 {
-	inline constexpr mechanics::rules reload_rules=[] {
-		mechanics::rules r{25,mechanics::magazine_release::physical_pull,true,false,true,mechanics::feed_type::closed_bolt,true};
-		r.physical_catch_release=true;return r;
+	inline constexpr mechanics::rules reload_rules = []
+	{
+		mechanics::rules r{
+		    .magazine_capacity = 25,
+		    .release = mechanics::magazine_release::physical_pull,
+		    .last_round_lock = true,
+		    .release_control = false,
+		    .plus_one = true,
+		    .feed = mechanics::feed_type::closed_bolt,
+		    .manual_catch = true,
+		};
+		r.physical_catch_release = true;
+		return r;
 	}();
 }

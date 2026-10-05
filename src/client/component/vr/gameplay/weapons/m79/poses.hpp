@@ -91,23 +91,63 @@ inline constexpr std::array<hinged_part_pose,7> hinge_followers{{
 {"j_strap_end",{{12.522895693f,0.000000000f,0.951524044f},{0.000000000f,-0.024445480f,0.000000000f,0.999701165f}},{{10.375878942f,0.000430102f,-2.031560582f},{-0.000030520f,0.821750278f,0.000000000f,0.569847769f}}},
 {"j_strap_start",{{-6.857320831f,0.000000000f,0.019321000f},{0.000000000f,-0.024445480f,0.000000000f,0.999701165f}},{{-5.514972229f,-0.000001916f,0.967812059f},{0.000000000f,0.351113410f,0.000000000f,0.936332939f}}},
 }};
-inline const break_action_profile feed=[] {break_action_profile p;
-p.id="m79";p.native_name="m79";p.receiver="h2_viewmodel_m79_base";p.receiver_bones=17;p.ammunition={1};
-p.interaction.open_angle=0.841586207f;
-p.hinge_pivot={8.117086115f,0.000000000f,1.859428968f};
-p.barrel_bone="j_front_end_reload";p.lock_bone="j_breech_lock";p.shell_bone="j_grenade_round";p.case_bone="j_brass_round";
-p.chamber_bones={"j_grenade_round"};
-p.barrel_closed={{8.117408452f,0.000000000f,1.859658910f},{0.000000000f,0.000000000f,0.000000000f,1.000000000f}};p.barrel_open={{8.117472350f,0.000135899f,1.859341806f},{0.000000000f,0.408484498f,0.000030520f,0.912765257f}};
-p.lock_closed={{2.986783869f,0.000000000f,4.704713821f},{0.000000000f,0.000000000f,0.000000000f,1.000000000f}};p.lock_open={{3.175012955f,-0.000101092f,4.704955100f},{0.000000000f,0.000000000f,0.000000000f,1.000000000f}};
-p.shell_in_wrist={{4.267440636f,0.906107703f,2.060987388f},{-0.490646474f,0.543297035f,-0.678174332f,-0.064606071f}};p.shell_tip={1.727534842f,-0.000555022f,0.068946711f};
-p.chamber_in_barrel={{{{-2.504781663f,0.000537000f,1.677457179f},{0.000000000f,0.000000000f,0.000000000f,1.000000000f}}}};
-p.mouth_in_barrel={{{{-4.207563400f,-0.000018022f,1.746403889f},{0.000000000f,0.707106781f,0.000000000f,0.707106781f}}}};
-p.case_in_shell={{-0.822127710f,0.000000000f,0.000000000f},{0.000000000f,0.000000000f,0.000000000f,1.000000000f}};
-p.barrel_grip={"native_foreend",{{9.650305648f,1.536915378f,0.275397743f},{0.152918989f,-0.118426433f,-0.216934976f,0.956833412f}},{3.223534818f,-0.216372225f,3.537761881f},idle_fingers};p.shell_fingers=shell_fingers;
-p.sound_key=[](break_action::effect e)->sound_reference {switch(e){
-case break_action::effect::open:return {"weap_m79_open_plr"};
-case break_action::effect::close:return {"weap_m79_chamber_plr"};
-case break_action::effect::eject:return {"weap_m79_clipout_plr"};
-case break_action::effect::load:return {"weap_m79_clipin_plr"};
-default:return {};}};p.followers=hinge_followers;return p;}();
+inline const break_action_profile feed = []
+{
+	break_action_profile p;
+	p.id = "m79";
+	p.native_name = "m79";
+	p.receiver = "h2_viewmodel_m79_base";
+	p.receiver_bones = 17;
+	p.ammunition = {
+		.capacity = 1,
+	};
+	p.interaction.open_angle = 0.841586207f;
+	p.hinge_pivot = {8.117086115f, 0.000000000f, 1.859428968f};
+	p.barrel_bone = "j_front_end_reload";
+	p.lock_bone = "j_breech_lock";
+	p.shell_bone = "j_grenade_round";
+	p.case_bone = "j_brass_round";
+	p.chamber_bones = {"j_grenade_round"};
+	p.barrel_closed = {{8.117408452f, 0.000000000f, 1.859658910f},
+		               {0.000000000f, 0.000000000f, 0.000000000f, 1.000000000f}};
+	p.barrel_open = {{8.117472350f, 0.000135899f, 1.859341806f},
+		             {0.000000000f, 0.408484498f, 0.000030520f, 0.912765257f}};
+	p.lock_closed = {{2.986783869f, 0.000000000f, 4.704713821f},
+		             {0.000000000f, 0.000000000f, 0.000000000f, 1.000000000f}};
+	p.lock_open = {{3.175012955f, -0.000101092f, 4.704955100f},
+		           {0.000000000f, 0.000000000f, 0.000000000f, 1.000000000f}};
+	p.shell_in_wrist = {{4.267440636f, 0.906107703f, 2.060987388f},
+		                {-0.490646474f, 0.543297035f, -0.678174332f, -0.064606071f}};
+	p.shell_tip = {1.727534842f, -0.000555022f, 0.068946711f};
+	p.chamber_in_barrel = {{{{-2.504781663f, 0.000537000f, 1.677457179f},
+		                     {0.000000000f, 0.000000000f, 0.000000000f, 1.000000000f}}}};
+	p.mouth_in_barrel = {{{{-4.207563400f, -0.000018022f, 1.746403889f},
+		                   {0.000000000f, 0.707106781f, 0.000000000f, 0.707106781f}}}};
+	p.case_in_shell = {{-0.822127710f, 0.000000000f, 0.000000000f},
+		               {0.000000000f, 0.000000000f, 0.000000000f, 1.000000000f}};
+	p.barrel_grip = {"native_foreend",
+		             {{9.650305648f, 1.536915378f, 0.275397743f},
+		              {0.152918989f, -0.118426433f, -0.216934976f, 0.956833412f}},
+		             {3.223534818f, -0.216372225f, 3.537761881f},
+		             idle_fingers};
+	p.shell_fingers = shell_fingers;
+	p.sound_key = [](break_action::effect e) -> sound_reference
+	{
+		switch (e)
+		{
+		case break_action::effect::open:
+			return {"weap_m79_open_plr"};
+		case break_action::effect::close:
+			return {"weap_m79_chamber_plr"};
+		case break_action::effect::eject:
+			return {"weap_m79_clipout_plr"};
+		case break_action::effect::load:
+			return {"weap_m79_clipin_plr"};
+		default:
+			return {};
+		}
+	};
+	p.followers = hinge_followers;
+	return p;
+}();
 }

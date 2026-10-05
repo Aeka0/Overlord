@@ -78,12 +78,51 @@ inline constexpr std::array<joint_pose, 18> rocket_fingers{{
 inline constexpr std::array<std::string_view,3> aliases{"rpg_player","rpg_af_chase","rpg_straight_af_chase"};
 // Separate quiet transients in the verified 48000 Hz / 40969-frame lift recording.
 // Boundaries selected at low-energy millisecond positions; no extracted asset ships.
-inline constexpr sound_window support_grab_window{"wpfoly_rpg_reload_lift_v1",108,167};
-inline constexpr sound_window support_release_window{"wpfoly_rpg_reload_lift_v1",443,498};
+inline constexpr sound_window support_grab_window{
+	.recording = "wpfoly_rpg_reload_lift_v1",
+	.begin_ms = 108,
+	.end_ms = 167,
+};
+inline constexpr sound_window support_release_window{
+	.recording = "wpfoly_rpg_reload_lift_v1",
+	.begin_ms = 443,
+	.end_ms = 498,
+};
 // Last 6 cm of the exported rocket tail; muzzle ring from the receiver mesh.
-inline const launcher_profile feed{"rpg","rpg",launcher_loading::rocket,false,aliases,"h2_viewmodel_rpg7_rocket",{{14.17322835f, 0.00000000f, 2.36220491f}, {0.00000000f, 0.00000000f, 0.00000000f, 1.00000000f}},{{4.58213829f, 2.96699486f, 0.39517690f}, {0.54185468f, 0.43461453f, 0.24802303f, 0.67526906f}},rocket_fingers,
-	{-43.3238678f/2.54f,0,0},{-37.3238678f/2.54f,0,0},
-	{18.09935f/2.54f,0,6.f/2.54f},{"weap_rpg_insert_plr"},
-	{"weap_rpg_lift_plr",sound_reference_kind::notetrack,sound_part::whole,nullptr,&support_grab_window},
-	{"weap_rpg_lift_plr",sound_reference_kind::notetrack,sound_part::whole,nullptr,&support_release_window}};
+inline const launcher_profile feed{
+	.id = "rpg",
+	.native_name = "rpg",
+	.loading = launcher_loading::rocket,
+	.guided = false,
+	.aliases = aliases,
+	.rocket_model = "h2_viewmodel_rpg7_rocket",
+	.rocket_rest = {{14.17322835f, 0.00000000f, 2.36220491f},
+	                {0.00000000f, 0.00000000f, 0.00000000f, 1.00000000f}},
+	.rocket_in_wrist = {{4.58213829f, 2.96699486f, 0.39517690f},
+	                    {0.54185468f, 0.43461453f, 0.24802303f, 0.67526906f}},
+	.rocket_fingers = rocket_fingers,
+	.tail_start = {-43.3238678f / 2.54f, 0, 0},
+	.tail_end = {-37.3238678f / 2.54f, 0, 0},
+	.load_mouth = {18.09935f / 2.54f, 0, 6.f / 2.54f},
+	.load_sound =
+	    {
+	        .name = "weap_rpg_insert_plr",
+	    },
+	.support_grab_sound =
+	    {
+	        .name = "weap_rpg_lift_plr",
+	        .kind = sound_reference_kind::notetrack,
+	        .part = sound_part::whole,
+	        .notetrack_weapon = nullptr,
+	        .window = &support_grab_window,
+	    },
+	.support_release_sound =
+	    {
+	        .name = "weap_rpg_lift_plr",
+	        .kind = sound_reference_kind::notetrack,
+	        .part = sound_part::whole,
+	        .notetrack_weapon = nullptr,
+	        .window = &support_release_window,
+	    },
+};
 }

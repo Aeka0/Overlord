@@ -5,6 +5,22 @@
 namespace vr::gameplay::weapons::m1911
 {
 	inline constexpr profile base{
-		"m1911","h2_viewmodel_colt45_base","base",aim_rule::rear_hand,wrists,1,
-		.10f,.22f,.10f,idle_fingers,equip_rest,suppress_equip,&physical,{part_visibility::rigid_groups}};
+	    .id = "m1911",
+	    .receiver = "h2_viewmodel_colt45_base",
+	    .variant = "base",
+	    .aiming = aim_rule::rear_hand,
+	    .wrists = wrists,
+	    .authored_rear = 1,
+	    .acquire_meters = profile_defaults::acquire_meters,
+	    .release_meters = profile_defaults::release_meters,
+	    .blend_seconds = profile_defaults::blend_seconds,
+	    .fingers = idle_fingers,
+	    .equip_rest = equip_rest,
+	    .suppress_equip = suppress_equip,
+	    .reload = &physical,
+	    .viewmodel =
+	        {
+	            .visibility = part_visibility::rigid_groups,
+	        },
+	};
 }

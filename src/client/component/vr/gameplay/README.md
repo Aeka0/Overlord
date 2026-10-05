@@ -40,3 +40,6 @@ coordinate native selection and inventory commits, and publish presentation
 snapshots. Keep game types, addresses, script calls and scheduler ownership out
 of the decision headers. This boundary describes dependencies; it does not
 establish independent source provenance or change the applicable licenses.
+
+Weapon configuration fields, units, shared defaults and verification boundaries
+are documented in [the weapon configuration guide](weapons/README.md).

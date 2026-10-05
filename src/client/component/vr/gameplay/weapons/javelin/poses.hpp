@@ -51,8 +51,15 @@ inline constexpr std::array<part_pose,5> equip_rest{{
 {"j_lid",{{-56.39057310f, 0.03945600f, -0.21279431f}, {0.00000000f, 0.00000000f, 0.00000000f, 1.00000000f}}},
 }};
 inline constexpr std::array<std::string_view,3> aliases{"javelin_estate_jeep","javelin_dcburn","javelin_noimpact"};
-inline const launcher_profile feed=[] {
-	launcher_profile p{"javelin","javelin",launcher_loading::native_reload,true,aliases};
+inline const launcher_profile feed = []
+{
+	launcher_profile p{
+		.id = "javelin",
+		.native_name = "javelin",
+		.loading = launcher_loading::native_reload,
+		.guided = true,
+		.aliases = aliases,
+	};
 	// Native idle tag_view is 18.70728 cm left of the tube axis (the CLU sight).
 	p.sight_lateral_meters=.18707281f;
 	return p;

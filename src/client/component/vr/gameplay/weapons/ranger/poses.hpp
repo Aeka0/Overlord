@@ -58,23 +58,66 @@ inline constexpr std::array<part_pose,10> equip_rest{{
 {"j_ri_bullet",{{-2.968436714f,-0.687636024f,1.548855887f},{0.000000000f,0.000000000f,0.000000000f,1.000000000f}}},
 {"tag_flash",{{9.348656812f,0.000000000f,1.499857959f},{0.000000000f,0.000000000f,0.000000000f,1.000000000f}}},
 }};
-inline const break_action_profile feed=[] {break_action_profile p;
-p.id="ranger";p.native_name="ranger";p.receiver="h2_viewmodel_sawed_off_double_barrel_base";p.receiver_bones=11;p.ammunition={2};
-p.interaction.open_angle=0.636880736f;p.scatter_ejected_rounds=true;
-p.hinge_pivot={8.519404565f,0.000000000f,1.614012949f};
-p.barrel_bone="j_reload";p.lock_bone="j_back_lock";p.shell_bone="j_le_bullet";p.case_bone="j_le_bullet";
-p.chamber_bones={"j_le_bullet","j_ri_bullet"};
-p.barrel_closed={{9.563620259f,0.000000000f,1.896515043f},{0.000000000f,0.000000000f,0.000000000f,1.000000000f}};p.barrel_open={{9.526907979f,-0.000033299f,1.220146576f},{0.000030520f,0.313085720f,0.000000000f,0.949724871f}};
-p.lock_closed={{4.408624229f,0.000000000f,3.551212070f},{0.000000000f,-0.159888713f,0.000000000f,0.987135046f}};p.lock_open={{4.408624229f,0.000000000f,3.551212070f},{-0.050843920f,-0.151585700f,0.313944451f,0.935882232f}};
-p.shell_in_wrist=hand_poses::shell_grasp::for_shell({-0.620604500f,-0.056349991f,-0.053616114f});p.shell_tip={2.241030265f,0.040694479f,0.048939543f};
-p.chamber_in_barrel={{{{-2.970693243f,0.687634992f,1.548855699f},{0.000000000f,0.000000000f,0.000000000f,1.000000000f}},{{-2.968436714f,-0.687636024f,1.548855699f},{0.000000000f,0.000000000f,0.000000000f,1.000000000f}}}};
-p.mouth_in_barrel={{{{-3.982336315f,0.728329471f,1.597795242f},{0.000000000f,0.707106781f,0.000000000f,0.707106781f}},{{-4.011009622f,-0.666732499f,1.549241862f},{0.000000000f,0.707106781f,0.000000000f,0.707106781f}}}};
-p.case_in_shell={{0.000000000f,0.000000000f,0.000000000f},{0.000000000f,0.000000000f,0.000000000f,1.000000000f}};
-p.barrel_grip={"native_foreend",{{8.812788053f,1.732160252f,0.611403766f},{0.403618244f,-0.057660596f,-0.044997680f,0.911999330f}},{4.487103129f,-0.760170751f,1.531717144f},idle_fingers};p.shell_fingers=shell_fingers;
-p.sound_key=[](break_action::effect e)->sound_reference {switch(e){
-case break_action::effect::open:return {"weap_ranger_open_plr"};
-case break_action::effect::close:return {"weap_ranger_chamber_plr"};
-case break_action::effect::eject:return {"weap_ranger_clipout_plr"};
-case break_action::effect::load:return {"weap_ranger_clipin_plr"};
-default:return {};}};return p;}();
+inline const break_action_profile feed = []
+{
+	break_action_profile p;
+	p.id = "ranger";
+	p.native_name = "ranger";
+	p.receiver = "h2_viewmodel_sawed_off_double_barrel_base";
+	p.receiver_bones = 11;
+	p.ammunition = {
+		.capacity = 2,
+	};
+	p.interaction.open_angle = 0.636880736f;
+	p.scatter_ejected_rounds = true;
+	p.hinge_pivot = {8.519404565f, 0.000000000f, 1.614012949f};
+	p.barrel_bone = "j_reload";
+	p.lock_bone = "j_back_lock";
+	p.shell_bone = "j_le_bullet";
+	p.case_bone = "j_le_bullet";
+	p.chamber_bones = {"j_le_bullet", "j_ri_bullet"};
+	p.barrel_closed = {{9.563620259f, 0.000000000f, 1.896515043f},
+		               {0.000000000f, 0.000000000f, 0.000000000f, 1.000000000f}};
+	p.barrel_open = {{9.526907979f, -0.000033299f, 1.220146576f},
+		             {0.000030520f, 0.313085720f, 0.000000000f, 0.949724871f}};
+	p.lock_closed = {{4.408624229f, 0.000000000f, 3.551212070f},
+		             {0.000000000f, -0.159888713f, 0.000000000f, 0.987135046f}};
+	p.lock_open = {{4.408624229f, 0.000000000f, 3.551212070f},
+		           {-0.050843920f, -0.151585700f, 0.313944451f, 0.935882232f}};
+	p.shell_in_wrist = hand_poses::shell_grasp::for_shell({-0.620604500f, -0.056349991f, -0.053616114f});
+	p.shell_tip = {2.241030265f, 0.040694479f, 0.048939543f};
+	p.chamber_in_barrel = {{{{-2.970693243f, 0.687634992f, 1.548855699f},
+		                     {0.000000000f, 0.000000000f, 0.000000000f, 1.000000000f}},
+		                    {{-2.968436714f, -0.687636024f, 1.548855699f},
+		                     {0.000000000f, 0.000000000f, 0.000000000f, 1.000000000f}}}};
+	p.mouth_in_barrel = {{{{-3.982336315f, 0.728329471f, 1.597795242f},
+		                   {0.000000000f, 0.707106781f, 0.000000000f, 0.707106781f}},
+		                  {{-4.011009622f, -0.666732499f, 1.549241862f},
+		                   {0.000000000f, 0.707106781f, 0.000000000f, 0.707106781f}}}};
+	p.case_in_shell = {{0.000000000f, 0.000000000f, 0.000000000f},
+		               {0.000000000f, 0.000000000f, 0.000000000f, 1.000000000f}};
+	p.barrel_grip = {"native_foreend",
+		             {{8.812788053f, 1.732160252f, 0.611403766f},
+		              {0.403618244f, -0.057660596f, -0.044997680f, 0.911999330f}},
+		             {4.487103129f, -0.760170751f, 1.531717144f},
+		             idle_fingers};
+	p.shell_fingers = shell_fingers;
+	p.sound_key = [](break_action::effect e) -> sound_reference
+	{
+		switch (e)
+		{
+		case break_action::effect::open:
+			return {"weap_ranger_open_plr"};
+		case break_action::effect::close:
+			return {"weap_ranger_chamber_plr"};
+		case break_action::effect::eject:
+			return {"weap_ranger_clipout_plr"};
+		case break_action::effect::load:
+			return {"weap_ranger_clipin_plr"};
+		default:
+			return {};
+		}
+	};
+	return p;
+}();
 }

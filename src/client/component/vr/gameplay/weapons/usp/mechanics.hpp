@@ -9,6 +9,12 @@ namespace vr::gameplay::weapons::usp
 	inline constexpr const char* native_name = "usp";
 	// Live campaign capture: token16, same 12-round closed-bolt mechanism.
 	inline constexpr const char* silenced_native_name = "usp_silencer";
-	inline constexpr mechanics::rules reload_rules{12,mechanics::magazine_release::button,true,true,true};
+	inline constexpr mechanics::rules reload_rules{
+	    .magazine_capacity = 12,
+	    .release = mechanics::magazine_release::button,
+	    .last_round_lock = true,
+	    .release_control = true,
+	    .plus_one = true,
+	};
 	inline constexpr auto chamber_rules = mechanics::chamber_rules(reload_rules);
 }
