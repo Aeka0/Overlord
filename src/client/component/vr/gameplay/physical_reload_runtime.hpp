@@ -99,7 +99,16 @@ namespace vr::gameplay::weapons::physical_reload
 	};
 	// Short copied snapshots only; no native calls or ammo writes on render thread.
 	presentation current(weapon_identity id) noexcept;
-	void collect_interactions(const hand_interaction::frame&)noexcept;
+	inline bool takes_carry_support(const presentation& reload, const hold& owner) noexcept
+	{
+		return owner.can_fire() && valid_hand(owner.support) && reload.active && reload.definition &&
+		       reload.definition->interaction.support_magazine_catch &&
+		       reload.ammo.magazine_hand == owner.support;
+	}
+	// After granted mechanical commits, transfer supported-pistol ownership to
+	// its settled magazine lease through the server-owned carry adapter.
+	void reconcile_carry_support() noexcept;
+	void collect_interactions(const hand_interaction::frame&) noexcept;
 	void update_interactions();
 	// Identity/reconciliation/settlement only; never acquires from cached input.
 	void update_lifecycle(bool suspended);

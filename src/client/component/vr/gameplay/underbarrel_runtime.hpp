@@ -92,9 +92,37 @@ namespace vr::gameplay::weapons::underbarrel
 	void collect_interactions(const hand_interaction::frame&)noexcept;
 	void report_interactions()noexcept;
 	presentation current(weapon_identity)noexcept;
-	void update(const controller_input::frame&,std::span<const carry::instance>,std::span<const carry::scene>,
-		const std::array<hands::anchor,2>&,const head_pose_bridge::spatial_frame&)noexcept;
-	bool ordinary_support_allowed(const carry::scene&,const hands::anchor&,hand,bool retaining=false)noexcept;
+	enum class support_handoff
+	{
+		unchanged,
+		acquire,
+		release
+	};
+	struct support_handoff_input
+	{
+		bool grip_down{}, hand_occupied{};
+	};
+	inline support_handoff carry_support_handoff(const presentation& module,
+	                                             const hold& owner,
+	                                             const support_handoff_input& input) noexcept
+	{
+		if (!owner.can_fire() || !module.owns_support)
+			return support_handoff::unchanged;
+		const auto offhand = hand(1 - int(owner.rear));
+		if (module.grip != lease::none && input.grip_down && !input.hand_occupied)
+			return support_handoff::acquire;
+		if (module.grip == lease::none && owner.support == offhand)
+			return support_handoff::release;
+		return support_handoff::unchanged;
+	}
+	// Admitted contact uses the filtered frame; retained support uses the original
+	// squeeze state. Ownership commits remain in the server-owned carry adapter.
+	void settle_interactions(const hand_interaction::frame&,
+	                         const controller_input::frame& raw_input) noexcept;
+	bool ordinary_support_allowed(const carry::scene&,
+	                              const hands::anchor&,
+	                              hand,
+	                              bool retaining = false) noexcept;
 	void suspend()noexcept;
 	bool blocks_native(const void* ps)noexcept;
 	bool prepare_transfer(weapon_identity)noexcept;

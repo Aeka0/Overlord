@@ -3,6 +3,7 @@
 #include "shield_geometry.hpp"
 #include "hand_interaction/runtime.hpp"
 #include "equipment_runtime.hpp"
+#include "carry_interaction.hpp"
 #include "knife_profile.hpp"
 #include "official_cheats.hpp"
 #include "native_weapon_read.hpp"
@@ -207,10 +208,25 @@ namespace vr::gameplay::equipment
 		const std::lock_guard lock(mutex);published.visible=false;
 		if (return_knife) {published.knife.return_to_chest();hits.reset();}
 	}
-	unsigned update(const controller_input::frame& input,const head_pose_bridge::spatial_frame& body,const std::array<anchor,2>& wrists,
-		unsigned valid_hands,unsigned available,unsigned pressed,unsigned released,std::span<const weapons::carry::instance> owned,std::span<const weapons::carry::scene> scenes)
+	unsigned settle_interactions(const hand_interaction::frame& frame,
+	                             const controller_input::frame& input,
+	                             const weapons::carry::grip_edges& edges)
 	{
-		if(!running()){suspend(true);return 0;}
+		unsigned available{}, released = edges.released;
+		const unsigned pressed = edges.pressed;
+		for (int h = 0; h < 2; ++h)
+			if (hand_interaction::has(hand(h), hand_interaction::domain::knife))
+				available |= 1u << h;
+		const auto& body = frame.body;
+		const auto& wrists = frame.wrists;
+		const auto valid_hands = frame.valid_hands;
+		const auto owned = weapons::carry::interaction_instances();
+		const std::span<const weapons::carry::scene> scenes = frame.objects;
+		if (!running())
+		{
+			suspend(true);
+			return 0;
+		}
 		if (!melee::native::allowed() || !input.focused || !fresh(input.sampled_at,clock::now()) || body.generation!=input.reference_generation || owned.size()!=scenes.size()) {suspend();return 0;}
 		state s;{const std::lock_guard lock(mutex);s=published;}
 		const bool bayonet=cheats::chest_bayonet();

@@ -2,6 +2,7 @@
 #include "hand_interaction/runtime.hpp"
 #include "hand_interaction/constraints.hpp"
 #include "underbarrel_runtime.hpp"
+#include "carry_interaction.hpp"
 #include "official_cheats.hpp"
 #include "underbarrel_feedback.hpp"
 #include "native_ammunition.hpp"
@@ -357,7 +358,7 @@ namespace vr::gameplay::weapons::underbarrel
 		const float distance=firing_distance(hands::scale(hands::sub(local.position,s.firing_local.position),1/s.units),s.firing_forward_m);
 		return support_intent(distance,controller_facing(q,int(actor)),s.type);
 	}
-	void update(const controller_input::frame& input,std::span<const carry::instance> owned,std::span<const carry::scene> weapons,
+	static void update_modules(const controller_input::frame& input,std::span<const carry::instance> owned,std::span<const carry::scene> weapons,
 		const std::array<hands::anchor,2>& wrists,const head_pose_bridge::spatial_frame& body)noexcept
 	{
 		if(!scheduler::is_executing(scheduler::pipeline::server) || !game::CL_IsCgameInitialized())return;
@@ -416,11 +417,50 @@ namespace vr::gameplay::weapons::underbarrel
 			}
 		}
 	}
-	part_presentation::result present(const part_rig& parts,const hands::rig& rig,const hands::pose_library& library,const profile& profile,
-		const std::array<hands::anchor,2>& ordinary_supports,
-		const controller_input::frame& input,const hold& owner,const presentation& v,std::uint64_t assembly,bool gameplay,
-		const std::array<hands::anchor,2>& targets,const std::array<hands::vec,2>& shoulders,const std::array<hands::vec,3>& axes,
-		hands::vec head,hands::vec offset,float units,std::span<hands::bone> solved,hands::part_hand_frame* hand_motion)noexcept
+	void settle_interactions(const hand_interaction::frame& frame,
+	                         const controller_input::frame& raw_input) noexcept
+	{
+		update_modules(frame.input, carry::interaction_instances(), frame.objects, frame.wrists, frame.body);
+		bool changed{};
+		for (const auto& item : carry::interaction_instances())
+		{
+			if (item.at != carry::location::held || !item.owner.can_fire())
+				continue;
+			const auto module = current(item.id);
+			if (!module.owns_support)
+				continue;
+			const auto offhand = hand(1 - int(item.owner.rear));
+			const bool grip_down = raw_input.squeeze[int(offhand)].down;
+			const bool hand_occupied =
+			    module.grip != lease::none && grip_down && carry::interaction_hand_occupied(offhand);
+			const auto change = carry_support_handoff(
+			    module, item.owner, {.grip_down = grip_down, .hand_occupied = hand_occupied});
+			if (change == support_handoff::acquire)
+				changed = carry::acquire_support(item.id, offhand) || changed;
+			else if (change == support_handoff::release)
+				changed = carry::release_support(item.id) || changed;
+		}
+		if (changed)
+			carry::publish_topology();
+	}
+	part_presentation::result present(const part_rig& parts,
+	                                  const hands::rig& rig,
+	                                  const hands::pose_library& library,
+	                                  const profile& profile,
+	                                  const std::array<hands::anchor, 2>& ordinary_supports,
+	                                  const controller_input::frame& input,
+	                                  const hold& owner,
+	                                  const presentation& v,
+	                                  std::uint64_t assembly,
+	                                  bool gameplay,
+	                                  const std::array<hands::anchor, 2>& targets,
+	                                  const std::array<hands::vec, 2>& shoulders,
+	                                  const std::array<hands::vec, 3>& axes,
+	                                  hands::vec head,
+	                                  hands::vec offset,
+	                                  float units,
+	                                  std::span<hands::bone> solved,
+	                                  hands::part_hand_frame* hand_motion) noexcept
 	{
 		using namespace hands;if(!enabled() || !parts || !owner.can_fire() || !library.valid || units<=0 || !std::isfinite(units) || solved.size()<size_t(rig.count))return {};
 		const int rear=int(owner.rear),off=1-rear;const auto gun=as_anchor(solved[rig.gun]);

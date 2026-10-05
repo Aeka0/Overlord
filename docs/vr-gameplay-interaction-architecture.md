@@ -32,7 +32,7 @@ The subsystem table records their current responsibilities and boundaries.
 
 | Facility | Current owner | Boundary |
 | --- | --- | --- |
-| Server interaction phases | `gameplay/interaction_coordinator.cpp` | One provider table orders reporting, collection, settlement and lifecycle work. Normal and reconciliation reporting retain their separate established orders. |
+| Server interaction phases | `gameplay/interaction_schedule.hpp`, `interaction_coordinator.cpp` | Named phase lists select callbacks from one checked provider inventory. Acquisition and reconciliation retain their distinct orders; lifecycle groups have explicit ownership. H2 server scheduling stays in the implementation adapter. |
 | Arbitration and input history | `gameplay/hand_interaction/runtime.cpp` | Owns grants, witnessed outcomes and publication; does not schedule or call domain runtimes. |
 | Carry and inventory | `gameplay/carry_interaction.hpp`, `weapon_carry_runtime.cpp` | Admits a server-owned frame and exposes carry candidates, grip commits, pickup and presentation publication. Native inventory, selection and drop transactions remain here. |
 | Common hands | `gameplay/hand_service.*`, `hand_skeleton.hpp`, `hand_pose_schema.hpp`, `hand_pose_library.hpp` | Owns neutral/bilateral binding and hand presentation dispatch. Generic hand descriptors, transforms and mirroring do not require weapon admission rules. |
@@ -50,6 +50,33 @@ to its server adapter; the hand arbiter sees copied scene descriptors and settle
 relationships. Repeated XR samples still run reconciliation without creating a
 new acquisition batch. Script-only world use and vehicle control retain their
 own admission paths. Native game writes remain on their verified owner thread.
+
+The dispatch schedule uses local provider keys, never serialized hand identities
+or native IDs. Binding validation rejects missing reports/collectors, callbacks
+without a settlement phase, omitted lifecycle callbacks and mismatched provider
+indices. No numeric ranking or disabled-rank sentinel participates in dispatch.
+
+The admitted-batch boundary remains explicit:
+
+1. Report settled relations, synchronize input and exchange underbarrel supply.
+2. Collect domain/carry proposals and resolve them once through the hand arbiter.
+3. Settle granted domain commits in their declared phase.
+4. Let physical reload reconcile support-to-magazine handoffs; let underbarrel
+   settle its mechanical state and support handoffs; refresh copied carry poses.
+5. Let equipment consume its knife grants, then settle heartbeat, carry grips and
+   world use with the resulting hand masks.
+6. Publish carry/launcher feedback, report final relations and finish the batch.
+
+Pistol support-catch and secondary-module lease rules belong to their domain
+runtimes. They request ownership changes through the server-owned carry adapter;
+the coordinator does not inspect magazine ownership or secondary grip internals.
+Equipment receives the copied interaction frame, original input and named grip
+edges instead of a positional argument list. Filtered contact input and original
+squeeze retention keep their separate existing meanings.
+
+Continuous lifecycle still runs after an admitted batch. Without one, continuous
+and idle-feed lifecycle settle before vehicle/scripted-use handling. Repeated
+input reports settled state through reconciliation without another acquisition.
 
 The hand service freezes the knife presentation state before composing wrists,
 fingers and empty-hand poses. Knife equipment no longer owns the global hand rig

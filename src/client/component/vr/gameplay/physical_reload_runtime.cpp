@@ -7,6 +7,7 @@
 #include "physical_reload_presenter.hpp"
 #include "native_shot_history.hpp"
 #include "weapon_carry_runtime.hpp"
+#include "carry_interaction.hpp"
 #include "weapon_runtime_lifecycle.hpp"
 #include "weapon_instance_cache.hpp"
 #include "weapon_interaction.hpp"
@@ -449,7 +450,21 @@ namespace vr::gameplay::weapons::physical_reload
 		}
 	}
 	void update_interactions(){tick(true);}
-	bool exchange_supply(weapon_identity id,hand actor,bool draw,supply_commit_fn write,void* context)noexcept
+	void reconcile_carry_support() noexcept
+	{
+		bool changed{};
+		for (const auto& item : carry::interaction_instances())
+		{
+			if (item.at != carry::location::held || !item.owner.can_fire() || !valid_hand(item.owner.support))
+				continue;
+			if (takes_carry_support(current(item.id), item.owner))
+				changed = carry::release_support(item.id) || changed;
+		}
+		if (changed)
+			carry::publish_topology();
+	}
+	bool exchange_supply(
+	    weapon_identity id, hand actor, bool draw, supply_commit_fn write, void* context) noexcept
 	{
 		namespace hi=hand_interaction;const auto* input=hi::simulation();const auto now=clock::now();
 		if(!active() || !input || !write || !valid_hand(actor) || !input->input.focused ||

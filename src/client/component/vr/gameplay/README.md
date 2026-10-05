@@ -16,11 +16,18 @@ owns arbitration/publication; `carry_interaction` exposes server-only carry
 operations and `weapon_scene.hpp` contains copied scene data without runtime
 calls. `hand_service` owns shared hand binding and presentation dispatch.
 
+`interaction_schedule.hpp` declares named phases without H2 types or scheduler
+calls. The coordinator binds their callbacks and retains the H2 server entry
+point. Support/magazine and secondary-module handoffs stay in their respective
+domain runtimes and commit through carry after arbitration; equipment owns the
+translation of knife grants into its typed settlement input. Keep mechanical
+rules out of dispatch and native ownership out of the phase declarations.
+
 Weapon recipes are registered in `weapon_registry.cpp`; consumers include the
 lightweight query/capability headers and explicitly include any concrete recipe
 they inspect. Common pose descriptors/math/mirroring, body-supply layout and
 falling trajectories are independent of a particular weapon or inventory ledger.
-See the [current module boundaries](../../../../../docs/vr-gameplay-interaction-architecture.md#current-implementation-boundaries-2026-10-02).
+See the [current module boundaries](../../../../../docs/vr-gameplay-interaction-architecture.md#current-implementation-boundaries).
 
 Asset extraction/auditing and third-party research tools remain local, outside
 production source and packaging. No exported models, animations or audio are

@@ -5,11 +5,12 @@
 ![H2-MOD VR](assets/steamvr/cover.png)
 
 Bilibili/Aeka0：https://space.bilibili.com/10077845
+
 允许转载，请附上本项目链接。
 
-H2-Mod-VR 是基于 H2-Mod 开发的《使命召唤：现代战争 2 战役重制版》VR 模组。项目为原有战役加入原生双眼视差画面、6DOF头部与双手追踪、物理枪械操作，以及面向 VR 的装备、场景和剧情交互。适配以游戏原有的武器、弹药、动画和任务逻辑为基础，尽量保留原版的剧情表现。
+H2-Mod-VR 是《使命召唤：现代战争 2 战役重制版》的 VR 化模组。项目为原有战役加入原生双眼视差画面、6DOF头部与双手追踪、物理枪械操作，以及面向 VR 的装备、场景和剧情交互。适配以游戏原有的武器、弹药、动画和任务逻辑为基础，尽量保留原版的剧情表现。
 
-> 目前为 Beta 版本，在游玩期间很可能会出现部分场景/剧情脚本的适配问题。如遭遇问题或有改善游玩体验方面的建议欢迎进行反馈。请注意原 H2-Mod 的自定义 Mod 预期无法工作，同时现阶段可能进行大规模的代码调整和重构，不建议在现阶段进行 Mod 开发。同时请知悉版本更迭可能会破坏游戏存档和进度。
+> 目前为 Beta 版本，在游玩期间很可能会出现部分场景/剧情脚本的适配问题。如遭遇问题或有改善游玩体验方面的建议欢迎进行反馈。请注意 H2-Mod 的自定义 Mod 预期无法工作，同时现阶段可能进行大规模的代码调整和重构，不建议在现阶段进行 Mod 开发。同时请知悉版本更迭可能会破坏游戏存档和进度。
 
 ## 主要功能
 
@@ -27,7 +28,6 @@ H2-Mod-VR 是基于 H2-Mod 开发的《使命召唤：现代战争 2 战役重�
 - 64 位 Windows 10/11 系统。
 - 合法持有并安装《使命召唤：现代战争 2 战役重制版》。
 - SteamVR，以及能通过 SteamVR 提供头部和双手追踪的 VR 设备。
-- 当前安装方式所需的 H2-Mod 基础数据。
 
 当前客户端使用 Direct3D 11 和 SteamVR/OpenVR。仓库中保留的 OpenXR 实现与诊断工具不代表正式客户端使用 OpenXR，也不代表已经支持绕过 SteamVR 运行。
 
@@ -81,7 +81,7 @@ Beta 及正式版本发布时，可从 [Releases 页面](https://github.com/Aeka
 
 启动器语言与游戏语言分别管理。切换启动器的中英文界面，不代表已经下载或切换原版游戏的语言资源。
 
-更新通过本项目的 [Releases 页面](https://github.com/Aeka0/h2-mod-vr/releases) 手动安装。当前 VR 版本未配置上游 H2-Mod 自动更新服务，避免其更新流程替换 VR 客户端或清理 VR 资源。替换文件前请先退出游戏。
+更新通过本项目的 [Releases 页面](https://github.com/Aeka0/h2-mod-vr/releases) 手动安装。当前 VR 版本暂未配置自动更新服务。
 
 ## 当前状态与限制
 
@@ -134,7 +134,7 @@ msbuild build\h2-mod.sln /t:client /m:2 /p:Configuration=RelWithDebInfo /p:Platf
 
 项目代码采用 [GNU GPLv3](LICENSE)。第三方代码、字体及其他资源保留各自的许可证与版权声明，详见[第三方声明](THIRD_PARTY_NOTICES.md)和[来源清单](docs/source-provenance.md)。
 
-VR 适配由 [Aeka0](https://github.com/Aeka0) 独立维护。本分支与上游项目及其作者无隶属关系，也未获得其背书。VR 改动的维护与问题反馈由本项目负责。
+VR 适配由 [Aeka0](https://github.com/Aeka0) 独立维护。本分支与上游项目及其作者无隶属关系，也未获得其背书，请勿骚扰上游作者。VR 改动的维护与问题反馈由本项目负责。
 
 基础代码源自 H2-Mod 及其更早的上游项目 [IW6x](https://git.alterware.dev/alterware/iw6-mod) 和 [S1x](https://git.alterware.dev/alterware/s1-mod)。
 

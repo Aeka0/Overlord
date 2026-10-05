@@ -10,7 +10,7 @@ for the design contract.
 | Entry point | Responsibility |
 | --- | --- |
 | `gameplay/hand_interaction/core.hpp` | Unified button history, target identity, grasp sessions, shared-grasp permissions, bounded candidate ranking, and rejection records |
-| `interaction_coordinator.cpp` | Sole server dispatch entry; one provider inventory preserves collection, settlement and reconciliation order across normal, suspended and repeated-input frames |
+| `interaction_schedule.hpp`, `interaction_coordinator.cpp` | Named phase order and one checked callback inventory; the sole H2 server adapter sequences fresh, suspended and repeated-input paths |
 | `hand_interaction/runtime.cpp` | Current-frame authorization, confirmation of actual transaction outcomes and session publication; no domain dispatch |
 | `weapon_carry_runtime.cpp`, `carry_interaction.hpp` | Native inventory/carry adapter, tracked-frame admission, carry candidates, grip/pickup commits and presentation publication |
 | `hand_service.*` | Common hand binding and presentation dispatch, with one knife-state snapshot for wrist and finger composition |
@@ -23,6 +23,13 @@ for the design contract.
 Existing ammunition conservation, native compare-and-write, mechanical action cores, weapon fire cadence, model bindings, and hand IK remain. Forced native inventory changes can still rebuild holding relationships; new controller acquisitions must pass unified authorization. The core adds no second writable ammunition ledger.
 
 The four mechanical runtimes no longer register separate grasp ticks. Production calls use central button intents; local gating for the original controller remains for isolated mechanical tests and protection during continuous operations.
+
+Post-commit support handoffs are owned by their domains: physical reload handles
+the supported-pistol magazine catch, and underbarrel handles secondary-module
+grasp/release. They commit through the carry adapter after arbitration; they do
+not grant a hand by querying another interaction provider. Equipment settles its
+knife grants from a typed frame/input/edge boundary. The coordinator sequences
+these stages and applies shared exclusion masks without reading domain internals.
 
 The module boundaries are documented in the
 [current architecture boundaries](vr-gameplay-interaction-architecture.md#current-implementation-boundaries).
