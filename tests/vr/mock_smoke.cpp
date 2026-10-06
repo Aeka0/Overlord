@@ -5,6 +5,7 @@
 #include "component/vr/steamvr_runtime.hpp"
 #include "mock_control.hpp"
 #include "test_support.hpp"
+#include "component/vr/engine_scene_resolution.hpp"
 
 #include <chrono>
 #include <filesystem>
@@ -94,6 +95,14 @@ namespace
 			set_graphics_requirements = load<vr::tests::mock::set_graphics_requirements_fn>(
 				"h2vMockSetGraphicsRequirements");
 			set_should_render = load<vr::tests::mock::set_should_render_fn>("h2vMockSetShouldRender");
+			set_action_value=load<vr::tests::mock::set_action_value_fn>("h2vMockSetActionValue");
+			set_eye_extent=load<vr::tests::mock::set_eye_extent_fn>("h2vMockSetEyeExtent");
+			set_cylinder_supported=load<vr::tests::mock::set_cylinder_supported_fn>("h2vMockSetCylinderSupported");
+			set_synthetic_checks=load<vr::tests::mock::set_synthetic_checks_fn>("h2vMockSetSyntheticChecks");
+			set_view_flags = load<vr::tests::mock::set_view_flags_fn>("h2vMockSetViewFlags");
+			set_head_height = load<vr::tests::mock::set_head_height_fn>("h2vMockSetHeadHeight");
+			set_runtime_name = load<vr::tests::mock::set_runtime_name_fn>("h2vMockSetRuntimeName");
+			set_interaction_profile = load<vr::tests::mock::set_interaction_profile_fn>("h2vMockSetInteractionProfile");
 			queue_session_state = load<vr::tests::mock::queue_session_state_fn>("h2vMockQueueSessionState");
 			get_statistics = load<vr::tests::mock::get_statistics_fn>("h2vMockGetStatistics");
 		}
@@ -128,6 +137,14 @@ namespace
 		vr::tests::mock::destroy_acquired_fn destroy_acquired{};
 		vr::tests::mock::set_graphics_requirements_fn set_graphics_requirements{};
 		vr::tests::mock::set_should_render_fn set_should_render{};
+		vr::tests::mock::set_action_value_fn set_action_value{};
+		vr::tests::mock::set_cylinder_supported_fn set_cylinder_supported;
+		vr::tests::mock::set_synthetic_checks_fn set_synthetic_checks{};
+		vr::tests::mock::set_eye_extent_fn set_eye_extent{};
+		vr::tests::mock::set_view_flags_fn set_view_flags{};
+		vr::tests::mock::set_head_height_fn set_head_height{};
+		vr::tests::mock::set_runtime_name_fn set_runtime_name{};
+		vr::tests::mock::set_interaction_profile_fn set_interaction_profile{};
 		vr::tests::mock::queue_session_state_fn queue_session_state{};
 		vr::tests::mock::get_statistics_fn get_statistics{};
 
@@ -182,7 +199,7 @@ namespace
 		vr::tests::require(!runtime.initialize(graphics), "swapchain image failure unexpectedly initialized");
 		const auto status = runtime.get_status();
 		vr::tests::require(status.state == vr::runtime_state::runtime_unavailable,
-			"swapchain image failure did not become runtime_unavailable");
+			std::format("swapchain image failure state={} stage={} error={}",vr::to_string(status.state),status.last_initialization_stage,status.last_error));
 		vr::tests::require(status.last_xr_result == XR_ERROR_RUNTIME_FAILURE &&
 			status.last_xr_result_name == "XR_ERROR_RUNTIME_FAILURE",
 			"swapchain cleanup overwrote the initialization failure XrResult");
@@ -214,6 +231,79 @@ namespace
 			statistics.images_released == 1,
 			"wait timeout did not leave the acquired image eligible for a later legal wait/release");
 		runtime.shutdown();
+	}
+
+	void expect_recreate_waits_for_ready(mock_loader_control& loader, const d3d11::device_snapshot& graphics)
+	{
+		configure(loader, graphics, vr::tests::mock::scenario::happy);
+		vr::openxr::runtime_backend runtime;
+		runtime.set_desired_enabled(true);
+		runtime.set_scene_mode(vr::scene_mode::synthetic);
+		vr::tests::require(runtime.initialize(graphics), "recreation initialization failed");
+		loader.queue_session_state(XR_SESSION_STATE_READY);
+		runtime.on_present(graphics, 1);
+		runtime.request_reinitialize();
+		runtime.on_present(graphics, 2);
+		const auto idle = runtime.get_status();
+		vr::tests::require(idle.state == vr::runtime_state::session_idle && idle.session_generation == 2 &&
+			!idle.session_running && loader.statistics().frames_waited == 1,
+			"recreated session must not inherit running state or submit before READY");
+		loader.queue_session_state(XR_SESSION_STATE_READY);
+		runtime.on_present(graphics, 3);
+		vr::tests::require(runtime.get_status().submitted_frames == 2, "recreated session did not resume after READY");
+		runtime.shutdown();
+	}
+
+	void expect_session_end_failure(mock_loader_control& loader, const d3d11::device_snapshot& graphics)
+	{
+		configure(loader, graphics, vr::tests::mock::scenario::happy);
+		vr::openxr::runtime_backend runtime;
+		runtime.set_desired_enabled(true);
+		runtime.set_scene_mode(vr::scene_mode::synthetic);
+		vr::tests::require(runtime.initialize(graphics), "session-end failure initialization failed");
+		loader.queue_session_state(XR_SESSION_STATE_READY);
+		runtime.on_present(graphics, 1);
+		loader.fail_once(vr::tests::mock::failure_point::end_session, XR_ERROR_RUNTIME_FAILURE);
+		loader.queue_session_state(XR_SESSION_STATE_STOPPING);
+		runtime.on_present(graphics, 2);
+		const auto status = runtime.get_status();
+		vr::tests::require(!status.session_running && status.last_xr_result == XR_ERROR_RUNTIME_FAILURE &&
+			status.last_error.find("xrEndSession") != std::string::npos,
+			"xrEndSession must retire running state even when it returns an error");
+		runtime.shutdown();
+		vr::tests::require(!runtime.get_status().loader_loaded && loader.statistics().sessions_ended == 1,
+			"shutdown must not repeat an already completed session-end transition");
+	}
+
+	void expect_tracking_recovery(mock_loader_control& loader, const d3d11::device_snapshot& graphics)
+	{
+		configure(loader, graphics, vr::tests::mock::scenario::happy);
+		vr::openxr::runtime_backend runtime;
+		runtime.set_desired_enabled(true);
+		runtime.set_scene_mode(vr::scene_mode::synthetic);
+		vr::tests::require(runtime.initialize(graphics), "tracking recovery initialization failed");
+		loader.queue_session_state(XR_SESSION_STATE_READY);
+		runtime.on_present(graphics, 1);
+		for(const auto flags : {XrViewStateFlags{0}, XR_VIEW_STATE_POSITION_VALID_BIT, XR_VIEW_STATE_ORIENTATION_VALID_BIT})
+		{
+			loader.set_view_flags(flags);
+			runtime.on_present(graphics, 2);
+			const auto status = runtime.get_status();
+			vr::tests::require(status.state == vr::runtime_state::running && status.session_running &&
+				status.applied_enabled && status.session_generation == 1 && status.submitted_frames == 1,
+				"temporary invalid tracking disabled or rebuilt the OpenXR object graph");
+		}
+		const auto skipped = loader.statistics();
+		vr::tests::require(skipped.zero_layer_frames == 3 && skipped.images_acquired == 2 &&
+			skipped.frames_waited == skipped.frames_begun && skipped.frames_begun == skipped.frames_ended,
+			"invalid poses must close frames without acquiring or rendering images");
+		loader.set_view_flags(XR_VIEW_STATE_POSITION_VALID_BIT | XR_VIEW_STATE_ORIENTATION_VALID_BIT);
+		runtime.on_present(graphics, 3);
+		vr::tests::require(runtime.get_status().submitted_frames == 2 && loader.statistics().instances_created == 1,
+			"valid tracking did not resume on the existing session");
+		runtime.shutdown();
+		vr::tests::require(!runtime.get_status().loader_loaded && loader.statistics().invalid_session_end_rejected == 0,
+			"shutdown must not call xrEndSession outside STOPPING");
 	}
 
 	void expect_positive_wait_result(mock_loader_control& loader, const d3d11::device_snapshot& graphics)
@@ -333,7 +423,7 @@ namespace
 		const auto statistics = loader.statistics();
 		vr::tests::require(statistics.instances_created == 2 && statistics.instances_destroyed == 2 &&
 			statistics.sessions_created == 2 && statistics.sessions_destroyed == 2 &&
-			statistics.spaces_created == 4 && statistics.spaces_destroyed == 4 &&
+			statistics.spaces_created == 12 && statistics.spaces_destroyed == 12 &&
 			statistics.swapchains_created == 4 && statistics.swapchains_destroyed == 4,
 			"teardown retry leaked or double-destroyed part of the object graph");
 		vr::engine_stereo_bridge::set_enabled(false);
@@ -355,27 +445,24 @@ namespace
 		runtime.shutdown();
 	}
 
-	void expect_strict_scene_source_rejection(mock_loader_control& loader, const d3d11::device_snapshot& graphics)
-		{
-			configure(loader, graphics, vr::tests::mock::scenario::happy);
-			vr::openxr::runtime_backend runtime;
-			runtime.set_desired_enabled(true);
-			runtime.set_scene_mode(vr::scene_mode::synthetic);
-			vr::tests::require(runtime.initialize(graphics), "strict scene source setup failed");
-			vr::engine_stereo_bridge::set_enabled(true);
-			runtime.set_scene_mode(vr::scene_mode::engine_stereo);
-			loader.queue_session_state(XR_SESSION_STATE_READY);
-			runtime.on_present(graphics, 1);
-			auto status = runtime.get_status();
-			vr::tests::require(status.requested_scene_mode == vr::scene_mode::engine_stereo &&
-				status.effective_scene_mode == vr::scene_mode::engine_stereo &&
-				status.compositor_prepare_count == 1 && status.compositor_source_miss_count == 1 &&
-				status.submitted_frames == 0 &&
-				status.last_compositor_error.find("no complete native stereo capture pair") != std::string::npos,
-				"missing native stereo source was not rejected without a submitted substitute");
-			vr::engine_stereo_bridge::set_enabled(false);
-			runtime.shutdown();
-		}
+	void expect_strict_scene_source_rejection(mock_loader_control& loader,const d3d11::device_snapshot& graphics)
+	{
+		configure(loader,graphics,vr::tests::mock::scenario::happy);
+		vr::openxr::runtime_backend runtime;
+		runtime.set_desired_enabled(true);runtime.set_scene_mode(vr::scene_mode::synthetic);
+		vr::tests::require(runtime.initialize(graphics),"strict source initialization failed");
+		vr::engine_stereo_bridge::configure_target(true);vr::engine_stereo_bridge::set_render_hook_installed(true);
+		vr::engine_stereo_bridge::set_enabled(true);runtime.set_scene_mode(vr::scene_mode::engine_stereo);
+		loader.queue_session_state(XR_SESSION_STATE_READY);
+		const d3d11::present_event event{.graphics=graphics,.frame_index=1};
+		runtime.on_present(event);runtime.on_present_post(event,S_OK);
+		const auto status=runtime.get_status();
+		vr::tests::require(status.applied_enabled&&!status.native_renderer_ready&&status.submitted_frames==0&&
+			loader.statistics().images_acquired==0&&loader.statistics().zero_layer_frames==1,
+			"unproven native source must not acquire images or submit a substitute");
+		vr::tests::require(vr::engine_stereo_bridge::is_active(),"bootstrap observations must retain the valid CPU view family");
+		vr::engine_stereo_bridge::set_enabled(false);runtime.shutdown();
+	}
 
 		void run_happy_path(mock_loader_control& loader, const d3d11::device_snapshot& first_graphics)
 	{
@@ -490,6 +577,8 @@ namespace
 	}
 }
 
+#include "openxr_adaptation_tests.hpp"
+
 int main()
 {
 	try
@@ -506,6 +595,9 @@ int main()
 		expect_failed_scenario(loader, graphics, vr::tests::mock::scenario::graphics_mismatch,
 			vr::runtime_state::graphics_mismatch);
 		expect_swapchain_failure_result(loader, graphics);
+		expect_recreate_waits_for_ready(loader, graphics);
+		expect_session_end_failure(loader, graphics);
+		expect_tracking_recovery(loader, graphics);
 		expect_wait_timeout_result(loader, graphics);
 		expect_positive_wait_result(loader, graphics);
 		expect_frame_root_cause(loader, graphics,
@@ -524,6 +616,14 @@ int main()
 		expect_destroy_instance_null_proc(loader, graphics);
 			expect_strict_scene_source_rejection(loader, graphics);
 		run_happy_path(loader, graphics);
+		openxr_adaptation_tests::calibrated_grip_input(loader,graphics);
+		openxr_adaptation_tests::focused_startup_height(loader,graphics);
+		openxr_adaptation_tests::virtualdesktop_grip_reference(loader,graphics);
+		openxr_adaptation_tests::focused_input(loader,graphics);
+		openxr_adaptation_tests::native_pair(loader,graphics);
+		openxr_adaptation_tests::frontend_menu(loader,graphics,false);
+		openxr_adaptation_tests::frontend_menu(loader,graphics,true);
+		openxr_adaptation_tests::canted_native_views(loader,graphics);
 		loader.unload();
 		vr::tests::require(GetModuleHandleW(L"openxr_loader.dll") == nullptr,
 			"production runtime leaked an openxr_loader.dll module reference");

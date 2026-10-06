@@ -247,5 +247,9 @@
   "oobe.ammoHelp": "Weggeworfene Magazine verlieren ihre Restmunition. Gehaltene Magazine an der Hüfte loslassen, um Patronen zurückzuerhalten.",
   "oobe.scroll": "Schnelleinrichtung scrollen",
   "oobe.skip": "Überspringen",
-  "oobe.done": "Fertig"
+  "oobe.done": "Fertig",
+  "settings.runtimeBackend": "VR-Schnittstelle",
+  "settings.runtimeBackendHint": "OpenXR wird empfohlen; OpenVR dient als Alternative. Die Auswahl wird sofort gespeichert und beim Spielstart verwendet. Der Launcher muss nicht neu gestartet werden.",
+  "choice.openxr": "OpenXR",
+  "choice.openvr": "OpenVR"
 }

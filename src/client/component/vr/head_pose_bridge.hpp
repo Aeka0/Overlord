@@ -117,8 +117,16 @@ namespace vr::head_pose_bridge
 	void configure_target(bool matched) noexcept;
 	void set_enabled(bool enabled) noexcept;
 	void set_world_scale(float units_per_meter) noexcept;
+	// The runtime adapter decides whether a sample may establish a new origin.
+	// Retaining the reference leaves any initial/manual recenter request pending.
+	enum class reference_policy
+	{
+		allow_recenter,
+		retain_reference
+	};
 	void publish_tracking_pose(const tracking_pose& pose, std::uint64_t sample_id = 0,
-		std::chrono::steady_clock::time_point sampled_at = {}) noexcept;
+		std::chrono::steady_clock::time_point sampled_at = {},
+		reference_policy reference = reference_policy::allow_recenter) noexcept;
 	void request_recenter(bool reset_view=false) noexcept;
 	void invalidate_pose() noexcept;
 	void reset() noexcept;

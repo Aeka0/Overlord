@@ -306,36 +306,58 @@ namespace
 	void expect_backend_override()
 	{
 		constexpr char environment[] = "H2V_VR_BACKEND";
-		const auto existing_size = GetEnvironmentVariableA(environment, nullptr, 0);
-		std::string existing(existing_size, '\0');
-		if (existing_size != 0)
+		constexpr char runtime_environment[] = "XR_RUNTIME_JSON";
+		const auto save = [](const char* name)
 		{
-			const auto written = GetEnvironmentVariableA(environment, existing.data(), existing_size);
-			existing.resize(written);
-		}
-
-		SetEnvironmentVariableA(environment, "openvr");
+			const auto size = GetEnvironmentVariableA(name, nullptr, 0);
+			std::optional<std::string> result;
+			if (size)
+			{
+				result = std::string(size, '\0');
+				result->resize(GetEnvironmentVariableA(name, result->data(), size));
+			}
+			return result;
+		};
+		const auto backend_before = save(environment), runtime_before = save(runtime_environment);
+		const auto restore = gsl::finally([&]
 		{
+			SetEnvironmentVariableA(environment, backend_before ? backend_before->c_str() : nullptr);
+			SetEnvironmentVariableA(runtime_environment, runtime_before ? runtime_before->c_str() : nullptr);
+		});
+		SetEnvironmentVariableA(environment, nullptr);
+		for (const char* manifest : {static_cast<const char*>(nullptr), "steamxr_win64.json", "vendor-runtime.json"})
+		{
+			SetEnvironmentVariableA(runtime_environment, manifest);
 			vr::runtime_backend runtime;
 			const auto status = runtime.get_status();
-			vr::tests::require(status.backend_name == "openvr",
-				"the explicit OpenVR backend override was not selected");
-			vr::tests::require(runtime.requires_present_owner_execution(),
-				"OpenVR was not bound to the real DXGI Present owner execution domain");
+			vr::tests::require(status.backend_name == "openxr" && status.state == vr::runtime_state::disabled &&
+				status.backend_selection_reason.find("default") != std::string::npos && runtime.requires_present_owner_execution(),
+				"OpenXR default was replaced by a runtime manifest or left the Present owner");
+			// Selection is immutable. Changing the environment affects a new client only.
+			SetEnvironmentVariableA(environment, "openvr");
+			vr::tests::require(runtime.get_status().backend_name == "openxr", "live environment changes switched the active backend");
+			SetEnvironmentVariableA(environment, nullptr);
+		}
+		for (const char* selected : {"openvr", "steamvr", "OPENVR"})
+		{
+			SetEnvironmentVariableA(environment, selected);
+			vr::runtime_backend runtime;
+			vr::tests::require(runtime.get_status().backend_name == "openvr" && runtime.requires_present_owner_execution(),
+				"the manual OpenVR backup or its alias was not selected on the Present owner");
 		}
 		SetEnvironmentVariableA(environment, "openxr");
 		{
 			vr::runtime_backend runtime;
-			const auto status = runtime.get_status();
-			vr::tests::require(status.backend_name == "openvr" &&
-				status.state == vr::runtime_state::runtime_unavailable &&
-				status.last_error.find("rejects unsupported H2V_VR_BACKEND=openxr") !=
-				std::string::npos,
-				"the strict native runtime did not reject the OpenXR override");
-			vr::tests::require(runtime.requires_present_owner_execution(),
-				"the strict SteamVR/OpenVR runtime left the Present owner domain");
+			vr::tests::require(runtime.get_status().backend_name == "openxr", "the explicit OpenXR override was not selected");
 		}
-		SetEnvironmentVariableA(environment, existing_size == 0 ? nullptr : existing.c_str());
+		SetEnvironmentVariableA(environment, "unknown-backend");
+		{
+			vr::runtime_backend runtime;
+			const auto status = runtime.get_status();
+			vr::tests::require(status.state == vr::runtime_state::runtime_unavailable && !status.applied_enabled &&
+				status.last_error.find("unsupported H2V_VR_BACKEND=unknown-backend") != std::string::npos,
+				"an unknown backend override did not fail closed");
+		}
 	}
 
 	void expect_process_runtime_preference()
@@ -1474,7 +1496,11 @@ int main()
 		expect_loader_missing(runtime, graphics, 3);
 
 		runtime.set_desired_enabled(false);
-		runtime.on_present(graphics, 1);
+		d3d11::present_event disable_event;
+		disable_event.graphics = graphics;
+		disable_event.frame_index = 1;
+		runtime.on_present(disable_event);
+		runtime.on_present_post(disable_event, S_OK);
 		auto status = runtime.get_status();
 		vr::tests::require(status.state == vr::runtime_state::disabled,
 			"disable did not produce disabled state");

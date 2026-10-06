@@ -7,5 +7,5 @@ namespace launcher_vr_settings
 	std::string load();
 	std::string save(const std::string& payload);
 	// Also used by direct -singleplayer starts that bypass the launcher UI.
-	void initialize_debug_options();
+	void initialize_startup_options(bool from_launcher);
 }

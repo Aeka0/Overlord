@@ -247,5 +247,9 @@
   "oobe.ammoHelp": "버린 탄창의 남은 탄약을 잃습니다. 들고 있는 탄창을 허리에서 놓으면 탄약을 회수합니다.",
   "oobe.scroll": "빠른 안내 스크롤",
   "oobe.skip": "건너뛰기",
-  "oobe.done": "완료"
+  "oobe.done": "완료",
+  "settings.runtimeBackend": "VR 인터페이스",
+  "settings.runtimeBackendHint": "OpenXR을 권장하며 OpenVR은 대체 옵션입니다. 선택은 즉시 저장되고 게임 시작 시 적용됩니다. 런처를 다시 시작할 필요가 없습니다.",
+  "choice.openxr": "OpenXR",
+  "choice.openvr": "OpenVR"
 }

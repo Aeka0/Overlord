@@ -2,6 +2,7 @@
 
 #include "status_sections.hpp"
 #include "format_helpers.hpp"
+#include "input_status.hpp"
 #include "../controller_input.hpp"
 #include "../desktop_mirror.hpp"
 #include "../engine_scene_resolution.hpp"
@@ -40,6 +41,7 @@ namespace vr::diagnostics::detail
 		output << "runtime:\n";
 		output << "  backend=" << available(runtime_status.backend_name);
 		output << " selection=" << available(runtime_status.backend_selection_reason) << '\n';
+		output << "  menu_surface=" << available(runtime_status.menu_surface_mode) << '\n';
 		output << "  sdk_headers_available=" << yes_no(runtime_status.sdk_headers_available);
 		output << " state=" << to_string(runtime_status.state) << '\n';
 		output << "  loader_loaded=" << yes_no(runtime_status.loader_loaded);
@@ -70,6 +72,10 @@ namespace vr::diagnostics::detail
 		output << "  runtime_name=" << available(runtime_status.runtime_name);
 		output << " controller_input_ready=" << runtime_status.controller_input_ready;
 		output << " controller_input_error=" << available(runtime_status.controller_input_error);
+		output << "\n  controller_grip_reference=" << available(runtime_status.controller_pose_reference);
+		output << " references=" << available(runtime_status.controller_reference_ids[0]) << '/'
+			<< available(runtime_status.controller_reference_ids[1]);
+		output << " reference_error=" << available(runtime_status.controller_pose_reference_error);
 		const auto controls = controller_input::latest();
 		output << "\n  controllers: sequence=" << controls.sequence
 			<< " focus=" << controls.focused << " move_active=" << controls.move_active
@@ -87,6 +93,7 @@ namespace vr::diagnostics::detail
 			<< " grip_valid=" << controls.grip[0].valid << ',' << controls.grip[1].valid
 			<< " aim_valid=" << controls.aim[0].valid << ',' << controls.aim[1].valid;
 		output << " system_name=" << available(runtime_status.system_name) << '\n';
+		append_input_history(output,controller_input::get_input_history(),controller_input::clock::now());
 		output << "  last_runtime_name=" << available(runtime_status.last_runtime_name);
 		output << " last_system_name=" << available(runtime_status.last_system_name) << '\n';
 		output << "  session_state=" << runtime_status.session_state;

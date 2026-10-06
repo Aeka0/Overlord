@@ -4,6 +4,7 @@
 #include <memory>
 
 #include "vr_runtime.hpp"
+#include "present_transaction.hpp"
 
 namespace vr::openvr
 {
@@ -15,23 +16,8 @@ namespace vr::openvr
 		float up{};
 	};
 
-	struct present_transaction_key
-	{
-		bool active{};
-		std::uint64_t frame{};
-		std::uint64_t generation{};
-		std::uint32_t thread_id{};
-	};
-
-	enum class present_post_validation
-	{
-		matched,
-		missing_pre,
-		frame_mismatch,
-		generation_mismatch,
-		thread_mismatch,
-		present_failed,
-	};
+	using present_transaction_key = present_transaction::key;
+	using present_post_validation = present_transaction::validation;
 
 	[[nodiscard]] present_post_validation validate_present_post(
 		const present_transaction_key& transaction,

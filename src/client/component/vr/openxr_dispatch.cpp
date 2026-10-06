@@ -10,8 +10,12 @@ namespace vr::openxr
 	namespace
 	{
 		template <typename Function>
-		bool load_function(PFN_xrGetInstanceProcAddr get_instance_proc_addr, const XrInstance instance,
-			const char* name, Function& output, std::string& error, XrResult& result)
+		bool load_function(PFN_xrGetInstanceProcAddr get_instance_proc_addr,
+		                   const XrInstance instance,
+		                   const char* name,
+		                   Function& output,
+		                   std::string& error,
+		                   XrResult& result)
 		{
 			PFN_xrVoidFunction function{};
 			result = get_instance_proc_addr(instance, name, &function);
@@ -21,7 +25,8 @@ namespace vr::openxr
 				{
 					result = XR_ERROR_FUNCTION_UNSUPPORTED;
 				}
-				error = std::format("{} is unavailable (XrResult={})", name, static_cast<std::int64_t>(result));
+				error =
+				    std::format("{} is unavailable (XrResult={})", name, static_cast<std::int64_t>(result));
 				return false;
 			}
 
@@ -30,7 +35,9 @@ namespace vr::openxr
 		}
 	}
 
-	bool dispatch_table::load_global(const PFN_xrGetInstanceProcAddr entry, std::string& error, XrResult& result)
+	bool dispatch_table::load_global(const PFN_xrGetInstanceProcAddr entry,
+	                                 std::string& error,
+	                                 XrResult& result)
 	{
 		reset();
 		if (entry == nullptr)
@@ -41,15 +48,20 @@ namespace vr::openxr
 		}
 
 		get_instance_proc_addr = entry;
-		return load_function(entry, XR_NULL_HANDLE, "xrEnumerateInstanceExtensionProperties",
-			enumerate_instance_extension_properties, error, result) &&
-			load_function(entry, XR_NULL_HANDLE, "xrCreateInstance", create_instance, error, result);
+		return load_function(entry,
+		                     XR_NULL_HANDLE,
+		                     "xrEnumerateInstanceExtensionProperties",
+		                     enumerate_instance_extension_properties,
+		                     error,
+		                     result) &&
+		       load_function(entry, XR_NULL_HANDLE, "xrCreateInstance", create_instance, error, result);
 	}
 
 	bool dispatch_table::load_instance(const XrInstance instance, std::string& error, XrResult& result)
 	{
-#define H2V_LOAD_XR(member, name) \
-		if (!load_function(get_instance_proc_addr, instance, name, member, error, result)) return false
+#define H2V_LOAD_XR(member, name)                                                                            \
+	if (!load_function(get_instance_proc_addr, instance, name, member, error, result))                       \
+	return false
 
 		H2V_LOAD_XR(destroy_instance, "xrDestroyInstance");
 		H2V_LOAD_XR(get_instance_properties, "xrGetInstanceProperties");
@@ -77,6 +89,21 @@ namespace vr::openxr
 		H2V_LOAD_XR(begin_frame, "xrBeginFrame");
 		H2V_LOAD_XR(locate_views, "xrLocateViews");
 		H2V_LOAD_XR(end_frame, "xrEndFrame");
+		H2V_LOAD_XR(string_to_path, "xrStringToPath");
+		H2V_LOAD_XR(create_action_set, "xrCreateActionSet");
+		H2V_LOAD_XR(destroy_action_set, "xrDestroyActionSet");
+		H2V_LOAD_XR(create_action, "xrCreateAction");
+		H2V_LOAD_XR(suggest_interaction_profile_bindings, "xrSuggestInteractionProfileBindings");
+		H2V_LOAD_XR(attach_session_action_sets, "xrAttachSessionActionSets");
+		H2V_LOAD_XR(create_action_space, "xrCreateActionSpace");
+		H2V_LOAD_XR(locate_space, "xrLocateSpace");
+		H2V_LOAD_XR(sync_actions, "xrSyncActions");
+		H2V_LOAD_XR(get_current_interaction_profile, "xrGetCurrentInteractionProfile");
+		H2V_LOAD_XR(get_action_state_boolean, "xrGetActionStateBoolean");
+		H2V_LOAD_XR(get_action_state_float, "xrGetActionStateFloat");
+		H2V_LOAD_XR(get_action_state_vector2f, "xrGetActionStateVector2f");
+		H2V_LOAD_XR(get_action_state_pose, "xrGetActionStatePose");
+		H2V_LOAD_XR(apply_haptic_feedback, "xrApplyHapticFeedback");
 
 #undef H2V_LOAD_XR
 		return true;

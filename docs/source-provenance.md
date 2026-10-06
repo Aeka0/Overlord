@@ -9,7 +9,7 @@ existing source notices are retained.
 A new Git root does not change ownership or third-party license terms.
 
 The .gitmodules file and Git tree pin dependency sources. Dependencies retain
-their own histories and notices. Bundled OpenVR source is recorded in
+their own histories and notices. Bundled OpenVR source and the application-local OpenXR loader are recorded in
 THIRD_PARTY_NOTICES.md. The bundled Premake executable identifies itself as
 5.0.0-beta2; its upstream license is retained under licenses/.
 

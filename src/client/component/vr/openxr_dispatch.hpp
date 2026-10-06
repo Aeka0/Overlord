@@ -23,13 +23,24 @@
 
 namespace vr::openxr
 {
+	struct call_result
+	{
+		XrResult code{XR_SUCCESS};
+		const char* operation{};
+		explicit operator bool() const noexcept
+		{
+			// A timeout leaves image ownership pending even though its code is positive.
+			return XR_SUCCEEDED(code) && code != XR_TIMEOUT_EXPIRED;
+		}
+	};
+
 	struct dispatch_table
 	{
 		PFN_xrGetInstanceProcAddr get_instance_proc_addr{};
 		PFN_xrEnumerateInstanceExtensionProperties enumerate_instance_extension_properties{};
-		using enumerate_instance_version_fn = XrResult (XRAPI_PTR*)(XrVersion* apiVersion);
-			enumerate_instance_version_fn enumerate_instance_version{};
-			PFN_xrCreateInstance create_instance{};
+		using enumerate_instance_version_fn = XrResult(XRAPI_PTR*)(XrVersion* apiVersion);
+		enumerate_instance_version_fn enumerate_instance_version{};
+		PFN_xrCreateInstance create_instance{};
 		PFN_xrDestroyInstance destroy_instance{};
 		PFN_xrGetInstanceProperties get_instance_properties{};
 		PFN_xrGetSystem get_system{};
@@ -56,6 +67,21 @@ namespace vr::openxr
 		PFN_xrBeginFrame begin_frame{};
 		PFN_xrLocateViews locate_views{};
 		PFN_xrEndFrame end_frame{};
+		PFN_xrStringToPath string_to_path{};
+		PFN_xrCreateActionSet create_action_set{};
+		PFN_xrDestroyActionSet destroy_action_set{};
+		PFN_xrCreateAction create_action{};
+		PFN_xrSuggestInteractionProfileBindings suggest_interaction_profile_bindings{};
+		PFN_xrAttachSessionActionSets attach_session_action_sets{};
+		PFN_xrCreateActionSpace create_action_space{};
+		PFN_xrLocateSpace locate_space{};
+		PFN_xrSyncActions sync_actions{};
+		PFN_xrGetCurrentInteractionProfile get_current_interaction_profile{};
+		PFN_xrGetActionStateBoolean get_action_state_boolean{};
+		PFN_xrGetActionStateFloat get_action_state_float{};
+		PFN_xrGetActionStateVector2f get_action_state_vector2f{};
+		PFN_xrGetActionStatePose get_action_state_pose{};
+		PFN_xrApplyHapticFeedback apply_haptic_feedback{};
 
 		[[nodiscard]] bool load_global(PFN_xrGetInstanceProcAddr entry, std::string& error, XrResult& result);
 		[[nodiscard]] bool load_instance(XrInstance instance, std::string& error, XrResult& result);

@@ -37,7 +37,12 @@ namespace vr::settings
 	    .name = "vr_cheatAmmo",
 	    .values = {"off", "reserve", "infinite"},
 	    .label_keys = {"choice.disabled", "choice.infiniteReserve", "choice.infiniteAmmo"}};
+	inline constexpr choice_setting runtime_backend{
+		.name = "vr_runtimeBackend",
+		.values = {"openxr", "openvr"},
+		.label_keys = {"choice.openxr", "choice.openvr"}};
 	inline constexpr std::array choices{
+		runtime_backend,
 	    choice_setting{
 	        .name = turn_mode, .values = {"smooth", "snap"}, .label_keys = {"choice.smooth", "choice.snap"}},
 	    choice_setting{.name = recoil_penalty,

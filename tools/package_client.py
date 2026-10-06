@@ -25,6 +25,12 @@ LICENSE_SOURCES = {
     "libtommath": "deps/libtommath/LICENSE",
     "minhook": "deps/minhook/LICENSE.txt",
     "OpenVR": "deps/openvr/LICENSE",
+    "OpenXR": "deps/openxr/LICENSE",
+    "OpenXR-MIT": "deps/openxr/LICENSES/MIT.txt",
+    "OpenXR-Apache-2.0": "deps/openxr/LICENSES/Apache-2.0.txt",
+    "OpenXR-CC-BY-4.0": "deps/openxr/LICENSES/CC-BY-4.0.txt",
+    "OpenXR-COPYING": "deps/openxr/COPYING.adoc",
+    "OpenXR-jsoncpp": "deps/openxr/src/external/jsoncpp/LICENSE",
     "rapidjson": "deps/rapidjson/license.txt",
     "sol2": "deps/sol2/LICENSE.txt",
     "stb": "deps/stb/LICENSE",
@@ -54,6 +60,7 @@ def collect(configuration: str, base_data: Path | None = None) -> dict[str, Path
                 add(path, str(PurePosixPath(destination) / path.relative_to(source).as_posix()))
 
     add(build / f"{binary}.exe", f"{binary}.exe")
+    add(build / "openxr_loader.dll", "openxr_loader.dll")
     add(build / f"{binary}.vrmanifest", f"{binary}.vrmanifest")
     manifest = json.loads((build / f"{binary}.vrmanifest").read_text(encoding="utf-8-sig"))
     applications = manifest.get("applications", [])

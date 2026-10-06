@@ -1,6 +1,7 @@
 #pragma once
 
 #include <Windows.h>
+#include <array>
 #include <d3d11.h>
 
 namespace vr::tests::mock
@@ -8,6 +9,7 @@ namespace vr::tests::mock
 	enum class scenario : std::uint32_t
 	{
 		happy,
+		canted_views,
 		runtime_unavailable,
 		no_hmd,
 		graphics_mismatch,
@@ -26,10 +28,16 @@ namespace vr::tests::mock
 		destroy_space,
 		destroy_session,
 		destroy_instance,
+		end_session,
 	};
 
 	struct statistics
 	{
+		std::uint64_t action_sets_created{}, action_sets_destroyed{}, actions_created{}, actions_destroyed{},
+		    binding_profiles{}, action_syncs{}, haptic_events{};
+		std::uint64_t quad_frames{}, cylinder_frames{};
+		std::array<std::uint32_t, 2> last_projection_pixels{};
+		std::uint32_t last_menu_pixel{};
 		std::uint64_t instances_created{};
 		std::uint64_t instances_destroyed{};
 		std::uint64_t sessions_created{};
@@ -42,6 +50,7 @@ namespace vr::tests::mock
 		std::uint64_t textures_created{};
 		std::uint64_t sessions_begun{};
 		std::uint64_t sessions_ended{};
+		std::uint64_t invalid_session_end_rejected{};
 		std::uint64_t frames_waited{};
 		std::uint64_t frames_begun{};
 		std::uint64_t frames_ended{};
@@ -61,6 +70,14 @@ namespace vr::tests::mock
 	using destroy_acquired_fn = std::int32_t(WINAPI*)();
 	using set_graphics_requirements_fn = void(WINAPI*)(LUID, D3D_FEATURE_LEVEL);
 	using set_should_render_fn = void(WINAPI*)(BOOL);
+	using set_eye_extent_fn = void(WINAPI*)(std::uint32_t, std::uint32_t);
+	using set_cylinder_supported_fn = void(WINAPI*)(BOOL);
+	using set_synthetic_checks_fn = void(WINAPI*)(BOOL);
+	using set_action_value_fn = void(WINAPI*)(const char*, float, float);
+	using set_view_flags_fn = void(WINAPI*)(std::uint64_t);
+	using set_head_height_fn = void(WINAPI*)(float);
+	using set_runtime_name_fn = void(WINAPI*)(const char*);
+	using set_interaction_profile_fn = void(WINAPI*)(unsigned, const char*);
 	using queue_session_state_fn = void(WINAPI*)(std::int32_t);
 	using get_statistics_fn = void(WINAPI*)(statistics*);
-}
+} // namespace vr::tests::mock

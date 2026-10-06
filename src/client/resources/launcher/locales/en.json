@@ -247,5 +247,9 @@
   "oobe.ammoHelp": "Discarded magazines lose their remaining rounds. Release held magazines at your waist to recover those rounds.",
   "oobe.scroll": "Scroll quick guide",
   "oobe.skip": "Skip",
-  "oobe.done": "Finish"
+  "oobe.done": "Finish",
+  "settings.runtimeBackend": "VR backend",
+  "settings.runtimeBackendHint": "OpenXR is recommended; OpenVR is a backup. Saved immediately and used when you enter the game; no launcher restart needed.",
+  "choice.openxr": "OpenXR",
+  "choice.openvr": "OpenVR"
 }

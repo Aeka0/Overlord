@@ -64,28 +64,24 @@ the conditions in that license. The software is provided "AS IS", without
 warranty, and Valve and its contributors disclaim liability as described in the
 full license text.
 
-## OpenXR prerequisites artifact
+## Khronos OpenXR loader
 
-The separately downloadable `OpenXR prerequisites` artifact contains the
-application-local `openxr_loader.dll` built from Khronos OpenXR-SDK
-`release-1.1.62` at commit
-`57af7fc61f9f2d492580cb28aab6d0ea59d8d417`. The artifact also contains this
-notice, the SDK's `COPYING.adoc`, and the applicable license texts.
+The client build and overlay include application-local `openxr_loader.dll`
+built from the unmodified pinned OpenXR-SDK `release-1.1.62` at commit
+`57af7fc61f9f2d492580cb28aab6d0ea59d8d417`. Its source is available from
+[OpenXR-SDK](https://github.com/KhronosGroup/OpenXR-SDK).
 
-OpenXR-SDK: https://github.com/KhronosGroup/OpenXR-SDK
+Loader sources and relevant common/generated sources are licensed under
+`Apache-2.0 OR MIT`; the loader build system is Apache-2.0. The loader includes
+JsonCpp under its public-domain/MIT terms. The package retains the SDK's license,
+COPYING overview, Apache-2.0, MIT, CC-BY-4.0 and JsonCpp notices under `licenses/OpenXR*`.
+Preserve those files when redistributing the loader. Per-file notices in the
+pinned checkout remain authoritative.
 
-The OpenXR loader sources and relevant common/generated sources are licensed
-under `Apache-2.0 OR MIT`; the loader build system is Apache-2.0. The loader also
-incorporates JsonCpp source under its public-domain/MIT terms. Preserve
-`COPYING.adoc`, `licenses/Apache-2.0.txt`, `licenses/MIT.txt`,
-`licenses/CC-BY-4.0.txt`, and `licenses/jsoncpp-LICENSE.txt` when redistributing the artifact or
-`openxr_loader.dll`.
-
-The OpenXR loader is only a standards-based dispatch loader. It is not a vendor
-OpenXR runtime and this project does not distribute a vendor runtime. Users must
-separately install and activate a compatible runtime supplied by their headset or
-platform vendor. The normal h2-mod production deployment intentionally excludes
-`openxr_loader.dll`; obtain the separate prerequisites artifact when testing VR.
+The loader dispatches the standard API. Users install and activate their vendor's
+OpenXR runtime separately; this project distributes no vendor runtime. OpenXR
+is the default backend, with OpenVR available through explicit selection. Hardware
+validation is scoped to the combinations documented in the runtime guide.
 
 ## REFramework reference implementation
 

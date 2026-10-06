@@ -10,39 +10,24 @@
 #include "openxr_d3d11.hpp"
 #include "runtime_backend.hpp"
 #include "scene_compositor.hpp"
+#include "openxr_input.hpp"
+#include "openxr_menu.hpp"
+#include "native_stereo_source.hpp"
+#include "present_transaction.hpp"
+#include "pose_filter.hpp"
+#include "touch_controller_reference.hpp"
+#include "spatial_math.hpp"
+#include "engine_scene_resolution.hpp"
+#include "movie_presentation.hpp"
+#include "presentation_options.hpp"
 
 #include <d3d11_4.h>
 #include <algorithm>
 #include <array>
-#include <condition_variable>
 #include <cmath>
 #include <format>
 #include <mutex>
-#include <optional>
-#include <thread>
 #include <vector>
-
-namespace vr
-{
-	const char* to_string(const runtime_state state) noexcept
-	{
-		switch (state)
-		{
-		case runtime_state::disabled: return "disabled";
-		case runtime_state::waiting_for_graphics: return "waiting_for_graphics";
-		case runtime_state::sdk_headers_unavailable: return "sdk_headers_unavailable";
-		case runtime_state::loader_missing: return "loader_missing";
-		case runtime_state::runtime_unavailable: return "runtime_unavailable";
-		case runtime_state::no_hmd: return "no_hmd";
-		case runtime_state::graphics_mismatch: return "graphics_mismatch";
-		case runtime_state::session_idle: return "session_idle";
-		case runtime_state::running: return "running";
-		case runtime_state::recoverable_error: return "recoverable_error";
-		case runtime_state::fatal_for_vr: return "fatal_for_vr";
-		}
-		return "unknown";
-	}
-}
 
 namespace vr::openxr
 {
@@ -51,91 +36,162 @@ namespace vr::openxr
 	{
 		const char* result_name(const XrResult result) noexcept
 		{
-#define H2V_XR_RESULT(value) case value: return #value
+#define H2V_XR_RESULT(value)                                                                                 \
+	case value:                                                                                              \
+		return #value
 			switch (result)
 			{
-			H2V_XR_RESULT(XR_SUCCESS);
-			H2V_XR_RESULT(XR_TIMEOUT_EXPIRED);
-			H2V_XR_RESULT(XR_SESSION_LOSS_PENDING);
-			H2V_XR_RESULT(XR_EVENT_UNAVAILABLE);
-			H2V_XR_RESULT(XR_SPACE_BOUNDS_UNAVAILABLE);
-			H2V_XR_RESULT(XR_SESSION_NOT_FOCUSED);
-			H2V_XR_RESULT(XR_FRAME_DISCARDED);
-			H2V_XR_RESULT(XR_ERROR_VALIDATION_FAILURE);
-			H2V_XR_RESULT(XR_ERROR_RUNTIME_FAILURE);
-			H2V_XR_RESULT(XR_ERROR_OUT_OF_MEMORY);
-			H2V_XR_RESULT(XR_ERROR_API_VERSION_UNSUPPORTED);
-			H2V_XR_RESULT(XR_ERROR_INITIALIZATION_FAILED);
-			H2V_XR_RESULT(XR_ERROR_FUNCTION_UNSUPPORTED);
-			H2V_XR_RESULT(XR_ERROR_FEATURE_UNSUPPORTED);
-			H2V_XR_RESULT(XR_ERROR_EXTENSION_NOT_PRESENT);
-			H2V_XR_RESULT(XR_ERROR_LIMIT_REACHED);
-			H2V_XR_RESULT(XR_ERROR_SIZE_INSUFFICIENT);
-			H2V_XR_RESULT(XR_ERROR_HANDLE_INVALID);
-			H2V_XR_RESULT(XR_ERROR_INSTANCE_LOST);
-			H2V_XR_RESULT(XR_ERROR_SESSION_RUNNING);
-			H2V_XR_RESULT(XR_ERROR_SESSION_NOT_RUNNING);
-			H2V_XR_RESULT(XR_ERROR_SESSION_LOST);
-			H2V_XR_RESULT(XR_ERROR_SYSTEM_INVALID);
-			H2V_XR_RESULT(XR_ERROR_PATH_INVALID);
-			H2V_XR_RESULT(XR_ERROR_PATH_COUNT_EXCEEDED);
-			H2V_XR_RESULT(XR_ERROR_PATH_FORMAT_INVALID);
-			H2V_XR_RESULT(XR_ERROR_PATH_UNSUPPORTED);
-			H2V_XR_RESULT(XR_ERROR_LAYER_INVALID);
-			H2V_XR_RESULT(XR_ERROR_LAYER_LIMIT_EXCEEDED);
-			H2V_XR_RESULT(XR_ERROR_SWAPCHAIN_RECT_INVALID);
-			H2V_XR_RESULT(XR_ERROR_SWAPCHAIN_FORMAT_UNSUPPORTED);
-			H2V_XR_RESULT(XR_ERROR_ACTION_TYPE_MISMATCH);
-			H2V_XR_RESULT(XR_ERROR_SESSION_NOT_READY);
-			H2V_XR_RESULT(XR_ERROR_SESSION_NOT_STOPPING);
-			H2V_XR_RESULT(XR_ERROR_TIME_INVALID);
-			H2V_XR_RESULT(XR_ERROR_REFERENCE_SPACE_UNSUPPORTED);
-			H2V_XR_RESULT(XR_ERROR_FILE_ACCESS_ERROR);
-			H2V_XR_RESULT(XR_ERROR_FILE_CONTENTS_INVALID);
-			H2V_XR_RESULT(XR_ERROR_FORM_FACTOR_UNSUPPORTED);
-			H2V_XR_RESULT(XR_ERROR_FORM_FACTOR_UNAVAILABLE);
-			H2V_XR_RESULT(XR_ERROR_API_LAYER_NOT_PRESENT);
-			H2V_XR_RESULT(XR_ERROR_CALL_ORDER_INVALID);
-			H2V_XR_RESULT(XR_ERROR_GRAPHICS_DEVICE_INVALID);
-			H2V_XR_RESULT(XR_ERROR_POSE_INVALID);
-			H2V_XR_RESULT(XR_ERROR_INDEX_OUT_OF_RANGE);
-			H2V_XR_RESULT(XR_ERROR_VIEW_CONFIGURATION_TYPE_UNSUPPORTED);
-			H2V_XR_RESULT(XR_ERROR_ENVIRONMENT_BLEND_MODE_UNSUPPORTED);
-			H2V_XR_RESULT(XR_ERROR_NAME_DUPLICATED);
-			H2V_XR_RESULT(XR_ERROR_NAME_INVALID);
-			H2V_XR_RESULT(XR_ERROR_ACTIONSET_NOT_ATTACHED);
-			H2V_XR_RESULT(XR_ERROR_ACTIONSETS_ALREADY_ATTACHED);
-			H2V_XR_RESULT(XR_ERROR_LOCALIZED_NAME_DUPLICATED);
-			H2V_XR_RESULT(XR_ERROR_LOCALIZED_NAME_INVALID);
-			H2V_XR_RESULT(XR_ERROR_GRAPHICS_REQUIREMENTS_CALL_MISSING);
-			H2V_XR_RESULT(XR_ERROR_RUNTIME_UNAVAILABLE);
-			default: return "XR_UNKNOWN_RESULT";
+				H2V_XR_RESULT(XR_SUCCESS);
+				H2V_XR_RESULT(XR_TIMEOUT_EXPIRED);
+				H2V_XR_RESULT(XR_SESSION_LOSS_PENDING);
+				H2V_XR_RESULT(XR_EVENT_UNAVAILABLE);
+				H2V_XR_RESULT(XR_SPACE_BOUNDS_UNAVAILABLE);
+				H2V_XR_RESULT(XR_SESSION_NOT_FOCUSED);
+				H2V_XR_RESULT(XR_FRAME_DISCARDED);
+				H2V_XR_RESULT(XR_ERROR_VALIDATION_FAILURE);
+				H2V_XR_RESULT(XR_ERROR_RUNTIME_FAILURE);
+				H2V_XR_RESULT(XR_ERROR_OUT_OF_MEMORY);
+				H2V_XR_RESULT(XR_ERROR_API_VERSION_UNSUPPORTED);
+				H2V_XR_RESULT(XR_ERROR_INITIALIZATION_FAILED);
+				H2V_XR_RESULT(XR_ERROR_FUNCTION_UNSUPPORTED);
+				H2V_XR_RESULT(XR_ERROR_FEATURE_UNSUPPORTED);
+				H2V_XR_RESULT(XR_ERROR_EXTENSION_NOT_PRESENT);
+				H2V_XR_RESULT(XR_ERROR_LIMIT_REACHED);
+				H2V_XR_RESULT(XR_ERROR_SIZE_INSUFFICIENT);
+				H2V_XR_RESULT(XR_ERROR_HANDLE_INVALID);
+				H2V_XR_RESULT(XR_ERROR_INSTANCE_LOST);
+				H2V_XR_RESULT(XR_ERROR_SESSION_RUNNING);
+				H2V_XR_RESULT(XR_ERROR_SESSION_NOT_RUNNING);
+				H2V_XR_RESULT(XR_ERROR_SESSION_LOST);
+				H2V_XR_RESULT(XR_ERROR_SYSTEM_INVALID);
+				H2V_XR_RESULT(XR_ERROR_PATH_INVALID);
+				H2V_XR_RESULT(XR_ERROR_PATH_COUNT_EXCEEDED);
+				H2V_XR_RESULT(XR_ERROR_PATH_FORMAT_INVALID);
+				H2V_XR_RESULT(XR_ERROR_PATH_UNSUPPORTED);
+				H2V_XR_RESULT(XR_ERROR_LAYER_INVALID);
+				H2V_XR_RESULT(XR_ERROR_LAYER_LIMIT_EXCEEDED);
+				H2V_XR_RESULT(XR_ERROR_SWAPCHAIN_RECT_INVALID);
+				H2V_XR_RESULT(XR_ERROR_SWAPCHAIN_FORMAT_UNSUPPORTED);
+				H2V_XR_RESULT(XR_ERROR_ACTION_TYPE_MISMATCH);
+				H2V_XR_RESULT(XR_ERROR_SESSION_NOT_READY);
+				H2V_XR_RESULT(XR_ERROR_SESSION_NOT_STOPPING);
+				H2V_XR_RESULT(XR_ERROR_TIME_INVALID);
+				H2V_XR_RESULT(XR_ERROR_REFERENCE_SPACE_UNSUPPORTED);
+				H2V_XR_RESULT(XR_ERROR_FILE_ACCESS_ERROR);
+				H2V_XR_RESULT(XR_ERROR_FILE_CONTENTS_INVALID);
+				H2V_XR_RESULT(XR_ERROR_FORM_FACTOR_UNSUPPORTED);
+				H2V_XR_RESULT(XR_ERROR_FORM_FACTOR_UNAVAILABLE);
+				H2V_XR_RESULT(XR_ERROR_API_LAYER_NOT_PRESENT);
+				H2V_XR_RESULT(XR_ERROR_CALL_ORDER_INVALID);
+				H2V_XR_RESULT(XR_ERROR_GRAPHICS_DEVICE_INVALID);
+				H2V_XR_RESULT(XR_ERROR_POSE_INVALID);
+				H2V_XR_RESULT(XR_ERROR_INDEX_OUT_OF_RANGE);
+				H2V_XR_RESULT(XR_ERROR_VIEW_CONFIGURATION_TYPE_UNSUPPORTED);
+				H2V_XR_RESULT(XR_ERROR_ENVIRONMENT_BLEND_MODE_UNSUPPORTED);
+				H2V_XR_RESULT(XR_ERROR_NAME_DUPLICATED);
+				H2V_XR_RESULT(XR_ERROR_NAME_INVALID);
+				H2V_XR_RESULT(XR_ERROR_ACTIONSET_NOT_ATTACHED);
+				H2V_XR_RESULT(XR_ERROR_ACTIONSETS_ALREADY_ATTACHED);
+				H2V_XR_RESULT(XR_ERROR_LOCALIZED_NAME_DUPLICATED);
+				H2V_XR_RESULT(XR_ERROR_LOCALIZED_NAME_INVALID);
+				H2V_XR_RESULT(XR_ERROR_GRAPHICS_REQUIREMENTS_CALL_MISSING);
+				H2V_XR_RESULT(XR_ERROR_RUNTIME_UNAVAILABLE);
+			default:
+				return "XR_UNKNOWN_RESULT";
 			}
 #undef H2V_XR_RESULT
+		}
+
+		head_pose_bridge::reference_policy head_reference_policy(XrSessionState session,
+		                                                       XrViewStateFlags views,
+		                                                       XrSpaceLocationFlags head) noexcept
+		{
+			constexpr auto tracked_views = XR_VIEW_STATE_POSITION_TRACKED_BIT | XR_VIEW_STATE_ORIENTATION_TRACKED_BIT;
+			constexpr auto tracked_head = XR_SPACE_LOCATION_POSITION_TRACKED_BIT | XR_SPACE_LOCATION_ORIENTATION_TRACKED_BIT;
+			const bool ready = session == XR_SESSION_STATE_FOCUSED &&
+			                   (views & tracked_views) == tracked_views && (head & tracked_head) == tracked_head;
+			return ready ? head_pose_bridge::reference_policy::allow_recenter
+			             : head_pose_bridge::reference_policy::retain_reference;
 		}
 
 		const char* session_state_name(const XrSessionState state) noexcept
 		{
 			switch (state)
 			{
-			case XR_SESSION_STATE_UNKNOWN: return "XR_SESSION_STATE_UNKNOWN";
-			case XR_SESSION_STATE_IDLE: return "XR_SESSION_STATE_IDLE";
-			case XR_SESSION_STATE_READY: return "XR_SESSION_STATE_READY";
-			case XR_SESSION_STATE_SYNCHRONIZED: return "XR_SESSION_STATE_SYNCHRONIZED";
-			case XR_SESSION_STATE_VISIBLE: return "XR_SESSION_STATE_VISIBLE";
-			case XR_SESSION_STATE_FOCUSED: return "XR_SESSION_STATE_FOCUSED";
-			case XR_SESSION_STATE_STOPPING: return "XR_SESSION_STATE_STOPPING";
-			case XR_SESSION_STATE_LOSS_PENDING: return "XR_SESSION_STATE_LOSS_PENDING";
-			case XR_SESSION_STATE_EXITING: return "XR_SESSION_STATE_EXITING";
-			default: return "XR_SESSION_STATE_UNKNOWN_VALUE";
+			case XR_SESSION_STATE_UNKNOWN:
+				return "XR_SESSION_STATE_UNKNOWN";
+			case XR_SESSION_STATE_IDLE:
+				return "XR_SESSION_STATE_IDLE";
+			case XR_SESSION_STATE_READY:
+				return "XR_SESSION_STATE_READY";
+			case XR_SESSION_STATE_SYNCHRONIZED:
+				return "XR_SESSION_STATE_SYNCHRONIZED";
+			case XR_SESSION_STATE_VISIBLE:
+				return "XR_SESSION_STATE_VISIBLE";
+			case XR_SESSION_STATE_FOCUSED:
+				return "XR_SESSION_STATE_FOCUSED";
+			case XR_SESSION_STATE_STOPPING:
+				return "XR_SESSION_STATE_STOPPING";
+			case XR_SESSION_STATE_LOSS_PENDING:
+				return "XR_SESSION_STATE_LOSS_PENDING";
+			case XR_SESSION_STATE_EXITING:
+				return "XR_SESSION_STATE_EXITING";
+			default:
+				return "XR_SESSION_STATE_UNKNOWN_VALUE";
 			}
 		}
 	}
 
 	class runtime_backend::implementation final
 	{
-	public:
-		~implementation() { shutdown(); }
+		enum class world_submission
+		{
+			omit,
+			include
+		};
+		enum class publication_policy
+		{
+			invalidate,
+			retain_bootstrap
+		};
+		enum class eye_content
+		{
+			native_texture,
+			diagnostic_color
+		};
+		struct prediction
+		{
+			bool sdk_frame_open{}, views_valid{}, native_pair_admitted{}, ui_only{}, menu_layers_ready{};
+			unsigned pending_presents{};
+			std::uint64_t pair{};
+			XrFrameState state{};
+			std::array<XrView, 2> views{};
+			head_pose_bridge::tracking_pose head;
+		} prediction_;
+		present_transaction::key present_;
+		std::uint64_t owner_generation_{};
+		std::uint32_t owner_thread_{};
+		float pause_dim_{};
+		XrTime reference_change_{};
+		bool cylinder_supported_{};
+		DXGI_FORMAT menu_format_{};
+		input_actions inputs_;
+
+		menu_layers menus_;
+		texture_blit::renderer blit_;
+
+		controller_reference_query reference_query_{};
+
+	  public:
+		explicit implementation(controller_reference_query reference_query)
+		    : reference_query_(reference_query)
+		{
+		}
+
+		~implementation()
+		{
+			shutdown();
+		}
 
 		void set_desired_enabled(const bool enabled)
 		{
@@ -171,12 +227,14 @@ namespace vr::openxr
 		}
 
 		bool capture_engine_texture(const d3d11::device_snapshot& graphics,
-			ID3D11Texture2D* const source, const capture_frame_tag tag)
+		                            ID3D11Texture2D* const source,
+		                            const capture_frame_tag tag)
 		{
-			if (!capture_.produce_texture(graphics, source, tag)) return false;
-			if (!tag.native) return true;
-			if (native_render_session::active().complete_rendered_eye(
-				tag.pair_id, tag.eye_index, source))
+			if (!capture_.produce_texture(graphics, source, tag))
+				return false;
+			if (!tag.native)
+				return true;
+			if (native_render_session::active().complete_rendered_eye(tag.pair_id, tag.eye_index, source))
 			{
 				return true;
 			}
@@ -197,11 +255,12 @@ namespace vr::openxr
 			publish_status_locked();
 		}
 
-		// OpenXR keeps wait/begin/locate/end inside its worker-owned frame
-		// transaction. The renderer-thread frame contract is implemented by the
-		// OpenVR backend first; keep this explicit no-op until OpenXR is moved to
-		// the same transaction model.
-		void prepare_frame(const d3d11::device_snapshot&, std::uint64_t) {}
+		void prepare_frame(const d3d11::device_snapshot&, std::uint64_t)
+		{
+			const std::lock_guard lock(mutex_);
+			status_.direct_renderer_thread_id = GetCurrentThreadId();
+			publish_status_locked();
+		}
 
 		bool initialize(const d3d11::device_snapshot& graphics)
 		{
@@ -214,8 +273,8 @@ namespace vr::openxr
 			else
 			{
 				const auto failed_operation = status_.worker_current_operation;
-				status_.worker_last_completed_operation = failed_operation.empty()
-					? "backend.initialize (failed)" : failed_operation + " (failed)";
+				status_.worker_last_completed_operation =
+				    failed_operation.empty() ? "backend.initialize (failed)" : failed_operation + " (failed)";
 				status_.worker_current_operation = "idle";
 				status_.worker_last_status_update = GetTickCount64();
 				publish_status_locked();
@@ -225,31 +284,88 @@ namespace vr::openxr
 
 		void on_present(const d3d11::present_event& event)
 		{
-			std::unique_lock lock(mutex_, std::try_to_lock);
-			if (!lock) return;
-			on_present_locked(event.graphics, event.swap_chain, event.frame_index);
+			const std::lock_guard lock(mutex_);
+			if (present_.active || d3d11::is_inside_present_gpu_scope())
+			{
+				fail(runtime_state::fatal_for_vr, "OpenXR Present ownership", XR_ERROR_CALL_ORDER_INVALID);
+				publish_status_locked();
+				return;
+			}
+			if (present_transaction::owner_changed(status_.applied_enabled,
+			                                       status_.reinitialize_pending,
+			                                       owner_generation_,
+			                                       owner_thread_,
+			                                       event.graphics.generation,
+			                                       GetCurrentThreadId()))
+			{
+				fail(
+				    runtime_state::fatal_for_vr, "OpenXR Present owner changed", XR_ERROR_CALL_ORDER_INVALID);
+				publish_status_locked();
+				return;
+			}
+			present_ = {true, event.frame_index, event.graphics.generation, GetCurrentThreadId()};
+			++status_.present_owner_pre_count;
+			status_.present_owner_transaction_active = true;
+			status_.present_owner_transaction_thread_id = GetCurrentThreadId();
+			if (maintain_session(event.graphics) && prediction_.sdk_frame_open)
+			{
+				if (status_.requested_scene_mode == scene_mode::synthetic)
+					(void)render_synthetic();
+				else
+					(void)complete_native(event.swap_chain);
+			}
 			publish_status_locked();
 		}
-
-		void on_present(const d3d11::device_snapshot& graphics, const std::uint64_t frame)
+		void on_present_post(const d3d11::present_event& event, HRESULT result)
 		{
-			std::unique_lock lock(mutex_, std::try_to_lock);
-			if (!lock) return;
-			on_present_locked(graphics, nullptr, frame);
+			const std::lock_guard lock(mutex_);
+			++status_.present_owner_post_count;
+			const auto match = present_transaction::validate(present_, event, GetCurrentThreadId(), result);
+			present_ = {};
+			status_.present_owner_transaction_active = false;
+			status_.present_owner_transaction_thread_id = 0;
+			status_.present_owner_last_post_hresult = result;
+				if (match != present_transaction::validation::matched || d3d11::is_inside_present_gpu_scope())
+				{
+					inputs_.invalidate(controller_input::input_reason::present_mismatch,XR_ERROR_CALL_ORDER_INVALID);
+				head_pose_bridge::invalidate_pose();
+				engine_stereo_bridge::invalidate_views();
+				fail(
+				    runtime_state::fatal_for_vr, "OpenXR Present-post mismatch", XR_ERROR_CALL_ORDER_INVALID);
+				publish_status_locked();
+				return;
+			}
+			status_.direct_present_owner_contract_valid = true;
+			status_.present_owner_last_completed_frame = event.frame_index;
+			if (status_.desired_enabled && status_.applied_enabled && !prediction_.sdk_frame_open &&
+			    status_.state != runtime_state::fatal_for_vr && poll_events() && session_running_)
+			{
+				(void)begin_prediction(event.frame_index);
+			}
 			publish_status_locked();
 		}
-
-		void on_present_post(const d3d11::present_event&, const HRESULT)
+		// CPU/WARP fixture entry: never substitutes a virtual Present for H2 stereo.
+		void on_present(const d3d11::device_snapshot& graphics, std::uint64_t frame)
 		{
-			// OpenXR remains worker-driven. xrEndFrame completes its runtime frame;
-			// it does not consume the synchronous DXGI Present result.
+			const std::lock_guard lock(mutex_);
+			if (status_.requested_scene_mode != scene_mode::synthetic)
+			{
+				fail(runtime_state::fatal_for_vr,
+				     "native OpenXR requires real Present pre/post",
+				     XR_ERROR_CALL_ORDER_INVALID);
+				publish_status_locked();
+				return;
+			}
+			if (maintain_session(graphics) && !prediction_.sdk_frame_open && begin_prediction(frame))
+				(void)render_synthetic();
+			publish_status_locked();
 		}
 
 		void on_resize_before(const d3d11::resize_event& event) noexcept
 		{
-			const std::lock_guard lock(mutex_);
-			compositor_.invalidate();
-			capture_.invalidate(event.graphics.generation);
+			// Resize only records recovery intent. The next Present owner retires
+			// SDK and GPU resources, outside the resize callback's call stack.
+			resize_generation_.store(event.graphics.generation, std::memory_order_release);
 		}
 
 		void on_device_destroying(const d3d11::device_snapshot& graphics) noexcept
@@ -270,6 +386,12 @@ namespace vr::openxr
 			status_.reinitialize_pending = false;
 			(void)teardown_locked(true);
 			publish_status_locked();
+		}
+
+		bool shutdown_complete() const noexcept
+		{
+			const std::lock_guard lock(mutex_);
+			return !has_objects();
 		}
 
 		bool requested_enabled() const
@@ -295,7 +417,7 @@ namespace vr::openxr
 			return snapshot;
 		}
 
-	private:
+	  private:
 		void set_result(const XrResult result) noexcept
 		{
 			status_.last_xr_result = result;
@@ -305,8 +427,10 @@ namespace vr::openxr
 		bool fail(const runtime_state state, const char* operation, const XrResult result)
 		{
 			status_.state = state;
-			status_.last_error = std::format("{} failed (XrResult={} {})", operation,
-				static_cast<std::int64_t>(result), result_name(result));
+			status_.last_error = std::format("{} failed (XrResult={} {})",
+			                                 operation,
+			                                 static_cast<std::int64_t>(result),
+			                                 result_name(result));
 			set_result(result);
 			return false;
 		}
@@ -360,21 +484,29 @@ namespace vr::openxr
 				return false;
 			}
 
+			// Query the selected SteamVR service's static grip reference BEFORE any
+			// OpenXR instance/session exists. Other runtimes never initialize OpenVR.
+			auto controller_reference =
+			    reference_query_ ? reference_query_() : controller_pose_reference::configuration{};
+
 			publish_progress_locked("layer_policy", "isolate incompatible implicit OpenXR layers");
 			const auto layer_policy = apply_native_implicit_layer_policy();
 			status_.implicit_layer_policy_applied = layer_policy.applied;
 			status_.implicit_layer_manifest_count = static_cast<std::uint32_t>(layer_policy.manifest_count);
-			status_.implicit_layers_disabled = static_cast<std::uint32_t>(layer_policy.disabled_layers.size());
+			status_.implicit_layers_disabled =
+			    static_cast<std::uint32_t>(layer_policy.disabled_layers.size());
 			status_.disabled_implicit_layers.clear();
 			for (const auto& layer : layer_policy.disabled_layers)
 			{
-				if (!status_.disabled_implicit_layers.empty()) status_.disabled_implicit_layers += ", ";
+				if (!status_.disabled_implicit_layers.empty())
+					status_.disabled_implicit_layers += ", ";
 				status_.disabled_implicit_layers += layer;
 			}
 			status_.implicit_layer_policy_warning.clear();
 			for (const auto& warning : layer_policy.warnings)
 			{
-				if (!status_.implicit_layer_policy_warning.empty()) status_.implicit_layer_policy_warning += "; ";
+				if (!status_.implicit_layer_policy_warning.empty())
+					status_.implicit_layer_policy_warning += "; ";
 				status_.implicit_layer_policy_warning += warning;
 			}
 			if (!layer_policy.blocking_error.empty())
@@ -389,19 +521,22 @@ namespace vr::openxr
 			std::vector<wchar_t> module_buffer(MAX_PATH);
 			const auto append_module_loader_path = [&loader_paths, &module_buffer](HMODULE module)
 			{
-				if (module == nullptr) return;
+				if (module == nullptr)
+					return;
 				for (;;)
 				{
-					const auto length = GetModuleFileNameW(module, module_buffer.data(),
-						static_cast<DWORD>(module_buffer.size()));
-					if (length == 0) return;
+					const auto length = GetModuleFileNameW(
+					    module, module_buffer.data(), static_cast<DWORD>(module_buffer.size()));
+					if (length == 0)
+						return;
 					if (length < module_buffer.size() - 1)
 					{
 						const std::wstring module_path(module_buffer.data(), length);
 						const auto separator = module_path.find_last_of(L"\\/");
 						if (separator != std::wstring::npos)
 						{
-							const auto loader_path = module_path.substr(0, separator + 1) + L"openxr_loader.dll";
+							const auto loader_path =
+							    module_path.substr(0, separator + 1) + L"openxr_loader.dll";
 							if (std::ranges::find(loader_paths, loader_path) == loader_paths.end())
 								loader_paths.push_back(loader_path);
 						}
@@ -412,8 +547,9 @@ namespace vr::openxr
 			};
 			HMODULE current_module{};
 			(void)GetModuleHandleExW(GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS |
-				GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT,
-				reinterpret_cast<LPCWSTR>(&result_name), &current_module);
+			                             GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT,
+			                         reinterpret_cast<LPCWSTR>(&result_name),
+			                         &current_module);
 			append_module_loader_path(current_module);
 			append_module_loader_path(nullptr);
 			const auto last_error_before_load = GetLastError();
@@ -421,7 +557,8 @@ namespace vr::openxr
 			{
 				publish_progress_locked("loader", "LoadLibraryExW candidate");
 				loader_ = LoadLibraryExW(loader_path.c_str(), nullptr, LOAD_LIBRARY_SEARCH_DLL_LOAD_DIR);
-				if (loader_ != nullptr) break;
+				if (loader_ != nullptr)
+					break;
 			}
 			if (loader_ == nullptr)
 			{
@@ -429,13 +566,14 @@ namespace vr::openxr
 				SetLastError(last_error_before_load);
 				status_.state = runtime_state::loader_missing;
 				status_.last_error = std::format(
-					"openxr_loader.dll was not loadable beside the active h2-mod-vr/game modules (Win32={})",
-					load_error);
+				    "openxr_loader.dll was not loadable beside the active h2-mod-vr/game modules (Win32={})",
+				    load_error);
 				return false;
 			}
 			status_.loader_loaded = true;
 			publish_progress_locked("loader", "resolve xrGetInstanceProcAddr");
-			auto entry = reinterpret_cast<PFN_xrGetInstanceProcAddr>(GetProcAddress(loader_, "xrGetInstanceProcAddr"));
+			auto entry =
+			    reinterpret_cast<PFN_xrGetInstanceProcAddr>(GetProcAddress(loader_, "xrGetInstanceProcAddr"));
 			XrResult result{XR_SUCCESS};
 			std::string error;
 			publish_progress_locked("loader", "load global OpenXR dispatch");
@@ -451,43 +589,58 @@ namespace vr::openxr
 			publish_progress_locked("extensions", "xrEnumerateInstanceExtensionProperties(count)");
 			std::uint32_t extension_count{};
 			result = dispatch_.enumerate_instance_extension_properties(nullptr, 0, &extension_count, nullptr);
-			if (!call_ok(result, "xrEnumerateInstanceExtensionProperties", runtime_state::runtime_unavailable))
+			if (!call_ok(
+			        result, "xrEnumerateInstanceExtensionProperties", runtime_state::runtime_unavailable))
 			{
-				(void)teardown_preserving_error(); return false;
+				(void)teardown_preserving_error();
+				return false;
 			}
 			publish_progress_locked("extensions", "xrEnumerateInstanceExtensionProperties(data)");
 			std::vector<XrExtensionProperties> extensions(extension_count, {XR_TYPE_EXTENSION_PROPERTIES});
-			result = dispatch_.enumerate_instance_extension_properties(nullptr, extension_count, &extension_count,
-				extensions.data());
-			if (!call_ok(result, "xrEnumerateInstanceExtensionProperties", runtime_state::runtime_unavailable))
+			result = dispatch_.enumerate_instance_extension_properties(
+			    nullptr, extension_count, &extension_count, extensions.data());
+			if (!call_ok(
+			        result, "xrEnumerateInstanceExtensionProperties", runtime_state::runtime_unavailable))
 			{
-				(void)teardown_preserving_error(); return false;
+				(void)teardown_preserving_error();
+				return false;
 			}
-			const auto supports_d3d11 = std::ranges::any_of(extensions, [](const auto& item)
-			{
-				return std::strcmp(item.extensionName, XR_KHR_D3D11_ENABLE_EXTENSION_NAME) == 0;
-			});
+			const auto supports_d3d11 = std::ranges::any_of(
+			    extensions,
+			    [](const auto& item)
+			    { return std::strcmp(item.extensionName, XR_KHR_D3D11_ENABLE_EXTENSION_NAME) == 0; });
 			if (!supports_d3d11)
 			{
-				fail(runtime_state::runtime_unavailable, "XR_KHR_D3D11_enable", XR_ERROR_EXTENSION_NOT_PRESENT);
-				(void)teardown_preserving_error(); return false;
+				fail(runtime_state::runtime_unavailable,
+				     "XR_KHR_D3D11_enable",
+				     XR_ERROR_EXTENSION_NOT_PRESENT);
+				(void)teardown_preserving_error();
+				return false;
 			}
 
 			publish_progress_locked("instance", "xrCreateInstance");
 			constexpr auto requested_api_version = XR_MAKE_VERSION(1, 0, 0);
-			const char* enabled_extensions[]{XR_KHR_D3D11_ENABLE_EXTENSION_NAME};
+			cylinder_supported_ = std::ranges::any_of(
+			    extensions,
+			    [](const auto& e) {
+				    return std::strcmp(e.extensionName, XR_KHR_COMPOSITION_LAYER_CYLINDER_EXTENSION_NAME) ==
+				           0;
+			    });
+			const char* enabled_extensions[]{XR_KHR_D3D11_ENABLE_EXTENSION_NAME,
+			                                 XR_KHR_COMPOSITION_LAYER_CYLINDER_EXTENSION_NAME};
 			XrInstanceCreateInfo instance_info{XR_TYPE_INSTANCE_CREATE_INFO};
 			strcpy_s(instance_info.applicationInfo.applicationName, "h2-mod-vr");
 			instance_info.applicationInfo.applicationVersion = 1;
 			strcpy_s(instance_info.applicationInfo.engineName, "h2-mod");
 			instance_info.applicationInfo.engineVersion = 1;
 			instance_info.applicationInfo.apiVersion = requested_api_version;
-			instance_info.enabledExtensionCount = 1;
+			instance_info.enabledExtensionCount = cylinder_supported_ ? 2 : 1;
 			instance_info.enabledExtensionNames = enabled_extensions;
 			result = dispatch_.create_instance(&instance_info, &instance_);
 			if (!call_ok(result, "xrCreateInstance", runtime_state::runtime_unavailable))
 			{
-				(void)teardown_preserving_error(); return false;
+				(void)teardown_preserving_error();
+				return false;
 			}
 			status_.instance_created = true;
 			publish_progress_locked("instance", "load instance OpenXR dispatch");
@@ -496,7 +649,8 @@ namespace vr::openxr
 				status_.state = runtime_state::runtime_unavailable;
 				status_.last_error = error;
 				set_result(result);
-				(void)teardown_preserving_error(); return false;
+				(void)teardown_preserving_error();
+				return false;
 			}
 
 			publish_progress_locked("instance", "xrGetInstanceProperties");
@@ -504,67 +658,88 @@ namespace vr::openxr
 			result = dispatch_.get_instance_properties(instance_, &instance_properties);
 			if (!call_ok(result, "xrGetInstanceProperties", runtime_state::runtime_unavailable))
 			{
-				(void)teardown_preserving_error(); return false;
+				(void)teardown_preserving_error();
+				return false;
 			}
 			status_.runtime_name = instance_properties.runtimeName;
 			status_.last_runtime_name = status_.runtime_name;
 
 			publish_progress_locked("system", "xrGetSystem");
-			const XrSystemGetInfo system_info{XR_TYPE_SYSTEM_GET_INFO, nullptr, XR_FORM_FACTOR_HEAD_MOUNTED_DISPLAY};
+			const XrSystemGetInfo system_info{
+			    XR_TYPE_SYSTEM_GET_INFO, nullptr, XR_FORM_FACTOR_HEAD_MOUNTED_DISPLAY};
 			result = dispatch_.get_system(instance_, &system_info, &system_id_);
 			if (result == XR_ERROR_FORM_FACTOR_UNAVAILABLE)
 			{
 				fail(runtime_state::no_hmd, "xrGetSystem", result);
-				(void)teardown_preserving_error(); return false;
+				(void)teardown_preserving_error();
+				return false;
 			}
 			if (!call_ok(result, "xrGetSystem", runtime_state::runtime_unavailable))
 			{
-				(void)teardown_preserving_error(); return false;
+				(void)teardown_preserving_error();
+				return false;
 			}
 			publish_progress_locked("system", "xrGetSystemProperties");
 			XrSystemProperties system_properties{XR_TYPE_SYSTEM_PROPERTIES};
 			result = dispatch_.get_system_properties(instance_, system_id_, &system_properties);
 			if (!call_ok(result, "xrGetSystemProperties", runtime_state::runtime_unavailable))
 			{
-				(void)teardown_preserving_error(); return false;
+				(void)teardown_preserving_error();
+				return false;
 			}
 			status_.system_name = system_properties.systemName;
+			status_.menu_surface_mode = cylinder_supported_ ? "cylinder" : "quad";
+			if (system_properties.graphicsProperties.maxLayerCount < menu_surface::surface_count + 1)
+			{
+				fail(runtime_state::runtime_unavailable,
+				     "OpenXR menu layer capacity",
+				     XR_ERROR_LAYER_LIMIT_EXCEEDED);
+				(void)teardown_preserving_error();
+				return false;
+			}
 			status_.last_system_name = status_.system_name;
 
 			publish_progress_locked("views", "xrEnumerateViewConfigurationViews(count)");
 			std::uint32_t view_count{};
-			result = dispatch_.enumerate_view_configuration_views(instance_, system_id_, view_type_, 0,
-				&view_count, nullptr);
-			if (!call_ok(result, "xrEnumerateViewConfigurationViews", runtime_state::runtime_unavailable) || view_count != 2)
+			result = dispatch_.enumerate_view_configuration_views(
+			    instance_, system_id_, view_type_, 0, &view_count, nullptr);
+			if (!call_ok(result, "xrEnumerateViewConfigurationViews", runtime_state::runtime_unavailable) ||
+			    view_count != 2)
 			{
-				if (!XR_FAILED(result)) fail(runtime_state::runtime_unavailable, "stereo view count", XR_ERROR_RUNTIME_FAILURE);
-				(void)teardown_preserving_error(); return false;
+				if (!XR_FAILED(result))
+					fail(runtime_state::runtime_unavailable, "stereo view count", XR_ERROR_RUNTIME_FAILURE);
+				(void)teardown_preserving_error();
+				return false;
 			}
 			publish_progress_locked("views", "xrEnumerateViewConfigurationViews(data)");
 			view_configs_.assign(view_count, {XR_TYPE_VIEW_CONFIGURATION_VIEW});
-			result = dispatch_.enumerate_view_configuration_views(instance_, system_id_, view_type_, view_count,
-				&view_count, view_configs_.data());
+			result = dispatch_.enumerate_view_configuration_views(
+			    instance_, system_id_, view_type_, view_count, &view_count, view_configs_.data());
 			if (!call_ok(result, "xrEnumerateViewConfigurationViews", runtime_state::runtime_unavailable))
 			{
-				(void)teardown_preserving_error(); return false;
+				(void)teardown_preserving_error();
+				return false;
 			}
 			status_.view_count = view_count;
 
 			publish_progress_locked("views", "xrEnumerateEnvironmentBlendModes(count)");
 			std::uint32_t blend_count{};
-			result = dispatch_.enumerate_environment_blend_modes(instance_, system_id_, view_type_, 0,
-				&blend_count, nullptr);
-			if (!call_ok(result, "xrEnumerateEnvironmentBlendModes", runtime_state::runtime_unavailable) || blend_count == 0)
+			result = dispatch_.enumerate_environment_blend_modes(
+			    instance_, system_id_, view_type_, 0, &blend_count, nullptr);
+			if (!call_ok(result, "xrEnumerateEnvironmentBlendModes", runtime_state::runtime_unavailable) ||
+			    blend_count == 0)
 			{
-				(void)teardown_preserving_error(); return false;
+				(void)teardown_preserving_error();
+				return false;
 			}
 			publish_progress_locked("views", "xrEnumerateEnvironmentBlendModes(data)");
 			std::vector<XrEnvironmentBlendMode> blend_modes(blend_count);
-			result = dispatch_.enumerate_environment_blend_modes(instance_, system_id_, view_type_, blend_count,
-				&blend_count, blend_modes.data());
+			result = dispatch_.enumerate_environment_blend_modes(
+			    instance_, system_id_, view_type_, blend_count, &blend_count, blend_modes.data());
 			if (!call_ok(result, "xrEnumerateEnvironmentBlendModes", runtime_state::runtime_unavailable))
 			{
-				(void)teardown_preserving_error(); return false;
+				(void)teardown_preserving_error();
+				return false;
 			}
 			blend_mode_ = blend_modes.front();
 			status_.blend_mode = blend_mode_ == XR_ENVIRONMENT_BLEND_MODE_OPAQUE ? "opaque" : "other";
@@ -574,33 +749,28 @@ namespace vr::openxr
 			result = dispatch_.get_d3d11_graphics_requirements(instance_, system_id_, &requirements);
 			if (!call_ok(result, "xrGetD3D11GraphicsRequirementsKHR", runtime_state::runtime_unavailable))
 			{
-				(void)teardown_preserving_error(); return false;
+				(void)teardown_preserving_error();
+				return false;
 			}
 			if (!graphics_requirements_match(requirements, graphics, error))
 			{
 				status_.state = runtime_state::graphics_mismatch;
 				status_.last_error = error;
 				set_result(XR_ERROR_GRAPHICS_DEVICE_INVALID);
-				(void)teardown_preserving_error(); return false;
+				(void)teardown_preserving_error();
+				return false;
 			}
 
-			publish_progress_locked("graphics_requirements", "create private D3D11 device");
-			d3d11::device_snapshot private_graphics;
-			if (!create_private_device(requirements, private_graphics, error))
-			{
-				status_.state = runtime_state::graphics_mismatch;
-				status_.last_error = error;
-				set_result(XR_ERROR_GRAPHICS_DEVICE_INVALID);
-				(void)teardown_preserving_error(); return false;
-			}
-
+			publish_progress_locked("graphics_requirements", "bind the game D3D11 device");
 			publish_progress_locked("session", "xrCreateSession");
-			const XrGraphicsBindingD3D11KHR binding{XR_TYPE_GRAPHICS_BINDING_D3D11_KHR, nullptr, private_graphics.device.Get()};
+			const XrGraphicsBindingD3D11KHR binding{
+			    XR_TYPE_GRAPHICS_BINDING_D3D11_KHR, nullptr, graphics.device.Get()};
 			const XrSessionCreateInfo session_info{XR_TYPE_SESSION_CREATE_INFO, &binding, 0, system_id_};
 			result = dispatch_.create_session(instance_, &session_info, &session_);
 			if (!call_ok(result, "xrCreateSession", runtime_state::runtime_unavailable))
 			{
-				(void)teardown_preserving_error(); return false;
+				(void)teardown_preserving_error();
+				return false;
 			}
 			status_.session_created = true;
 
@@ -611,55 +781,133 @@ namespace vr::openxr
 			result = dispatch_.create_reference_space(session_, &space_info, &local_space_);
 			if (!call_ok(result, "xrCreateReferenceSpace(local)", runtime_state::runtime_unavailable))
 			{
-				(void)teardown_preserving_error(); return false;
+				(void)teardown_preserving_error();
+				return false;
 			}
 			publish_progress_locked("spaces", "xrCreateReferenceSpace(view)");
 			space_info.referenceSpaceType = XR_REFERENCE_SPACE_TYPE_VIEW;
 			result = dispatch_.create_reference_space(session_, &space_info, &view_space_);
 			if (!call_ok(result, "xrCreateReferenceSpace(view)", runtime_state::runtime_unavailable))
 			{
-				(void)teardown_preserving_error(); return false;
+				(void)teardown_preserving_error();
+				return false;
 			}
 
 			publish_progress_locked("swapchains", "xrEnumerateSwapchainFormats(count)");
 			std::uint32_t format_count{};
 			result = dispatch_.enumerate_swapchain_formats(session_, 0, &format_count, nullptr);
-			if (!call_ok(result, "xrEnumerateSwapchainFormats", runtime_state::runtime_unavailable) || format_count == 0)
+			if (!call_ok(result, "xrEnumerateSwapchainFormats", runtime_state::runtime_unavailable) ||
+			    format_count == 0)
 			{
-				(void)teardown_preserving_error(); return false;
+				(void)teardown_preserving_error();
+				return false;
 			}
 			publish_progress_locked("swapchains", "xrEnumerateSwapchainFormats(data)");
 			std::vector<std::int64_t> formats(format_count);
-			result = dispatch_.enumerate_swapchain_formats(session_, format_count, &format_count, formats.data());
+			result =
+			    dispatch_.enumerate_swapchain_formats(session_, format_count, &format_count, formats.data());
 			if (!call_ok(result, "xrEnumerateSwapchainFormats", runtime_state::runtime_unavailable))
 			{
-				(void)teardown_preserving_error(); return false;
+				(void)teardown_preserving_error();
+				return false;
 			}
-			const std::array preferred{static_cast<std::int64_t>(DXGI_FORMAT_R8G8B8A8_UNORM_SRGB),
-				static_cast<std::int64_t>(DXGI_FORMAT_B8G8R8A8_UNORM_SRGB),
-				static_cast<std::int64_t>(DXGI_FORMAT_R8G8B8A8_UNORM)};
-			color_format_ = formats.front();
-			for (const auto candidate : preferred)
-				if (std::ranges::find(formats, candidate) != formats.end()) { color_format_ = candidate; break; }
+			constexpr std::array preferred{std::int64_t(DXGI_FORMAT_R16G16B16A16_FLOAT),
+			                               std::int64_t(DXGI_FORMAT_R8G8B8A8_UNORM_SRGB),
+			                               std::int64_t(DXGI_FORMAT_B8G8R8A8_UNORM_SRGB),
+			                               std::int64_t(DXGI_FORMAT_R8G8B8A8_UNORM)};
+			color_format_ = 0;
+			for (auto candidate : preferred)
+				if (std::ranges::find(formats, candidate) != formats.end())
+				{
+					color_format_ = candidate;
+					break;
+				}
+			if (!color_format_)
+			{
+				fail(runtime_state::runtime_unavailable,
+				     "OpenXR color format",
+				     XR_ERROR_SWAPCHAIN_FORMAT_UNSUPPORTED);
+				(void)teardown_preserving_error();
+				return false;
+			}
+			menu_format_ = DXGI_FORMAT(color_format_);
+			for (auto candidate : {DXGI_FORMAT_R8G8B8A8_UNORM_SRGB, DXGI_FORMAT_B8G8R8A8_UNORM_SRGB})
+				if (std::ranges::find(formats, std::int64_t(candidate)) != formats.end())
+				{
+					menu_format_ = candidate;
+					break;
+				}
+			unsigned width = 0, height = 0;
+			for (const auto& view : view_configs_)
+			{
+				width = (std::max)(width, view.recommendedImageRectWidth);
+				height = (std::max)(height, view.recommendedImageRectHeight);
+			}
+			for (auto& view : view_configs_)
+			{
+				if (width > view.maxImageRectWidth || height > view.maxImageRectHeight)
+				{
+					fail(runtime_state::runtime_unavailable,
+					     "common OpenXR eye extent",
+					     XR_ERROR_LIMIT_REACHED);
+					(void)teardown_preserving_error();
+					return false;
+				}
+				view.recommendedImageRectWidth = width;
+				view.recommendedImageRectHeight = height;
+			}
+			status_.recommended_eye_width = width;
+			status_.recommended_eye_height = height;
+			if (status_.requested_scene_mode == scene_mode::engine_stereo &&
+			    !engine_scene_resolution::request({width, height}, error))
+			{
+				status_.native_renderer_error = error;
+				fail(runtime_state::fatal_for_vr, error.c_str(), XR_ERROR_RUNTIME_FAILURE);
+				(void)teardown_preserving_error();
+				return false;
+			}
 			status_.color_format = color_format_;
 			for (std::size_t index = 0; index < eyes_.size(); ++index)
 			{
 				publish_progress_locked("swapchains", std::format("create eye swapchain {}", index));
-				if (!create_eye_swapchain(dispatch_, session_, private_graphics.device.Get(), color_format_, view_configs_[index],
-					eyes_[index], error, result))
+				if (!create_eye_swapchain(dispatch_,
+				                          session_,
+				                          graphics.device.Get(),
+				                          color_format_,
+				                          view_configs_[index],
+				                          eyes_[index],
+				                          error,
+				                          result))
 				{
 					status_.state = runtime_state::runtime_unavailable;
 					status_.last_error = error;
 					set_result(result);
-					(void)teardown_preserving_error(); return false;
+					(void)teardown_preserving_error();
+					return false;
 				}
 				status_.eyes[index].width = eyes_[index].width;
 				status_.eyes[index].height = eyes_[index].height;
 			}
 
-			graphics_ = private_graphics;
+			graphics_ = graphics;
 			status_.device_generation = graphics.generation;
 			++status_.session_generation;
+			publish_progress_locked("input", "create and attach OpenXR action sets");
+				if (!inputs_.initialize(dispatch_, instance_, session_, result, error))
+				{
+					inputs_.invalidate(controller_input::input_reason::initialization_failed,result);
+				fail(runtime_state::runtime_unavailable, error.c_str(), result);
+				(void)teardown_preserving_error();
+				return false;
+			}
+			apply_controller_reference(std::move(controller_reference));
+			// A new LOCAL space cannot reuse a reference from an older session.
+			head_pose_bridge::request_recenter();
+			status_.controller_input_ready = true;
+			native_menu::set_requested(true);
+			status_.submission_on_game_device = true;
+			status_.graphics_transport = "h2_device_openxr";
+			status_.native_renderer_ready = false;
 			status_.applied_enabled = true;
 			status_.reinitialize_pending = false;
 			status_.state = runtime_state::session_idle;
@@ -695,15 +943,17 @@ namespace vr::openxr
 		bool has_objects() const noexcept
 		{
 			return loader_ != nullptr || instance_ != XR_NULL_HANDLE || session_ != XR_NULL_HANDLE ||
-				local_space_ != XR_NULL_HANDLE || view_space_ != XR_NULL_HANDLE ||
-				eyes_[0].handle != XR_NULL_HANDLE || eyes_[1].handle != XR_NULL_HANDLE;
+			       local_space_ != XR_NULL_HANDLE || view_space_ != XR_NULL_HANDLE ||
+			       eyes_[0].handle != XR_NULL_HANDLE || eyes_[1].handle != XR_NULL_HANDLE;
 		}
 
 		bool teardown_failure(const char* operation, const XrResult result) noexcept
 		{
 			status_.state = runtime_state::recoverable_error;
-			status_.last_error = std::format("{} failed during teardown (XrResult={} {})", operation,
-				static_cast<std::int64_t>(result), result_name(result));
+			status_.last_error = std::format("{} failed during teardown (XrResult={} {})",
+			                                 operation,
+			                                 static_cast<std::int64_t>(result),
+			                                 result_name(result));
 			set_result(result);
 			status_.applied_enabled = false;
 			publish_status_locked();
@@ -712,12 +962,15 @@ namespace vr::openxr
 
 		bool settle_eye(eye_swapchain& eye, XrResult& result) noexcept
 		{
-			if (!eye.acquired) return true;
+			if (!eye.acquired)
+				return true;
 			if (!eye.waited)
 			{
-				const XrSwapchainImageWaitInfo wait_info{XR_TYPE_SWAPCHAIN_IMAGE_WAIT_INFO, nullptr, 10'000'000};
+				const XrSwapchainImageWaitInfo wait_info{
+				    XR_TYPE_SWAPCHAIN_IMAGE_WAIT_INFO, nullptr, 10'000'000};
 				result = dispatch_.wait_swapchain_image(eye.handle, &wait_info);
-				if (XR_FAILED(result) || result == XR_TIMEOUT_EXPIRED) return false;
+				if (XR_FAILED(result) || result == XR_TIMEOUT_EXPIRED)
+					return false;
 				eye.waited = true;
 			}
 			return release_acquired_image(dispatch_, eye, result);
@@ -725,36 +978,61 @@ namespace vr::openxr
 
 		bool teardown_locked(const bool final_shutdown) noexcept
 		{
+			inputs_.invalidate();
+			status_.controller_input_ready = false;
+			native_menu::set_requested(false);
+			pause_dim_ = 0;
 			head_pose_bridge::invalidate_pose();
+			if (prediction_.sdk_frame_open)
+			{
+				prediction_.menu_layers_ready = false;
+				(void)finish_prediction(world_submission::omit);
+			}
 			if (!has_objects())
 			{
+				session_running_ = false;
 				status_.applied_enabled = false;
 				status_.session_running = false;
-				status_.state = final_shutdown || !status_.desired_enabled ? runtime_state::disabled : status_.state;
+				status_.state =
+				    final_shutdown || !status_.desired_enabled ? runtime_state::disabled : status_.state;
 				return true;
 			}
 			++status_.cleanup_count;
 			engine_stereo_bridge::invalidate_views();
 			compositor_.invalidate();
-				capture_.invalidate(status_.device_generation);
+			capture_.invalidate(status_.device_generation);
 			status_.applied_enabled = false;
+			if (graphics_ && !openxr::wait_for_gpu_idle(
+			                     graphics_.device.Get(), graphics_.context.Get(), status_.last_error))
+				return teardown_failure("D3D11 GPU idle wait", XR_ERROR_RUNTIME_FAILURE);
 			XrResult result{XR_SUCCESS};
+			const auto menu_cleanup = menus_.destroy(dispatch_);
+			if (!menu_cleanup)
+				return teardown_failure(menu_cleanup.operation, menu_cleanup.code);
+			const auto action_cleanup = inputs_.destroy(dispatch_);
+			if (!action_cleanup)
+				return teardown_failure(action_cleanup.operation, action_cleanup.code);
 			for (auto& eye : eyes_)
 			{
 				if (eye.acquired && !settle_eye(eye, result))
-					return teardown_failure(eye.waited ? "xrReleaseSwapchainImage" : "xrWaitSwapchainImage", result);
+					return teardown_failure(eye.waited ? "xrReleaseSwapchainImage" : "xrWaitSwapchainImage",
+					                        result);
 			}
-			if (session_running_ && dispatch_.end_session != nullptr)
+			// xrEndSession is only legal after STOPPING. Explicit teardown already
+			// owns the session mutex and retires GPU use; xrDestroySession is legal
+			// from any state once no thread can use the handle.
+			if (session_running_ && session_state_ == XR_SESSION_STATE_STOPPING &&
+			    dispatch_.end_session != nullptr)
 			{
 				result = dispatch_.end_session(session_);
-				if (XR_FAILED(result) && result != XR_ERROR_SESSION_NOT_RUNNING)
-					return teardown_failure("xrEndSession", result);
+				// EndSession always transitions to not-running, including errors.
 				session_running_ = false;
 				status_.session_running = false;
+				if (XR_FAILED(result) && result != XR_ERROR_SESSION_NOT_RUNNING)
+					return teardown_failure("xrEndSession", result);
 				++status_.session_end_count;
 			}
-			if (graphics_ && !openxr::wait_for_gpu_idle(graphics_.device.Get(), graphics_.context.Get(), status_.last_error))
-				return teardown_failure("D3D11 GPU idle wait", XR_ERROR_RUNTIME_FAILURE);
+
 			for (auto& eye : eyes_)
 			{
 				if (eye.handle != XR_NULL_HANDLE)
@@ -767,18 +1045,24 @@ namespace vr::openxr
 			{
 				if (*space != XR_NULL_HANDLE)
 				{
-					if (dispatch_.destroy_space == nullptr) return teardown_failure("xrDestroySpace", XR_ERROR_FUNCTION_UNSUPPORTED);
+					if (dispatch_.destroy_space == nullptr)
+						return teardown_failure("xrDestroySpace", XR_ERROR_FUNCTION_UNSUPPORTED);
 					result = dispatch_.destroy_space(*space);
-					if (XR_FAILED(result)) return teardown_failure("xrDestroySpace", result);
+					if (XR_FAILED(result))
+						return teardown_failure("xrDestroySpace", result);
 					*space = XR_NULL_HANDLE;
 				}
 			}
 			if (session_ != XR_NULL_HANDLE)
 			{
-				if (dispatch_.destroy_session == nullptr) return teardown_failure("xrDestroySession", XR_ERROR_FUNCTION_UNSUPPORTED);
+				if (dispatch_.destroy_session == nullptr)
+					return teardown_failure("xrDestroySession", XR_ERROR_FUNCTION_UNSUPPORTED);
 				result = dispatch_.destroy_session(session_);
-				if (XR_FAILED(result)) return teardown_failure("xrDestroySession", result);
+				if (XR_FAILED(result))
+					return teardown_failure("xrDestroySession", result);
 				session_ = XR_NULL_HANDLE;
+				session_running_ = false;
+				status_.session_running = false;
 				status_.session_created = false;
 			}
 			if (instance_ != XR_NULL_HANDLE)
@@ -794,32 +1078,44 @@ namespace vr::openxr
 					else
 					{
 						return teardown_failure("xrDestroyInstance",
-							XR_FAILED(result) ? result : XR_ERROR_FUNCTION_UNSUPPORTED);
+						                        XR_FAILED(result) ? result : XR_ERROR_FUNCTION_UNSUPPORTED);
 					}
 				}
 				if (dispatch_.destroy_instance == nullptr)
 					return teardown_failure("xrDestroyInstance", XR_ERROR_FUNCTION_UNSUPPORTED);
 				result = dispatch_.destroy_instance(instance_);
-				if (XR_FAILED(result)) return teardown_failure("xrDestroyInstance", result);
+				if (XR_FAILED(result))
+					return teardown_failure("xrDestroyInstance", result);
 				instance_ = XR_NULL_HANDLE;
 				status_.instance_created = false;
 			}
 			dispatch_.reset();
-			if (loader_ != nullptr) { FreeLibrary(loader_); loader_ = nullptr; }
+			if (loader_ != nullptr)
+			{
+				FreeLibrary(loader_);
+				loader_ = nullptr;
+			}
 			status_.loader_loaded = false;
 			status_.session_created = false;
 			status_.instance_created = false;
 			status_.session_running = false;
 			status_.view_count = 0;
 			status_.color_format = 0;
-			status_.session_state = XR_SESSION_STATE_UNKNOWN;
+			session_state_ = XR_SESSION_STATE_UNKNOWN;
+			status_.session_state = static_cast<std::int32_t>(session_state_);
 			status_.session_state_name = session_state_name(XR_SESSION_STATE_UNKNOWN);
 			status_.eyes = {};
 			status_.runtime_name.clear();
 			status_.system_name.clear();
+			if (status_.native_renderer_ready)
+				native_render_session::active().invalidate(status_.device_generation);
+			blit_.reset();
+			status_.native_renderer_ready = false;
+			status_.submission_on_game_device = false;
 			graphics_ = {};
 			system_id_ = XR_NULL_SYSTEM_ID;
-			status_.state = final_shutdown || !status_.desired_enabled ? runtime_state::disabled : runtime_state::waiting_for_graphics;
+			status_.state = final_shutdown || !status_.desired_enabled ? runtime_state::disabled
+			                                                           : runtime_state::waiting_for_graphics;
 			return true;
 		}
 
@@ -829,303 +1125,584 @@ namespace vr::openxr
 			{
 				XrEventDataBuffer event{XR_TYPE_EVENT_DATA_BUFFER};
 				const auto result = dispatch_.poll_event(instance_, &event);
-				if (result == XR_EVENT_UNAVAILABLE) return true;
-				if (XR_FAILED(result)) return fail(runtime_state::recoverable_error, "xrPollEvent", result);
-				if (event.type != XR_TYPE_EVENT_DATA_SESSION_STATE_CHANGED) continue;
+				if (result == XR_EVENT_UNAVAILABLE)
+					return true;
+				if (XR_FAILED(result))
+					return fail(runtime_state::recoverable_error, "xrPollEvent", result);
+				if (event.type == XR_TYPE_EVENT_DATA_INTERACTION_PROFILE_CHANGED)
+				{
+					const auto& changed = reinterpret_cast<const XrEventDataInteractionProfileChanged&>(event);
+					if (changed.session == session_)
+						inputs_.profile_changed();
+					continue;
+				}
+				if (event.type == XR_TYPE_EVENT_DATA_REFERENCE_SPACE_CHANGE_PENDING)
+				{
+					const auto& changed =
+					    reinterpret_cast<const XrEventDataReferenceSpaceChangePending&>(event);
+					if (changed.session == session_ &&
+					    changed.referenceSpaceType == XR_REFERENCE_SPACE_TYPE_LOCAL)
+						reference_change_ = changed.changeTime;
+					continue;
+				}
+				if (event.type != XR_TYPE_EVENT_DATA_SESSION_STATE_CHANGED)
+					continue;
 				const auto& changed = reinterpret_cast<const XrEventDataSessionStateChanged&>(event);
-				status_.session_state = changed.state;
+				if (changed.session != session_)
+					continue;
+				session_state_ = changed.state;
+				status_.session_state = static_cast<std::int32_t>(session_state_);
 				status_.session_state_name = session_state_name(changed.state);
-				if (changed.state == XR_SESSION_STATE_READY)
+				if (changed.state == XR_SESSION_STATE_READY && !session_running_)
 				{
 					++status_.session_ready_count;
 					const XrSessionBeginInfo begin_info{XR_TYPE_SESSION_BEGIN_INFO, nullptr, view_type_};
 					const auto begin_result = dispatch_.begin_session(session_, &begin_info);
-					if (XR_FAILED(begin_result)) return fail(runtime_state::recoverable_error, "xrBeginSession", begin_result);
-					session_running_ = true; status_.session_running = true; ++status_.session_begin_count;
+					if (XR_FAILED(begin_result))
+						return fail(runtime_state::recoverable_error, "xrBeginSession", begin_result);
+					session_running_ = true;
+					status_.session_running = true;
+					++status_.session_begin_count;
 					status_.state = runtime_state::running;
 				}
 				else if (changed.state == XR_SESSION_STATE_STOPPING)
 				{
 					++status_.session_stopping_count;
-					if (session_running_)
+					if (prediction_.sdk_frame_open)
+					{
+						prediction_.menu_layers_ready = false;
+						(void)finish_prediction(world_submission::omit);
+					}
+						inputs_.invalidate(controller_input::input_reason::session_inactive);
+						head_pose_bridge::invalidate_pose();
+						if (session_running_)
 					{
 						const auto end_result = dispatch_.end_session(session_);
-						if (XR_FAILED(end_result)) return fail(runtime_state::recoverable_error, "xrEndSession", end_result);
-						session_running_ = false; status_.session_running = false; ++status_.session_end_count;
+						session_running_ = false;
+						status_.session_running = false;
+						if (XR_FAILED(end_result))
+							return fail(runtime_state::recoverable_error, "xrEndSession", end_result);
+						++status_.session_end_count;
 					}
 					status_.state = runtime_state::session_idle;
 				}
-				else if (changed.state == XR_SESSION_STATE_EXITING || changed.state == XR_SESSION_STATE_LOSS_PENDING)
+				else if (changed.state == XR_SESSION_STATE_EXITING ||
+				         changed.state == XR_SESSION_STATE_LOSS_PENDING)
 				{
-					status_.reinitialize_pending = true;
+						status_.reinitialize_pending = true;
+						inputs_.invalidate(controller_input::input_reason::session_inactive);
+					head_pose_bridge::invalidate_pose();
+					engine_stereo_bridge::invalidate_views();
+					return false;
 				}
 			}
 		}
 
-		bool prepare_scene(const d3d11::device_snapshot& graphics, IDXGISwapChain* swap_chain)
+		bool copy_pose(const XrPosef& pose, head_pose_bridge::tracking_pose& output)
 		{
-			status_.effective_scene_mode = status_.requested_scene_mode;
-			status_.last_compositor_error.clear();
-			if (status_.requested_scene_mode == scene_mode::synthetic)
+			const auto& q = pose.orientation;
+			const auto& p = pose.position;
+			const float norm = q.x * q.x + q.y * q.y + q.z * q.z + q.w * q.w;
+			if (!std::isfinite(norm) || std::abs(norm - 1.f) > .01f)
+				return false;
+			output = {{p.x, p.y, p.z}, pose_filter::rotation({q.x, q.y, q.z, q.w})};
+			return pose_filter::valid({output.position_meters, output.orientation});
+		}
+		bool retire_native_prediction()
+		{
+			if (!prediction_.native_pair_admitted)
+				return true;
+			const auto id = prediction_.pair;
+			bool retired = native_render_session::active().pair_published(id)
+			                   ? native_render_session::active().release_pair(id)
+			                   : native_render_session::active().discard_unpublished_pair(id);
+			if (!retired)
+				native_render_session::active().quarantine_pair(id);
+			prediction_.native_pair_admitted = false;
+			return retired;
+		}
+		bool finish_prediction(world_submission world,
+		                       publication_policy publication = publication_policy::invalidate)
+		{
+			if (!prediction_.sdk_frame_open)
+				return true;
+			std::array<XrCompositionLayerProjectionView, 2> views{};
+			for (unsigned eye = 0; eye < 2; ++eye)
 			{
+				views[eye] = {XR_TYPE_COMPOSITION_LAYER_PROJECTION_VIEW};
+				views[eye].pose = prediction_.views[eye].pose;
+				views[eye].fov = prediction_.views[eye].fov;
+				views[eye].subImage = {
+				    eyes_[eye].handle, {{0, 0}, {int(eyes_[eye].width), int(eyes_[eye].height)}}, 0};
+			}
+			const XrCompositionLayerProjection projection{
+			    XR_TYPE_COMPOSITION_LAYER_PROJECTION, nullptr, 0, local_space_, 2, views.data()};
+			std::array<const XrCompositionLayerBaseHeader*, menu_surface::surface_count + 1> layers{};
+			unsigned count = 0;
+			if (world == world_submission::include)
+				layers[count++] = reinterpret_cast<const XrCompositionLayerBaseHeader*>(&projection);
+			if (prediction_.menu_layers_ready)
+				for (const auto* layer : menus_.layers())
+					layers[count++] = layer;
+			const XrFrameEndInfo end{XR_TYPE_FRAME_END_INFO,
+			                         nullptr,
+			                         prediction_.state.predictedDisplayTime,
+			                         blend_mode_,
+			                         count,
+			                         layers.data()};
+			const auto result = dispatch_.end_frame(session_, &end);
+			prediction_.sdk_frame_open = false;
+			const bool retired = retire_native_prediction();
+			prediction_ = {};
+			if (publication == publication_policy::invalidate)
+				engine_stereo_bridge::invalidate_views();
+			if (XR_FAILED(result))
+			{
+				status_.reinitialize_pending = true;
+				return fail(runtime_state::recoverable_error, "xrEndFrame", result);
+			}
+			if (!retired)
+				return fail(
+				    runtime_state::fatal_for_vr, "native OpenXR pair retirement", XR_ERROR_RUNTIME_FAILURE);
+			if (count)
+				++status_.submitted_frames;
+			status_.state = runtime_state::running;
+			return true;
+		}
+		void apply_controller_reference(controller_pose_reference::configuration reference)
+		{
+			if (!reference.expected_runtime.empty() && reference.expected_runtime != status_.runtime_name)
+				reference = {};
+			if (status_.runtime_name == "VirtualDesktopXR")
+				reference = controller_pose_reference::touch_legacy_reference();
+			// SteamVR metadata was copied before loading OpenXR. No OpenVR SDK connection
+			// overlaps this instance/session or the Present-owned frame loop.
+			status_.controller_pose_reference = reference.name;
+			status_.controller_pose_reference_error = reference.error;
+			for (unsigned hand = 0; hand < reference.hands.size(); ++hand)
+				status_.controller_reference_ids[hand] = reference.hands[hand].reference_id;
+			inputs_.set_grip_reference(std::move(reference));
+		}
+
+		bool try_arm_native()
+		{
+			if (status_.requested_scene_mode != scene_mode::engine_stereo)
+				return true;
+			const auto proof = native_stereo_source::current();
+			if (proof.state == native_stereo_source::phase::waiting)
+			{
+				status_.native_renderer_ready = false;
+				status_.native_renderer_error = "awaiting coordinated native stereo content proof";
 				return true;
 			}
-			if (status_.requested_scene_mode != scene_mode::engine_stereo)
+			if (proof.state == native_stereo_source::phase::failed)
 			{
-				status_.last_compositor_error = "strict VR requires scene_mode engine_stereo";
-				++status_.compositor_source_miss_count;
-				status_.state = runtime_state::recoverable_error;
-				return false;
+				return fail(runtime_state::fatal_for_vr, proof.error.c_str(), XR_ERROR_RUNTIME_FAILURE);
 			}
-			++status_.compositor_prepare_count;
-			std::string error;
-			if (status_.requested_scene_mode == scene_mode::engine_stereo)
+			if (proof.generation != graphics_.generation ||
+			    proof.context != reinterpret_cast<std::uintptr_t>(graphics_.context.Get()) ||
+			    proof.owner_thread != GetCurrentThreadId() || proof.source.Width != eyes_[0].width ||
+			    proof.source.Height != eyes_[0].height)
 			{
-				std::array<captured_frame, 2> pair{};
-				if (capture_.acquire_stereo_pair(graphics.device.Get(), status_.device_generation,
-					0, pair, error) == stereo_pair_acquire_result::ready)
+				return fail(runtime_state::fatal_for_vr,
+				            "native OpenXR content proof device/owner mismatch",
+				            XR_ERROR_GRAPHICS_DEVICE_INVALID);
+			}
+			const auto ring = native_render_session::active().get_status();
+			if (!ring.available || ring.device_generation != graphics_.generation ||
+			    ring.width != proof.source.Width || ring.height != proof.source.Height ||
+			    ring.format != DXGI_FORMAT_R16G16B16A16_FLOAT ||
+			    ring.source_format != std::uint32_t(proof.source.Format))
+			{
+				std::string error;
+				if ((ring.available && !native_render_session::active().suspend_acquisition()) ||
+				    !native_render_session::active().ensure_copy_ring(
+				        graphics_, proof.source, DXGI_FORMAT_R16G16B16A16_FLOAT, error))
 				{
-					std::array<stereo_capture_source, 2> sources{};
-					bool valid = true;
-					for (std::size_t index{}; index < pair.size(); ++index)
-					{
-						const auto& capture = pair[index];
-						if (capture.texture == nullptr)
-						{
-							error = "native stereo capture did not produce a shared GPU texture";
-							valid = false;
-							continue;
-						}
-						sources[index] = {capture.texture.Get(), capture.description,
-							capture.frame_id, capture.device_generation, capture.tag.pair_id,
-							capture.tag.eye_index};
-					}
-					const auto prepared = valid &&
-						compositor_.prepare_stereo_pair(graphics, sources, error);
-					const auto consumed_pair_id = pair[0].tag.pair_id;
-					capture_.release(pair[0]);
-					capture_.release(pair[1]);
-					if (prepared && compositor_.stereo_source_available(graphics.generation))
-					{
-						(void)native_render_session::active().release_pair(consumed_pair_id);
-						return true;
-					}
-					native_render_session::active().quarantine_pair(consumed_pair_id);
+					status_.native_renderer_error = error;
+					return fail(
+					    runtime_state::fatal_for_vr, "native OpenXR ring creation", XR_ERROR_RUNTIME_FAILURE);
 				}
-				status_.last_compositor_error = error.empty()
-					? "no complete native stereo capture pair is available" : error;
-				++status_.compositor_source_miss_count;
-				status_.state = runtime_state::recoverable_error;
+			}
+			status_.native_renderer_ready = true;
+			status_.native_renderer_error.clear();
+			return true;
+		}
+		bool begin_prediction(std::uint64_t pair)
+		{
+			if (prediction_.sdk_frame_open || !session_running_)
+				return false;
+			if (!try_arm_native())
+				return false;
+			prediction_ = {};
+			prediction_.state = {XR_TYPE_FRAME_STATE};
+			prediction_.pair = pair;
+			const XrFrameWaitInfo wait{XR_TYPE_FRAME_WAIT_INFO};
+				auto result = dispatch_.wait_frame(session_, &wait, &prediction_.state);
+				if (XR_FAILED(result))
+				{
+					inputs_.invalidate(controller_input::input_reason::wait_frame_failed,result);
+				head_pose_bridge::invalidate_pose();
+				engine_stereo_bridge::invalidate_views();
+				return fail(runtime_state::recoverable_error, "xrWaitFrame", result);
+			}
+			const XrFrameBeginInfo begin{XR_TYPE_FRAME_BEGIN_INFO};
+				result = dispatch_.begin_frame(session_, &begin);
+				if (XR_FAILED(result))
+				{
+					inputs_.invalidate(controller_input::input_reason::begin_frame_failed,result);
+				head_pose_bridge::invalidate_pose();
+				engine_stereo_bridge::invalidate_views();
+				status_.reinitialize_pending = true;
+				return fail(runtime_state::recoverable_error, "xrBeginFrame", result);
+			}
+			prediction_.sdk_frame_open = true;
+				if (!prediction_.state.shouldRender)
+				{
+					inputs_.invalidate(controller_input::input_reason::frame_not_rendered);
+				head_pose_bridge::invalidate_pose();
+				(void)finish_prediction(world_submission::omit);
 				return false;
 			}
-			(void)swap_chain;
-			status_.last_compositor_error = error.empty()
-				? "no complete native stereo capture pair is available" : error;
-			++status_.compositor_source_miss_count;
-			status_.state = runtime_state::recoverable_error;
-			return false;
-		}
+			if (reference_change_ && prediction_.state.predictedDisplayTime >= reference_change_)
+			{
+					head_pose_bridge::request_recenter();
+					inputs_.invalidate(controller_input::input_reason::reference_changed);
+				reference_change_ = 0;
+			}
+			prediction_.views = {{{XR_TYPE_VIEW}, {XR_TYPE_VIEW}}};
+			XrViewState state{XR_TYPE_VIEW_STATE};
+			std::uint32_t count{};
+			const XrViewLocateInfo locate{XR_TYPE_VIEW_LOCATE_INFO,
+			                              nullptr,
+			                              view_type_,
+			                              prediction_.state.predictedDisplayTime,
+			                              local_space_};
+			result = dispatch_.locate_views(session_, &locate, &state, 2, &count, prediction_.views.data());
+			if (XR_FAILED(result) || count != 2)
+			{
+				(void)finish_prediction(world_submission::omit);
+				return fail(runtime_state::recoverable_error,
+				            "xrLocateViews",
+				            XR_FAILED(result) ? result : XR_ERROR_VIEW_CONFIGURATION_TYPE_UNSUPPORTED);
+			}
+			XrSpaceLocation head{XR_TYPE_SPACE_LOCATION};
+			result = dispatch_.locate_space(
+			    view_space_, local_space_, prediction_.state.predictedDisplayTime, &head);
+			const auto flags = XR_VIEW_STATE_POSITION_VALID_BIT | XR_VIEW_STATE_ORIENTATION_VALID_BIT;
+			const auto space_flags =
+			    XR_SPACE_LOCATION_POSITION_VALID_BIT | XR_SPACE_LOCATION_ORIENTATION_VALID_BIT;
+				if (XR_FAILED(result) || (state.viewStateFlags & flags) != flags ||
+				    (head.locationFlags & space_flags) != space_flags || !copy_pose(head.pose, prediction_.head))
+				{
+					inputs_.invalidate(XR_FAILED(result) ? controller_input::input_reason::tracking_failed :
+						controller_input::input_reason::hmd_pose_invalid,result);
+				head_pose_bridge::invalidate_pose();
+				(void)finish_prediction(world_submission::omit);
+				return false;
+			}
+			for (unsigned eye = 0; eye < 2; ++eye)
+			{
+				head_pose_bridge::tracking_pose checked;
+					if (!copy_pose(prediction_.views[eye].pose, checked))
+					{
+						inputs_.invalidate(controller_input::input_reason::pose_invalid);
+					(void)finish_prediction(world_submission::omit);
+					return false;
+				}
+				// H2's current family bridge expresses eye positions and FOV, with
+				// a shared head rotation. Do not silently flatten canted eye cameras.
+				const auto& eye_rotation = prediction_.views[eye].pose.orientation;
+				const auto& head_rotation = head.pose.orientation;
+				const float alignment = eye_rotation.x * head_rotation.x + eye_rotation.y * head_rotation.y +
+				                        eye_rotation.z * head_rotation.z + eye_rotation.w * head_rotation.w;
+					if (status_.requested_scene_mode == scene_mode::engine_stereo &&
+					    std::abs(alignment) < .99999f)
+					{
+						inputs_.invalidate(controller_input::input_reason::view_configuration_unsupported,XR_ERROR_FEATURE_UNSUPPORTED);
+					head_pose_bridge::invalidate_pose();
+					(void)finish_prediction(world_submission::omit);
+					return fail(runtime_state::fatal_for_vr,
+					            "OpenXR native bridge cannot represent canted eye orientations",
+					            XR_ERROR_FEATURE_UNSUPPORTED);
+				}
+				const auto& f = prediction_.views[eye].fov;
+				projections_[eye] = {std::tan(f.angleLeft),
+				                     std::tan(f.angleRight),
+				                     std::tan(f.angleDown),
+				                     std::tan(f.angleUp)};
+			}
+			head_pose_bridge::publish_tracking_pose(
+			    prediction_.head, pair, std::chrono::steady_clock::now(),
+			    head_reference_policy(session_state_, state.viewStateFlags, head.locationFlags));
+			std::string operation;
+			XrResult input_result{};
+			if (!inputs_.sample(dispatch_,
+			                    session_,
+			                    local_space_,
+			                    prediction_.state.predictedDisplayTime,
+			                    session_state_ == XR_SESSION_STATE_FOCUSED,
+			                    input_result,
+			                    operation))
+			{
+				(void)finish_prediction(world_submission::omit);
+				return fail(runtime_state::recoverable_error, operation.c_str(), input_result);
+			}
+			status_.controller_pose_reference_error = inputs_.grip_reference().error;
+			menus_.observe_backdrop(prediction_.head, graphics_.generation);
+			++status_.tracking_pose_sample_count;
+			status_.tracking_last_present_frame = pair;
+			const auto mode = native_menu::current_presentation();
+			const auto ui = native_menu::current();
+			const auto now = GetTickCount64();
+			const bool fresh = ui.enabled && now >= ui.timestamp && now - ui.timestamp <= 250;
+			const bool movie = menu_surface::movie_theater(mode.enabled,
+			                                               mode.video,
+			                                               mode.frontend,
+			                                               mode.scene,
+			                                               fresh,
+			                                               ui.count,
+			                                               ui.briefing,
+			                                               mode.fullscreen_video);
+			prediction_.ui_only = mode.enabled && (mode.frontend || movie);
+			pause_dim_ = fresh && !ui.frontend ? ui.scene_dim : 0;
 
-		bool acquire_render_release(eye_swapchain& eye, const std::size_t eye_index,
-			const d3d11::device_snapshot& graphics, XrResult& root_result, std::string& root_operation)
+			if (status_.requested_scene_mode == scene_mode::engine_stereo && !prediction_.ui_only)
+			{
+				if (status_.native_renderer_ready)
+				{
+					if (!native_render_session::active().admit_pair(pair))
+					{
+						(void)finish_prediction(world_submission::omit);
+						return fail(runtime_state::fatal_for_vr,
+						            "native OpenXR prediction admission",
+						            XR_ERROR_RUNTIME_FAILURE);
+					}
+					prediction_.native_pair_admitted = true;
+				}
+				const auto q = head.pose.orientation;
+				const spatial_math::quat inverse{-q.x, -q.y, -q.z, q.w};
+				std::array<std::array<float, 3>, 2> eye_offsets;
+				for (unsigned eye = 0; eye < 2; ++eye)
+				{
+					const auto p = prediction_.views[eye].pose.position;
+					eye_offsets[eye] = spatial_math::rotate(
+					    inverse,
+					    {p.x - head.pose.position.x, p.y - head.pose.position.y, p.z - head.pose.position.z});
+				}
+				if (!engine_stereo_bridge::publish_view_family(
+				        pair, eye_offsets[0], eye_offsets[1], projections_))
+				{
+					(void)finish_prediction(world_submission::omit);
+					return fail(
+					    runtime_state::fatal_for_vr, "OpenXR predicted view family", XR_ERROR_POSE_INVALID);
+				}
+				// Bootstrap observations need poses but cannot retain an XR frame for
+				// a source whose game-device content proof is not ready yet.
+				if (!status_.native_renderer_ready)
+				{
+					(void)finish_prediction(world_submission::omit, publication_policy::retain_bootstrap);
+					return false;
+				}
+			}
+			else
+				engine_stereo_bridge::invalidate_views();
+			prediction_.views_valid = true;
+			status_.frame_context_id = pair;
+			++status_.frame_context_prepare_count;
+			return true;
+		}
+		bool render_eye(eye_swapchain& eye,
+		                unsigned index,
+		                ID3D11Texture2D* source,
+		                eye_content content,
+		                XrResult& result,
+		                std::string& error)
 		{
-			const XrSwapchainImageAcquireInfo acquire_info{XR_TYPE_SWAPCHAIN_IMAGE_ACQUIRE_INFO};
-			auto result = dispatch_.acquire_swapchain_image(eye.handle, &acquire_info, &eye.acquired_index);
-			if (XR_FAILED(result)) { root_result = result; root_operation = "xrAcquireSwapchainImage"; return false; }
-			eye.acquired = true; ++status_.eyes[eye_index].acquired;
-			const XrSwapchainImageWaitInfo wait_info{XR_TYPE_SWAPCHAIN_IMAGE_WAIT_INFO, nullptr, 10'000'000};
-			result = dispatch_.wait_swapchain_image(eye.handle, &wait_info);
+			const XrSwapchainImageAcquireInfo acquire{XR_TYPE_SWAPCHAIN_IMAGE_ACQUIRE_INFO};
+			result = dispatch_.acquire_swapchain_image(eye.handle, &acquire, &eye.acquired_index);
+			if (XR_FAILED(result))
+			{
+				error = "xrAcquireSwapchainImage";
+				return false;
+			}
+			eye.acquired = true;
+			++status_.eyes[index].acquired;
+			const XrSwapchainImageWaitInfo wait{XR_TYPE_SWAPCHAIN_IMAGE_WAIT_INFO, nullptr, 10'000'000};
+			result = dispatch_.wait_swapchain_image(eye.handle, &wait);
 			if (XR_FAILED(result) || result == XR_TIMEOUT_EXPIRED)
 			{
-				root_result = result; root_operation = "xrWaitSwapchainImage"; return false;
+				error = "xrWaitSwapchainImage";
+				return false;
 			}
 			eye.waited = true;
 			if (eye.acquired_index >= eye.render_targets.size())
 			{
-				root_result = XR_ERROR_RUNTIME_FAILURE; root_operation = "swapchain image index"; return false;
+				result = XR_ERROR_RUNTIME_FAILURE;
+				return false;
 			}
-			bool rendered = false;
-			std::string compositor_error;
-			if (status_.effective_scene_mode == scene_mode::synthetic)
+			if (content == eye_content::diagnostic_color)
 			{
-				const float pulse = static_cast<float>((status_.submitted_frames % 253) + 1) / 255.0f;
-				const float color[4]{eye_index == 0 ? 1.0f : 0.0f,
-					eye_index == 0 ? 0.0f : 1.0f, 1.0f, pulse};
-				graphics.context->ClearRenderTargetView(
-					eye.render_targets[eye.acquired_index].Get(), color);
-				rendered = true;
+				const float pulse = float((status_.submitted_frames % 253) + 1) / 255.f;
+				const float color[]{index == 0 ? 1.f : 0.f, index == 0 ? 0.f : 1.f, 1.f, pulse};
+				const auto queue = d3d11::acquire_gpu_queue_interop();
+				graphics_.context->ClearRenderTargetView(eye.render_targets[eye.acquired_index].Get(), color);
 			}
 			else
 			{
-				rendered = compositor_.render_eye(graphics,
-					{eye.render_targets[eye.acquired_index].Get(), eye.width, eye.height,
-						projections_[eye_index], false}, compositor_error,
-					static_cast<std::uint32_t>(2 + eye_index));
+				const texture_blit::renderer::draw_request transfer{
+				    .graphics = graphics_,
+				    .source = source,
+				    .destination = eye.render_targets[eye.acquired_index].Get(),
+				    .width = eye.width,
+				    .height = eye.height,
+				    .source_encoding = texture_blit::encoding::linear,
+				    .dim = pause_dim_};
+				if (!blit_.draw(transfer, error))
+				{
+					result = XR_ERROR_RUNTIME_FAILURE;
+					return false;
+				}
 			}
-			if (rendered) ++status_.compositor_render_count;
-			if (!rendered)
 			{
-				status_.last_compositor_error = compositor_error.empty()
-					? "strict native stereo compositor render failed" : compositor_error;
-				root_result = XR_ERROR_RUNTIME_FAILURE;
-				root_operation = "native stereo compositor render";
+				const auto queue = d3d11::acquire_gpu_queue_interop();
+				graphics_.context->Flush();
+			}
+			const XrSwapchainImageReleaseInfo release{XR_TYPE_SWAPCHAIN_IMAGE_RELEASE_INFO};
+			result = dispatch_.release_swapchain_image(eye.handle, &release);
+			if (XR_FAILED(result))
+			{
+				error = "xrReleaseSwapchainImage";
 				return false;
 			}
-			const XrSwapchainImageReleaseInfo release_info{XR_TYPE_SWAPCHAIN_IMAGE_RELEASE_INFO};
-			result = dispatch_.release_swapchain_image(eye.handle, &release_info);
-			if (XR_FAILED(result)) { root_result = result; root_operation = "xrReleaseSwapchainImage"; return false; }
-			eye.acquired = false; eye.waited = false; ++status_.eyes[eye_index].released;
+			eye.acquired = eye.waited = false;
+			++status_.eyes[index].released;
+			++status_.compositor_render_count;
 			return true;
 		}
-
-		void frame(const d3d11::device_snapshot& graphics, IDXGISwapChain* swap_chain)
+		bool frame_failure(const char* operation, XrResult result)
 		{
-			XrFrameState frame_state{XR_TYPE_FRAME_STATE};
-			const XrFrameWaitInfo wait_info{XR_TYPE_FRAME_WAIT_INFO};
-				auto result = dispatch_.wait_frame(session_, &wait_info, &frame_state);
-			if (XR_FAILED(result)) { fail(runtime_state::recoverable_error, "xrWaitFrame", result); return; }
-			const XrFrameBeginInfo begin_info{XR_TYPE_FRAME_BEGIN_INFO};
-				result = dispatch_.begin_frame(session_, &begin_info);
-			if (XR_FAILED(result)) { fail(runtime_state::recoverable_error, "xrBeginFrame", result); return; }
-			if (!frame_state.shouldRender)
+			for (auto& eye : eyes_)
 			{
-				const XrFrameEndInfo end{XR_TYPE_FRAME_END_INFO, nullptr, frame_state.predictedDisplayTime, blend_mode_, 0, nullptr};
-				result = dispatch_.end_frame(session_, &end);
-				if (XR_FAILED(result)) fail(runtime_state::recoverable_error, "xrEndFrame", result);
-				return;
+				XrResult ignored{};
+				(void)settle_eye(eye, ignored);
 			}
-
-			std::array<XrView, 2> views{{{XR_TYPE_VIEW}, {XR_TYPE_VIEW}}};
-			XrViewState view_state{XR_TYPE_VIEW_STATE};
-			std::uint32_t count{};
-			const XrViewLocateInfo locate{XR_TYPE_VIEW_LOCATE_INFO, nullptr, view_type_, frame_state.predictedDisplayTime, local_space_};
-			result = dispatch_.locate_views(session_, &locate, &view_state, static_cast<std::uint32_t>(views.size()), &count, views.data());
-			XrResult root_result{result}; std::string root_operation;
-			const auto required_view_flags = XR_VIEW_STATE_POSITION_VALID_BIT |
-				XR_VIEW_STATE_ORIENTATION_VALID_BIT;
-			bool ok = !XR_FAILED(result) && count == 2 &&
-				(view_state.viewStateFlags & required_view_flags) == required_view_flags;
-			if (!ok)
-			{
-				root_operation = "xrLocateViews";
-				if (XR_SUCCEEDED(root_result)) root_result = XR_ERROR_VIEW_CONFIGURATION_TYPE_UNSUPPORTED;
-			}
-			if (ok)
-			{
-				const auto& orientation = views[0].pose.orientation;
-				const float xx = orientation.x * orientation.x;
-				const float yy = orientation.y * orientation.y;
-				const float zz = orientation.z * orientation.z;
-				const float xy = orientation.x * orientation.y;
-				const float xz = orientation.x * orientation.z;
-				const float yz = orientation.y * orientation.z;
-				const float wx = orientation.w * orientation.x;
-				const float wy = orientation.w * orientation.y;
-				const float wz = orientation.w * orientation.z;
-				head_pose_bridge::publish_tracking_pose({
-					{
-						(views[0].pose.position.x + views[1].pose.position.x) * 0.5f,
-						(views[0].pose.position.y + views[1].pose.position.y) * 0.5f,
-						(views[0].pose.position.z + views[1].pose.position.z) * 0.5f,
-					},
-					{{
-						{1.0f - 2.0f * (yy + zz), 2.0f * (xy - wz), 2.0f * (xz + wy)},
-						{2.0f * (xy + wz), 1.0f - 2.0f * (xx + zz), 2.0f * (yz - wx)},
-						{2.0f * (xz - wy), 2.0f * (yz + wx), 1.0f - 2.0f * (xx + yy)},
-					}},
-				});
-				for (std::size_t index{}; index < projections_.size(); ++index)
-				{
-					const auto& fov = views[index].fov;
-					projections_[index] = {
-						std::tan(fov.angleLeft),
-						std::tan(fov.angleRight),
-						std::tan(fov.angleDown),
-						std::tan(fov.angleUp),
-					};
-				}
-				status_.effective_scene_mode = status_.requested_scene_mode;
-				if (status_.effective_scene_mode == scene_mode::engine_stereo)
-				{
-					const auto published = engine_stereo_bridge::publish_view_family(status_.submitted_frames + 1,
-						{views[0].pose.position.x, views[0].pose.position.y, views[0].pose.position.z},
-						{views[1].pose.position.x, views[1].pose.position.y, views[1].pose.position.z},
-						projections_);
-					if (!published)
-					{
-						status_.state = runtime_state::fatal_for_vr;
-						status_.last_error = "engine stereo bridge rejected the predicted OpenXR view family";
-						const XrFrameEndInfo end{XR_TYPE_FRAME_END_INFO, nullptr,
-							frame_state.predictedDisplayTime, blend_mode_, 0, nullptr};
-						(void)dispatch_.end_frame(session_, &end);
-						return;
-					}
-					if (!prepare_scene(graphics, swap_chain))
-					{
-						const XrFrameEndInfo end{XR_TYPE_FRAME_END_INFO, nullptr,
-							frame_state.predictedDisplayTime, blend_mode_, 0, nullptr};
-						(void)dispatch_.end_frame(session_, &end);
-						return;
-					}
-				}
-				for (std::size_t index = 0; index < eyes_.size(); ++index)
-					if (!acquire_render_release(eyes_[index], index, graphics, root_result, root_operation)) { ok = false; break; }
-			}
-
-			if (!ok)
-			{
-				head_pose_bridge::invalidate_pose();
-				for (auto& eye : eyes_)
-				{
-					XrResult cleanup{XR_SUCCESS};
-					(void)settle_eye(eye, cleanup);
-				}
-				const XrFrameEndInfo end{XR_TYPE_FRAME_END_INFO, nullptr, frame_state.predictedDisplayTime, blend_mode_, 0, nullptr};
-				(void)dispatch_.end_frame(session_, &end);
-				fail(runtime_state::recoverable_error, root_operation.c_str(), root_result);
-				(void)teardown_preserving_error();
-				return;
-			}
-
-			std::array<XrCompositionLayerProjectionView, 2> projection_views{};
-			for (std::size_t index = 0; index < projection_views.size(); ++index)
-			{
-				auto& projection = projection_views[index];
-				projection.type = XR_TYPE_COMPOSITION_LAYER_PROJECTION_VIEW;
-				projection.pose = views[index].pose;
-				projection.fov = views[index].fov;
-				projection.subImage.swapchain = eyes_[index].handle;
-				projection.subImage.imageRect.extent = {static_cast<std::int32_t>(eyes_[index].width), static_cast<std::int32_t>(eyes_[index].height)};
-			}
-			const XrCompositionLayerProjection layer{XR_TYPE_COMPOSITION_LAYER_PROJECTION, nullptr, 0, local_space_,
-				static_cast<std::uint32_t>(projection_views.size()), projection_views.data()};
-			const XrCompositionLayerBaseHeader* layers[]{reinterpret_cast<const XrCompositionLayerBaseHeader*>(&layer)};
-			const XrFrameEndInfo end{XR_TYPE_FRAME_END_INFO, nullptr, frame_state.predictedDisplayTime, blend_mode_, 1, layers};
-			result = dispatch_.end_frame(session_, &end);
-			if (XR_FAILED(result)) { fail(runtime_state::recoverable_error, "xrEndFrame", result); return; }
-			++status_.submitted_frames;
-			status_.state = runtime_state::running;
+				prediction_.menu_layers_ready = false;
+				(void)finish_prediction(world_submission::omit);
+				inputs_.invalidate(controller_input::input_reason::frame_submission_failed,result);
+			head_pose_bridge::invalidate_pose();
+			fail(runtime_state::recoverable_error, operation, result);
+			(void)teardown_preserving_error();
+			return false;
 		}
-
-		void on_present_locked(const d3d11::device_snapshot& graphics, IDXGISwapChain* swap_chain, std::uint64_t)
+		bool render_synthetic()
 		{
+			if (!prediction_.sdk_frame_open || !prediction_.views_valid)
+				return false;
+			XrResult result{};
+			std::string error;
+			for (unsigned eye = 0; eye < 2; ++eye)
+				if (!render_eye(eyes_[eye], eye, nullptr, eye_content::diagnostic_color, result, error))
+					return frame_failure(error.empty() ? "OpenXR eye render" : error.c_str(), result);
+			return finish_prediction(world_submission::include);
+		}
+		bool complete_native(IDXGISwapChain* chain)
+		{
+			if (!prediction_.views_valid)
+				return finish_prediction(world_submission::omit);
+			bool world = false;
+			if (!prediction_.ui_only)
+			{
+				if (native_render_session::active().pair_deferred(prediction_.pair))
+				{
+					return finish_prediction(world_submission::omit);
+				}
+				if (native_render_session::active().pair_failed(prediction_.pair))
+				{
+					return frame_failure("H2 predicted stereo pair failed", XR_ERROR_RUNTIME_FAILURE);
+				}
+				if (!native_render_session::active().pair_published(prediction_.pair))
+				{
+					status_.last_compositor_error =
+					    "waiting for the exact predicted native OpenXR stereo pair";
+					if (++prediction_.pending_presents >= 4)
+						return finish_prediction(world_submission::omit);
+					return true;
+				}
+				std::array<native_render_session::eye_target, 2> source;
+				if (!native_render_session::active().acquire_published_pair(prediction_.pair, source))
+				{
+					return frame_failure("native OpenXR pair acquire", XR_ERROR_RUNTIME_FAILURE);
+				}
+				XrResult result{};
+				std::string error;
+				++status_.compositor_prepare_count;
+				for (unsigned eye = 0; eye < 2; ++eye)
+					if (!render_eye(eyes_[eye],
+					                eye,
+					                source[eye].color.Get(),
+					                eye_content::native_texture,
+					                result,
+					                error))
+						return frame_failure(error.empty() ? "OpenXR eye transfer" : error.c_str(), result);
+				status_.last_compositor_error.clear();
+				world = true;
+			}
+			const menu_layers::presentation_input menu_input{.session = session_,
+			                                                 .space = local_space_,
+			                                                 .graphics = graphics_,
+			                                                 .swapchain = chain,
+			                                                 .head = prediction_.head,
+			                                                 .cylinder_supported = cylinder_supported_,
+			                                                 .format = menu_format_};
+			const auto menu_result = menus_.prepare(dispatch_, menu_input);
+			if (!menu_result)
+			{
+				const auto detail = std::string(menu_result.call.operation) +
+				                    (menu_result.detail.empty() ? "" : ": " + menu_result.detail);
+				return frame_failure(detail.c_str(), menu_result.call.code);
+			}
+			prediction_.menu_layers_ready = true;
+			return finish_prediction(world ? world_submission::include : world_submission::omit);
+		}
+		bool maintain_session(const d3d11::device_snapshot& graphics)
+		{
+			const auto resized = resize_generation_.exchange(0, std::memory_order_acq_rel);
+			if (status_.desired_enabled && graphics && resized == graphics.generation)
+				status_.reinitialize_pending = true;
 			if (!status_.desired_enabled)
 			{
-				(void)teardown_locked(true); return;
+				(void)teardown_locked(true);
+				return false;
 			}
-			if (status_.reinitialize_pending || (status_.applied_enabled && status_.device_generation != graphics.generation))
+			if (status_.reinitialize_pending ||
+			    (status_.applied_enabled && status_.device_generation != graphics.generation))
 			{
-				if (!teardown_locked(false)) return;
+				if (!teardown_locked(false))
+					return false;
 				status_.reinitialize_pending = false;
+				auto_initialize_allowed_ = true;
 			}
 			if (!status_.applied_enabled)
 			{
-				if (!auto_initialize_allowed_) return;
+				if (!graphics)
+				{
+					status_.state = runtime_state::waiting_for_graphics;
+					return false;
+				}
+				if (!auto_initialize_allowed_ && initialization_generation_ == graphics.generation)
+					return false;
+				initialization_generation_ = graphics.generation;
 				auto_initialize_allowed_ = false;
-				if (!initialize_locked(graphics)) return;
+				if (!initialize_locked(graphics))
+					return false;
 			}
-			if (!poll_events() || !session_running_) return;
-			frame(graphics_, swap_chain);
+			if (status_.state == runtime_state::fatal_for_vr)
+				return false;
+			owner_generation_ = graphics.generation;
+			owner_thread_ = GetCurrentThreadId();
+			status_.direct_present_owner_thread_id = owner_thread_;
+			return poll_events() && session_running_;
 		}
 
 		mutable std::mutex mutex_;
@@ -1135,6 +1712,8 @@ namespace vr::openxr
 		XrInstance instance_{XR_NULL_HANDLE};
 		XrSystemId system_id_{XR_NULL_SYSTEM_ID};
 		XrSession session_{XR_NULL_HANDLE};
+		// SDK control state is authoritative; runtime_status is its copied report.
+		XrSessionState session_state_{XR_SESSION_STATE_UNKNOWN};
 		XrSpace local_space_{XR_NULL_HANDLE};
 		XrSpace view_space_{XR_NULL_HANDLE};
 		std::array<eye_swapchain, 2> eyes_{};
@@ -1148,37 +1727,95 @@ namespace vr::openxr
 		std::int64_t color_format_{};
 		bool session_running_{};
 		bool auto_initialize_allowed_{true};
+		std::uint64_t initialization_generation_{};
+		std::atomic_uint64_t resize_generation_{};
 		mutable std::mutex status_mutex_;
 		runtime_status status_snapshot_{runtime_state::disabled, true};
 	};
 #else
 	class runtime_backend::implementation final
 	{
-	public:
-		implementation() { status_.state = runtime_state::sdk_headers_unavailable; }
-		void set_desired_enabled(bool value) { status_.desired_enabled = value; }
-		void set_scene_mode(scene_mode mode) { status_.requested_scene_mode = mode; }
-		void request_reinitialize() { status_.reinitialize_pending = true; }
-		void prepare_frame(const d3d11::device_snapshot&, std::uint64_t) {}
-		bool initialize(const d3d11::device_snapshot&) { status_.state = runtime_state::sdk_headers_unavailable; return false; }
-		void on_present(const d3d11::device_snapshot&, std::uint64_t) {}
-		void on_present(const d3d11::present_event&) {}
-		void on_present_post(const d3d11::present_event&, HRESULT) {}
-		void capture_present(const d3d11::present_event&) {}
-		bool capture_engine_texture(const d3d11::device_snapshot&,
-			ID3D11Texture2D*, capture_frame_tag) { return false; }
-		void poll_capture(const d3d11::device_snapshot&) {}
-		void on_resize_before(const d3d11::resize_event&) noexcept {}
-		void on_device_destroying(const d3d11::device_snapshot&) noexcept {}
-		void shutdown() noexcept { status_.state = runtime_state::disabled; status_.applied_enabled = false; }
-		bool requested_enabled() const { return status_.desired_enabled; }
-		bool applied_enabled() const { return false; }
-		runtime_status get_status() const { return status_; }
-	private: runtime_status status_{};
+	  public:
+		explicit implementation(controller_reference_query)
+		{
+			status_.state = runtime_state::sdk_headers_unavailable;
+		}
+		void set_desired_enabled(bool value)
+		{
+			status_.desired_enabled = value;
+		}
+		void set_scene_mode(scene_mode mode)
+		{
+			status_.requested_scene_mode = mode;
+		}
+		void request_reinitialize()
+		{
+			status_.reinitialize_pending = true;
+		}
+		void prepare_frame(const d3d11::device_snapshot&, std::uint64_t)
+		{
+		}
+		bool initialize(const d3d11::device_snapshot&)
+		{
+			status_.state = runtime_state::sdk_headers_unavailable;
+			return false;
+		}
+		void on_present(const d3d11::device_snapshot&, std::uint64_t)
+		{
+		}
+		void on_present(const d3d11::present_event&)
+		{
+		}
+		void on_present_post(const d3d11::present_event&, HRESULT)
+		{
+		}
+		void capture_present(const d3d11::present_event&)
+		{
+		}
+		bool capture_engine_texture(const d3d11::device_snapshot&, ID3D11Texture2D*, capture_frame_tag)
+		{
+			return false;
+		}
+		void poll_capture(const d3d11::device_snapshot&)
+		{
+		}
+		void on_resize_before(const d3d11::resize_event&) noexcept
+		{
+		}
+		void on_device_destroying(const d3d11::device_snapshot&) noexcept
+		{
+		}
+		void shutdown() noexcept
+		{
+			status_.state = runtime_state::disabled;
+			status_.applied_enabled = false;
+		}
+		bool shutdown_complete() const noexcept
+		{
+			return true;
+		}
+		bool requested_enabled() const
+		{
+			return status_.desired_enabled;
+		}
+		bool applied_enabled() const
+		{
+			return false;
+		}
+		runtime_status get_status() const
+		{
+			return status_;
+		}
+
+	  private:
+		runtime_status status_{};
 	};
 #endif
 
-	runtime_backend::runtime_backend() : implementation_(std::make_unique<implementation>()) {}
+	runtime_backend::runtime_backend(controller_reference_query reference_query)
+	    : implementation_(std::make_unique<implementation>(reference_query))
+	{
+	}
 	runtime_backend::~runtime_backend()
 	{
 		if (implementation_ != nullptr)
@@ -1186,535 +1823,79 @@ namespace vr::openxr
 			implementation_->shutdown();
 		}
 	}
-	void runtime_backend::set_desired_enabled(const bool enabled) { implementation_->set_desired_enabled(enabled); }
-	void runtime_backend::set_scene_mode(const scene_mode mode) { implementation_->set_scene_mode(mode); }
-	void runtime_backend::request_reinitialize() { implementation_->request_reinitialize(); }
-	void runtime_backend::prepare_frame(const d3d11::device_snapshot& graphics, const std::uint64_t frame_index)
+	void runtime_backend::set_desired_enabled(const bool enabled)
+	{
+		implementation_->set_desired_enabled(enabled);
+	}
+	void runtime_backend::set_scene_mode(const scene_mode mode)
+	{
+		implementation_->set_scene_mode(mode);
+	}
+	void runtime_backend::request_reinitialize()
+	{
+		implementation_->request_reinitialize();
+	}
+	void runtime_backend::prepare_frame(const d3d11::device_snapshot& graphics,
+	                                    const std::uint64_t frame_index)
 	{
 		implementation_->prepare_frame(graphics, frame_index);
 	}
-	bool runtime_backend::initialize(const d3d11::device_snapshot& graphics) { return implementation_->initialize(graphics); }
-	void runtime_backend::on_present(const d3d11::device_snapshot& graphics, const std::uint64_t frame) { implementation_->on_present(graphics, frame); }
-	void runtime_backend::on_present(const d3d11::present_event& event) { implementation_->on_present(event); }
+	bool runtime_backend::initialize(const d3d11::device_snapshot& graphics)
+	{
+		return implementation_->initialize(graphics);
+	}
+	void runtime_backend::on_present(const d3d11::device_snapshot& graphics, const std::uint64_t frame)
+	{
+		implementation_->on_present(graphics, frame);
+	}
+	void runtime_backend::on_present(const d3d11::present_event& event)
+	{
+		implementation_->on_present(event);
+	}
 	void runtime_backend::on_present_post(const d3d11::present_event& event, const HRESULT result)
 	{
 		implementation_->on_present_post(event, result);
 	}
-	void runtime_backend::capture_present(const d3d11::present_event& event) { implementation_->capture_present(event); }
+	void runtime_backend::capture_present(const d3d11::present_event& event)
+	{
+		implementation_->capture_present(event);
+	}
 	bool runtime_backend::capture_engine_texture(const d3d11::device_snapshot& graphics,
-		ID3D11Texture2D* const source, const capture_frame_tag tag)
+	                                             ID3D11Texture2D* const source,
+	                                             const capture_frame_tag tag)
 	{
 		return implementation_->capture_engine_texture(graphics, source, tag);
 	}
-	void runtime_backend::poll_capture(const d3d11::device_snapshot& graphics) { implementation_->poll_capture(graphics); }
-	void runtime_backend::on_resize_before(const d3d11::resize_event& event) noexcept { implementation_->on_resize_before(event); }
-	void runtime_backend::on_device_destroying(const d3d11::device_snapshot& graphics) noexcept { implementation_->on_device_destroying(graphics); }
-	void runtime_backend::shutdown() noexcept { implementation_->shutdown(); }
-	bool runtime_backend::requested_enabled() const { return implementation_->requested_enabled(); }
-	bool runtime_backend::applied_enabled() const { return implementation_->applied_enabled(); }
-	runtime_status runtime_backend::get_status() const { return implementation_->get_status(); }
-}
-
-namespace vr
-{
-	class runtime::implementation final
+	void runtime_backend::poll_capture(const d3d11::device_snapshot& graphics)
 	{
-	public:
-		implementation() : present_owner_execution(backend.requires_present_owner_execution())
-		{
-			if (present_owner_execution)
-			{
-				worker_phase = "present_owner";
-			}
-			else
-			{
-				worker = std::thread([this] { run(); });
-			}
-		}
-
-		~implementation()
-		{
-			stop_worker();
-		}
-
-		void set_enabled(const bool enabled)
-		{
-			if (present_owner_execution)
-			{
-				backend.set_desired_enabled(enabled);
-				return;
-			}
-			{
-				const std::lock_guard lock(mailbox_mutex);
-				desired_enabled = enabled;
-				++configuration_generation;
-				configuration_pending = true;
-				wake = true;
-			}
-			mailbox_cv.notify_one();
-		}
-
-		void set_mode(const scene_mode mode)
-		{
-			if (present_owner_execution)
-			{
-				backend.set_scene_mode(mode);
-				return;
-			}
-			{
-				const std::lock_guard lock(mailbox_mutex);
-				desired_scene_mode = mode;
-				++configuration_generation;
-				configuration_pending = true;
-				wake = true;
-			}
-			mailbox_cv.notify_one();
-		}
-
-		void reinitialize()
-		{
-			if (present_owner_execution)
-			{
-				backend.request_reinitialize();
-				return;
-			}
-			{
-				const std::lock_guard lock(mailbox_mutex);
-				reinitialize_pending = true;
-				++configuration_generation;
-				configuration_pending = true;
-				wake = true;
-			}
-			mailbox_cv.notify_one();
-		}
-
-		void capture_present(const d3d11::present_event& event)
-		{
-			if (present_owner_execution)
-			{
-				backend.capture_present(event);
-				return;
-			}
-			bool capture_enabled{};
-			{
-				const std::lock_guard lock(mailbox_mutex);
-				capture_enabled = desired_enabled && desired_scene_mode == scene_mode::backbuffer && !stop;
-			}
-			if (capture_enabled)
-			{
-				backend.capture_present(event);
-			}
-		}
-
-		bool capture_engine_texture(const d3d11::device_snapshot& graphics,
-			ID3D11Texture2D* const source, const capture_frame_tag tag)
-		{
-			if (present_owner_execution)
-			{
-				return backend.capture_engine_texture(graphics, source, tag);
-			}
-			bool capture_enabled{};
-			{
-				const std::lock_guard lock(mailbox_mutex);
-				capture_enabled = desired_enabled && desired_scene_mode == scene_mode::engine_stereo && !stop;
-			}
-			if (capture_enabled)
-			{
-				return backend.capture_engine_texture(graphics, source, tag);
-			}
-			return false;
-		}
-
-		void poll_capture(const d3d11::device_snapshot& graphics)
-		{
-			if (present_owner_execution)
-			{
-				backend.poll_capture(graphics);
-				return;
-			}
-			bool capture_enabled{};
-			{
-				const std::lock_guard lock(mailbox_mutex);
-				capture_enabled = desired_enabled && desired_scene_mode != scene_mode::synthetic && !stop;
-			}
-			if (capture_enabled)
-			{
-				backend.poll_capture(graphics);
-			}
-		}
-
-		void present(const d3d11::present_event& event)
-		{
-			if (present_owner_execution)
-			{
-				backend.on_present(event);
-				return;
-			}
-			{
-				const std::lock_guard lock(mailbox_mutex);
-				if (!event.graphics) return;
-				if (retiring_generation != 0 && event.graphics.generation <= retiring_generation)
-				{
-					++worker_dropped_present_count;
-					return;
-				}
-				if (event.graphics.generation > retiring_generation)
-				{
-					retiring_generation = 0;
-				}
-			if (has_present) ++worker_dropped_present_count;
-				latest_graphics = event.graphics;
-			latest_swap_chain = event.swap_chain;
-			latest_frame = event.frame_index;
-			++present_sequence;
-			latest_present_sequence = present_sequence;
-			has_present = true;
-			wake = true;
-			}
-			mailbox_cv.notify_one();
-		}
-
-		void present(const d3d11::device_snapshot& graphics, const std::uint64_t frame)
-		{
-			if (present_owner_execution)
-			{
-				backend.on_present(graphics, frame);
-				return;
-			}
-			d3d11::present_event event{};
-			event.graphics = graphics;
-			event.frame_index = frame;
-			present(event);
-		}
-
-		void present_post(const d3d11::present_event& event, const HRESULT result)
-		{
-			if (present_owner_execution)
-			{
-				backend.on_present_post(event, result);
-				if (backend.shutdown_complete())
-				{
-					const std::lock_guard lock(mailbox_mutex);
-					present_owner_shutdown_complete = true;
-					worker_phase = "present_owner_stopped";
-				}
-			}
-		}
-
-		void device_destroying(const d3d11::device_snapshot& graphics) noexcept
-		{
-			if (present_owner_execution)
-			{
-				backend.on_device_destroying(graphics);
-				return;
-			}
-			{
-				const std::lock_guard lock(mailbox_mutex);
-				retiring_generation = graphics.generation;
-				latest_graphics = graphics;
-				has_device_destroying = true;
-				wake = true;
-			}
-			mailbox_cv.notify_one();
-		}
-
-		void resize(const d3d11::resize_event& event) noexcept
-		{
-			if (present_owner_execution)
-			{
-				backend.on_resize_before(event);
-				return;
-			}
-			{
-				const std::lock_guard lock(mailbox_mutex);
-				pending_resize = event;
-				has_resize = true;
-				wake = true;
-			}
-			mailbox_cv.notify_one();
-		}
-
-		void stop_worker() noexcept
-		{
-			if (present_owner_execution)
-			{
-				{
-					const std::lock_guard lock(mailbox_mutex);
-					if (present_owner_shutdown_complete) return;
-					worker_phase = "present_owner_stopping";
-				}
-				backend.shutdown();
-				const auto complete = backend.shutdown_complete();
-				{
-					const std::lock_guard lock(mailbox_mutex);
-					present_owner_shutdown_complete = complete;
-					worker_phase = present_owner_shutdown_complete
-						? "present_owner_stopped" : "present_owner_waiting_post";
-				}
-				return;
-			}
-			if (!worker.joinable())
-			{
-				return;
-			}
-			{
-				const std::lock_guard lock(mailbox_mutex);
-				worker_phase = "stopping";
-				stop = true;
-				wake = true;
-			}
-			mailbox_cv.notify_one();
-			worker.join();
-		}
-
-		bool shutdown_complete() noexcept
-		{
-			if (present_owner_execution) return backend.shutdown_complete();
-			const std::lock_guard lock(mailbox_mutex);
-			return !worker.joinable() && !worker_active;
-		}
-
-		void run()
-		{
-			{
-				const std::lock_guard lock(mailbox_mutex);
-				worker_active = true;
-				worker_phase = "waiting";
-				worker_last_error.clear();
-			}
-			try
-			{
-				for (;;)
-				{
-				d3d11::device_snapshot graphics;
-				std::uint64_t frame{};
-				bool destroying{};
-				bool apply_configuration{};
-				bool apply_reinitialize{};
-				bool resize{};
-				bool has_present_snapshot{};
-				bool enabled{};
-				std::uint64_t present_sequence_snapshot{};
-				std::uint64_t configuration_generation_snapshot{};
-				d3d11::resize_event resize_event{};
-				scene_mode mode{};
-				Microsoft::WRL::ComPtr<IDXGISwapChain> swap_chain_reference;
-				{
-
-					std::unique_lock lock(mailbox_mutex);
-					mailbox_cv.wait(lock, [this] { return wake; });
-					++worker_wakeup_count;
-					worker_phase = "consuming";
-					wake = false;
-					if (stop) break;
-					if (has_present) ++worker_present_count;
-					graphics = latest_graphics;
-					swap_chain_reference = latest_swap_chain;
-					frame = latest_frame;
-					present_sequence_snapshot = latest_present_sequence;
-					destroying = has_device_destroying;
-					has_present_snapshot = has_present;
-					resize = has_resize;
-					resize_event = pending_resize;
-					apply_configuration = configuration_pending;
-					configuration_generation_snapshot = configuration_generation;
-					apply_reinitialize = reinitialize_pending;
-					enabled = desired_enabled;
-					mode = desired_scene_mode;
-					has_device_destroying = false;
-					has_resize = false;
-					has_present = false;
-					configuration_pending = false;
-					reinitialize_pending = false;
-				}
-				if (resize)
-				{
-					backend.on_resize_before(resize_event);
-				}
-				backend.set_desired_enabled(enabled);
-				backend.set_scene_mode(mode);
-				if (apply_reinitialize) backend.request_reinitialize();
-				if (destroying)
-				{
-					backend.on_device_destroying(graphics);
-					const std::lock_guard lock(mailbox_mutex);
-					worker_last_generation = graphics.generation;
-					worker_phase = "waiting";
-					continue;
-				}
-				if (!backend.requested_enabled())
-				{
-					backend.shutdown();
-					continue;
-				}
-				if (has_present_snapshot)
-				{
-					const auto now = std::chrono::steady_clock::now();
-					const auto backend_status = backend.get_status();
-					const bool fatal_initialization_block =
-						backend_status.state == runtime_state::fatal_for_vr;
-					const auto should_initialize = apply_reinitialize ||
-						(!backend.applied_enabled() && !fatal_initialization_block &&
-							now >= next_initialization_attempt);
-					{
-						const std::lock_guard lock(mailbox_mutex);
-						++worker_backend_call_count;
-						worker_graphics_available = static_cast<bool>(graphics);
-								worker_current_operation = should_initialize
-									? "backend.initialize" : "backend initialization cooldown";
-								worker_last_status_update = GetTickCount64();
-						worker_phase = should_initialize ? "initializing" : "waiting_for_retry";
-					}
-					if (should_initialize)
-					{
-						if (backend.initialize(graphics))
-						{
-							next_initialization_attempt = {};
-						}
-						else
-						{
-							next_initialization_attempt = std::chrono::steady_clock::now() +
-								std::chrono::seconds(2);
-						}
-					}
-					if (backend.applied_enabled())
-					{
-						{
-							const std::lock_guard lock(mailbox_mutex);
-							worker_phase = "frame";
-						}
-						backend.on_present(d3d11::present_event{swap_chain_reference.Get(), graphics, frame});
-					}
-					{
-						const std::lock_guard lock(mailbox_mutex);
-						worker_last_present_sequence = present_sequence_snapshot;
-						worker_last_generation = graphics.generation;
-						worker_last_configuration_generation = configuration_generation_snapshot;
-						worker_phase = "waiting";
-					}
-				}
-				}
-			backend.shutdown();
-		}
-		catch (const std::exception& error)
-			{
-				backend.shutdown();
-				const std::lock_guard lock(mailbox_mutex);
-				worker_last_error = error.what();
-			}
-			catch (...)
-			{
-				backend.shutdown();
-				const std::lock_guard lock(mailbox_mutex);
-				worker_last_error = "Unknown exception in OpenXR worker";
-			}
-			{
-				const std::lock_guard lock(mailbox_mutex);
-				worker_active = false;
-				worker_phase = worker_last_error.empty() ? "stopped" : "failed";
-			}
-		}
-
-		runtime_backend backend;
-		const bool present_owner_execution;
-		std::thread worker;
-		std::mutex mailbox_mutex;
-		std::condition_variable mailbox_cv;
-		d3d11::device_snapshot latest_graphics;
-		Microsoft::WRL::ComPtr<IDXGISwapChain> latest_swap_chain;
-		std::uint64_t latest_frame{};
-		std::uint64_t present_sequence{};
-		std::uint64_t latest_present_sequence{};
-		std::uint64_t retiring_generation{};
-		std::uint64_t configuration_generation{};
-		bool desired_enabled{};
-		scene_mode desired_scene_mode{scene_mode::backbuffer};
-		bool configuration_pending{};
-		bool reinitialize_pending{};
-		bool has_present{};
-		bool has_device_destroying{};
-		d3d11::resize_event pending_resize{};
-		bool has_resize{};
-		bool wake{};
-		bool stop{};
-		bool worker_active{};
-		bool present_owner_shutdown_complete{};
-		std::uint64_t worker_wakeup_count{};
-		std::uint64_t worker_present_count{};
-		std::uint64_t worker_dropped_present_count{};
-		std::uint64_t worker_backend_call_count{};
-		bool worker_graphics_available{};
-		std::string worker_phase{"starting"};
-		std::string worker_last_error;
-		std::uint64_t worker_last_present_sequence{};
-		std::uint64_t worker_last_generation{};
-		std::uint64_t worker_last_configuration_generation{};
-		std::chrono::steady_clock::time_point next_initialization_attempt{};
-			std::uint64_t worker_last_status_update{};
-			std::uint64_t worker_watchdog_count{};
-			bool worker_progress_stalled{};
-			std::string worker_current_operation;
-	};
-
-	runtime& runtime::get() { static runtime value; return value; }
-	runtime::runtime() : implementation_(std::make_unique<implementation>()) {}
-	runtime::~runtime() = default;
-	void runtime::set_desired_enabled(const bool enabled) { implementation_->set_enabled(enabled); }
-	void runtime::set_scene_mode(const scene_mode mode) { implementation_->set_mode(mode); }
-	void runtime::request_reinitialize() { implementation_->reinitialize(); }
-	void runtime::prepare_frame(const d3d11::device_snapshot& graphics, const std::uint64_t frame_index)
-	{
-		implementation_->backend.prepare_frame(graphics, frame_index);
+		implementation_->poll_capture(graphics);
 	}
-	bool runtime::initialize(const d3d11::device_snapshot& graphics) { return implementation_->backend.initialize(graphics); }
-	void runtime::on_present(const d3d11::device_snapshot& graphics, const std::uint64_t frame) { implementation_->present(graphics, frame); }
-	void runtime::on_present(const d3d11::present_event& event) { implementation_->present(event); }
-	void runtime::on_present_post(const d3d11::present_event& event, const HRESULT result)
+	void runtime_backend::on_resize_before(const d3d11::resize_event& event) noexcept
 	{
-		implementation_->present_post(event, result);
+		implementation_->on_resize_before(event);
 	}
-	void runtime::capture_present(const d3d11::present_event& event) { implementation_->capture_present(event); }
-	bool runtime::capture_engine_texture(const d3d11::device_snapshot& graphics,
-		ID3D11Texture2D* const source, const capture_frame_tag tag)
+	void runtime_backend::on_device_destroying(const d3d11::device_snapshot& graphics) noexcept
 	{
-		return implementation_->capture_engine_texture(graphics, source, tag);
+		implementation_->on_device_destroying(graphics);
 	}
-	void runtime::poll_capture(const d3d11::device_snapshot& graphics) { implementation_->poll_capture(graphics); }
-	void runtime::on_resize_before(const d3d11::resize_event& event) noexcept { implementation_->resize(event); }
-	void runtime::on_device_destroying(const d3d11::device_snapshot& graphics) noexcept { implementation_->device_destroying(graphics); }
-	void runtime::shutdown() noexcept { implementation_->stop_worker(); }
-	bool runtime::shutdown_complete() noexcept { return implementation_->shutdown_complete(); }
-	bool runtime::requested_enabled() const { return implementation_->backend.requested_enabled(); }
-	bool runtime::applied_enabled() const { return implementation_->backend.applied_enabled(); }
-	runtime_status runtime::get_status() const
+	void runtime_backend::shutdown() noexcept
 	{
-		auto status = implementation_->backend.get_status();
-		const std::lock_guard lock(implementation_->mailbox_mutex);
-		status.worker_active = implementation_->worker_active;
-		status.worker_wakeup_count = implementation_->worker_wakeup_count;
-		status.worker_present_count = implementation_->worker_present_count;
-		status.worker_dropped_present_count = implementation_->worker_dropped_present_count;
-		status.worker_backend_call_count = implementation_->worker_backend_call_count;
-		status.worker_graphics_available = implementation_->worker_graphics_available;
-		status.worker_phase = implementation_->worker_phase;
-		status.worker_last_error = implementation_->worker_last_error;
-		status.worker_last_present_sequence = implementation_->worker_last_present_sequence;
-		status.worker_last_generation = implementation_->worker_last_generation;
-		status.worker_last_configuration_generation = implementation_->worker_last_configuration_generation;
-			status.worker_last_status_update = std::max(status.worker_last_status_update, implementation_->worker_last_status_update);
-			if (status.worker_current_operation.empty())
-			{
-				status.worker_current_operation = implementation_->worker_current_operation;
-			}
-			if (status.worker_last_status_update != 0)
-			{
-				const auto now = GetTickCount64();
-				status.worker_progress_age_ms = now >= status.worker_last_status_update
-					? now - status.worker_last_status_update : 0;
-				status.worker_progress_stalled = status.worker_active &&
-					status.worker_phase == "initializing" && status.worker_progress_age_ms > 10'000;
-				status.worker_watchdog_count = implementation_->worker_watchdog_count;
-			}
-			return status;
+		implementation_->shutdown();
+	}
+	bool runtime_backend::shutdown_complete() const noexcept
+	{
+		return implementation_->shutdown_complete();
+	}
+	bool runtime_backend::requested_enabled() const
+	{
+		return implementation_->requested_enabled();
+	}
+	bool runtime_backend::applied_enabled() const
+	{
+		return implementation_->applied_enabled();
+	}
+	runtime_status runtime_backend::get_status() const
+	{
+		return implementation_->get_status();
 	}
 }

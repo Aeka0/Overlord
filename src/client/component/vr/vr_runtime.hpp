@@ -176,6 +176,7 @@ namespace vr
 		std::uint64_t compositor_source_miss_count{};
 		frame_capture_status capture;
 		std::string last_compositor_error;
+		std::string menu_surface_mode;
 		std::string backend_name;
 		std::string backend_selection_reason;
 		std::string last_initialization_stage;
@@ -187,6 +188,9 @@ namespace vr
 		bool application_registered{};
 		std::string application_registration_error;
 		bool controller_input_ready{};
+		std::string controller_pose_reference;
+		std::array<std::string, 2> controller_reference_ids;
+		std::string controller_pose_reference_error;
 		std::string controller_input_error;
 		std::string runtime_manifest;
 		std::string runtime_library;
@@ -225,7 +229,7 @@ namespace vr
 
 	class runtime final
 	{
-	public:
+	  public:
 		static runtime& get();
 
 		void set_desired_enabled(bool enabled);
@@ -238,7 +242,8 @@ namespace vr
 		void on_present_post(const d3d11::present_event& event, HRESULT result);
 		void capture_present(const d3d11::present_event& event);
 		[[nodiscard]] bool capture_engine_texture(const d3d11::device_snapshot& graphics,
-			ID3D11Texture2D* source, capture_frame_tag tag);
+		                                          ID3D11Texture2D* source,
+		                                          capture_frame_tag tag);
 		void poll_capture(const d3d11::device_snapshot& graphics);
 		void on_resize_before(const d3d11::resize_event& event) noexcept;
 		void on_device_destroying(const d3d11::device_snapshot& graphics) noexcept;
@@ -249,7 +254,7 @@ namespace vr
 		[[nodiscard]] bool applied_enabled() const;
 		[[nodiscard]] runtime_status get_status() const;
 
-	private:
+	  private:
 		runtime();
 		~runtime();
 		runtime(const runtime&) = delete;

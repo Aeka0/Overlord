@@ -28,6 +28,7 @@
 #include "engine_view_probe.hpp"
 #include "game/game.hpp"
 #include "native_render_session.hpp"
+#include "native_stereo_source.hpp"
 #include "native_fullscreen_blur.hpp"
 
 #include <utils/hook.hpp>
@@ -3134,6 +3135,47 @@ namespace vr::engine_stereo_renderer
 			}
 			return false;
 		}
+		native_stereo_source::proof native_source_proof()
+		{
+			native_stereo_source::proof result;
+			if (!engine_scene_resolution::ready())
+			{
+				const auto resolution = engine_scene_resolution::get_report();
+				if (resolution.state == engine_scene_resolution::phase::failed)
+				{
+					result.state = native_stereo_source::phase::failed;
+					result.error = resolution.error;
+				}
+				return result;
+			}
+			const auto evidence = engine_stereo_owner_pass::get_report();
+			if (evidence.state != engine_stereo_owner_pass::gate_state::complete)
+				return result;
+			if (evidence.error != engine_stereo_owner_pass::failure::none ||
+			    evidence.completed_eye_mask != 3 || !evidence.eyes_distinct || !evidence.nonzero_bytes[0] ||
+			    !evidence.nonzero_bytes[1] || evidence.device_removed_reason != S_OK)
+			{
+				result.state = native_stereo_source::phase::failed;
+				result.error = "native stereo content proof is incomplete";
+				return result;
+			}
+			result.source = {evidence.width,
+			                 evidence.height,
+			                 evidence.mip_levels,
+			                 evidence.array_size,
+			                 DXGI_FORMAT(evidence.format),
+			                 {evidence.sample_count, evidence.sample_quality},
+			                 D3D11_USAGE(evidence.usage),
+			                 evidence.bind_flags,
+			                 evidence.cpu_access_flags,
+			                 evidence.misc_flags};
+			result.generation = evidence.device_generation;
+			result.context = evidence.context;
+			result.owner_thread = evidence.owner_thread_id;
+			result.state = native_stereo_source::phase::ready;
+			return result;
+		}
+
 	}
 
 	void capture_registry_baseline() noexcept
@@ -3370,9 +3412,12 @@ namespace vr::engine_stereo_renderer
 
 	class component final : public component_interface
 	{
+		native_stereo_source::registration source_registration;
+
 	public:
 		void post_unpack() override
 		{
+			source_registration = native_stereo_source::register_query(native_source_proof);
 			engine_scene_completion::validate();
 			engine_scene_resolution::install();
 			engine_scene_job_capture::install();
@@ -3386,6 +3431,7 @@ namespace vr::engine_stereo_renderer
 
 		void pre_destroy() override
 		{
+			source_registration.reset();
 			engine_stereo_bridge::set_render_hook_installed(false);
 		}
 	};

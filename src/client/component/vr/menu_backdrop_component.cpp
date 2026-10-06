@@ -1,5 +1,5 @@
 #include <std_include.hpp>
-#include "menu_overlay.hpp"
+#include "menu_backdrop.hpp"
 #include "native_hud_capture.hpp"
 #include "eye_composition.hpp"
 #include "spatial_panel_renderer.hpp"
@@ -26,7 +26,7 @@ namespace vr::menu_backdrop
 		thread_local spatial_panel::renderer renderer;
 		bool prepare(const eye_composition::event& event, ID3D11DeviceContext* context)
 		{
-			const auto surface = menu_overlay::latest_backdrop();
+			const auto surface = menu_backdrop::latest();
 			const auto current = native_menu::current();
 			const auto now = GetTickCount64();
 			if (!surface.canvas || current.frontend || !current.count || surface.session != current.session ||

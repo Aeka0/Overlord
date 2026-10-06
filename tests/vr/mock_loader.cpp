@@ -18,6 +18,8 @@ struct XrInstance_T
 {
 	std::uint64_t id{};
 };
+struct XrAction_T { XrActionSet owner{}; std::string name; XrActionType type{}; bool bound{}; };
+struct XrActionSet_T { XrInstance owner{}; std::vector<XrAction> actions; };
 
 struct XrSession_T
 {
@@ -25,15 +27,18 @@ struct XrSession_T
 	Microsoft::WRL::ComPtr<ID3D11Device> device;
 	std::vector<XrSwapchain> swapchains;
 	std::vector<XrSpace> spaces;
+	XrSessionState state{XR_SESSION_STATE_IDLE};
 	bool running{};
 	bool frame_waited{};
 	bool frame_begun{};
+	XrActionSet actions{};bool synced{};XrTime display_time{};
 };
 
 struct XrSpace_T
 {
 	std::uint64_t id{};
 	XrSession owner{XR_NULL_HANDLE};
+	XrReferenceSpaceType reference_type{XR_REFERENCE_SPACE_TYPE_LOCAL};XrAction action{};
 };
 
 struct XrSwapchain_T
@@ -58,9 +63,21 @@ namespace
 	LUID g_adapter_luid{};
 	D3D_FEATURE_LEVEL g_minimum_feature_level{D3D_FEATURE_LEVEL_10_0};
 	XrBool32 g_should_render{XR_TRUE};
+	constexpr auto tracked_pose_flags = XR_VIEW_STATE_POSITION_VALID_BIT | XR_VIEW_STATE_ORIENTATION_VALID_BIT |
+	                                    XR_VIEW_STATE_POSITION_TRACKED_BIT | XR_VIEW_STATE_ORIENTATION_TRACKED_BIT;
+	XrViewStateFlags g_view_flags = tracked_pose_flags;
+	float g_head_height{};
+	std::string g_runtime_name{"h2v mock OpenXR runtime"};
+	std::array<std::string, 2> g_profiles{ "/interaction_profiles/oculus/touch_controller", "/interaction_profiles/oculus/touch_controller" };
+	bool g_profile_changed{};
 	bool g_wait_timeout_returned{};
 	std::deque<XrSessionState> g_session_states;
 	statistics g_statistics;
+	bool g_synthetic_checks=true;
+	bool g_cylinder_supported=false;
+	unsigned g_eye_width=64,g_eye_height=64;
+	std::unordered_map<XrPath,std::string> g_paths;
+	std::unordered_map<std::string,std::array<float,2>> g_action_values;
 	XrSession g_current_session{XR_NULL_HANDLE};
 	std::uint64_t g_next_handle{1};
 	XrTime g_next_display_time{1};
@@ -160,9 +177,15 @@ extern "C" __declspec(dllexport) void WINAPI h2vMockReset()
 	g_adapter_luid = {};
 	g_minimum_feature_level = D3D_FEATURE_LEVEL_10_0;
 	g_should_render = XR_TRUE;
+	g_view_flags = tracked_pose_flags;
+	g_head_height = 0;
+	g_runtime_name = "h2v mock OpenXR runtime";
+	g_profiles.fill("/interaction_profiles/oculus/touch_controller");
+	g_profile_changed = false;
 	g_wait_timeout_returned = false;
 	g_session_states.clear();
 	g_statistics = {};
+	g_paths.clear();g_action_values.clear();g_synthetic_checks=true;g_cylinder_supported=false;g_eye_width=g_eye_height=64;
 	g_next_display_time = 1;
 	g_last_texture_epochs = {};
 	g_has_texture_epoch = false;
@@ -193,6 +216,34 @@ extern "C" __declspec(dllexport) void WINAPI h2vMockSetShouldRender(const BOOL s
 {
 	const std::lock_guard lock(g_mutex);
 	g_should_render = should_render ? XR_TRUE : XR_FALSE;
+}
+
+extern "C" __declspec(dllexport) void WINAPI h2vMockSetEyeExtent(std::uint32_t width,std::uint32_t height)
+{const std::lock_guard lock(g_mutex);g_eye_width=width;g_eye_height=height;}
+
+extern "C" __declspec(dllexport) void WINAPI h2vMockSetCylinderSupported(BOOL enabled){const std::lock_guard lock(g_mutex);g_cylinder_supported=enabled!=FALSE;}
+extern "C" __declspec(dllexport) void WINAPI h2vMockSetSyntheticChecks(BOOL enabled)
+{ const std::lock_guard lock(g_mutex);g_synthetic_checks=enabled!=FALSE; }
+
+extern "C" __declspec(dllexport) void WINAPI h2vMockSetActionValue(const char* action,float x,float y)
+{ const std::lock_guard lock(g_mutex);if(action)g_action_values[action]={x,y}; }
+
+extern "C" __declspec(dllexport) void WINAPI h2vMockSetViewFlags(const std::uint64_t flags)
+{
+	const std::lock_guard lock(g_mutex);
+	g_view_flags = flags;
+}
+
+extern "C" __declspec(dllexport) void WINAPI h2vMockSetHeadHeight(float height)
+{ const std::lock_guard lock(g_mutex); g_head_height = height; }
+
+extern "C" __declspec(dllexport) void WINAPI h2vMockSetRuntimeName(const char* name)
+{ const std::lock_guard lock(g_mutex); if (name) g_runtime_name = name; }
+
+extern "C" __declspec(dllexport) void WINAPI h2vMockSetInteractionProfile(unsigned hand, const char* profile)
+{
+	const std::lock_guard lock(g_mutex);
+	if (hand < g_profiles.size() && profile) { g_profiles[hand] = profile; g_profile_changed = true; }
 }
 
 extern "C" __declspec(dllexport) void WINAPI h2vMockQueueSessionState(const std::int32_t state)
@@ -244,12 +295,12 @@ XrResult XRAPI_CALL mockEnumerateInstanceExtensionProperties(const char*, const 
 	{
 		return XR_ERROR_VALIDATION_FAILURE;
 	}
-	*count = 1;
+	*count = g_cylinder_supported ? 2 : 1;
 	if (capacity == 0)
 	{
 		return XR_SUCCESS;
 	}
-	if (capacity < 1 || properties == nullptr)
+	if (capacity < *count || properties == nullptr)
 	{
 		return XR_ERROR_SIZE_INSUFFICIENT;
 	}
@@ -257,6 +308,7 @@ XrResult XRAPI_CALL mockEnumerateInstanceExtensionProperties(const char*, const 
 	properties[0].next = nullptr;
 	strcpy_s(properties[0].extensionName, XR_KHR_D3D11_ENABLE_EXTENSION_NAME);
 	properties[0].extensionVersion = XR_KHR_D3D11_enable_SPEC_VERSION;
+	if(g_cylinder_supported){properties[1]={XR_TYPE_EXTENSION_PROPERTIES};strcpy_s(properties[1].extensionName,XR_KHR_COMPOSITION_LAYER_CYLINDER_EXTENSION_NAME);properties[1].extensionVersion=XR_KHR_composition_layer_cylinder_SPEC_VERSION;}
 	return XR_SUCCESS;
 }
 
@@ -272,9 +324,10 @@ XrResult XRAPI_CALL mockEnumerateInstanceVersion(XrVersion* const version)
 
 XrResult XRAPI_CALL mockCreateInstance(const XrInstanceCreateInfo* const create_info, XrInstance* const instance)
 {
-	if (create_info == nullptr || instance == nullptr || create_info->enabledExtensionCount != 1 ||
+	if (create_info == nullptr || instance == nullptr || create_info->enabledExtensionCount != (g_cylinder_supported?2u:1u) ||
 		create_info->enabledExtensionNames == nullptr ||
-		std::strcmp(create_info->enabledExtensionNames[0], XR_KHR_D3D11_ENABLE_EXTENSION_NAME) != 0)
+		std::strcmp(create_info->enabledExtensionNames[0], XR_KHR_D3D11_ENABLE_EXTENSION_NAME) != 0 ||
+		(g_cylinder_supported && std::strcmp(create_info->enabledExtensionNames[1],XR_KHR_COMPOSITION_LAYER_CYLINDER_EXTENSION_NAME)!=0))
 	{
 		return XR_ERROR_VALIDATION_FAILURE;
 	}
@@ -314,7 +367,8 @@ XrResult XRAPI_CALL mockGetInstanceProperties(XrInstance, XrInstanceProperties* 
 		return XR_ERROR_VALIDATION_FAILURE;
 	}
 	properties->runtimeVersion = XR_MAKE_VERSION(1, 1, 0);
-	strcpy_s(properties->runtimeName, "h2v mock OpenXR runtime");
+	const std::lock_guard lock(g_mutex);
+	strcpy_s(properties->runtimeName, g_runtime_name.c_str());
 	return XR_SUCCESS;
 }
 
@@ -374,10 +428,10 @@ XrResult XRAPI_CALL mockEnumerateViewConfigurationViews(XrInstance, XrSystemId,
 	{
 		views[index].type = XR_TYPE_VIEW_CONFIGURATION_VIEW;
 		views[index].next = nullptr;
-		views[index].recommendedImageRectWidth = 64;
-		views[index].maxImageRectWidth = 64;
-		views[index].recommendedImageRectHeight = 64;
-		views[index].maxImageRectHeight = 64;
+		views[index].recommendedImageRectWidth = g_eye_width;
+		views[index].maxImageRectWidth = g_eye_width;
+		views[index].recommendedImageRectHeight = g_eye_height;
+		views[index].maxImageRectHeight = g_eye_height;
 		views[index].recommendedSwapchainSampleCount = 1;
 		views[index].maxSwapchainSampleCount = 1;
 	}
@@ -471,7 +525,7 @@ XrResult XRAPI_CALL mockCreateReferenceSpace(const XrSession session, const XrRe
 		return XR_ERROR_REFERENCE_SPACE_UNSUPPORTED;
 	}
 	const std::lock_guard lock(g_mutex);
-	*space = new XrSpace_T{g_next_handle++, session};
+	*space = new XrSpace_T{g_next_handle++, session, create_info->referenceSpaceType};
 	session->spaces.push_back(*space);
 	++g_statistics.spaces_created;
 	return XR_SUCCESS;
@@ -692,7 +746,11 @@ XrResult XRAPI_CALL mockPollEvent(XrInstance, XrEventDataBuffer* const event_dat
 	const std::lock_guard lock(g_mutex);
 	if (g_session_states.empty())
 	{
-		return XR_EVENT_UNAVAILABLE;
+		if (!g_profile_changed) return XR_EVENT_UNAVAILABLE;
+		g_profile_changed = false;
+		const XrEventDataInteractionProfileChanged changed{XR_TYPE_EVENT_DATA_INTERACTION_PROFILE_CHANGED, nullptr, g_current_session};
+		std::memcpy(event_data, &changed, sizeof(changed));
+		return XR_SUCCESS;
 	}
 	const XrEventDataSessionStateChanged changed{
 		XR_TYPE_EVENT_DATA_SESSION_STATE_CHANGED,
@@ -701,6 +759,7 @@ XrResult XRAPI_CALL mockPollEvent(XrInstance, XrEventDataBuffer* const event_dat
 		g_session_states.front(),
 		g_next_display_time,
 	};
+	if (g_current_session != XR_NULL_HANDLE) g_current_session->state = changed.state;
 	g_session_states.pop_front();
 	static_assert(sizeof(changed) <= sizeof(*event_data));
 	std::memcpy(event_data, &changed, sizeof(changed));
@@ -726,9 +785,17 @@ XrResult XRAPI_CALL mockEndSession(const XrSession session)
 	{
 		return XR_ERROR_SESSION_NOT_RUNNING;
 	}
-	session->running = false;
 	const std::lock_guard lock(g_mutex);
+	if (session->state != XR_SESSION_STATE_STOPPING)
+	{
+		++g_statistics.invalid_session_end_rejected;
+		session->running = false; // xrEndSession transitions even on an error.
+		return XR_ERROR_SESSION_NOT_STOPPING;
+	}
+	session->running = false;
 	++g_statistics.sessions_ended;
+	XrResult injected_result{};
+	if (consume_failure_locked(failure_point::end_session, injected_result)) return injected_result;
 	return XR_SUCCESS;
 }
 
@@ -745,6 +812,7 @@ XrResult XRAPI_CALL mockWaitFrame(const XrSession session, const XrFrameWaitInfo
 	session->frame_waited = true;
 	const std::lock_guard lock(g_mutex);
 	state->predictedDisplayTime = g_next_display_time++;
+	session->display_time=state->predictedDisplayTime;
 	state->predictedDisplayPeriod = 1;
 	state->shouldRender = g_should_render;
 	++g_statistics.frames_waited;
@@ -772,11 +840,11 @@ XrResult XRAPI_CALL mockLocateViews(const XrSession session, const XrViewLocateI
 	XrViewState* const view_state, const std::uint32_t capacity, std::uint32_t* const count, XrView* const views)
 {
 	if (session == XR_NULL_HANDLE || !session->running || locate_info == nullptr || view_state == nullptr ||
-		count == nullptr || capacity < 2 || views == nullptr)
+		count == nullptr || capacity < 2 || views == nullptr || locate_info->displayTime!=session->display_time)
 	{
 		return XR_ERROR_VALIDATION_FAILURE;
 	}
-	view_state->viewStateFlags = XR_VIEW_STATE_POSITION_VALID_BIT | XR_VIEW_STATE_ORIENTATION_VALID_BIT;
+	{ const std::lock_guard lock(g_mutex); view_state->viewStateFlags = g_view_flags; }
 	*count = 2;
 	for (std::uint32_t index = 0; index < 2; ++index)
 	{
@@ -784,7 +852,9 @@ XrResult XRAPI_CALL mockLocateViews(const XrSession session, const XrViewLocateI
 		views[index].next = nullptr;
 		views[index].pose = {};
 		views[index].pose.orientation.w = 1.0f;
+		if(g_scenario==scenario::canted_views){views[index].pose.orientation.y=index==0?-.05f:.05f;views[index].pose.orientation.w=std::sqrt(1-.05f*.05f);}
 		views[index].pose.position.x = index == 0 ? -0.032f : 0.032f;
+		views[index].pose.position.y = g_head_height;
 		views[index].fov = {-0.7f, 0.7f, 0.7f, -0.7f};
 	}
 	const std::lock_guard lock(g_mutex);
@@ -792,63 +862,175 @@ XrResult XRAPI_CALL mockLocateViews(const XrSession session, const XrViewLocateI
 	return XR_SUCCESS;
 }
 
-XrResult XRAPI_CALL mockEndFrame(const XrSession session, const XrFrameEndInfo* const end_info)
+XrResult XRAPI_CALL mockEndFrame(XrSession session,const XrFrameEndInfo* end)
 {
-	if (session == XR_NULL_HANDLE || !session->running || !session->frame_begun || end_info == nullptr ||
-		end_info->layerCount > 1 || (end_info->layerCount != 0 && end_info->layers == nullptr))
+	if(!session||!session->running||!session->frame_begun||!end||end->displayTime!=session->display_time||end->layerCount>8||(end->layerCount&&!end->layers))return XR_ERROR_CALL_ORDER_INVALID;
+	session->frame_begun=false;
+	bool projection=false,quad=false,cylinder=false;
+	for(unsigned layer_index=0;layer_index<end->layerCount;++layer_index)
 	{
-		return XR_ERROR_CALL_ORDER_INVALID;
-	}
-	session->frame_begun = false;
-	if (end_info->layerCount != 0)
-	{
-		const auto* const projection = reinterpret_cast<const XrCompositionLayerProjection*>(end_info->layers[0]);
-		if (projection == nullptr || projection->type != XR_TYPE_COMPOSITION_LAYER_PROJECTION ||
-			projection->viewCount != 2 || projection->views == nullptr)
+		const auto* layer=end->layers[layer_index];if(!layer)return XR_ERROR_LAYER_INVALID;
+		if(layer->type==XR_TYPE_COMPOSITION_LAYER_PROJECTION)
 		{
-			return XR_ERROR_VALIDATION_FAILURE;
-		}
-		std::array<std::array<std::uint8_t, 4>, 2> pixels{};
-		for (std::size_t index = 0; index < pixels.size(); ++index)
-		{
-			const auto& view = projection->views[index];
-			if (view.type != XR_TYPE_COMPOSITION_LAYER_PROJECTION_VIEW ||
-				view.subImage.swapchain == XR_NULL_HANDLE || view.subImage.imageArrayIndex != 0 ||
-				view.subImage.imageRect.offset.x != 0 || view.subImage.imageRect.offset.y != 0 ||
-				view.subImage.imageRect.extent.width != 64 || view.subImage.imageRect.extent.height != 64 ||
-				!read_first_pixel(session, view.subImage.swapchain, pixels[index]))
+			const auto* p=reinterpret_cast<const XrCompositionLayerProjection*>(layer);
+			if(p->viewCount!=2||!p->views)return XR_ERROR_VALIDATION_FAILURE;
+			std::array<std::array<std::uint8_t,4>,2> pixels;
+			for(unsigned eye=0;eye<2;++eye)
 			{
-				return XR_ERROR_VALIDATION_FAILURE;
+				const auto& view=p->views[eye];
+				if(view.pose.orientation.x!=0 || view.pose.orientation.y!=0 || view.pose.orientation.z!=0 || view.pose.orientation.w!=1 ||
+					view.pose.position.x!=(eye==0?-.032f:.032f) || view.pose.position.y!=g_head_height || view.pose.position.z!=0 ||
+					view.fov.angleLeft!=-.7f || view.fov.angleRight!=.7f || view.fov.angleUp!=.7f || view.fov.angleDown!=-.7f ||
+					view.type!=XR_TYPE_COMPOSITION_LAYER_PROJECTION_VIEW||!view.subImage.swapchain||view.subImage.imageArrayIndex||
+					view.subImage.imageRect.extent.width!=int(g_eye_width)||view.subImage.imageRect.extent.height!=int(g_eye_height)||
+					!read_first_pixel(session,view.subImage.swapchain,pixels[eye]))return XR_ERROR_VALIDATION_FAILURE;
+				std::memcpy(&g_statistics.last_projection_pixels[eye],pixels[eye].data(),4);
 			}
+			if(g_synthetic_checks)
+			{
+				if(!(pixels[0][0]>200&&pixels[0][1]<160&&pixels[0][2]>200&&pixels[1][0]<160&&pixels[1][1]>200&&pixels[1][2]>200)||
+					pixels[0]==pixels[1]||!pixels[0][3]||pixels[0][3]!=pixels[1][3]||(g_has_texture_epoch&&pixels[0][3]==g_last_texture_epochs[0]))
+					return XR_ERROR_VALIDATION_FAILURE;
+				g_last_texture_epochs={pixels[0][3],pixels[1][3]};g_has_texture_epoch=true;++g_statistics.texture_write_epochs_validated;
+			}
+			projection=true;
 		}
-		const bool left_magenta = pixels[0][0] > 200 && pixels[0][1] < 160 && pixels[0][2] > 200;
-		const bool right_cyan = pixels[1][0] < 160 && pixels[1][1] > 200 && pixels[1][2] > 200;
-		if (!left_magenta || !right_cyan || pixels[0] == pixels[1] || pixels[0][3] == 0 ||
-			pixels[0][3] != pixels[1][3])
+		else if(layer->type==XR_TYPE_COMPOSITION_LAYER_QUAD || layer->type==XR_TYPE_COMPOSITION_LAYER_CYLINDER_KHR)
 		{
-			return XR_ERROR_VALIDATION_FAILURE;
+			const auto sub=layer->type==XR_TYPE_COMPOSITION_LAYER_QUAD?reinterpret_cast<const XrCompositionLayerQuad*>(layer)->subImage:
+				reinterpret_cast<const XrCompositionLayerCylinderKHR*>(layer)->subImage;
+			std::array<std::uint8_t,4> pixel;
+			if(!sub.swapchain||sub.imageArrayIndex)return XR_ERROR_SWAPCHAIN_RECT_INVALID;
+			D3D11_TEXTURE2D_DESC description;sub.swapchain->textures[0]->GetDesc(&description);
+			if(sub.imageRect.extent.width>int(description.Width)||sub.imageRect.extent.height>int(description.Height))return XR_ERROR_SWAPCHAIN_RECT_INVALID;
+			if(!read_first_pixel(session,sub.swapchain,pixel))return XR_ERROR_LAYER_INVALID;
+			std::memcpy(&g_statistics.last_menu_pixel,pixel.data(),4);
+			quad|=layer->type==XR_TYPE_COMPOSITION_LAYER_QUAD;cylinder|=layer->type==XR_TYPE_COMPOSITION_LAYER_CYLINDER_KHR;
 		}
-		const std::lock_guard lock(g_mutex);
-		if (g_has_texture_epoch && pixels[0][3] == g_last_texture_epochs[0])
-		{
-			return XR_ERROR_VALIDATION_FAILURE;
-		}
-		g_last_texture_epochs = {pixels[0][3], pixels[1][3]};
-		g_has_texture_epoch = true;
-		++g_statistics.texture_write_epochs_validated;
+		else return XR_ERROR_LAYER_INVALID;
 	}
-	const std::lock_guard lock(g_mutex);
-	++g_statistics.frames_ended;
-	if (end_info->layerCount == 0)
-	{
-		++g_statistics.zero_layer_frames;
-	}
-	else
-	{
-		++g_statistics.projection_frames;
-		++g_statistics.eye_color_frames_validated;
-	}
+	const std::lock_guard lock(g_mutex);++g_statistics.frames_ended;
+	if(!end->layerCount)++g_statistics.zero_layer_frames;
+	if(projection){++g_statistics.projection_frames;++g_statistics.eye_color_frames_validated;}
+	if(quad)++g_statistics.quad_frames;if(cylinder)++g_statistics.cylinder_frames;
 	return XR_SUCCESS;
+}
+
+XrResult XRAPI_CALL mockStringToPath(XrInstance,const char* text,XrPath* output)
+{
+	if(!text||!output||text[0]!='/')return XR_ERROR_PATH_FORMAT_INVALID;
+	const std::lock_guard lock(g_mutex);
+	for(const auto& pair:g_paths)if(pair.second==text){*output=pair.first;return XR_SUCCESS;}
+	*output=g_next_handle++;g_paths[*output]=text;return XR_SUCCESS;
+}
+XrResult XRAPI_CALL mockCreateActionSet(XrInstance instance,const XrActionSetCreateInfo* info,XrActionSet* output)
+{
+	if(!instance||!info||!output||!info->actionSetName[0])return XR_ERROR_VALIDATION_FAILURE;
+	const std::lock_guard lock(g_mutex);*output=new XrActionSet_T;(*output)->owner=instance;
+	++g_statistics.action_sets_created;return XR_SUCCESS;
+}
+XrResult XRAPI_CALL mockCreateAction(XrActionSet set,const XrActionCreateInfo* info,XrAction* output)
+{
+	if(!set||!info||!output||!info->actionName[0])return XR_ERROR_VALIDATION_FAILURE;
+	const std::lock_guard lock(g_mutex);*output=new XrAction_T{set,info->actionName,info->actionType,false};
+	set->actions.push_back(*output);++g_statistics.actions_created;return XR_SUCCESS;
+}
+XrResult XRAPI_CALL mockDestroyActionSet(XrActionSet set)
+{
+	if(!set)return XR_ERROR_HANDLE_INVALID;
+	const std::lock_guard lock(g_mutex);
+	if(g_current_session&&g_current_session->actions==set)g_current_session->actions=XR_NULL_HANDLE;
+	for(auto action:set->actions){delete action;++g_statistics.actions_destroyed;}
+	delete set;++g_statistics.action_sets_destroyed;return XR_SUCCESS;
+}
+XrResult XRAPI_CALL mockSuggestInteractionProfileBindings(XrInstance,const XrInteractionProfileSuggestedBinding* info)
+{
+	if(!info||!info->suggestedBindings||!info->countSuggestedBindings)return XR_ERROR_VALIDATION_FAILURE;
+	const std::lock_guard lock(g_mutex);
+	if(!g_paths.contains(info->interactionProfile))return XR_ERROR_PATH_INVALID;
+	for(unsigned i=0;i<info->countSuggestedBindings;++i)
+	{
+		const auto& b=info->suggestedBindings[i];if(!b.action||!g_paths.contains(b.binding))return XR_ERROR_PATH_INVALID;
+		if(g_paths[info->interactionProfile]=="/interaction_profiles/oculus/touch_controller")b.action->bound=true;
+	}
+	++g_statistics.binding_profiles;return XR_SUCCESS;
+}
+XrResult XRAPI_CALL mockAttachSessionActionSets(XrSession session,const XrSessionActionSetsAttachInfo* info)
+{
+	if(!session||!info||info->countActionSets!=1||!info->actionSets)return XR_ERROR_VALIDATION_FAILURE;
+	if(session->actions)return XR_ERROR_ACTIONSETS_ALREADY_ATTACHED;
+	session->actions=info->actionSets[0];return XR_SUCCESS;
+}
+XrResult XRAPI_CALL mockCreateActionSpace(XrSession session,const XrActionSpaceCreateInfo* info,XrSpace* output)
+{
+	if(!session||!info||!output||!info->action||info->action->type!=XR_ACTION_TYPE_POSE_INPUT)return XR_ERROR_VALIDATION_FAILURE;
+	const std::lock_guard lock(g_mutex);*output=new XrSpace_T{g_next_handle++,session,XR_REFERENCE_SPACE_TYPE_LOCAL,info->action};
+	session->spaces.push_back(*output);++g_statistics.spaces_created;return XR_SUCCESS;
+}
+XrResult XRAPI_CALL mockSyncActions(XrSession session,const XrActionsSyncInfo* info)
+{
+	if(!session||!session->running||!info||info->countActiveActionSets!=1||!session->actions)return XR_ERROR_ACTIONSET_NOT_ATTACHED;
+	const std::lock_guard lock(g_mutex);++g_statistics.action_syncs;
+	session->synced=session->state==XR_SESSION_STATE_FOCUSED;
+	return session->synced?XR_SUCCESS:XR_SESSION_NOT_FOCUSED;
+}
+XrResult XRAPI_CALL mockGetActionStateBoolean(XrSession session,const XrActionStateGetInfo* info,XrActionStateBoolean* value)
+{
+	if(!session||!info||!value||!info->action||info->action->type!=XR_ACTION_TYPE_BOOLEAN_INPUT)return XR_ERROR_ACTION_TYPE_MISMATCH;
+	const std::lock_guard lock(g_mutex);value->isActive=session->synced&&info->action->bound;
+	value->currentState=value->isActive&&g_action_values[info->action->name][0]>.5f;return XR_SUCCESS;
+}
+XrResult XRAPI_CALL mockGetActionStateFloat(XrSession session,const XrActionStateGetInfo* info,XrActionStateFloat* value)
+{
+	if(!session||!info||!value||!info->action||info->action->type!=XR_ACTION_TYPE_FLOAT_INPUT)return XR_ERROR_ACTION_TYPE_MISMATCH;
+	const std::lock_guard lock(g_mutex);value->isActive=session->synced&&info->action->bound;
+	value->currentState=value->isActive?g_action_values[info->action->name][0]:0;return XR_SUCCESS;
+}
+XrResult XRAPI_CALL mockGetActionStateVector2f(XrSession session,const XrActionStateGetInfo* info,XrActionStateVector2f* value)
+{
+	if(!session||!info||!value||!info->action||info->action->type!=XR_ACTION_TYPE_VECTOR2F_INPUT)return XR_ERROR_ACTION_TYPE_MISMATCH;
+	const std::lock_guard lock(g_mutex);value->isActive=session->synced&&info->action->bound;
+	const auto& v=g_action_values[info->action->name];value->currentState=value->isActive?XrVector2f{v[0],v[1]}:XrVector2f{};return XR_SUCCESS;
+}
+XrResult XRAPI_CALL mockGetActionStatePose(XrSession session,const XrActionStateGetInfo* info,XrActionStatePose* value)
+{
+	if(!session||!info||!value||!info->action||info->action->type!=XR_ACTION_TYPE_POSE_INPUT)return XR_ERROR_ACTION_TYPE_MISMATCH;
+	value->isActive=session->synced&&info->action->bound;return XR_SUCCESS;
+}
+XrResult XRAPI_CALL mockLocateSpace(XrSpace space,XrSpace base,XrTime time,XrSpaceLocation* value)
+{
+	if(!space||!base||!value||time<=0||space->owner!=base->owner)return XR_ERROR_VALIDATION_FAILURE;
+	const std::lock_guard lock(g_mutex);value->locationFlags=g_view_flags;
+	value->pose={};value->pose.orientation.w=1;
+	if(space->action)
+	{
+		if(!space->owner->synced){value->locationFlags=0;return XR_SUCCESS;}
+		value->pose.position={space->action->name.starts_with("left_")?-.2f:.2f,0,-.3f};
+	}
+	else value->pose.position.y = g_head_height;
+	return XR_SUCCESS;
+}
+
+XrResult XRAPI_CALL mockGetCurrentInteractionProfile(XrSession session, XrPath user, XrInteractionProfileState* output)
+{
+	if (!session || !output) return XR_ERROR_VALIDATION_FAILURE;
+	const std::lock_guard lock(g_mutex);
+	if (!g_paths.contains(user)) return XR_ERROR_PATH_INVALID;
+	const unsigned hand = g_paths[user] == "/user/hand/left" ? 0 : 1;
+	output->interactionProfile = XR_NULL_PATH;
+	for (const auto& pair : g_paths)
+		if (pair.second == g_profiles[hand]) output->interactionProfile = pair.first;
+	return XR_SUCCESS;
+}
+
+XrResult XRAPI_CALL mockApplyHapticFeedback(XrSession session,const XrHapticActionInfo* info,const XrHapticBaseHeader* value)
+{
+	if(!session||!info||!value||!info->action||info->action->type!=XR_ACTION_TYPE_VIBRATION_OUTPUT)return XR_ERROR_ACTION_TYPE_MISMATCH;
+	if(session->state!=XR_SESSION_STATE_FOCUSED)return XR_SESSION_NOT_FOCUSED;
+	const auto* pulse=reinterpret_cast<const XrHapticVibration*>(value);
+	if(pulse->type!=XR_TYPE_HAPTIC_VIBRATION||pulse->duration<=0||pulse->duration>100'000'001||pulse->amplitude<=0||pulse->amplitude>1)
+		return XR_ERROR_VALIDATION_FAILURE;
+	const std::lock_guard lock(g_mutex);++g_statistics.haptic_events;return XR_SUCCESS;
 }
 
 extern "C" __declspec(dllexport) XrResult XRAPI_CALL xrGetInstanceProcAddr(
@@ -900,6 +1082,21 @@ extern "C" __declspec(dllexport) XrResult XRAPI_CALL xrGetInstanceProcAddr(
 	H2V_MOCK_PROC("xrBeginFrame", mockBeginFrame)
 	H2V_MOCK_PROC("xrLocateViews", mockLocateViews)
 	H2V_MOCK_PROC("xrEndFrame", mockEndFrame)
+	H2V_MOCK_PROC("xrStringToPath", mockStringToPath)
+	H2V_MOCK_PROC("xrCreateActionSet", mockCreateActionSet)
+	H2V_MOCK_PROC("xrDestroyActionSet", mockDestroyActionSet)
+	H2V_MOCK_PROC("xrCreateAction", mockCreateAction)
+	H2V_MOCK_PROC("xrSuggestInteractionProfileBindings", mockSuggestInteractionProfileBindings)
+	H2V_MOCK_PROC("xrAttachSessionActionSets", mockAttachSessionActionSets)
+	H2V_MOCK_PROC("xrCreateActionSpace", mockCreateActionSpace)
+	H2V_MOCK_PROC("xrLocateSpace", mockLocateSpace)
+	H2V_MOCK_PROC("xrSyncActions", mockSyncActions)
+	H2V_MOCK_PROC("xrGetCurrentInteractionProfile", mockGetCurrentInteractionProfile)
+	H2V_MOCK_PROC("xrGetActionStateBoolean", mockGetActionStateBoolean)
+	H2V_MOCK_PROC("xrGetActionStateFloat", mockGetActionStateFloat)
+	H2V_MOCK_PROC("xrGetActionStateVector2f", mockGetActionStateVector2f)
+	H2V_MOCK_PROC("xrGetActionStatePose", mockGetActionStatePose)
+	H2V_MOCK_PROC("xrApplyHapticFeedback", mockApplyHapticFeedback)
 
 #undef H2V_MOCK_PROC
 	return XR_ERROR_FUNCTION_UNSUPPORTED;

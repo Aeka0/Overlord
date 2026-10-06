@@ -29,9 +29,9 @@ H2-Mod-VR 是《使命召唤：现代战争 2 战役重制版》的 VR 化模组
 - 合法持有并安装《使命召唤：现代战争 2 战役重制版》。
 - SteamVR，以及能通过 SteamVR 提供头部和双手追踪的 VR 设备。
 
-当前客户端使用 Direct3D 11 和 SteamVR/OpenVR。仓库中保留的 OpenXR 实现与诊断工具不代表正式客户端使用 OpenXR，也不代表已经支持绕过 SteamVR 运行。
+当前客户端使用 Direct3D 11，默认使用 OpenXR，OpenVR 保留为手动切换的备选后端。已验证的运行组合是 Meta Quest 控制器与 SteamVR/OpenXR；其他设备和运行时需要分别验收。可在启动器的“VR 设置 → 基础 → VR 运行方式”中选择，进入游戏时即生效，无需重启启动器。限制见 [运行时与渲染说明](docs/vr-runtime-rendering.md)。
 
-仓库提供 Oculus Touch（Meta Quest）、Valve Index 和 Vive Controller 的默认输入绑定。但目前只有 Meta Quest 手柄真正进行了实机验证。其他设备可能需要调整 SteamVR 绑定及控制器对齐参数。
+仓库提供 Oculus Touch（Meta Quest）、Valve Index 和 Vive Controller 的默认输入绑定。但目前只有 Meta Quest 手柄真正进行了实机验证。其他设备可能需要调整运行时绑定及控制器对齐参数。
 
 模组不为盗版或破解版本游戏提供支持。模组发布也不附带原版完整游戏资源或提供下载地址。
 
@@ -43,13 +43,14 @@ Beta 及正式版本发布时，可从 [Releases 页面](https://github.com/Aeka
 2. 将 VR 客户端包解压到游戏根目录，运行 `h2-mod-vr.exe`。
 3. 启动 SteamVR，确认头显和控制器已正常连接，然后点击“单人战役”。
 
-首次成功连接 SteamVR 后，客户端会将 H2-MOD VR 注册到 SteamVR。普通版本与 Debug 版本分别注册，不共用同一个启动项。
+使用 OpenVR 备选后端时，首次成功连接会将 H2-MOD VR 注册到 SteamVR。普通版本与 Debug 版本分别注册，不共用同一个启动项。
 
 客户端及资源应保持类似以下的相对位置：
 
 ~~~text
 游戏目录/
 ├─ h2-mod-vr.exe
+├─ openxr_loader.dll
 ├─ h2-mod-vr.vrmanifest
 ├─ steamvr/
 ├─ vr_input/
@@ -60,7 +61,7 @@ Beta 及正式版本发布时，可从 [Releases 页面](https://github.com/Aeka
 
 ## 基础操作
 
-具体按键名称会随控制器和 SteamVR 绑定变化。以下使用常见的 Grip（侧握键）和 Trigger（扳机键）名称：
+具体按键名称会随控制器和运行时绑定变化。以下使用常见的 Grip（侧握键）和 Trigger（扳机键）名称：
 
 | 操作 | 基本方式 |
 | --- | --- |
@@ -121,7 +122,7 @@ msbuild build\h2-mod.sln /t:client /m:2 /p:Configuration=RelWithDebInfo /p:Platf
 反馈前请先搜索[已有 Issue](https://github.com/Aeka0/h2-mod-vr/issues)。中英文报告均可，建议提供：
 
 - 使用的版本或提交编号。
-- 头显、控制器、Windows 和 SteamVR 版本。
+- 头显、控制器、Windows、VR 运行时版本，以及所选的 OpenXR/OpenVR 后端。
 - 出现问题的任务、检查点、武器或操作场景。
 - 能够复现问题的步骤，以及预期表现与实际表现。
 - 必要的错误文本或经过删减的日志片段。

@@ -4,14 +4,14 @@
 
 namespace vr::menu_overlay
 {
-	namespace
+	void publish_backdrop(backdrop value) noexcept
 	{
-		std::mutex backdrop_mutex;
-		backdrop published_backdrop;
-		void publish_backdrop(backdrop value) noexcept
-		{const std::lock_guard lock(backdrop_mutex);published_backdrop=std::move(value);}
+		menu_backdrop::publish(std::move(value));
 	}
-	backdrop latest_backdrop() noexcept {const std::lock_guard lock(backdrop_mutex);return published_backdrop;}
+	backdrop latest_backdrop() noexcept
+	{
+		return menu_backdrop::latest();
+	}
 	bool presenter::release(surface& s) noexcept
 	{
 		if(!api_||!s.handle){s={};return true;}
@@ -103,28 +103,7 @@ namespace vr::menu_overlay
 				if(!anchor_.valid){native_menu::clear_pointer();return;}
 			}
 			const float elapsed=last_time_&&now>=last_time_?float(now-last_time_)*.001f:0;last_time_=now;
-			backdrop scene_backdrop;
-			// Geometry/freshness belongs to the active menu; vignette is only visual ink.
-			const auto canvas=current.count?image->layers[current.count-1]:nullptr;
-			if(!current.frontend&&current.count&&canvas&&image->owner.revision==current.revision&&
-				canvas->generation==device&&canvas->width&&canvas->height&&now>=canvas->timestamp&&now-canvas->timestamp<=250)
-			{
-				auto placement=menu_surface::layout(anchor_,false,float(canvas->width)/canvas->height,0);
-				if(const auto& map=canvas->canvas;map.valid())
-				{
-					// The canvas may contain transparent padding. Blur only the native
-					// content rectangle, in the same physical coordinates as its ink.
-					const float x=(map.x+map.width*.5f)/map.target_width-.5f;
-					const float y=.5f-(map.y+map.height*.5f)/map.target_height;
-					placement.basis.position=menu_surface::add(placement.basis.position,
-						menu_surface::add(menu_surface::mul(anchor_.right,x*placement.width),menu_surface::mul(anchor_.up,y*placement.height)));
-					placement.width*=map.width/map.target_width;
-					placement.height*=map.height/map.target_height;
-				}
-				scene_backdrop={canvas,placement,
-					current.session,current.revision,input.reference_generation,now};
-			}
-			publish_backdrop(std::move(scene_backdrop));
+			menu_backdrop::publish_for(current, image, anchor_, input.reference_generation, device, now);
 			unsigned active=current.count?current.count-1:menu_surface::surface_count;
 			bool active_ready{};
 			const auto previous_surfaces=surfaces_;

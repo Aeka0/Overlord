@@ -247,5 +247,9 @@
   "oobe.ammoHelp": "捨てたマガジンの残弾は失われます。手に持ったマガジンを腰で離すと回収できます。",
   "oobe.scroll": "クイックガイドをスクロール",
   "oobe.skip": "スキップ",
-  "oobe.done": "完了"
+  "oobe.done": "完了",
+  "settings.runtimeBackend": "VR インターフェース",
+  "settings.runtimeBackendHint": "OpenXR を推奨し、OpenVR は代替として利用できます。選択はすぐに保存され、ゲーム開始時に適用されます。ランチャーの再起動は不要です。",
+  "choice.openxr": "OpenXR",
+  "choice.openvr": "OpenVR"
 }

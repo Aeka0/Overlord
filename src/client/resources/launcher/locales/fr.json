@@ -247,5 +247,9 @@
   "oobe.ammoHelp": "Les chargeurs jetés perdent les cartouches restantes. Relâchez-les à la taille pour récupérer leurs munitions.",
   "oobe.scroll": "Faire défiler le guide rapide",
   "oobe.skip": "Passer",
-  "oobe.done": "Terminer"
+  "oobe.done": "Terminer",
+  "settings.runtimeBackend": "Interface VR",
+  "settings.runtimeBackendHint": "OpenXR est recommandé ; OpenVR est une solution de secours. Le choix est enregistré immédiatement et appliqué au lancement du jeu, sans redémarrer le lanceur.",
+  "choice.openxr": "OpenXR",
+  "choice.openvr": "OpenVR"
 }

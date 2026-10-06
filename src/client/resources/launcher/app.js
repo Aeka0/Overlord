@@ -259,7 +259,8 @@ function chooseSettingsOption(index) {
     var choice = settingsDropdownChoices[id][index];
     if (!choice || !dropdownAvailable(id)) return;
     var button = document.getElementById(id);
-    var changed = button.value !== choice.value;
+    var previousValue = button.value;
+    var changed = previousValue !== choice.value;
     closeSettingsDropdown();
     if (id === 'launcher-language') { saveLauncherLanguage(choice.value); button.focus(); return; }
     if (id === 'game-language') { saveGameLanguage(choice.value); button.focus(); return; }
@@ -274,6 +275,11 @@ function chooseSettingsOption(index) {
     syncSettingsDropdowns();
     if (changed && id === 'vr_turnMode') updateTurnControls();
     if (changed && vrSettings.defaults.hasOwnProperty(id)) markVRDirty();
+    if (changed && id === 'vr_runtimeBackend' && !saveVRSettings()) {
+        button.value = previousValue;
+        syncSettingsDropdowns();
+        return;
+    }
     button.focus();
 }
 

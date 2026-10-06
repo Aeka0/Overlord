@@ -10,13 +10,18 @@ namespace vr::steamvr_input
 	// Used exclusively by the OpenVR runtime owner under its existing mutex.
 	class actions
 	{
-	public:
+	  public:
 		bool initialize();
-		void sample(bool focused) noexcept;
+		void sample(bool focused,
+		            controller_input::input_reason unavailable_reason =
+		                controller_input::input_reason::input_unavailable) noexcept;
 		void reset() noexcept;
-		[[nodiscard]] const std::string& error() const noexcept { return error_; }
+		[[nodiscard]] const std::string& error() const noexcept
+		{
+			return error_;
+		}
 
-	private:
+	  private:
 		IVRInput* input_{};
 		VRActionSetHandle_t set_{};
 		VRActionHandle_t move_{};
@@ -44,5 +49,6 @@ namespace vr::steamvr_input
 		std::array<VRActionHandle_t, 2> haptic_{};
 		std::uint64_t sequence_{};
 		std::string error_;
+		std::int64_t initialization_code_{};
 	};
 }

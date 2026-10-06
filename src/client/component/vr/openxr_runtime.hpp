@@ -5,13 +5,15 @@
 
 #include "openxr_dispatch.hpp"
 #include "vr_runtime.hpp"
+#include "controller_pose_reference.hpp"
 
 namespace vr::openxr
 {
+	using controller_reference_query = controller_pose_reference::configuration (*)();
 	class runtime_backend final
 	{
-	public:
-		runtime_backend();
+	  public:
+		explicit runtime_backend(controller_reference_query reference_query = nullptr);
 		~runtime_backend();
 
 		void set_desired_enabled(bool enabled);
@@ -24,17 +26,19 @@ namespace vr::openxr
 		void on_present_post(const d3d11::present_event& event, HRESULT result);
 		void capture_present(const d3d11::present_event& event);
 		[[nodiscard]] bool capture_engine_texture(const d3d11::device_snapshot& graphics,
-			ID3D11Texture2D* source, capture_frame_tag tag);
+		                                          ID3D11Texture2D* source,
+		                                          capture_frame_tag tag);
 		void poll_capture(const d3d11::device_snapshot& graphics);
 		void on_resize_before(const d3d11::resize_event& event) noexcept;
 		void on_device_destroying(const d3d11::device_snapshot& graphics) noexcept;
 		void shutdown() noexcept;
+		[[nodiscard]] bool shutdown_complete() const noexcept;
 
 		[[nodiscard]] bool requested_enabled() const;
 		[[nodiscard]] bool applied_enabled() const;
 		[[nodiscard]] runtime_status get_status() const;
 
-	private:
+	  private:
 		class implementation;
 		std::unique_ptr<implementation> implementation_;
 	};

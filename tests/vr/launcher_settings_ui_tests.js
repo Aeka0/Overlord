@@ -15,6 +15,7 @@ for (const messages of Object.values(catalog)) {
     messages['about.stage'] = productVersion; // Native bootstrap uses the same product version.
 }
 const defaults = {
+    vr_runtimeBackend: 'openxr',
     vr_recordingMode: false, vr_recordingDim: 65, vr_quickReload: true, vr_chamberingGuide: false, vr_physicalLadders: true, vr_discardAmmoPenalty: false, vr_hideHud: false, vr_disableBlur: false,
     vr_disableDogPounce: true, vr_enemyMeleeDamageScale: 0.5,
     vr_cheatHealth: 'off', vr_cheatNotarget: 'off', vr_cheatAmmo: 'off',
@@ -35,6 +36,7 @@ const quest3 = {
 const alignmentKeys = Object.keys(quest3);
 const debugKeys = Object.keys(defaults).filter(key => key.startsWith('vr_debug') || key.endsWith('Debug'));
 const choiceCatalog = {
+    vr_runtimeBackend: [{value: 'openxr',labelKey: 'choice.openxr'},{value: 'openvr',labelKey: 'choice.openvr'}],
     vr_turnMode: [{value: 'smooth',labelKey: 'choice.smooth'},{value: 'snap',labelKey: 'choice.snap'}],
     vr_recoilPenalty: [{value: 'all',labelKey: 'choice.allWeapons'},{value: 'long',labelKey: 'choice.longWeapons'},{value: 'off',labelKey: 'choice.off'}],
     vr_cheatHealth: [{value: 'off',labelKey: 'choice.disabled'},{value: 'demigod',labelKey: 'choice.demigod'},{value: 'god',labelKey: 'choice.god'}],
@@ -138,6 +140,25 @@ function setup(initialLanguage = 'en', build = { configuration: 'RelWithDebInfo'
         language: () => savedLanguage, languageWrites: () => languageWrites,
         failLanguageLoad: value => { failLanguageLoad = value; }, failLanguageSave: value => { failLanguageSave = value; }, stored: () => stored, writes: () => writes, launches: () => launches,
         failLoad: value => { failLoad = value; }, failSave: value => { failSave = value; } };
+}
+
+// Backend selection applies to the upcoming game without restarting the launcher.
+{
+    const app = setup(), c = app.context, n = app.nodes;
+    c.window.onload();
+    assert.equal(n.vr_runtimeBackend.value, 'openxr');
+    c.toggleSettingsDropdown('vr_runtimeBackend'); c.chooseSettingsOption(1);
+    assert.equal(app.stored().vr_runtimeBackend, 'openvr');
+    assert.equal(app.writes(), 1);
+    assert.equal(c.vrSettings.dirty, false);
+    c.launchGame(); assert.equal(app.launches(), 1, 'the selected backend can launch in the same process');
+    c.loadVRSettings(); assert.equal(n.vr_runtimeBackend.value, 'openvr');
+    app.failSave(true); c.toggleSettingsDropdown('vr_runtimeBackend'); c.chooseSettingsOption(0);
+    assert.equal(n.vr_runtimeBackend.value, 'openvr', 'failed backend save restores the prior selection');
+    assert.equal(app.stored().vr_runtimeBackend, 'openvr');
+    c.launchGame(); assert.equal(app.launches(), 1, 'failed save cannot start with an ambiguous preference');
+    app.failSave(false); c.toggleSettingsDropdown('vr_runtimeBackend'); c.chooseSettingsOption(0);
+    assert.equal(app.stored().vr_runtimeBackend, 'openxr');
 }
 
 const app = setup(), c = app.context, n = app.nodes;

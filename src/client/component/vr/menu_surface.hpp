@@ -49,6 +49,54 @@ namespace vr::menu_surface
 		anchor basis{};
 		float distance{}, width{}, height{}, radius{}; // Radius zero selects a plane; width is arc length otherwise.
 	};
+	struct ray_hit
+	{
+		float u{}, v{}, distance{};
+		bool valid{};
+	};
+	// Runtime-independent pointer intersection in the same metres/anchor frame
+	// used for presentation. UV is top-down native canvas space.
+	inline ray_hit intersect(const geometry& surface, vec3 origin, vec3 direction) noexcept
+	{
+		if (!surface.basis.valid || !finite(origin) || !finite(direction) || !std::isfinite(surface.width) ||
+		    !std::isfinite(surface.height) || !std::isfinite(surface.distance) ||
+		    !std::isfinite(surface.radius) || surface.width <= 0 || surface.height <= 0 ||
+		    surface.distance <= 0 || surface.radius < 0)
+			return {};
+		const auto normal = mul(surface.basis.forward, -1);
+		const auto relative = add(origin, mul(surface.basis.position, -1));
+		const vec3 o{
+		    dot(relative, surface.basis.right), dot(relative, surface.basis.up), dot(relative, normal)};
+		const vec3 d{
+		    dot(direction, surface.basis.right), dot(direction, surface.basis.up), dot(direction, normal)};
+		if (!surface.radius)
+		{
+			if (d[2] >= -1e-6f)
+				return {};
+			const float t = (-surface.distance - o[2]) / d[2];
+			const float u = .5f + (o[0] + t * d[0]) / surface.width,
+			            v = .5f - (o[1] + t * d[1]) / surface.height;
+			return {u, v, t, std::isfinite(t) && t > 0 && t < 20 && u >= 0 && u <= 1 && v >= 0 && v <= 1};
+		}
+		const float z = o[2] + surface.distance - surface.radius;
+		const float a = d[0] * d[0] + d[2] * d[2], b = 2 * (o[0] * d[0] + z * d[2]);
+		const float c = o[0] * o[0] + z * z - surface.radius * surface.radius,
+		            discriminant = b * b - 4 * a * c;
+		if (a < 1e-6f || !std::isfinite(discriminant) || discriminant < 0)
+			return {};
+		for (const float t :
+		     {(-b - std::sqrt(discriminant)) / (2 * a), (-b + std::sqrt(discriminant)) / (2 * a)})
+		{
+			if (!std::isfinite(t) || t <= 0 || t >= 20)
+				continue;
+			const float angle = std::atan2(o[0] + t * d[0], -(z + t * d[2]));
+			const float u = .5f + angle * surface.radius / surface.width,
+			            v = .5f - (o[1] + t * d[1]) / surface.height;
+			if (u >= 0 && u <= 1 && v >= 0 && v <= 1)
+				return {u, v, t, true};
+		}
+		return {};
+	}
 	inline geometry layout(const anchor& a,bool theater,float aspect,unsigned behind) noexcept
 	{
 		geometry g;g.basis=a;

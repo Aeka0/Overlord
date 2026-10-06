@@ -247,5 +247,9 @@
   "oobe.ammoHelp": "丢弃弹匣会损失其中的剩余弹药；在腰间松开手中弹匣可回收弹药。",
   "oobe.scroll": "滚动快速导览",
   "oobe.skip": "跳过",
-  "oobe.done": "完成"
+  "oobe.done": "完成",
+  "settings.runtimeBackend": "VR 运行方式",
+  "settings.runtimeBackendHint": "推荐使用 OpenXR，OpenVR 作为备选。选择会自动保存，进入游戏时生效，无需重启启动器。",
+  "choice.openxr": "OpenXR",
+  "choice.openvr": "OpenVR"
 }

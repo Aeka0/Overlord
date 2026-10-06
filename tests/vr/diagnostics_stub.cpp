@@ -76,15 +76,18 @@ namespace vr::engine_stereo_owner_pass
 	void request_temporal_history_reset() noexcept {} // No native temporal history in no-loader tests.
 }
 
+namespace vr::tests { std::optional<engine_scene_resolution::extent> native_resolution_override; }
+
 namespace vr::engine_scene_resolution
 {
 	// No-loader executables cannot claim to resize the real H2 renderer.
-	bool request(extent, std::string& error)
+	bool request(extent desired, std::string& error)
 	{
+		if(tests::native_resolution_override && desired.width==tests::native_resolution_override->width && desired.height==tests::native_resolution_override->height)return true;
 		error = "native H2 scene resolution requires the real engine";
 		return false;
 	}
-	bool ready() noexcept { return false; }
-	bool accepts_source(extent) noexcept { return false; }
+	bool ready() noexcept { return tests::native_resolution_override.has_value(); }
+	bool accepts_source(extent desired) noexcept {return tests::native_resolution_override && desired.width==tests::native_resolution_override->width && desired.height==tests::native_resolution_override->height;}
 	report get_report() { return {}; }
 }

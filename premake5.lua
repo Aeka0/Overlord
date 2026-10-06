@@ -173,7 +173,7 @@ includedirs {"./src/client", "./src/common", "%{prj.location}/src"}
 
 resincludedirs {"$(ProjectDir)src"}
 
-dependson {"tlsdll"}
+dependson {"tlsdll", "openxr-loader"}
 
 -- Keep the Unicode CASC API isolated from the legacy game's ANSI PCH.
 filter "files:src/client/launcher/game_language.cpp"
@@ -203,6 +203,7 @@ if _OPTIONS["copy-to"] then
 	postbuildcommands {"copy /y \"$(TargetPath)\" \"" .. _OPTIONS["copy-to"] .. "\""}
 	postbuildcommands {"copy /y \"$(TargetDir)$(TargetName).pdb\" \"" .. _OPTIONS["copy-to"] .. "\""}
 	copy_client_resources(_OPTIONS["copy-to"])
+	postbuildcommands {'{COPYFILE} "%{cfg.targetdir}/openxr_loader.dll" "' .. path.join(_OPTIONS["copy-to"], "openxr_loader.dll") .. '"'}
 end
 
 dependencies.imports()
@@ -218,6 +219,15 @@ includedirs {"./src/tlsdll", "%{prj.location}/src"}
 links {"common"}
 
 resincludedirs {"$(ProjectDir)src"}
+
+group "Dependencies"
+project "openxr-loader"
+	kind "Utility"
+	files {"tools/build_openxr_loader.py", "deps/openxr/src/loader/CMakeLists.txt"}
+	local loader_generator = _ACTION == "vs2019" and "Visual Studio 16 2019" or "Visual Studio 17 2022"
+	prebuildcommands {
+		'python "%{wks.location}/../tools/build_openxr_loader.py" --configuration RelWithDebInfo --generator "' .. loader_generator .. '" --toolset "$(PlatformToolset)" --output-dir "%{wks.location}/bin/%{cfg.platform}/%{cfg.buildcfg}"'
+	}
 
 if _OPTIONS["with-vr-tests"] then
 	dofile(path.join(_MAIN_SCRIPT_DIR, "premake/vr_tests.lua"))()

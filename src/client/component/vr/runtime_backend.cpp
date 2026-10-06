@@ -3,7 +3,10 @@
 #include "runtime_backend.hpp"
 
 #include "openvr_runtime.hpp"
+#include "openxr_runtime.hpp"
+#include <variant>
 #include "steamvr_runtime.hpp"
+#include "steamvr_controller_reference.hpp"
 
 #include <algorithm>
 #include <cstdlib>
@@ -16,28 +19,53 @@ namespace vr
 	{
 		std::string lower_ascii(std::string value)
 		{
-			std::ranges::transform(value, value.begin(), [](const unsigned char character)
-			{
-				return static_cast<char>(std::tolower(character));
-			});
+			std::ranges::transform(value,
+			                       value.begin(),
+			                       [](const unsigned char character)
+			                       { return static_cast<char>(std::tolower(character)); });
 			return value;
 		}
 
 		std::string environment_value(const char* const name)
 		{
 			const auto length = GetEnvironmentVariableA(name, nullptr, 0);
-			if (length == 0) return {};
+			if (length == 0)
+				return {};
 			std::string value(length, '\0');
 			const auto copied = GetEnvironmentVariableA(name, value.data(), length);
-			if (copied == 0 || copied >= length) return {};
+			if (copied == 0 || copied >= length)
+				return {};
 			value.resize(copied);
 			return value;
 		}
 
+		controller_pose_reference::configuration query_controller_reference()
+		{
+			const auto selected = steamvr::locate_active_runtime();
+			if (!selected.steamvr_manifest || !selected.valid)
+				return {};
+			if (const auto error = steamvr::diagnose_ipc_environment(); !error.empty())
+			{
+				controller_pose_reference::configuration unavailable;
+				unavailable.target = controller_pose_reference::basis::calibration_frame;
+				unavailable.expected_runtime = "SteamVR/OpenXR";
+				unavailable.name = "steamvr_device_origin";
+				unavailable.error = error;
+				return unavailable;
+			}
+			return steamvr::query_openxr_grip_reference();
+		}
+
 		struct backend_choice
 		{
+			enum class kind
+			{
+				openvr,
+				openxr
+			};
+			kind selected{kind::openxr};
 			bool valid{true};
-			std::string reason{"strict native path selects SteamVR/OpenVR"};
+			std::string reason{"OpenXR is the default; using the active OpenXR runtime"};
 		};
 
 		backend_choice choose_backend()
@@ -45,31 +73,26 @@ namespace vr
 			const auto requested = lower_ascii(environment_value("H2V_VR_BACKEND"));
 			if (requested == "openvr" || requested == "steamvr")
 			{
-				return {true, "H2V_VR_BACKEND explicitly selected SteamVR/OpenVR"};
+				return {
+				    backend_choice::kind::openvr, true, "H2V_VR_BACKEND explicitly selected SteamVR/OpenVR"};
+			}
+			if (requested == "openxr")
+			{
+				return {backend_choice::kind::openxr,
+				        true,
+				        "H2V_VR_BACKEND explicitly selected the active OpenXR runtime"};
 			}
 			if (!requested.empty())
 			{
-				return {false, "strict native path rejects unsupported H2V_VR_BACKEND=" + requested};
+				return {backend_choice::kind::openxr, false, "unsupported H2V_VR_BACKEND=" + requested};
 			}
 
-			const auto override_manifest = environment_value("XR_RUNTIME_JSON");
-			if (!override_manifest.empty())
-			{
-				const auto normalized = lower_ascii(override_manifest);
-				if (normalized.find("steamxr") != std::string::npos ||
-					normalized.find("steamvr") != std::string::npos)
-				{
-					return {true, "XR_RUNTIME_JSON names SteamVR; selecting its OpenVR interface"};
-				}
-				return {false, "strict native path rejects a non-SteamVR XR_RUNTIME_JSON"};
-			}
-
-			const auto steamvr_runtime = steamvr::locate_active_runtime();
-			if (steamvr_runtime.steamvr_manifest)
-			{
-				return {true,
-					"the active runtime manifest is SteamVR; using its declared library through OpenVR"};
-			}
+			// Runtime manifests choose the provider within OpenXR. They never select
+			// another API backend; the OpenXR loader owns manifest interpretation.
+			if (!environment_value("XR_RUNTIME_JSON").empty())
+				return {backend_choice::kind::openxr,
+				        true,
+				        "OpenXR is the default; XR_RUNTIME_JSON overrides its runtime"};
 
 			return {};
 		}
@@ -77,95 +100,124 @@ namespace vr
 
 	class runtime_backend::implementation final
 	{
-	public:
-		implementation() : choice_(choose_backend()) {}
+		backend_choice choice_;
+		using backends =
+		    std::variant<std::unique_ptr<openvr::runtime_backend>, std::unique_ptr<openxr::runtime_backend>>;
+		static backends make_backend(backend_choice::kind kind)
+		{
+			if (kind == backend_choice::kind::openxr)
+				return std::make_unique<openxr::runtime_backend>(query_controller_reference);
+			return std::make_unique<openvr::runtime_backend>();
+		}
+		template <class Operation> decltype(auto) visit(Operation&& operation) const
+		{
+			return std::visit([&](const auto& backend) -> decltype(auto) { return operation(*backend); },
+			                  backend_);
+		}
+		backends backend_;
+		mutable std::mutex mutex_;
+
+	  public:
+		implementation() : choice_(choose_backend()), backend_(make_backend(choice_.selected))
+		{
+		}
 
 		void set_desired_enabled(const bool enabled)
 		{
 			const std::lock_guard lock(mutex_);
-			openvr_.set_desired_enabled(enabled);
+			visit([&](auto& backend) { return backend.set_desired_enabled(enabled); });
 		}
 		void set_scene_mode(const scene_mode mode)
 		{
 			const std::lock_guard lock(mutex_);
-			openvr_.set_scene_mode(mode);
+			visit([&](auto& backend) { return backend.set_scene_mode(mode); });
 		}
 		void request_reinitialize()
 		{
 			const std::lock_guard lock(mutex_);
-			openvr_.request_reinitialize();
+			visit([&](auto& backend) { return backend.request_reinitialize(); });
 		}
 		void prepare_frame(const d3d11::device_snapshot& graphics, const std::uint64_t frame_index)
 		{
 			// Backend selection is immutable after construction. Renderer observation
-			// is independent from the Present-owner OpenVR transaction.
-			if (choice_.valid) openvr_.prepare_frame(graphics, frame_index);
+			// is independent from the Present-owner runtime transaction.
+			if (choice_.valid)
+				visit([&](auto& backend) { return backend.prepare_frame(graphics, frame_index); });
 		}
 		bool initialize(const d3d11::device_snapshot& graphics)
 		{
 			const std::lock_guard lock(mutex_);
-			return choice_.valid && openvr_.initialize(graphics);
+			return choice_.valid && visit([&](auto& backend) { return backend.initialize(graphics); });
 		}
 		void on_present(const d3d11::device_snapshot& graphics, const std::uint64_t frame)
 		{
 			const std::lock_guard lock(mutex_);
-			if (choice_.valid) openvr_.on_present(graphics, frame);
+			if (choice_.valid)
+				visit([&](auto& backend) { return backend.on_present(graphics, frame); });
 		}
 		void on_present(const d3d11::present_event& event)
 		{
 			const std::lock_guard lock(mutex_);
-			if (choice_.valid) openvr_.on_present(event);
+			if (choice_.valid)
+				visit([&](auto& backend) { return backend.on_present(event); });
 		}
 		void on_present_post(const d3d11::present_event& event, const HRESULT result)
 		{
 			const std::lock_guard lock(mutex_);
-			if (choice_.valid) openvr_.on_present_post(event, result);
+			if (choice_.valid)
+				visit([&](auto& backend) { return backend.on_present_post(event, result); });
 		}
 		void capture_present(const d3d11::present_event& event)
 		{
 			const std::lock_guard lock(mutex_);
-			if (choice_.valid) openvr_.capture_present(event);
+			if (choice_.valid)
+				visit([&](auto& backend) { return backend.capture_present(event); });
 		}
 		bool capture_engine_texture(const d3d11::device_snapshot& graphics,
-			ID3D11Texture2D* const source, const capture_frame_tag tag)
+		                            ID3D11Texture2D* const source,
+		                            const capture_frame_tag tag)
 		{
 			const std::lock_guard lock(mutex_);
-			return choice_.valid && openvr_.capture_engine_texture(graphics, source, tag);
+			return choice_.valid && visit([&](auto& backend)
+			                              { return backend.capture_engine_texture(graphics, source, tag); });
 		}
 		void poll_capture(const d3d11::device_snapshot& graphics)
 		{
 			const std::lock_guard lock(mutex_);
-			if (choice_.valid) openvr_.poll_capture(graphics);
+			if (choice_.valid)
+				visit([&](auto& backend) { return backend.poll_capture(graphics); });
 		}
 		void on_resize_before(const d3d11::resize_event& event) noexcept
 		{
 			const std::lock_guard lock(mutex_);
-			if (choice_.valid) openvr_.on_resize_before(event);
+			if (choice_.valid)
+				visit([&](auto& backend) { return backend.on_resize_before(event); });
 		}
 		void on_device_destroying(const d3d11::device_snapshot& graphics) noexcept
 		{
 			const std::lock_guard lock(mutex_);
-			if (choice_.valid) openvr_.on_device_destroying(graphics);
+			if (choice_.valid)
+				visit([&](auto& backend) { return backend.on_device_destroying(graphics); });
 		}
 		void shutdown() noexcept
 		{
 			const std::lock_guard lock(mutex_);
-			openvr_.shutdown();
+			visit([&](auto& backend) { return backend.shutdown(); });
 		}
 		bool shutdown_complete() const noexcept
 		{
 			const std::lock_guard lock(mutex_);
-			return openvr_.shutdown_complete();
+			return visit([&](auto& backend) { return backend.shutdown_complete(); });
 		}
 		bool requested_enabled() const
 		{
 			const std::lock_guard lock(mutex_);
-			return openvr_.requested_enabled();
+			return visit([&](auto& backend) { return backend.requested_enabled(); });
 		}
 		bool applied_enabled() const
 		{
 			const std::lock_guard lock(mutex_);
-			return choice_.valid && openvr_.applied_enabled();
+			return choice_.valid && visit([&](auto& backend) { return backend.applied_enabled(); });
 		}
 		bool requires_present_owner_execution() const noexcept
 		{
@@ -174,8 +226,8 @@ namespace vr
 
 		runtime_status get_status() const
 		{
-			auto status = openvr_.get_status();
-			status.backend_name = "openvr";
+			auto status = visit([&](auto& backend) { return backend.get_status(); });
+			status.backend_name = choice_.selected == backend_choice::kind::openxr ? "openxr" : "openvr";
 			status.backend_selection_reason = choice_.reason;
 			if (!choice_.valid)
 			{
@@ -185,14 +237,11 @@ namespace vr
 			}
 			return status;
 		}
-
-	private:
-		backend_choice choice_;
-		openvr::runtime_backend openvr_;
-		mutable std::mutex mutex_;
 	};
 
-	runtime_backend::runtime_backend() : implementation_(std::make_unique<implementation>()) {}
+	runtime_backend::runtime_backend() : implementation_(std::make_unique<implementation>())
+	{
+	}
 	runtime_backend::~runtime_backend() = default;
 	void runtime_backend::set_desired_enabled(const bool value)
 	{
@@ -210,9 +259,9 @@ namespace vr
 		implementation_->request_reinitialize();
 	}
 	void runtime_backend::prepare_frame(const d3d11::device_snapshot& graphics,
-		const std::uint64_t frame_index)
+	                                    const std::uint64_t frame_index)
 	{
-		// prepare_frame only records renderer ownership for OpenVR. Runtime queue
+		// prepare_frame records renderer ownership. Runtime queue
 		// calls are confined to the real DXGI Present pre/post transaction.
 		implementation_->prepare_frame(graphics, frame_index);
 	}
@@ -242,7 +291,8 @@ namespace vr
 		implementation_->capture_present(value);
 	}
 	bool runtime_backend::capture_engine_texture(const d3d11::device_snapshot& graphics,
-		ID3D11Texture2D* const source, const capture_frame_tag tag)
+	                                             ID3D11Texture2D* const source,
+	                                             const capture_frame_tag tag)
 	{
 		const std::lock_guard lock(mutex_);
 		return implementation_->capture_engine_texture(graphics, source, tag);

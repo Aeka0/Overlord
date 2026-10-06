@@ -333,7 +333,7 @@ namespace vr::head_pose_bridge
 	}
 
 	void publish_tracking_pose(const tracking_pose& pose, const std::uint64_t sample_id,
-		const std::chrono::steady_clock::time_point sampled_at) noexcept
+		const std::chrono::steady_clock::time_point sampled_at, const reference_policy reference) noexcept
 	{
 		const bool valid = finite_vector(pose.position_meters) && valid_rotation(pose.orientation);
 		const std::lock_guard lock(state_mutex);
@@ -348,12 +348,18 @@ namespace vr::head_pose_bridge
 			return;
 		}
 
+		if (recenter_pending && reference == reference_policy::retain_reference)
+		{
+			invalidate_locked();
+			return;
+		}
 		++pose_publications;
 		const auto absolute_orientation = h2_orientation(pose.orientation);
 		if (!absolute_angles.update(absolute_orientation)) return;
 		current_absolute_pitch_degrees = pitch_degrees(absolute_orientation);
 		current_absolute_roll_degrees = horizon_roll_degrees(absolute_orientation);
-		if (recenter_pending || !pose_available)
+		// Temporary publication loss does not erase the established origin.
+		if (recenter_pending)
 		{
 			// An upright recovery must not inherit the alternate Euler yaw. Keep
 			// recenter translation aligned with horizontal forward (not fused yaw,

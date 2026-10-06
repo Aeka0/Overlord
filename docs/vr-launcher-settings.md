@@ -2,6 +2,22 @@
 
 The desktop launcher exposes **Play / Language / VR Settings / Help / About**.
 
+## VR backend selection
+
+**VR Settings > Basics > VR backend** uses the shared choice catalog: OpenXR
+(default/recommended) and OpenVR (manual backup). A valid selection saves
+immediately; a failed save restores the prior choice and remains retryable.
+The upcoming game reads that saved choice after the launcher returns, before
+loading its binary and constructing the runtime. No launcher restart is needed.
+The active game keeps one backend until it exits.
+
+The choice is stored in the existing native profile as `vr_runtimeBackend`.
+Save/reset, UTF-8 profiles and native enum indices share the normal setting
+validation. A launcher start uses its saved choice; direct `-singleplayer` starts
+use the saved choice unless `H2V_VR_BACKEND` explicitly overrides it for diagnosis.
+Backend changes do not rewrite controller calibration or switch the vendor's
+system-wide OpenXR registration.
+
 ## First-use setup and quick guide
 
 The six-step guide opens automatically only when the working directory contains

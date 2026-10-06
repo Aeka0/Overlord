@@ -1,16 +1,12 @@
 #pragma once
 #include "native_menu.hpp"
+#include "menu_backdrop.hpp"
 #include <openvr.h>
 #include <d3d11.h>
 
 namespace vr::menu_overlay
 {
-	struct backdrop
-	{
-		std::shared_ptr<const native_hud_capture::frame> canvas;
-		menu_surface::geometry placement;
-		std::uint64_t session{},revision{},reference{},stamp{};
-	};
+	using backdrop = menu_backdrop::snapshot;
 	// Immutable texture lease and placement only; the eye renderer never calls
 	// OpenVR or reaches into the present owner's mutable overlay instance.
 	backdrop latest_backdrop() noexcept;

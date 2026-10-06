@@ -2,6 +2,7 @@
 #include "controller_input.hpp"
 #include "controller_calibration.hpp"
 #include "stabilization.hpp"
+#include "input_history.hpp"
 #include <atomic>
 #include <mutex>
 
@@ -22,6 +23,7 @@ namespace vr::controller_input
 	{
 		std::mutex mutex;
 		frame current{};
+		input_history history;
 		std::uint64_t continuity{1};bool gameplay_active{};
 		controller_calibration::calibration calibration;
 		std::array<pose_filter::filter,2> hand_filters;
@@ -58,7 +60,12 @@ namespace vr::controller_input
 			const auto& grip=next.grip[h].tracking;
 			const pose_filter::pose raw{grip.position_meters,grip.orientation};
 			if(amount>0 && (!pose_filter::valid(raw) || !pose_filter::valid({next.aim[h].tracking.position_meters,next.aim[h].tracking.orientation})))
-			{next.grip[h].valid=next.aim[h].valid=false;hand_filters[h].reset();continue;}
+			{
+				next.grip[h].valid=next.aim[h].valid=false;
+				next.source.channels[index(hand_channel(input_channel::left_grip,h))]={input_reason::pose_filter_rejected};
+				next.source.channels[index(hand_channel(input_channel::left_aim,h))]={input_reason::pose_filter_rejected};
+				hand_filters[h].reset();continue;
+			}
 			const auto filtered=hand_filters[h].update(raw,next.sequence,next.reference_generation,next.sampled_at,amount,pose_filter::hand);
 			if(amount<=0 || !std::isfinite(amount))continue; // Exact calibrated bypass.
 			const auto transform=pose_filter::correction(raw,filtered);
@@ -66,18 +73,30 @@ namespace vr::controller_input
 			next.grip[h].tracking={filtered.position,filtered.orientation};
 			next.aim[h].tracking={aim.position,aim.orientation};
 		}
-		next.continuity_generation=continuity;current=next;
+		for(unsigned h=0;h<2;++h)
+			if(value.aim[h].valid && !next.aim[h].valid &&
+				next.source.channels[index(hand_channel(input_channel::left_aim,h))].reason!=input_reason::pose_filter_rejected)
+				next.source.channels[index(hand_channel(input_channel::left_aim,h))]={input_reason::calibration_invalid};
+		next.continuity_generation=continuity;history.observe(next);current=next;
 	}
 	void set_gameplay_active(bool active) noexcept
 	{
 		const std::lock_guard lock(mutex);
+		history.set_gameplay_active(active);
 		if(active!=gameplay_active){gameplay_active=active;current.continuity_generation=++continuity;for(auto& f:hand_filters)f.reset();}
 		stabilization::set_gameplay(active);
 	}
 
-	void invalidate() noexcept
+	void invalidate(input_reason reason, input_backend backend, std::int64_t code) noexcept
 	{
-		publish({});
+		frame value;
+		value.sampled_at=clock::now();value.source.backend=backend;value.source.gate={reason,code};
+		publish(value);
+	}
+	input_history_snapshot get_input_history() noexcept
+	{
+		const std::lock_guard lock(mutex);
+		return history.snapshot();
 	}
 
 	frame latest() noexcept

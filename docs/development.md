@@ -6,7 +6,7 @@ Commands and targets come from [premake5.lua](../premake5.lua) and the [CI workf
 
 The current client targets Windows x64, Win32, and D3D11. The repository does not provide an equivalent Linux client build pipeline.
 
-Use Visual Studio 2022 with the Desktop development with C++ tools and a Windows SDK. Premake selects `C++latest`, the latest available SDK, and the static CRT, and generates symbols for Debug, RelWithDebInfo and Release. Python is used for analysis and deployment tools; Node.js is used for launcher script tests. Neither is a client runtime dependency.
+Use Visual Studio 2022 with the Desktop development with C++ tools and a Windows SDK. Premake selects `C++latest`, the latest available SDK, and the static CRT, and generates symbols for Debug, RelWithDebInfo and Release. Python and CMake build the application-local OpenXR loader from the pinned SDK. Python is also used for analysis and deployment tools; Node.js is used for launcher script tests. Neither is a client runtime dependency.
 
 If the installed C++ toolset is Visual Studio 2019 v142, use its x64 MSBuild
 and pass `/p:PlatformToolset=v142` when building the generated solution. The
@@ -24,7 +24,7 @@ msbuild build\h2-mod.sln /m /v:minimal /p:Configuration=Debug /p:Platform=x64
 
 For Release, use the same command and change the value in `Configuration=Debug` to `Release`. Release enables optimization and treats compiler warnings as errors; a passing Debug build does not establish that Release builds successfully.
 
-Artifacts are written to `build/bin/x64/<Configuration>/`. The client project is named `client`. Debug produces `h2-mod-vr-debug.exe` and `h2-mod-vr-debug.pdb`; RelWithDebInfo/Release produce `h2-mod-vr.exe` and `h2-mod-vr.pdb`. The embedded TLS helper keeps its configuration-local `tlsdll.dll` name. To build and run one target:
+Artifacts are written to `build/bin/x64/<Configuration>/`. The client project is named `client`. Debug produces `h2-mod-vr-debug.exe` and `h2-mod-vr-debug.pdb`; RelWithDebInfo/Release produce `h2-mod-vr.exe` and `h2-mod-vr.pdb`. The embedded TLS helper keeps its configuration-local `tlsdll.dll` name. The `openxr-loader` dependency builds one optimized SDK loader for both client configurations, so both EXEs can share an installation. CMake is discovered from PATH or Visual Studio installation roots; direct helper runs can pass `--cmake`, `--generator` and `--toolset`. To build and run one target:
 
 ```bat
 msbuild build\vr-weapon-grip-tests.vcxproj /m /v:minimal /p:Configuration=Debug /p:Platform=x64
@@ -123,13 +123,13 @@ header dependency to fix a missing declaration. The client compiles those same
 implementation files directly without its engine PCH. Other client translation
 units keep `<std_include.hpp>` before additional includes.
 
-The production selector uses SteamVR/OpenVR; see the [runtime guide](vr-runtime-rendering.md). The repository still contains an OpenXR implementation and tests:
+The selector uses OpenXR by default, with explicitly selected OpenVR as a backup; see the [runtime guide](vr-runtime-rendering.md). Keep offline and hardware evidence separate:
 
-- `vr-runtime-mock-smoke` directly tests the OpenXR implementation and requires the mock `openxr_loader.dll` in the same directory. Passing it does not establish that production OpenVR submission works.
-- `vr-openvr-lifecycle-tests` exercises the production OpenVR implementation with strict SDK doubles and WARP textures. It covers focus loss before/after submission, partial-eye submission, safe retirement, format-probe resumption, and initialization attempts after device replacement. It does not launch SteamVR or establish HMD acceptance.
-- `vr-runtime-real-loader-probe` and `tools/build-openxr-loader.bat` validate the real OpenXR loader boundary.
+- `vr-runtime-mock-smoke` directly tests the OpenXR implementation and requires the mock `openxr_loader.dll` in the same directory. It covers predicted native pair transfer, Actions/focus/haptics, UI pixel conversion and quad/cylinder layers. It does not establish installed-runtime or HMD acceptance.
+- `vr-openvr-lifecycle-tests` exercises the OpenVR backup implementation with strict SDK doubles and WARP textures. It covers focus loss before/after submission, partial-eye submission, safe retirement, format-probe resumption, and initialization attempts after device replacement. It does not launch SteamVR or establish HMD acceptance.
+- `vr-runtime-real-loader-probe` uses the actual installed OpenXR loader/runtime boundary. It requires hardware/runtime readiness and is not part of offline regression.
 - `vr-steamvr-hardware-probe` accesses the actual runtime and devices. Keep it separate from regression batches that require no hardware. It also does not replace acceptance inside the target game.
-- CI builds RelWithDebInfo and Debug clients, runs the no-loader smoke test and validates launcher scripts. It packages client overlays without deploying to an update server. OpenXR loader artifacts and hardware probes remain separate tasks.
+- CI builds RelWithDebInfo and Debug clients, runs the no-loader smoke test and validates launcher scripts. It packages client overlays without deploying to an update server. The client dependency target builds the loader; hardware probes remain separate tasks.
 
 ## Deployment and acceptance
 
@@ -137,6 +137,7 @@ In addition to the executable, the client's post-build steps copy these resource
 
 | Repository source | Destination relative to the game directory |
 | --- | --- |
+| Generated pinned SDK loader (`openxr-loader` target) | `openxr_loader.dll` beside either EXE |
 | `data/vr_input/` | `vr_input/` |
 | `data/ui_scripts/vr_gameplay/` | `h2-mod/ui_scripts/vr_gameplay/` |
 | `assets/steamvr/cover.png`, `cover-small.png`, `cover-capsule.png` | `steamvr/` |

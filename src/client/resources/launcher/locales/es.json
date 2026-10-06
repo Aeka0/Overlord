@@ -247,5 +247,9 @@
   "oobe.ammoHelp": "Los cargadores descartados pierden sus cartuchos restantes. Suéltalos en la cintura para recuperar la munición.",
   "oobe.scroll": "Desplazar guía rápida",
   "oobe.skip": "Omitir",
-  "oobe.done": "Finalizar"
+  "oobe.done": "Finalizar",
+  "settings.runtimeBackend": "Interfaz de RV",
+  "settings.runtimeBackendHint": "Se recomienda OpenXR; OpenVR es la alternativa. La selección se guarda al instante y se aplica al iniciar el juego, sin reiniciar el lanzador.",
+  "choice.openxr": "OpenXR",
+  "choice.openvr": "OpenVR"
 }

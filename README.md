@@ -29,9 +29,9 @@ H2-Mod-VR is a VR mod for *Call of Duty: Modern Warfare 2 Campaign Remastered*. 
 - A legally owned and installed copy of *Call of Duty: Modern Warfare 2 Campaign Remastered*.
 - SteamVR and VR hardware that provides head and hand tracking through SteamVR.
 
-The current client uses Direct3D 11 and SteamVR/OpenVR. The OpenXR implementation and diagnostic tools retained in the repository do not mean that the release client uses OpenXR or supports running without SteamVR.
+The client uses Direct3D 11 and defaults to OpenXR, with OpenVR retained as a manually selected backup. The validated combination is Meta Quest controllers with SteamVR/OpenXR; other devices and runtimes require separate acceptance. Choose it under the launcher's VR Settings > Basics > VR backend; it applies when entering the game without restarting the launcher. See [runtime and rendering contracts](docs/vr-runtime-rendering.md) for selection and limitations.
 
-The repository includes default input bindings for Oculus Touch (Meta Quest), Valve Index, and Vive Controller. So far, only Meta Quest controllers have been tested on actual hardware. Other devices may require adjustments to SteamVR bindings and controller alignment settings.
+The repository includes default input bindings for Oculus Touch (Meta Quest), Valve Index, and Vive Controller. So far, only Meta Quest controllers have been tested on actual hardware. Other devices may require adjustments to runtime bindings and controller alignment settings.
 
 Pirated or cracked copies of the game are not supported. Mod releases do not include the full original game assets or provide download links for the game.
 
@@ -43,13 +43,14 @@ When Beta and stable releases are published, installation packages will be avail
 2. Extract the VR client package into the game's root directory and run `h2-mod-vr.exe`.
 3. Start SteamVR, make sure your headset and controllers are connected, then click "Singleplayer".
 
-After its first successful connection to SteamVR, the client registers H2-MOD VR with SteamVR. The standard and Debug builds register separately, with their own launch entries.
+When using the OpenVR backup, the client registers H2-MOD VR with SteamVR after its first successful connection. The standard and Debug builds register separately, with their own launch entries.
 
 Keep the client and its resources in a layout similar to this:
 
 ~~~text
 Game directory/
 ├─ h2-mod-vr.exe
+├─ openxr_loader.dll
 ├─ h2-mod-vr.vrmanifest
 ├─ steamvr/
 ├─ vr_input/
@@ -60,7 +61,7 @@ Building the client does not automatically compile ZoneTool assets into fastfile
 
 ## Basic Controls
 
-Button names vary by controller and SteamVR binding. The following uses the common names Grip and Trigger:
+Button names vary by controller and runtime binding. The following uses the common names Grip and Trigger:
 
 | Action | Basic method |
 | --- | --- |
@@ -121,7 +122,7 @@ See the [development guide](docs/development.md) for build details, checks appro
 Search [existing issues](https://github.com/Aeka0/h2-mod-vr/issues) before submitting a report. Reports in English or Chinese are welcome. Please include:
 
 - The version or commit you are using.
-- Your headset, controllers, Windows version, and SteamVR version.
+- Your headset, controllers, Windows and VR runtime versions, and selected OpenXR/OpenVR backend.
 - The mission, checkpoint, weapon, or interaction where the problem occurs.
 - Steps to reproduce the issue, along with expected and actual behavior.
 - Relevant error text or trimmed log excerpts, if needed.

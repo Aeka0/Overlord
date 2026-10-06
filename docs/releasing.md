@@ -27,9 +27,9 @@ python tools\package_client.py --configuration RelWithDebInfo
 ~~~
 
 The archive under `output/packages/<version-name>/` includes the executable, application manifest,
-input bindings, artwork, loose project scripts and license notices. It excludes
-PDBs, user settings, logs, original game files, raw ZoneTool assets and OpenXR loader
-binaries. Retain matching PDBs privately; they can contain local source paths.
+input bindings, artwork, loose project scripts, the Khronos OpenXR loader and
+license notices. It excludes PDBs, user settings, logs, original game files and
+raw ZoneTool assets. Retain matching PDBs privately; they can contain local source paths.
 
 The overlay requires a legally owned game and the base H2-Mod data required by
 the installation. The client build does not compile data/zone_source/ and
@@ -54,9 +54,8 @@ Legacy MOTD, featured panels and Wordle are temporarily disabled at both native
 startup and Lua registration. Static project and contributor links remain active.
 The old implementation is retained for later restoration, but needs a VR-owned
 feed and fixes to cache validation/cancellation before its opt-in is restored.
-Install updates manually from this project's Releases page. The research OpenXR
-loader can still be built separately using tools/build-openxr-loader.bat, with
-its matching notices.
+Install updates manually from this project's Releases page. The OpenXR loader is built by the client dependency target from the pinned SDK
+using tools/build_openxr_loader.py; the batch entry point delegates to that same helper.
 
 ## Tag and publish
 

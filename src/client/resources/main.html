@@ -1044,6 +1044,12 @@
                                                 <div class="hint"><span data-i18n="settings.basicsHint">Visual comfort and controller alignment.</span></div>
                                             </div>
                                             <div class="setting-group">
+                                                <div class="setting-row">
+                                                    <label for="vr_runtimeBackend"><span data-i18n="settings.runtimeBackend">VR backend</span><span class="hint" id="vr_runtimeBackend-hint" data-i18n="settings.runtimeBackendHint">OpenXR is recommended; OpenVR is a backup. Saved immediately and used when you enter the game; no launcher restart needed.</span></label>
+                                                    <button type="button" class="dropdown-trigger" id="vr_runtimeBackend" value="openxr" role="combobox" aria-haspopup="listbox" aria-expanded="false" aria-controls="settings-dropdown-menu" aria-describedby="vr_runtimeBackend-hint" onclick="toggleSettingsDropdown('vr_runtimeBackend')" onkeydown="onSettingsDropdownKey(event, 'vr_runtimeBackend')"><span id="vr_runtimeBackend-label"><span data-i18n="choice.openxr">OpenXR</span></span></button>
+                                                </div>
+                                            </div>
+                                            <div class="setting-group">
                                                 <h3 data-i18n="oobe.quickGuide">Quick guide</h3>
                                                 <div class="hint" data-i18n="oobe.quickGuideHint">Revisit language, device, comfort, assistance and challenge preferences.</div>
                                                 <button type="button" class="guide-button" id="vr-quick-guide" onclick="LauncherOnboarding.open(false)" data-i18n="oobe.open">Open quick guide</button>

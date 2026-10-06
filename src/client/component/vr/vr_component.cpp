@@ -1,4 +1,5 @@
 #include <std_include.hpp>
+#include "settings.hpp"
 
 #include "loader/component_loader.hpp"
 
@@ -796,6 +797,10 @@ namespace vr
 				dvars::register_bool(debug_options::names[i], false,
 					game::DVAR_FLAG_SAVED, "Optional VR diagnostic; requires game restart");
 			}
+			static auto runtime_backends = settings::runtime_backend.values;
+			dvars::register_enum(settings::runtime_backend.name, runtime_backends.data(),
+				settings::runtime_backend.default_index, game::DVAR_FLAG_SAVED,
+				"VR backend for game startup; select it before entering the game");
 			vr_enable = dvars::register_bool("vr_enable", true, game::DVAR_FLAG_SAVED,
 				"Enable VR rendering after vr_reinit");
 			static const char* probe_modes[]{"off", "observe", nullptr};
@@ -819,7 +824,7 @@ namespace vr
 			accepting_work.store(true, std::memory_order_release);
 			alive.store(true, std::memory_order_release);
 			// runtime::get() owns a function-local singleton whose constructor may
-			// create the runtime worker. Its first use must remain on this expected
+			// select the runtime backend. Its first use must remain on this expected
 			// main/loader thread, never the watchdog or a Present callback.
 			(void)runtime::get();
 			configure_engine_probe();

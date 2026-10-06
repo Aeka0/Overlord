@@ -57,6 +57,49 @@ Common topic-specific commands are listed below with their registered spelling a
 
 These commands primarily provide snapshots. The shared file path above is documented here only for `vr_status`; do not assume other commands generate equivalent files. `vr_reinit` and `vr_recenter` change state, so preserve the original symptom evidence before running them.
 
+### Controller input: one report after the problem
+
+For an input problem, ask the player to close the VR dashboard, return to the
+game, release the controller buttons and sticks, then try moving each hand,
+moving a stick, and pressing a trigger. Run `vr_status` once and share
+`minidumps/h2-mod-vr-status-latest.txt`. The player does not need to compare
+several logs or interpret individual counters. Do this before restarting the
+game; input history is retained across runtime reinitialization within the
+process, but a new process starts a new history.
+
+Both `vr_input_status` and the saved report include a bounded `input_history`
+section. Each hand pose and major action reports `ever_valid`, `valid_samples`,
+`activity_samples`, `last_valid_age_ms`, its current condition and duration,
+availability `losses`, and the last loss and rejection with backend, API result,
+and age. A loss also records the input sequence, reference generation, runtime
+input availability, and gameplay context. `runtime_focus_known=0` means that
+availability was not queried at that boundary, for example after a tracking
+failure. `publication_age_ms` includes neutral lifecycle publications;
+`sample_age_ms` measures the last action-sampling publication separately.
+`sample_fresh=0` identifies a stale or missing sample without inventing a new
+disconnect event; the accompanying summary labels the recorded state accordingly.
+`ever_valid=0` means it was never
+observed as available in this process; `losses>0` establishes an earlier
+available-to-unavailable transition. `age_ms=-1` means no such observation exists.
+
+An active action with zero activity may simply be an untouched stick or released
+button. An unavailable action is different. The producer records separate
+conditions for input setup failure, runtime input unavailability, action
+synchronization/query failure, inactive actions, invalid poses, and reported
+device disconnection. `focus=0` alone cannot identify which one occurred.
+The last API error and last loss survive recovery. `input_transitions` retains
+the most recent eight changes in chronological order, including affected
+channels, reasons and codes. This keeps a recovered controller failure visible
+alongside a later dashboard focus loss when both fit in the retained history.
+`discarded>0` explicitly marks older changes that have been overwritten;
+identical unavailable frames do not fill this history. Availability loss is not proof of a
+physical controller disconnect, and input availability does not establish
+native acceptance of firing, ADS, or movement.
+
+These observations reuse the existing input publications with fixed-size
+counters and timestamps. They do not add runtime polling, per-frame console
+output, automatic exports, or an unbounded recording.
+
 ## Performance or intermittent visual issues: one continuous capture
 
 Before launching, enable **VR Settings > Debug > CPU performance capture**.

@@ -137,13 +137,7 @@ namespace vr::openvr
 		const d3d11::present_event& event, const std::uint32_t thread_id,
 		const HRESULT result) noexcept
 	{
-		if (!transaction.active) return present_post_validation::missing_pre;
-		if (transaction.frame != event.frame_index) return present_post_validation::frame_mismatch;
-		if (transaction.generation != event.graphics.generation)
-			return present_post_validation::generation_mismatch;
-		if (transaction.thread_id != thread_id) return present_post_validation::thread_mismatch;
-		if (FAILED(result)) return present_post_validation::present_failed;
-		return present_post_validation::matched;
+		return present_transaction::validate(transaction, event, thread_id, result);
 	}
 
 	bool present_owner_change_is_violation(const bool applied_enabled,
@@ -151,9 +145,8 @@ namespace vr::openvr
 		const std::uint32_t owner_thread_id, const std::uint64_t event_generation,
 		const std::uint32_t event_thread_id) noexcept
 	{
-		return applied_enabled && !reinitialize_pending &&
-			owner_generation == event_generation && owner_thread_id != 0 &&
-			owner_thread_id != event_thread_id;
+		return present_transaction::owner_changed(applied_enabled, reinitialize_pending,
+			owner_generation, owner_thread_id, event_generation, event_thread_id);
 	}
 
 	bool gpu_frame_transport_is_armed(const runtime_status& status) noexcept
@@ -596,7 +589,8 @@ namespace vr::openvr
 					ui_head_.position_meters[r]=pose.mDeviceToAbsoluteTracking.m[r][3];
 					for(unsigned c=0;c<3;++c)ui_head_.orientation[r][c]=pose.mDeviceToAbsoluteTracking.m[r][c];
 				}
-				input_actions_.sample(ui_head_valid_&&system_->IsInputAvailable());
+					input_actions_.sample(ui_head_valid_&&system_->IsInputAvailable(),ui_head_valid_ ? controller_input::input_reason::input_unavailable :
+						!pose.bDeviceIsConnected ? controller_input::input_reason::hmd_disconnected : controller_input::input_reason::hmd_pose_invalid);
 			}
 			publish_status_locked();
 		}
@@ -1244,8 +1238,10 @@ namespace vr::openvr
 			if (pose_result != VRCompositorError_None)
 			{
 				ui_head_valid_=false;
-				if(pose_result==VRCompositorError_DoNotHaveFocus){set_pause_dim(0);set_theater(false);}
-				controller_input::invalidate();
+					if(pose_result==VRCompositorError_DoNotHaveFocus){set_pause_dim(0);set_theater(false);}
+					controller_input::invalidate(pose_result==VRCompositorError_DoNotHaveFocus ?
+						controller_input::input_reason::compositor_focus_lost : controller_input::input_reason::tracking_failed,
+						controller_input::input_backend::openvr,pose_result);
 				head_pose_bridge::invalidate_pose();
 				++status_.tracking_pose_failure_count;
 				++status_.frame_context_miss_count;
@@ -1305,10 +1301,11 @@ namespace vr::openvr
 			}
 
 			const auto& hmd_pose = poses[k_unTrackedDeviceIndex_Hmd];
-			if (!hmd_pose.bDeviceIsConnected || !hmd_pose.bPoseIsValid)
-			{
-				ui_head_valid_=false;
-				controller_input::invalidate();
+				if (!hmd_pose.bDeviceIsConnected || !hmd_pose.bPoseIsValid)
+				{
+					ui_head_valid_=false;
+					controller_input::invalidate(!hmd_pose.bDeviceIsConnected ? controller_input::input_reason::hmd_disconnected :
+						controller_input::input_reason::hmd_pose_invalid,controller_input::input_backend::openvr);
 				diagnostics::record_trace(diagnostics::trace_event::runtime_state_change,
 					static_cast<std::uint64_t>(runtime_state::no_hmd),
 					(hmd_pose.bDeviceIsConnected ? 2ull : 0ull) |
@@ -1570,6 +1567,8 @@ namespace vr::openvr
 			frame_phase_ = frame_phase::idle_unarmed;
 			++status_.session_generation;
 			++status_.session_begin_count;
+			// Connection recreation starts a new tracking-origin lifetime.
+			head_pose_bridge::request_recenter();
 			status_.worker_last_completed_operation = "backend.initialize";
 			status_.worker_current_operation = "idle";
 			status_.last_initialization_stage = "complete";
@@ -2021,9 +2020,10 @@ namespace vr::openvr
 					return result == VRCompositorError_None ||
 						result == VRCompositorError_DoNotHaveFocus;
 				});
-				if (focus_only)
-				{
-					controller_input::invalidate();
+					if (focus_only)
+					{
+						controller_input::invalidate(controller_input::input_reason::compositor_focus_lost,
+							controller_input::input_backend::openvr,VRCompositorError_DoNotHaveFocus);
 					head_pose_bridge::invalidate_pose();
 					if (probing) status_.submit_format_probe.state = "retiring_focus_loss";
 					retain_prepared_pair_until_wait_get_poses(

@@ -49,9 +49,14 @@ namespace launcher_vr_settings
 		catch (const std::exception& e) { return json{{"ok", false}, {"error", e.what()}}.dump(); }
 	}
 
-	void initialize_debug_options()
+	void initialize_startup_options(bool from_launcher)
 	{
 		const auto values = read_values(read_profile(game_data::get_config_source_path()));
+		const auto backend = backend_environment_update(values,
+			from_launcher ? startup_source::launcher : startup_source::direct,
+			GetEnvironmentVariableA("H2V_VR_BACKEND", nullptr, 0) != 0);
+		if (backend && !SetEnvironmentVariableA("H2V_VR_BACKEND", backend->c_str()))
+			throw std::runtime_error("Could not apply the selected VR backend before game startup.");
 		vr::debug_options::initialize(debug_selection(values));
 	}
 

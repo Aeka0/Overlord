@@ -244,6 +244,7 @@ int main()
 			}
 
 			auto mode = detect_mode_from_arguments();
+			const bool from_launcher = mode == launcher::mode::none;
 			if (mode == launcher::mode::none)
 			{
 				const launcher launcher;
@@ -255,7 +256,7 @@ int main()
 			}
 
 			game::environment::set_mode(mode);
-			launcher_vr_settings::initialize_debug_options();
+			launcher_vr_settings::initialize_startup_options(from_launcher);
 
 			entry_point = load_binary(mode);
 			if (!entry_point)

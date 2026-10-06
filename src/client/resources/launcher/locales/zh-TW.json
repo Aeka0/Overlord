@@ -247,5 +247,9 @@
   "oobe.ammoHelp": "丟棄彈匣會損失其中的剩余彈藥；在腰間松開手中彈匣可回收彈藥。",
   "oobe.scroll": "滾動快速導覽",
   "oobe.skip": "跳過",
-  "oobe.done": "完成"
+  "oobe.done": "完成",
+  "settings.runtimeBackend": "VR 執行方式",
+  "settings.runtimeBackendHint": "建議使用 OpenXR，OpenVR 作為備用。選擇會自動儲存，進入遊戲時生效，無需重新啟動啟動器。",
+  "choice.openxr": "OpenXR",
+  "choice.openvr": "OpenVR"
 }

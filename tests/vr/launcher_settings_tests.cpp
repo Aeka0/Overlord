@@ -66,6 +66,23 @@ int main(int argc, char** argv)
 				require(catalog[field.name][i]["value"]==field.values[i] && catalog[field.name][i]["labelKey"]==field.label_keys[i], "Frontend choices preserve native ordering and localized labels");
 		const auto initial = defaults();
 		require(validate(initial), "Shared defaults must be valid");
+		const auto* backend_name = vr::settings::runtime_backend.name;
+		require(initial[backend_name] == "openxr", "Launcher backend defaults to OpenXR");
+		for (const auto* backend : {"openxr", "openvr"})
+		{
+			auto edited = initial; edited[backend_name] = backend;
+			require(read_values(update_config("bind F10 togglemenu\n", edited)) == edited, "Backend preference round trips without losing binds");
+			require(backend_environment_update(edited, startup_source::launcher, true) == backend, "Launcher selection wins in the current process even with an inherited override");
+			require(backend_environment_update(edited, startup_source::direct, false) == backend, "Direct startup uses the saved backend when no override is present");
+			require(!backend_environment_update(edited, startup_source::direct, true), "Direct startup preserves an explicit diagnostic override");
+		}
+		require(read_values("\xef\xbb\xbfseta vr_runtimeBackend openvr\n")[backend_name] == "openvr", "UTF-8 BOM cannot hide the startup backend");
+		require(read_values("seta vr_runtimeBackend 1\n")[backend_name] == "openvr", "Native enum indices reload as launcher choices");
+		for (const auto* invalid : {"unknown", "openvr;quit", "../../openvr"})
+		{
+			auto edited = initial; edited[backend_name] = invalid; require(!validate(edited), "Malformed backend payload cannot be saved");
+		}
+
 		for(const auto& field:{vr::settings::cheat_health,vr::settings::cheat_notarget,vr::settings::cheat_ammo})
 		{
 			require(initial[field.name]=="off","Launcher cheats default off");

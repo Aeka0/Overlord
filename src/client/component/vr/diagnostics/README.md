@@ -26,6 +26,12 @@ formatting state. Reports already collected by the coordinator are passed by
 const reference; do not copy large reports or independently resample those inputs.
 Existing section-local observations remain at their original points in that order.
 
+`input_status.hpp` formats the same controller history for `vr_input_status` and
+the runtime report. Its fixed-size counters and timestamps are owned by the
+existing controller publication lock in `../controller_input.cpp`; the formatter
+does not query a runtime or reset observations. Keep action availability,
+runtime focus, recorded loss conditions and native gameplay acceptance distinct.
+
 The status file lock still covers the entire format-and-replace transaction.
 Do not parallelize report sections or move formatting outside that lock: doing
 so could mix stream state, reorder observations, or allow an older snapshot to

@@ -204,8 +204,12 @@ namespace
 		f.api.pose_result = VRCompositorError_DoNotHaveFocus;
 		for (unsigned attempt = 0; attempt < 3; ++attempt)
 		{
-			f.present();
-			const auto status = f.runtime.get_status();
+				f.present();
+				const auto status = f.runtime.get_status();
+				const auto input=controller_input::latest();
+				require(input.source.gate.reason==controller_input::input_reason::compositor_focus_lost &&
+					input.source.gate.code==VRCompositorError_DoNotHaveFocus && !input.source.runtime_focus_known,
+					"OpenVR compositor focus loss must preserve its cause without inventing an input-focus query");
 			require(status.applied_enabled && status.state == runtime_state::recoverable_error &&
 				status.cleanup_count == 0 && status.initialization_attempt_count == 1,
 				"focus loss before first Submit tore down or restarted OpenVR");
@@ -249,7 +253,7 @@ namespace
 	{
 		fixture f{graphics,true};vr::tests::menu_state={}; // LUI VM can be stopped throughout loading.
 		f.present(); // Loading starts with a prepared scene that will never render.
-		vr::tests::presentation_override=native_menu::presentation{true,false,false,true};
+		vr::tests::presentation_override=native_menu::presentation{.enabled=true,.frontend=false,.scene=false,.video=true,.fullscreen_video=true};
 		const auto cleanup=gsl::finally([]{vr::tests::presentation_override.reset();});
 		f.present();f.present();const auto count=f.runtime.get_status().tracking_pose_sample_count;
 		f.present();require(f.runtime.get_status().tracking_pose_sample_count==count+1&&f.api.grid&&f.api.fade_alpha==1,

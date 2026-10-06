@@ -2,6 +2,7 @@
 
 #include "head_pose_bridge.hpp"
 #include "settings.hpp"
+#include "input_observation.hpp"
 #include <array>
 #include <chrono>
 #include <cstdint>
@@ -74,13 +75,14 @@ namespace vr::controller_input
 		std::array<hand_pose, 2> aim{};
 		// Preserve the raw pair for diagnostics and its rigid grip-to-aim basis.
 		// Wrist alignment uses this pair; the physical lever uses filtered grip.
-		std::array<hand_pose, 2> runtime_aim{};
-		std::array<hand_pose, 2> runtime_grip{}; // Unfiltered runtime witness.
+		std::array<hand_pose, 2> runtime_aim{}; // Unfiltered SDK pointing pose.
+		std::array<hand_pose, 2> runtime_grip{}; // Unfiltered adapter grip in its reported calibration basis.
 		std::array<float,3> orientation_degrees{}; // pitch, yaw, roll
 		bool orientation_settling{};
 		std::array<float,3> wrist_pivot_meters{settings::wrist_inward.default_value,
 			settings::wrist_back.default_value,settings::wrist_up.default_value};
 		std::uint64_t continuity_generation{}; // Producer continuity, independent of game simulation cadence.
+		input_observation source{}; // Diagnostic provenance only; never grants gameplay admission.
 	};
 
 	class consumer_continuity
@@ -105,7 +107,8 @@ namespace vr::controller_input
 	}
 
 	void publish(const frame& value) noexcept;
-	void invalidate() noexcept;
+	void invalidate(input_reason reason = input_reason::runtime_reset,
+		input_backend backend = input_backend::unknown, std::int64_t code = 0) noexcept;
 	void set_gameplay_active(bool active) noexcept;
 	[[nodiscard]] frame latest() noexcept;
 }

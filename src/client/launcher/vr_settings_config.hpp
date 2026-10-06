@@ -7,6 +7,7 @@
 #include <string>
 #include <string_view>
 #include <vector>
+#include <optional>
 
 namespace launcher_vr_settings
 {
@@ -69,6 +70,17 @@ namespace launcher_vr_settings
 			if (!std::isfinite(number) || number < setting_number(field.min) || number > setting_number(field.max)) return false;
 		}
 		return true;
+	}
+
+	enum class startup_source { launcher, direct };
+	// The launcher controls the upcoming game in this process. Direct starts
+	// retain an explicit command-line environment override for diagnosis.
+	inline std::optional<std::string> backend_environment_update(
+		const json& values, startup_source source, bool has_environment_override)
+	{
+		if (source == startup_source::direct && has_environment_override) return std::nullopt;
+		if (!validate(values)) throw std::runtime_error("Invalid VR startup settings.");
+		return values.at(vr::settings::runtime_backend.name).get<std::string>();
 	}
 
 	inline vr::debug_options::selection debug_selection(const json& values)
@@ -150,6 +162,7 @@ namespace launcher_vr_settings
 
 	inline json read_values(std::string_view config)
 	{
+		if (config.substr(0, 3) == "\xef\xbb\xbf") config.remove_prefix(3);
 		auto result = defaults();
 		while (!config.empty())
 		{

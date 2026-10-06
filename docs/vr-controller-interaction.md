@@ -1,6 +1,6 @@
 # Controller input and hand interaction
 
-This guide describes the shared SteamVR input path and the boundary between
+This guide describes the shared OpenXR/OpenVR input path and the boundary between
 tracked controllers, native player commands, and weapon ownership. Weapon
 mechanics remain in their topic adapters; see [weapon interaction
 architecture](vr-weapon-interaction-architecture.md), [weapon
@@ -9,7 +9,7 @@ topics](vr-m9-reload.md).
 
 ## Input flow
 
-SteamVR actions are sampled at the existing runtime frame boundary. One immutable
+OpenXR Actions or OpenVR/SteamVR actions are sampled at the existing runtime frame boundary. One immutable
 input frame is published for gameplay consumers; subsystems do not poll the VR
 runtime independently. The frame carries tracking and producer continuity so
 consumers can distinguish a held input from a stale or discontinuous sample.
@@ -17,8 +17,9 @@ consumers can distinguish a held input from a stale or discontinuous sample.
 The left stick supplies movement relative to horizontal HMD heading. The right
 stick supplies smooth turning by default or snap turning when configured. Stick
 click actions request sprint and jump without replacing analog movement or
-turning. Device-specific bindings remain in `data/vr_input/`; ship that
-directory with the client and let SteamVR retain custom bindings.
+turning. OpenXR core-profile recipes live in `openxr_input.cpp`. OpenVR bindings remain
+in `data/vr_input/`; ship that directory with the client and let SteamVR retain
+its custom bindings. Both adapters publish the same gameplay input contract.
 
 Input continuity changes when tracking, focus, recentering, calibration,
 gameplay/menu ownership, or a long sampling gap invalidates the prior frame.
@@ -126,6 +127,6 @@ should verify that non-arm bones and native weapon animation remain unchanged.
 Headset acceptance should check left/right reach, elbow direction, wrist and
 grip alignment, aiming while looking away from the weapon, hand transfer,
 support-grip transitions, and each admitted weapon/attachment family. Repeat
-with the actual SteamVR bindings and devices used for release. Structural
+with the actual backend, runtime, bindings and devices used for release. Structural
 admission, a successful build, and CPU tests do not establish in-headset comfort
 or native gameplay acceptance.

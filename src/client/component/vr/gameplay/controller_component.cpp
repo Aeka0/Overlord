@@ -12,6 +12,7 @@
 #include "vehicles/runtime.hpp"
 #include "designator_events.hpp"
 #include "../controller_input.hpp"
+#include "../diagnostics/input_status.hpp"
 #include "../engine_stereo_owner_pass.hpp"
 #include "../settings.hpp"
 #include "component/command.hpp"
@@ -445,9 +446,13 @@ namespace vr::controllers
 			console::info("[VR input] turn_mode=%s turn_speed=%.1f turn_deadzone=%.2f snap_angle=%.1f\n",
 						  turn_mode->current.integer == 0 ? "smooth" : "snap", turn_speed->current.value,
 						  turn_deadzone->current.value, snap_angle->current.value);
-			const auto age = std::chrono::duration_cast<std::chrono::milliseconds>(
-								 controller_input::clock::now() - input.sampled_at)
-								 .count();
+			const auto now = controller_input::clock::now();
+			const bool sampled = input.sequence != 0 && input.sampled_at != controller_input::clock::time_point{} &&
+			                     now >= input.sampled_at;
+			// Invalidated publication has no sample age; -1 avoids printing system uptime.
+			const auto age = sampled
+			                     ? std::chrono::duration_cast<std::chrono::milliseconds>(now - input.sampled_at).count()
+			                     : -1;
 			console::info("[VR input] hooks=%d enabled=%d frame=%llu age_ms=%lld focus=%d move=%d(%.3f,%.3f) "
 						  "turn=%d(%.3f,%.3f) grip=%d/%d aim=%d/%d commands=%llu moving=%llu turns=%llu\n",
 						  hooks_installed, enabled && enabled->current.enabled,
@@ -456,6 +461,8 @@ namespace vr::controllers
 						  input.turn[0], input.turn[1], input.grip[0].valid, input.grip[1].valid,
 						  input.aim[0].valid, input.aim[1].valid, command_count.load(), movement_count.load(),
 						  turn_count.load());
+			console::info("[VR input] sample_available=%d head_pose=%d recenter_pending=%d recenter_count=%llu\n",
+			              sampled, head.pose_available, head.recenter_pending, head.recenter_count);
 			console::info("[VR input] sprint_active=%d down=%d presses=%llu jump_active=%d down=%d "
 						  "presses=%llu sprint_commands=%llu jump_commands=%llu jump_notifies=%llu\n",
 						  input.sprint.active, input.sprint.down, input.sprint.presses, input.jump.active,
@@ -469,7 +476,11 @@ namespace vr::controllers
 			const auto* ps=game::CL_IsCgameInitialized()?game::CG_GetPredictedPlayerState(0):nullptr;
 			console::info("[VR input] stance_verified=%d requests=%llu requested=%d actual=%d vertical=0.90 lateral_limit=none dwell_ms=0 repeat_ms=450\n",
 				stance_verified,stance_count.load(),stance_verified && ps ? *reinterpret_cast<const int*>(native_stance_address):-1,
-				ps ? int(controller_input::native_posture(ps->pm_flags)):-1);
+					ps ? int(controller_input::native_posture(ps->pm_flags)):-1);
+			std::ostringstream history_report;
+			diagnostics::append_input_history(history_report,controller_input::get_input_history(),
+				controller_input::clock::now(),"[VR input] ");
+			console::print_text(console::con_type_info,history_report.str());
 		}
 	} // namespace
 
