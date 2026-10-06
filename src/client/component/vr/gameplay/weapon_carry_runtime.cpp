@@ -875,7 +875,8 @@ namespace vr::gameplay::weapons::carry
 					cylinder::presentation revolver;
 					break_action::presentation hinged;
 					tube::presentation shotgun;
-					if (!launcher::prepare_transfer(id) || !underbarrel::prepare_transfer(id) ||
+					if (!launcher::prepare_transfer(id) ||
+					    !underbarrel::prepare_carry_release(v->owner, event.released, interaction_input) ||
 					    !physical_reload::prepare_transfer(id, magazine) ||
 					    !cylinder::prepare_transfer(id, revolver) || !tube::prepare_transfer(id, shotgun) ||
 					    !break_action::prepare_transfer(id, hinged))

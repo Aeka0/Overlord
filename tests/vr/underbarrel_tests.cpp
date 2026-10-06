@@ -253,8 +253,8 @@ int main()
 	{
 		w::carry::scene s;s.owner.rear=vr::hand::right;s.wrists[1].position={-.05f,0,0};
 		const std::array<vr::gameplay::hands::anchor,2> wrists{{{{0,0,0},{0,0,0,1}},{{1,2,3},{0,0,0,1}}}};
-		const auto before=u::mechanical_frame(s,wrists);s.gun.rotation={.70710678f,0,0,.70710678f};
-		const auto after=u::mechanical_frame(s,wrists);
+		const auto before=u::pump_frame(s,wrists);s.gun.rotation={.70710678f,0,0,.70710678f};
+		const auto after=u::pump_frame(s,wrists);
 		check(before.position==after.position && before.rotation==after.rotation,"restoring support IK cannot change the retained action's measurement frame");
 	}
 	check(w::underbarrel::authored::m203_axis[0]>.99f&&w::underbarrel::authored::shotgun_axis[0]<-.99f,"captured sliding directions are opposite");
@@ -262,8 +262,8 @@ int main()
 	check(w::underbarrel::authored::shotgun_stroke>.09f&&w::underbarrel::authored::shotgun_stroke<.12f,"pump source travel validated");
 	u::scene contact;contact.units=39.3701f;contact.stroke=.1f;contact.axis={1,0,0};
 	check(u::finite_contact(contact),"finite contact admitted");
-	contact.local_hand[0]=std::numeric_limits<float>::quiet_NaN();check(!u::finite_contact(contact),"NaN cannot enter physical travel");
-	contact.local_hand={};contact.units=0;check(!u::finite_contact(contact),"zero scale rejected");
+	contact.stroke_hand[0]=std::numeric_limits<float>::quiet_NaN();check(!u::finite_contact(contact),"NaN cannot enter physical travel");
+	contact.stroke_hand={};contact.units=0;check(!u::finite_contact(contact),"zero scale rejected");
 	contact.units=39.3701f;contact.axis={0,0,0};check(!u::finite_contact(contact),"degenerate action axis rejected");
 	for(auto pair:std::array<std::pair<const char*,const char*>,11>{{{"m16_grenadier","m203_m16"},{"m4_grenadier_airport","m203_m4_airport"},
 		{"scar_h_grenadier","scar_h_m203"},{"masada_digital_grenadier_eotech","gl_masada_digital_eotech"},{"m4_grenadier_acog","m203_m4_acog"},
@@ -372,6 +372,62 @@ int main()
 		}
 		check(length(sub(parts.mount.position,b[parent].bind.position))<.001f,"attachment origin aliases its real receiver mount");
 		check(parts.muzzle.position[0]>parts.mount.position[0],"module muzzle lies forward of actual attachment mount");
+		for (auto rear : {vr::hand::left, vr::hand::right})
+		{
+			using namespace vr::gameplay::hands::pose_math;
+			w::carry::scene live;
+			live.owner.rear = rear;
+			live.gun = {{20, -10, 7}, normalize({.1f, .2f, .3f, .9f})};
+			std::array<anchor, 2> wrists{};
+			wrists[int(rear)] = {{2, 3, 4}, {0, 0, 0, 1}};
+			u::scene barrel;
+			barrel.type = kind;
+			barrel.contact_hand = 1 - int(rear);
+			barrel.muzzle_local = parts.muzzle;
+			const auto visible_contact = u::sample_contact(barrel,
+			                                               {},
+			                                               live.owner,
+			                                               live.gun,
+			                                               wrists[1 - int(rear)],
+			                                               {},
+			                                               {{{1, 0, 0}, {0, 1, 0}, {0, 0, 1}}},
+			                                               39.37007874f,
+			                                               0);
+			const auto visible = compose(live.gun, parts.muzzle);
+			for (const auto grasp : {u::lease::none, u::lease::firing, u::lease::support, u::lease::action})
+			{
+				auto sampled = visible_contact;
+				if (u::uses_pump_frame(kind, grasp))
+					u::sample_pump_motion(sampled, live, wrists, 0);
+				check(
+				    length(sub(sampled.muzzle.position, visible.position)) < .00001f &&
+				        dot(rotate(sampled.muzzle.rotation, {1, 0, 0}), rotate(visible.rotation, {1, 0, 0})) >
+				            .99999f,
+				    "every underbarrel grip state uses the visible barrel for firing, including a pump-to-fire transition");
+				check(
+				    sampled.firing_distance == visible_contact.firing_distance &&
+				        sampled.facing == visible_contact.facing &&
+				        sampled.support_facing == visible_contact.support_facing &&
+				        sampled.action_distance == visible_contact.action_distance &&
+				        sampled.load_distance == visible_contact.load_distance &&
+				        sampled.load_alignment == visible_contact.load_alignment,
+				    "stroke sampling never moves new-grab, firing or loading contacts away from the visible attachment");
+				if (kind == u::kind::shotgun && (grasp == u::lease::action || grasp == u::lease::support))
+				{
+					const auto pump = u::pump_frame(live, wrists);
+					const auto expected =
+					    scale(compose(inverse(pump), wrists[1 - int(rear)]).position, 1 / 39.37007874f);
+					check(length(sub(sampled.stroke_hand, expected)) < .00001f &&
+					          length(sub(sampled.stroke_hand, visible_contact.stroke_hand)) > .01f &&
+					          std::abs(sampled.action_retention_distance - length(expected)) < .00001f,
+					      "held shotgun pump stroke and retention stay in the separate rear-driven frame");
+				}
+				else
+					check(sampled.stroke_hand == visible_contact.stroke_hand &&
+					          sampled.action_retention_distance == sampled.action_distance,
+					      "launcher and unheld shotgun contacts retain the visible weapon frame");
+			}
+		}
 		check((parts.bolt>=0)==(kind==u::kind::shotgun),"only the shotgun binds its independent window bolt");
 		for(float units:{1.f,39.37007874f})for(float amount:{0.f,.5f,1.f,2.f,-1.f})
 		for(const auto gun:{anchor{{},{0,0,0,1}},anchor{{12,-3,7},normalize({.2f,-.3f,.1f,.8f})}})

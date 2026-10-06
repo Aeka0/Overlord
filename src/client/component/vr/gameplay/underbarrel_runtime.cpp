@@ -41,15 +41,23 @@ namespace vr::gameplay::weapons::underbarrel
 		instance_cache<presentation,143> views;
 		struct record
 		{
-			presentation view{};native::binding module{};
-			std::uint64_t sequence{},assembly{},rear_revision{};hands::vec start{},previous{};float start_travel{};
-			bool insertion_armed{};clock::time_point updated{};int last_fire{};
-			const char* decision{"waiting for fresh input"};std::array<float,4> contact{};
+			presentation view{};
+			native::binding module{};
+			std::uint64_t sequence{}, assembly{}, rear_revision{};
+			hands::vec start{}, previous{};
+			float start_travel{};
+			bool insertion_armed{};
+			clock::time_point updated{};
+			int last_fire{};
+			const char* decision{"waiting for fresh input"};
+			std::array<float, 4> contact{};
 			std::uint64_t same_hand_chords{};
-			std::uint64_t native_reductions{};int last_native_before{},last_native_after{};
-			float start_distance{},previous_distance{};
+			std::uint64_t native_reductions{};
+			int last_native_before{}, last_native_after{};
+			float start_distance{}, previous_distance{};
 			controller_input::consumer_continuity continuity;
 			std::uint64_t input_continuity{};
+			controller_input::digital_action acquired_grip{};
 		};
 		instance_cache<record,143> records;const void* player{};std::uint64_t timeline{};int command_time{};
 		std::uint64_t shots{},commits{},rejected{};const char* reason{"waiting for supported assembly"};
@@ -111,122 +119,387 @@ namespace vr::gameplay::weapons::underbarrel
 			r.view.grip=lease::none;r.view.motion={};r.sequence=0;r.insertion_armed=false;
 			const bool ok=!r.view.ammo.held || apply(r,operation::cleanup);publish(r);return ok;
 		}
-		void tick(record& r,const scene& s,clock::time_point now)noexcept
+		bool prepare_transfer_ammunition(record& module) noexcept
 		{
-			const auto held=carry::held(s.owner.id());
-			const int off=valid_hand(held.rear)?1-int(held.rear):-1;
-			const auto* ps=reinterpret_cast<const game::playerState_s*>(game::g_entities[0].client);
-			const auto& input=s.input;
-			const auto* paused=game::Dvar_FindVar("cl_paused");
-			const bool usable=off>=0 && held.can_fire() && s.owner.id()==held.id() && s.owner.rear_revision==held.rear_revision &&
-				s.gameplay && finite_contact(s) && s.input.focused && fresh(s.input.sampled_at,now) && input.reference_generation==s.input.reference_generation &&
-				input.focused && input.grip[off].valid && input.aim[off].valid && s.input.grip[off].valid && s.input.aim[off].valid &&
-				ps && scripted_control::allowed(ps) && !(ps->e_flags&0x103000) && paused && !paused->current.integer && !*game::keyCatchers;
-			if(!usable){interrupt(r);return;}
-			const bool discontinuity=r.continuity.update(s.input,now);
-			if(r.rear_revision!=held.rear_revision || r.view.reference!=s.input.reference_generation || r.assembly!=s.assembly ||
-				discontinuity || s.input.sequence<r.sequence)
-			{if(!interrupt(r))return;r.rear_revision=held.rear_revision;r.view.reference=s.input.reference_generation;r.assembly=s.assembly;}
-			r.input_continuity=s.input.continuity_generation;
-			r.view.owner=held;r.view.at=now;r.updated=now;
-			if(r.view.grip==lease::none && held.support==hand::none)r.view.owns_support=false;
-			auto observed=native::observe(r.module);
-			if(!observed.valid){reason="module ownership or native feed rejected";interrupt(r);return;}
-			const auto sync=reconcile(r.view.ammo,observed.module.id,observed.ammo);
-			if(!sync || (sync.native_after!=observed.ammo && !native::commit(observed,sync.native_after)))
-			{r.view.fault=true;reason="secondary budget/identity reconciliation rejected";interrupt(r);return;}
-			if(sync.change==observed_change::debit){++r.native_reductions;r.last_native_before=r.view.ammo.loaded;r.last_native_after=sync.next.loaded;r.decision="native budget reduced; chamber unconfirmed";}
-			if(r.view.ammo.chamber && !sync.next.chamber && r.view.grip==lease::support)
-			{r.start=r.previous=s.local_hand;r.start_distance=r.previous_distance=s.hand_distance;r.start_travel=r.view.travel;}
-			r.view.ammo=sync.next;r.view.fault=false;
-			if(r.view.fault || s.input.sequence==r.sequence){publish(r);return;}
-			r.sequence=s.input.sequence;
-			auto pinch=s.input.trigger[off];const auto& squeeze=s.input.squeeze[off];
-			if(hand_interaction::input(hand(off),hand_interaction::button::trigger).release)pinch.down=false;
-			if(hand_interaction::input(hand(off),hand_interaction::button::grip).release)r.view.grip=lease::none;
-			const bool pressed=hand_interaction::input(hand(off),hand_interaction::button::trigger).press,grasp=hand_interaction::input(hand(off),hand_interaction::button::grip).press;
-			if(pressed && pinch.active && pinch.down && squeeze.active && squeeze.down)++r.same_hand_chords;
-			if(pressed || grasp){r.contact={s.firing_distance,s.support_facing,s.facing,s.waist_distance};r.decision="input outside secondary contact";}
-			const bool empty=hand_interaction::permits(hand(off),hand_interaction::domain::underbarrel,held.id());
-			const bool live_grip=input.squeeze[off].active && input.squeeze[off].down && input.squeeze[off].generation==squeeze.generation;
-			const auto orientation=palm_facing{s.support_facing,s.facing};
-			const auto support_tolerance=support_limits(s.type,s.support_release);
-			const bool contact=s.firing_distance<=firing_release && live_grip &&
-				(directional_grips(s.type)?firing_facing(orientation,true):s.facing>=.5f);
-			if(r.view.grip==lease::firing && (!squeeze.active || !squeeze.down || !contact || !empty))r.view.grip=lease::none;
-			if(r.view.grip==lease::support && s.type==kind::gp25)
+			const auto observed = native::observe(module.module);
+			if (!observed.valid || observed.ammo.loaded != module.view.ammo.loaded)
+				return false;
+			if (module.view.ammo.reserve != observed.ammo.reserve)
 			{
-				if(!live_grip || !empty || s.action_distance>std::max(support_tolerance.retention,s.support_radius))r.view.grip=lease::none;
+				module.view.ammo.reserve = observed.ammo.reserve;
+				++module.view.ammo.revision;
 			}
-			if(r.view.grip==lease::support && s.type!=kind::gp25)
+			return true;
+		}
+		void rebase_stroke(record& module, const scene& contact) noexcept
+		{
+			module.start = module.previous = contact.stroke_hand;
+			module.start_travel = module.view.travel;
+			module.start_distance = module.previous_distance = contact.hand_distance;
+		}
+
+		bool synchronize_grip_binding(record& module,
+		                              const scene& contact,
+		                              const hold& owner,
+		                              clock::time_point now) noexcept
+		{
+			const auto& input = contact.input;
+			const bool control_changed = module.rear_revision != owner.rear_revision;
+			const bool assembly_changed = module.assembly != contact.assembly;
+			const bool tracking_changed = module.view.reference != input.reference_generation;
+			const bool discontinuity = module.continuity.update(input, now);
+			const bool older_input = input.sequence < module.sequence;
+			if (!control_changed && !assembly_changed && !tracking_changed && !discontinuity && !older_input)
+				return true;
+
+			const bool retain_grip = control_changed && !assembly_changed && !tracking_changed &&
+			                         !discontinuity && !older_input &&
+			                         can_retain_module_grip(module.view, owner, input, module.acquired_grip);
+			if (retain_grip)
 			{
-				const auto shared=hand_interaction::shared_slider(s.rest_span,s.axis,r.start_distance,r.previous_distance,s.hand_distance,r.start_travel,s.stroke,support_tolerance.retention,support_tolerance.step);
-				const bool retained=s.type==kind::m203 ? (r.view.ammo.chamber ?
-					retained_support_span(s.rest_span,s.hand_distance,r.previous_distance,s.support_release,support_tolerance.step) : shared.valid) :
-					s.action_distance<=support_tolerance.retention;
-				if(!live_grip || !empty || !retained || !support_facing(orientation,true,s.type))r.view.grip=lease::none;
-				else if(!r.view.ammo.chamber && (s.type==kind::m203?shared.travel>.006f:hands::dot(hands::sub(s.local_hand,r.start),s.axis)>.003f))
-					r.view.grip=r.view.support_role=lease::action; // Empty action can reopen with the retained grasp.
-				else {if(r.view.ammo.chamber && s.type!=kind::m203)r.start=s.local_hand;r.previous=s.local_hand;r.previous_distance=s.hand_distance;publish(r);return;}
+				// A control-hand transition is neither a stroke nor a module Trigger edge.
+				rebase_stroke(module, contact);
+				module.sequence = input.sequence;
 			}
-			if(r.view.grip==lease::action)
+			else if (!interrupt(module))
+				return false;
+
+			module.rear_revision = owner.rear_revision;
+			module.view.reference = input.reference_generation;
+			module.assembly = contact.assembly;
+			return true;
+		}
+
+		const carry::scene* find_held_scene(weapon_identity id,
+		                                    std::span<const carry::instance> owned,
+		                                    std::span<const carry::scene> weapons) noexcept
+		{
+			for (size_t i = 0; i < owned.size() && i < weapons.size(); ++i)
 			{
-				auto projected=project_stroke(r.start,r.previous,s.local_hand,s.axis,r.start_travel,s.stroke,support_tolerance);
-				if(s.type==kind::m203){const auto shared=hand_interaction::shared_slider(s.rest_span,s.axis,r.start_distance,r.previous_distance,s.hand_distance,r.start_travel,s.stroke,support_tolerance.retention,support_tolerance.step);projected={shared.valid,shared.travel};}
-				if(!live_grip || !empty || !projected.valid)r.view.grip=lease::none;
+				if (owned[i].id == id && owned[i].at == carry::location::held && weapons[i].owner.id() == id)
+					return &weapons[i];
+			}
+			return nullptr;
+		}
+
+		void update_carry_only_grip(record& module,
+		                            const hold& owner,
+		                            const carry::scene* weapon,
+		                            const controller_input::frame& input,
+		                            clock::time_point now) noexcept
+		{
+			const bool scene_current = weapon && weapon->authored && weapon->assembly == module.assembly &&
+			                           weapon->sequence == input.sequence &&
+			                           weapon->reference == input.reference_generation;
+			const bool discontinuity = module.continuity.update(input, now);
+			const bool input_current =
+			    fresh(input.sampled_at, now) && !discontinuity && input.sequence >= module.sequence;
+			if (!scene_current || !input_current ||
+			    !can_retain_module_grip(module.view, owner, input, module.acquired_grip))
+			{
+				interrupt(module);
+				return;
+			}
+
+			// Keep the physical module hand while the host control is absent.
+			// Action projection and firing resume only after a validated regrasp.
+			module.view.owner = owner;
+			module.view.at = module.updated = now;
+			module.view.motion = {};
+			module.sequence = input.sequence;
+			module.rear_revision = owner.rear_revision;
+			module.input_continuity = input.continuity_generation;
+			publish(module);
+		}
+		void tick(record& runtime, const scene& contact, clock::time_point now) noexcept
+		{
+			const auto held = carry::held(contact.owner.id());
+			const int off = valid_hand(held.rear) ? 1 - int(held.rear) : -1;
+			const auto* ps = reinterpret_cast<const game::playerState_s*>(game::g_entities[0].client);
+			const auto& input = contact.input;
+			const auto* paused = game::Dvar_FindVar("cl_paused");
+			const bool usable = off >= 0 && held.can_fire() && contact.owner.id() == held.id() &&
+			                    contact.owner.rear_revision == held.rear_revision && contact.gameplay &&
+			                    finite_contact(contact) && input.focused && fresh(input.sampled_at, now) &&
+			                    input.grip[off].valid && input.aim[off].valid && ps &&
+			                    scripted_control::allowed(ps) && !(ps->e_flags & 0x103000) && paused &&
+			                    !paused->current.integer && !*game::keyCatchers;
+			if (!usable)
+			{
+				interrupt(runtime);
+				return;
+			}
+			if (!synchronize_grip_binding(runtime, contact, held, now))
+				return;
+			runtime.input_continuity = contact.input.continuity_generation;
+			runtime.view.owner = held;
+			runtime.view.at = now;
+			runtime.updated = now;
+			if (runtime.view.grip == lease::none && held.support == hand::none)
+				runtime.view.owns_support = false;
+			auto observed = native::observe(runtime.module);
+			if (!observed.valid)
+			{
+				reason = "module ownership or native feed rejected";
+				interrupt(runtime);
+				return;
+			}
+			const auto sync = reconcile(runtime.view.ammo, observed.module.id, observed.ammo);
+			if (!sync || (sync.native_after != observed.ammo && !native::commit(observed, sync.native_after)))
+			{
+				runtime.view.fault = true;
+				reason = "secondary budget/identity reconciliation rejected";
+				interrupt(runtime);
+				return;
+			}
+			if (sync.change == observed_change::debit)
+			{
+				++runtime.native_reductions;
+				runtime.last_native_before = runtime.view.ammo.loaded;
+				runtime.last_native_after = sync.next.loaded;
+				runtime.decision = "native budget reduced; chamber unconfirmed";
+			}
+			if (runtime.view.ammo.chamber && !sync.next.chamber && runtime.view.grip == lease::support)
+				rebase_stroke(runtime, contact);
+			runtime.view.ammo = sync.next;
+			runtime.view.fault = false;
+			if (input.sequence == runtime.sequence)
+			{
+				publish(runtime);
+				return;
+			}
+			runtime.sequence = contact.input.sequence;
+			auto pinch = contact.input.trigger[off];
+			const auto& squeeze = contact.input.squeeze[off];
+			if (hand_interaction::input(hand(off), hand_interaction::button::trigger).release)
+				pinch.down = false;
+			if (hand_interaction::input(hand(off), hand_interaction::button::grip).release)
+				runtime.view.grip = lease::none;
+			const bool trigger_pressed =
+			               hand_interaction::input(hand(off), hand_interaction::button::trigger).press,
+			           grip_pressed =
+			               hand_interaction::input(hand(off), hand_interaction::button::grip).press;
+			if (trigger_pressed && pinch.active && pinch.down && squeeze.active && squeeze.down)
+				++runtime.same_hand_chords;
+			if (trigger_pressed || grip_pressed)
+			{
+				runtime.contact = {
+				    contact.firing_distance, contact.support_facing, contact.facing, contact.waist_distance};
+				runtime.decision = "input outside secondary contact";
+			}
+			const bool hand_available =
+			    hand_interaction::permits(hand(off), hand_interaction::domain::underbarrel, held.id());
+			const bool grip_down = squeeze.active && squeeze.down;
+			const auto orientation = palm_facing{contact.support_facing, contact.facing};
+			const auto support_tolerance = support_limits(contact.type, contact.support_release);
+			const bool firing_contact =
+			    contact.firing_distance <= firing_release && grip_down &&
+			    (directional_grips(contact.type) ? firing_facing(orientation, true) : contact.facing >= .5f);
+			if (runtime.view.grip == lease::firing &&
+			    (!squeeze.active || !squeeze.down || !firing_contact || !hand_available))
+				runtime.view.grip = lease::none;
+			if (runtime.view.grip == lease::support && contact.type == kind::gp25)
+			{
+				if (!grip_down || !hand_available ||
+				    contact.action_distance > std::max(support_tolerance.retention, contact.support_radius))
+					runtime.view.grip = lease::none;
+			}
+			if (runtime.view.grip == lease::support && contact.type != kind::gp25)
+			{
+				const auto shared = hand_interaction::shared_slider(contact.rest_span,
+				                                                    contact.axis,
+				                                                    runtime.start_distance,
+				                                                    runtime.previous_distance,
+				                                                    contact.hand_distance,
+				                                                    runtime.start_travel,
+				                                                    contact.stroke,
+				                                                    support_tolerance.retention,
+				                                                    support_tolerance.step);
+				const bool retained =
+				    contact.type == kind::m203
+				        ? (runtime.view.ammo.chamber ? retained_support_span(contact.rest_span,
+				                                                             contact.hand_distance,
+				                                                             runtime.previous_distance,
+				                                                             contact.support_release,
+				                                                             support_tolerance.step)
+				                                     : shared.valid)
+				        : contact.action_retention_distance <= support_tolerance.retention;
+				if (!grip_down || !hand_available || !retained ||
+				    !support_facing(orientation, true, contact.type))
+					runtime.view.grip = lease::none;
+				else if (!runtime.view.ammo.chamber &&
+				         (contact.type == kind::m203
+				              ? shared.travel > .006f
+				              : hands::dot(hands::sub(contact.stroke_hand, runtime.start), contact.axis) >
+				                    .003f))
+					runtime.view.grip = runtime.view.support_role =
+					    lease::action; // Empty action can reopen with the retained grasp.
 				else
 				{
-					r.previous=s.local_hand;r.previous_distance=s.hand_distance;const auto next=projected.travel;
-					if(next>=s.stroke*.9f && !r.view.ammo.open)
-					{if(!apply(r,operation::open,&s)){r.view.grip=lease::none;++rejected;}else r.view.travel=next;}
-					else if(next<=s.stroke*.1f && r.view.ammo.open)
-						{if(!apply(r,operation::close,&s)){r.view.grip=lease::none;++rejected;}else{
-							r.view.travel=0;r.view.grip=r.view.support_role=lease::support;r.start=r.previous=s.local_hand;r.start_travel=0;r.start_distance=r.previous_distance=s.hand_distance;}}
-					else r.view.travel=next;
-					publish(r);return;
+					if (runtime.view.ammo.chamber && contact.type != kind::m203)
+						runtime.start = contact.stroke_hand;
+					runtime.previous = contact.stroke_hand;
+					runtime.previous_distance = contact.hand_distance;
+					publish(runtime);
+					return;
 				}
 			}
-			if(!empty)
+			if (runtime.view.grip == lease::action)
+			{
+				auto projected = project_stroke(runtime.start,
+				                                runtime.previous,
+				                                contact.stroke_hand,
+				                                contact.axis,
+				                                runtime.start_travel,
+				                                contact.stroke,
+				                                support_tolerance);
+				if (contact.type == kind::m203)
+				{
+					const auto shared = hand_interaction::shared_slider(contact.rest_span,
+					                                                    contact.axis,
+					                                                    runtime.start_distance,
+					                                                    runtime.previous_distance,
+					                                                    contact.hand_distance,
+					                                                    runtime.start_travel,
+					                                                    contact.stroke,
+					                                                    support_tolerance.retention,
+					                                                    support_tolerance.step);
+					projected = {shared.valid, shared.travel};
+				}
+				if (!grip_down || !hand_available || !projected.valid)
+					runtime.view.grip = lease::none;
+				else
+				{
+					runtime.previous = contact.stroke_hand;
+					runtime.previous_distance = contact.hand_distance;
+					const auto next = projected.travel;
+					if (next >= contact.stroke * .9f && !runtime.view.ammo.open)
+					{
+						if (!apply(runtime, operation::open, &contact))
+						{
+							runtime.view.grip = lease::none;
+							++rejected;
+						}
+						else
+							runtime.view.travel = next;
+					}
+					else if (next <= contact.stroke * .1f && runtime.view.ammo.open)
+					{
+						if (!apply(runtime, operation::close, &contact))
+						{
+							runtime.view.grip = lease::none;
+							++rejected;
+						}
+						else
+						{
+							runtime.view.travel = 0;
+							runtime.view.grip = runtime.view.support_role = lease::support;
+							rebase_stroke(runtime, contact);
+						}
+					}
+					else
+						runtime.view.travel = next;
+					publish(runtime);
+					return;
+				}
+			}
+			if (!hand_available)
 			{
 				// Consume blocked edges without erasing the neutral history. A hand
 				// becoming free must not lose the next legitimate Grip/Trigger press
 				// merely because the previous render sample still described support.
-				if(pressed || grasp)r.decision="support hand occupied";
-				r.view.grip=lease::none;if(r.view.ammo.held)(void)apply(r,operation::cleanup);publish(r);return;
+				if (trigger_pressed || grip_pressed)
+					runtime.decision = "support hand occupied";
+				runtime.view.grip = lease::none;
+				if (runtime.view.ammo.held)
+					(void)apply(runtime, operation::cleanup);
+				publish(runtime);
+				return;
 			}
-			if(r.view.ammo.held)
+			if (runtime.view.ammo.held)
 			{
-				if(!pinch.active || !pinch.down || !input.trigger[off].active || !input.trigger[off].down || input.trigger[off].generation!=pinch.generation)
-				{(void)apply(r,operation::discard,&s);r.insertion_armed=false;}
-				else if(s.load_distance>.065f)r.insertion_armed=true;
-				else if(r.insertion_armed && s.load_distance<=.045f && s.load_alignment>=.35f)
-				{r.insertion_armed=false;(void)apply(r,operation::insert,&s);}
-				publish(r);return;
-			}
-			if(grasp && squeeze.down && r.view.grip==lease::none && hand_interaction::granted(hand(off),hand_interaction::domain::underbarrel,held.id(),hand_interaction::button::grip))
-			{
-				const auto chosen=choose_grip(r.view.ammo,r.view.travel,s.firing_distance,s.action_distance,orientation,s.support_radius);
-				if(chosen==lease::action || chosen==lease::support)
-				{r.view.grip=r.view.support_role=chosen;r.view.owns_support=true;r.start=r.previous=s.local_hand;r.start_travel=r.view.travel;r.start_distance=r.previous_distance=s.hand_distance;}
-				else if(chosen==lease::firing && live_grip)
-				{r.view.grip=r.view.support_role=lease::firing;r.view.owns_support=true;}
-			}
-			if(grasp && r.view.grip!=lease::none)r.decision=r.view.grip==lease::firing?"firing grip acquired":"action grip acquired";
-			const bool fire_grip=s.type==kind::gp25?r.view.grip==lease::support && live_grip && empty:
-				r.view.grip==lease::firing && squeeze.active && squeeze.down && contact && r.view.travel<=.001f;
-			const auto trigger=route(pressed && pinch.down,false,fire_grip,r.view.grip==lease::action,
-				s.waist_distance<=s.waist_radius && (held.support==hand::none || (r.view.owns_support && r.view.grip==lease::none)),squeeze.active && squeeze.down,true);
-			if(trigger==trigger_route::fire || trigger==trigger_route::secondary_supply)
-			{
-				if(trigger==trigger_route::fire)
+				if (!pinch.active || !pinch.down || !input.trigger[off].active || !input.trigger[off].down ||
+				    input.trigger[off].generation != pinch.generation)
 				{
-					if(!input.trigger[int(held.rear)].down && input.trigger[off].active && input.trigger[off].down &&
-						input.trigger[off].generation==pinch.generation && !apply(r,operation::shot,&s,true))++rejected;
+					(void)apply(runtime, operation::discard, &contact);
+					runtime.insertion_armed = false;
 				}
-				else if(r.view.grip==lease::none && live_grip && input.trigger[off].active && input.trigger[off].down && input.trigger[off].generation==pinch.generation && hand_interaction::granted(hand(off),hand_interaction::domain::underbarrel,held.id(),hand_interaction::button::trigger))
-				{r.insertion_armed=false;if(!apply(r,operation::draw,&s))++rejected;}
+				else if (contact.load_distance > .065f)
+					runtime.insertion_armed = true;
+				else if (runtime.insertion_armed && contact.load_distance <= .045f &&
+				         contact.load_alignment >= .35f)
+				{
+					runtime.insertion_armed = false;
+					(void)apply(runtime, operation::insert, &contact);
+				}
+				publish(runtime);
+				return;
 			}
-			publish(r);
+			if (grip_pressed && squeeze.down && runtime.view.grip == lease::none &&
+			    hand_interaction::granted(hand(off),
+			                              hand_interaction::domain::underbarrel,
+			                              held.id(),
+			                              hand_interaction::button::grip))
+			{
+				const auto chosen = choose_grip(runtime.view.ammo,
+				                                runtime.view.travel,
+				                                contact.firing_distance,
+				                                contact.action_distance,
+				                                orientation,
+				                                contact.support_radius);
+				if (chosen == lease::action || chosen == lease::support)
+				{
+					runtime.view.grip = runtime.view.support_role = chosen;
+					runtime.view.owns_support = true;
+					rebase_stroke(runtime, contact);
+				}
+				else if (chosen == lease::firing && grip_down)
+				{
+					runtime.view.grip = runtime.view.support_role = lease::firing;
+					runtime.view.owns_support = true;
+				}
+				if (runtime.view.grip != lease::none)
+					runtime.acquired_grip = squeeze;
+			}
+			if (grip_pressed && runtime.view.grip != lease::none)
+				runtime.decision =
+				    runtime.view.grip == lease::firing ? "firing grip acquired" : "action grip acquired";
+			const bool can_fire_from_grip =
+			    contact.type == kind::gp25
+			        ? runtime.view.grip == lease::support && grip_down && hand_available
+			        : runtime.view.grip == lease::firing && squeeze.active && squeeze.down &&
+			              firing_contact && runtime.view.travel <= .001f;
+			const auto trigger = route(trigger_pressed && pinch.down,
+			                           false,
+			                           can_fire_from_grip,
+			                           runtime.view.grip == lease::action,
+			                           contact.waist_distance <= contact.waist_radius &&
+			                               (held.support == hand::none ||
+			                                (runtime.view.owns_support && runtime.view.grip == lease::none)),
+			                           squeeze.active && squeeze.down,
+			                           true);
+			if (trigger == trigger_route::fire || trigger == trigger_route::secondary_supply)
+			{
+				if (trigger == trigger_route::fire)
+				{
+					if (!input.trigger[int(held.rear)].down && input.trigger[off].active &&
+					    input.trigger[off].down && input.trigger[off].generation == pinch.generation &&
+					    !apply(runtime, operation::shot, &contact, true))
+						++rejected;
+				}
+				else if (runtime.view.grip == lease::none && grip_down && input.trigger[off].active &&
+				         input.trigger[off].down && input.trigger[off].generation == pinch.generation &&
+				         hand_interaction::granted(hand(off),
+				                                   hand_interaction::domain::underbarrel,
+				                                   held.id(),
+				                                   hand_interaction::button::trigger))
+				{
+					runtime.insertion_armed = false;
+					if (!apply(runtime, operation::draw, &contact))
+						++rejected;
+				}
+			}
+			publish(runtime);
 		}
 	}
 	bool enabled()noexcept{return alive && installed && carry::active() && firing_enabled();}
@@ -300,23 +573,63 @@ namespace vr::gameplay::weapons::underbarrel
 				hi::offer({actor,{hi::object(hi::domain::underbarrel,s.owner.id(),0,s.assembly),hi::role::supply,hi::button::trigger,hi::recipe::single,{}},pinch.event,30,s.waist_distance/s.waist_radius,1,true,true});
 		}
 	}
-	void report_interactions()noexcept
+	void report_interactions() noexcept
 	{
-		namespace hi=hand_interaction;
-		for(const auto& e:records.entries())if(e.id){const auto& v=e.value.view;if(!v.active || !carry::contains(v.owner.id()) || !valid_hand(v.owner.rear))continue;
-			if(v.ammo.held)hi::observed(v.ammo.loader,{hi::object(hi::domain::underbarrel,e.id,0,e.value.assembly),hi::role::supply,hi::button::trigger,hi::recipe::single,{}});
-			else if(v.grip!=lease::none)hi::observed(hand(1-int(v.owner.rear)),{hi::object(hi::domain::underbarrel,e.id,0,e.value.assembly),v.grip==lease::firing?hi::role::firing:hi::role::foregrip,hi::button::grip,hi::recipe::single,grip_capabilities(v.ammo.id.type,v.grip)});}
+		namespace hi = hand_interaction;
+		for (const auto& entry : records.entries())
+		{
+			if (!entry.id)
+				continue;
+			const auto& module = entry.value.view;
+			if (!module.active || !carry::contains(module.owner.id()))
+				continue;
+			const auto target = hi::object(hi::domain::underbarrel, entry.id, 0, entry.value.assembly);
+			if (module.ammo.held)
+			{
+				hi::observed(module.ammo.loader,
+				             {target, hi::role::supply, hi::button::trigger, hi::recipe::single, {}});
+				continue;
+			}
+
+			const auto actor = module_grip_hand(module);
+			if (module.grip == lease::none || !valid_hand(actor))
+				continue;
+			const auto role = module.grip == lease::firing ? hi::role::firing : hi::role::foregrip;
+			const auto abilities = carry::held(entry.id).can_fire()
+			                           ? grip_capabilities(module.ammo.id.type, module.grip)
+			                           : hi::capability::aim;
+			hi::observed(actor, {target, role, hi::button::grip, hi::recipe::single, abilities});
+		}
 	}
 	presentation current(weapon_identity id)noexcept
 	{const std::lock_guard lock(publication);const auto* p=views.find(id);return p?*p:presentation{};}
 	void suspend()noexcept
 	{if(!scheduler::is_executing(scheduler::pipeline::server))return;for(auto& e:records.entries())if(e.id)interrupt(e.value);}
-	bool prepare_transfer(weapon_identity id)noexcept
+	bool prepare_carry_release(const hold& owner,
+	                           unsigned released_hands,
+	                           const controller_input::frame& input) noexcept
 	{
-		if(!scheduler::is_executing(scheduler::pipeline::server))return false;auto* r=records.find(id);if(!r)return true;
-		const auto observed=native::observe(r->module);if(!observed.valid || observed.ammo.loaded!=r->view.ammo.loaded)return false;
-		if(r->view.ammo.reserve!=observed.ammo.reserve){r->view.ammo.reserve=observed.ammo.reserve;++r->view.ammo.revision;}
-		return interrupt(*r);
+		if (!scheduler::is_executing(scheduler::pipeline::server))
+			return false;
+		auto* module = records.find(owner.id());
+		if (!module)
+			return true;
+
+		if (!prepare_transfer_ammunition(*module))
+			return false;
+
+		// Carry calls this before committing the released-hand topology. Preserve
+		// the still-held module here, so the later carry-only update can retain it.
+		if (retain_grip_on_control_release(module->view, owner, released_hands, input, module->acquired_grip))
+			return true;
+		return interrupt(*module);
+	}
+	bool prepare_transfer(weapon_identity id) noexcept
+	{
+		if (!scheduler::is_executing(scheduler::pipeline::server))
+			return false;
+		auto* module = records.find(id);
+		return !module || (prepare_transfer_ammunition(*module) && interrupt(*module));
 	}
 	bool restore_transfer(const presentation& saved)noexcept
 	{
@@ -358,60 +671,122 @@ namespace vr::gameplay::weapons::underbarrel
 		const float distance=firing_distance(hands::scale(hands::sub(local.position,s.firing_local.position),1/s.units),s.firing_forward_m);
 		return support_intent(distance,controller_facing(q,int(actor)),s.type);
 	}
-	static void update_modules(const controller_input::frame& input,std::span<const carry::instance> owned,std::span<const carry::scene> weapons,
-		const std::array<hands::anchor,2>& wrists,const head_pose_bridge::spatial_frame& body)noexcept
+	static void update_modules(const controller_input::frame& input,
+	                           std::span<const carry::instance> owned,
+	                           std::span<const carry::scene> weapons,
+	                           const std::array<hands::anchor, 2>& wrists,
+	                           const head_pose_bridge::spatial_frame& body) noexcept
 	{
-		if(!scheduler::is_executing(scheduler::pipeline::server) || !game::CL_IsCgameInitialized())return;
-		const auto* ps=reinterpret_cast<const game::playerState_s*>(game::g_entities[0].client);if(!ps)return;
-		if(player!=ps || ps->commandTime<command_time || timeline!=native_ammunition::timeline())
-		{records={};const std::lock_guard lock(publication);views={};player=ps;timeline=native_ammunition::timeline();}
-		command_time=ps->commandTime;
-		if(!enabled()){suspend();return;}
-		std::array<scene,15> copy{};size_t count{};
-		{const std::lock_guard lock(publication);for(const auto& e:scenes.entries())if(e.id && count<copy.size())copy[count++]=e.value;}
-		records.retain([](weapon_identity id){return carry::contains(id)||native_carry::tracks(id);});
-		{const std::lock_guard lock(publication);views.retain([](weapon_identity id){return records.find(id)!=nullptr;});}
-		for(auto& e:records.entries())if(e.id && !carry::held(e.id).can_fire())interrupt(e.value);
-		for(size_t i=0;i<count;++i)
+		if (!scheduler::is_executing(scheduler::pipeline::server) || !game::CL_IsCgameInitialized())
+			return;
+		const auto* ps = reinterpret_cast<const game::playerState_s*>(game::g_entities[0].client);
+		if (!ps)
+			return;
+		if (player != ps || ps->commandTime < command_time || timeline != native_ammunition::timeline())
 		{
-			auto s=copy[i];if(!s.owner.id())continue;
-			const carry::scene* current_scene{};
-			for(size_t n=0;n<owned.size() && n<weapons.size();++n)if(owned[n].id==s.owner.id() && owned[n].at==carry::location::held){current_scene=&weapons[n];break;}
-			if(!current_scene || !binding_current(s,*current_scene,input))continue;
-			auto* r=records.find(s.owner.id());
-			// A retained slider/pump grasp must measure motion in the same rear-
-			// driven frame before and after closure, not in its own IK feedback.
-			const auto gun=s.type!=kind::m203 && r && (r->view.grip==lease::action || r->view.grip==lease::support)?mechanical_frame(*current_scene,wrists):current_scene->gun;
-			s=sample_contact(s,input,current_scene->owner,gun,wrists[s.contact_hand],body.head_position,body.head_yaw_axis,body.units_per_meter,r?r->view.travel:0);
+			records = {};
+			const std::lock_guard lock(publication);
+			views = {};
+			player = ps;
+			timeline = native_ammunition::timeline();
+		}
+		command_time = ps->commandTime;
+		if (!enabled())
+		{
+			suspend();
+			return;
+		}
+		std::array<scene, 15> copy{};
+		size_t count{};
+		{
+			const std::lock_guard lock(publication);
+			for (const auto& e : scenes.entries())
+				if (e.id && count < copy.size())
+					copy[count++] = e.value;
+		}
+		records.retain([](weapon_identity id) { return carry::contains(id) || native_carry::tracks(id); });
+		{
+			const std::lock_guard lock(publication);
+			views.retain([](weapon_identity id) { return records.find(id) != nullptr; });
+		}
+		for (auto& entry : records.entries())
+		{
+			if (!entry.id)
+				continue;
+			const auto owner = carry::held(entry.id);
+			if (!owner.can_fire())
+				update_carry_only_grip(
+				    entry.value, owner, find_held_scene(entry.id, owned, weapons), input, clock::now());
+		}
+		for (size_t i = 0; i < count; ++i)
+		{
+			auto s = copy[i];
+			if (!s.owner.id())
+				continue;
+			const auto* current_scene = find_held_scene(s.owner.id(), owned, weapons);
+			if (!current_scene || !binding_current(s, *current_scene, input))
+				continue;
+			auto* r = records.find(s.owner.id());
+			const auto previous_grip = r ? r->view.grip : lease::none;
+			const auto travel = r ? r->view.travel : 0.f;
+			// Every module fires, loads and acquires new grasps in the visible
+			// weapon frame. Only retained shotgun motion uses the pump frame.
+			s = sample_contact(s,
+			                   input,
+			                   current_scene->owner,
+			                   current_scene->gun,
+			                   wrists[s.contact_hand],
+			                   body.head_position,
+			                   body.head_yaw_axis,
+			                   body.units_per_meter,
+			                   travel);
+			if (uses_pump_frame(s.type, previous_grip))
+				sample_pump_motion(s, *current_scene, wrists, travel);
 			// The caller already admitted current gameplay/tracking. A paused or
 			// culled render sample owns local geometry, not today's input authority.
-			s.gameplay=true;
-			if(!r)
+			s.gameplay = true;
+			if (!r)
 			{
-				const auto binding=native::resolve(s.owner.id());
-				if(!binding || binding.id.type!=s.type){reason="unsupported, duplicate or aliased secondary binding";continue;}
-				const auto obs=native::observe(binding);if(!obs.valid)continue;
-				r=records.acquire(s.owner.id());if(!r)continue;
-				r->module=binding;r->view.ammo=import_native(binding.id,obs.ammo.loaded,obs.ammo.reserve);r->view.active=valid(r->view.ammo);r->view.owner=s.owner;
-			}
-			if(r->view.active)
-			{
-				auto& motion=r->view.motion;
-				motion.sequence=input.sequence;motion.assembly=s.assembly;motion.sampled_at=input.sampled_at;
-				motion.grip_generation=input.squeeze[s.contact_hand].generation;motion.units=body.units_per_meter;
-				motion.span=relative_hand_span(wrists,int(s.owner.rear),body.units_per_meter);
-				motion.hand=s.local_hand;motion.distance=s.hand_distance;motion.axis=s.axis;motion.rest=s.rest_span;
-				motion.stroke=s.stroke;motion.tolerance=support_limits(s.type,s.support_release);
-				const bool moving=r->view.grip==lease::action || r->view.grip==lease::support;
-				tick(*r,s,clock::now());
-				if(s.type!=kind::m203 && !moving && r->view.grip==lease::action)
+				const auto binding = native::resolve(s.owner.id());
+				if (!binding || binding.id.type != s.type)
 				{
-					// Acquisition used the visible contact. Seed travel in the same
-					// rear-driven frame used next tick; changing IK frames is not a pull.
-					const auto stable=sample_contact(s,input,current_scene->owner,mechanical_frame(*current_scene,wrists),
-						wrists[s.contact_hand],body.head_position,body.head_yaw_axis,body.units_per_meter,r->view.travel);
-					r->start=r->previous=stable.local_hand;r->start_travel=r->view.travel;
-					r->view.motion.hand=stable.local_hand;
+					reason = "unsupported, duplicate or aliased secondary binding";
+					continue;
+				}
+				const auto obs = native::observe(binding);
+				if (!obs.valid)
+					continue;
+				r = records.acquire(s.owner.id());
+				if (!r)
+					continue;
+				r->module = binding;
+				r->view.ammo = import_native(binding.id, obs.ammo.loaded, obs.ammo.reserve);
+				r->view.active = valid(r->view.ammo);
+				r->view.owner = s.owner;
+			}
+			if (r->view.active)
+			{
+				auto& motion = r->view.motion;
+				motion.sequence = input.sequence;
+				motion.assembly = s.assembly;
+				motion.sampled_at = input.sampled_at;
+				motion.grip_generation = input.squeeze[s.contact_hand].generation;
+				motion.units = body.units_per_meter;
+				motion.span = relative_hand_span(wrists, int(s.owner.rear), body.units_per_meter);
+				motion.hand = s.stroke_hand;
+				motion.distance = s.hand_distance;
+				motion.axis = s.axis;
+				motion.rest = s.rest_span;
+				motion.stroke = s.stroke;
+				motion.tolerance = support_limits(s.type, s.support_release);
+				tick(*r, s, clock::now());
+				if (!uses_pump_frame(s.type, previous_grip) && uses_pump_frame(s.type, r->view.grip))
+				{
+					// Seed a newly acquired pump from the same frame used next tick.
+					// Switching from visible acquisition to stroke tracking is not a pull.
+					sample_pump_motion(s, *current_scene, wrists, r->view.travel);
+					rebase_stroke(*r, s);
+					r->view.motion.hand = s.stroke_hand;
 					publish(*r);
 				}
 			}

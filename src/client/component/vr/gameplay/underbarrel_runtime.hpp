@@ -14,38 +14,112 @@ namespace vr::gameplay::weapons::underbarrel
 	using lease=contact_role;
 	struct scene
 	{
-		controller_input::frame input{};hold owner{};kind type{};std::uint64_t assembly{};
-		bool gameplay{};float firing_distance{10},facing{},action_distance{10},waist_distance{10},load_distance{10},load_alignment{};
-		hands::vec local_hand{},axis{};float stroke{},units{};hands::anchor muzzle{};
+		controller_input::frame input{};
+		hold owner{};
+		kind type{};
+		std::uint64_t assembly{};
+		bool gameplay{};
+		float firing_distance{10}, facing{}, action_distance{10}, waist_distance{10}, load_distance{10},
+		    load_alignment{};
+		hands::vec stroke_hand{}, axis{};
+		float stroke{}, units{};
+		hands::anchor muzzle{};
+		// New grabs use action_distance in the visible weapon frame. A held
+		// shotgun pump measures only stroke/retention in its unsteered frame.
+		float action_retention_distance{10};
 		// Immutable local contacts are published by the renderer; the server
 		// reconstructs geometry with the SAME input as ordinary carry arbitration.
-		int contact_hand{-1};float support_facing{-1},waist_radius{.2f};body_supply_layout supply{};
-		hands::quat wrist_basis{0,0,0,1}; // Visual round/hand placement only, never input-facing classification.
-		hands::anchor firing_local{},action_local{},round_in_wrist{},loading_local{},muzzle_local{};
+		int contact_hand{-1};
+		float support_facing{-1}, waist_radius{.2f};
+		body_supply_layout supply{};
+		// Visual round/hand placement only, never input-facing classification.
+		hands::quat wrist_basis{0, 0, 0, 1};
+		hands::anchor firing_local{}, action_local{}, round_in_wrist{}, loading_local{}, muzzle_local{};
 		float firing_forward_m{};
-		hands::vec rear_local{},rest_span{};float hand_distance{},support_radius{.075f},support_release{.22f};
+		hands::vec rear_local{}, rest_span{};
+		float hand_distance{}, support_radius{.075f}, support_release{.22f};
 	};
-	inline bool finite_contact(const scene& s)noexcept
+	inline bool finite_contact(const scene& s) noexcept
 	{
-		if(!std::isfinite(s.units) || s.units<=0 || !std::isfinite(s.stroke) || s.stroke<=0 || s.stroke>.5f)return false;
-		for(float d:{s.firing_distance,s.action_distance,s.waist_distance,s.load_distance})if(!std::isfinite(d)||d<0)return false;
-		for(float f:s.local_hand)if(!std::isfinite(f)||std::abs(f)>1000)return false;
-		const auto length=hands::length(s.axis);
-		return std::isfinite(length) && length>.99f && length<1.01f && std::isfinite(s.facing) && std::isfinite(s.load_alignment);
+		if (!std::isfinite(s.units) || s.units <= 0 || !std::isfinite(s.stroke) || s.stroke <= 0 ||
+		    s.stroke > .5f)
+			return false;
+		for (float d : {s.firing_distance,
+		                s.action_distance,
+		                s.action_retention_distance,
+		                s.waist_distance,
+		                s.load_distance})
+			if (!std::isfinite(d) || d < 0)
+				return false;
+		for (float f : s.stroke_hand)
+			if (!std::isfinite(f) || std::abs(f) > 1000)
+				return false;
+		const auto length = hands::length(s.axis);
+		return std::isfinite(length) && length > .99f && length < 1.01f && std::isfinite(s.facing) &&
+		       std::isfinite(s.load_alignment);
 	}
 	struct action_display
 	{
-		std::uint64_t sequence{},assembly{},grip_generation{};clock::time_point sampled_at{};
-		hands::vec span{},hand{},start{},previous{},axis{},rest{};
-		float units{},distance{},start_distance{},previous_distance{},initial{},stroke{};
+		std::uint64_t sequence{}, assembly{}, grip_generation{};
+		clock::time_point sampled_at{};
+		hands::vec span{}, hand{}, start{}, previous{}, axis{}, rest{};
+		float units{}, distance{}, start_distance{}, previous_distance{}, initial{}, stroke{};
 		part_limits tolerance{};
 	};
 	struct presentation
 	{
-		bool active{},fault{},owns_support{};state ammo{};hold owner{};lease grip{},support_role{};float travel{};
-		std::uint64_t reference{};clock::time_point at{};
+		bool active{}, fault{}, owns_support{};
+		state ammo{};
+		hold owner{};
+		lease grip{}, support_role{};
+		float travel{};
+		std::uint64_t reference{};
+		clock::time_point at{};
 		action_display motion{};
 	};
+	inline hand module_grip_hand(const presentation& module) noexcept
+	{
+		return valid_hand(module.owner.rear) ? hand(1 - int(module.owner.rear)) : module.owner.support;
+	}
+	// Releasing only the host control grip does not release the module hand.
+	// Retain the original physical Grip press, never a fresh/reconnected press.
+	inline bool can_retain_module_grip(const presentation& module,
+	                                   const hold& owner,
+	                                   const controller_input::frame& input,
+	                                   const controller_input::digital_action& acquired) noexcept
+	{
+		if (!module.active || module.fault || !module.owns_support || module.grip == lease::none ||
+		    module.ammo.held)
+			return false;
+
+		const auto actor = module_grip_hand(module);
+		const bool same_hand = valid_hand(actor) && owner.support == actor && owner.rear != actor;
+		if (!same_hand || !owner.id() || owner.id() != module.owner.id())
+			return false;
+
+		if (!input.focused || input.reference_generation != module.reference ||
+		    !input.grip[int(actor)].valid || !input.aim[int(actor)].valid)
+			return false;
+
+		const auto& current = input.squeeze[int(actor)];
+		return acquired.active && acquired.down && current.active && current.down &&
+		       current.generation == acquired.generation && current.presses == acquired.presses &&
+		       current.releases == acquired.releases;
+	}
+	inline bool retain_grip_on_control_release(const presentation& module,
+	                                           const hold& owner,
+	                                           unsigned released_hands,
+	                                           const controller_input::frame& input,
+	                                           const controller_input::digital_action& acquired) noexcept
+	{
+		if (!owner.can_fire() || !valid_hand(owner.support) ||
+		    owner.rear_revision != module.owner.rear_revision)
+			return false;
+
+		const bool control_released = (released_hands & (1u << int(owner.rear))) != 0;
+		const bool support_released = (released_hands & (1u << int(owner.support))) != 0;
+		return control_released && !support_released && can_retain_module_grip(module, owner, input, acquired);
+	}
 	inline hands::vec relative_hand_span(const std::array<hands::anchor,2>& wrists,int rear,float units)noexcept
 	{
 		return hands::scale(hands::rotate(hands::conjugate(wrists[rear].rotation),
@@ -125,7 +199,10 @@ namespace vr::gameplay::weapons::underbarrel
 	                              bool retaining = false) noexcept;
 	void suspend()noexcept;
 	bool blocks_native(const void* ps)noexcept;
-	bool prepare_transfer(weapon_identity)noexcept;
+	bool prepare_carry_release(const hold&,
+	                           unsigned released_hands,
+	                           const controller_input::frame&) noexcept;
+	bool prepare_transfer(weapon_identity) noexcept;
 	bool restore_transfer(const presentation&)noexcept;
 	inline bool binding_current(const scene& local,const carry::scene& live,const controller_input::frame& input)noexcept
 	{
@@ -133,35 +210,82 @@ namespace vr::gameplay::weapons::underbarrel
 			local.owner.id()==live.owner.id() && local.contact_hand==1-int(live.owner.rear) &&
 			live.sequence==input.sequence && live.reference==input.reference_generation;
 	}
-	inline hands::anchor mechanical_frame(const carry::scene& local,const std::array<hands::anchor,2>& wrists)noexcept
+	inline hands::anchor pump_frame(const carry::scene& local,
+	                                const std::array<hands::anchor, 2>& wrists) noexcept
 	{
-		const int rear=int(local.owner.rear);if(rear<0 || rear>1)return {};
-		const auto& driver=wrists[rear];
-		return {hands::sub(driver.position,hands::rotate(driver.rotation,local.wrists[rear].position)),driver.rotation};
+		const int rear = int(local.owner.rear);
+		if (rear < 0 || rear > 1)
+			return {};
+		const auto& driver = wrists[rear];
+		return {hands::sub(driver.position, hands::rotate(driver.rotation, local.wrists[rear].position)),
+		        driver.rotation};
 	}
-	inline scene sample_contact(scene s,const controller_input::frame& input,const hold& owner,const hands::anchor& gun,
-		const hands::anchor& wrist,hands::vec head,const std::array<hands::vec,3>& body_axis,float units,float travel)noexcept
+	inline bool uses_pump_frame(kind type, lease grasp) noexcept
 	{
-		using namespace hands;using namespace hands::pose_math;
-		s.input=input;s.owner=owner;s.units=units;
-		const auto local=compose(inverse(gun),{wrist.position,normalize(multiply(wrist.rotation,s.wrist_basis))});
-		const auto physical=multiply(conjugate(gun.rotation),wrist.rotation);
-		const auto scores=controller_facing(physical,s.contact_hand);s.support_facing=scores.support;
-		s.firing_distance=underbarrel::firing_distance(scale(sub(local.position,s.firing_local.position),1/units),s.firing_forward_m);
-		s.rest_span=scale(sub(s.action_local.position,s.rear_local),1/units);
-		s.hand_distance=length(sub(wrist.position,compose(gun,{s.rear_local,{0,0,0,1}}).position))/units;
-		if(directional_grips(s.type))s.facing=scores.firing;
+		return type == kind::shotgun && (grasp == lease::action || grasp == lease::support);
+	}
+	inline void sample_pump_motion(scene& contact,
+	                               const carry::scene& weapon,
+	                               const std::array<hands::anchor, 2>& wrists,
+	                               float travel) noexcept
+	{
+		using namespace hands;
+		using namespace hands::pose_math;
+		const auto frame = pump_frame(weapon, wrists);
+		const auto hand = compose(inverse(frame), wrists[contact.contact_hand]).position;
+		const auto action = add(contact.action_local.position, scale(contact.axis, travel * contact.units));
+		contact.stroke_hand = scale(hand, 1 / contact.units);
+		contact.action_retention_distance = length(sub(hand, action)) / contact.units;
+		// Muzzle, firing/reload contacts and new-grab admission remain in the
+		// visible weapon frame, even when this tick starts with a pump lease.
+	}
+	inline scene sample_contact(scene s,
+	                            const controller_input::frame& input,
+	                            const hold& owner,
+	                            const hands::anchor& gun,
+	                            const hands::anchor& wrist,
+	                            hands::vec head,
+	                            const std::array<hands::vec, 3>& body_axis,
+	                            float units,
+	                            float travel) noexcept
+	{
+		using namespace hands;
+		using namespace hands::pose_math;
+		s.input = input;
+		s.owner = owner;
+		s.units = units;
+		const auto local =
+		    compose(inverse(gun), {wrist.position, normalize(multiply(wrist.rotation, s.wrist_basis))});
+		const auto physical = multiply(conjugate(gun.rotation), wrist.rotation);
+		const auto scores = controller_facing(physical, s.contact_hand);
+		s.support_facing = scores.support;
+		s.firing_distance = underbarrel::firing_distance(
+		    scale(sub(local.position, s.firing_local.position), 1 / units), s.firing_forward_m);
+		s.rest_span = scale(sub(s.action_local.position, s.rear_local), 1 / units);
+		s.hand_distance =
+		    length(sub(wrist.position, compose(gun, {s.rear_local, {0, 0, 0, 1}}).position)) / units;
+		if (directional_grips(s.type))
+			s.facing = scores.firing;
 		else
-		{float q{};for(int i=0;i<4;++i)q+=local.rotation[i]*s.firing_local.rotation[i];s.facing=2*q*q-1;}
-		const auto action=add(s.action_local.position,scale(s.axis,travel*units));
-		s.action_distance=length(sub(local.position,action))/units;s.local_hand=scale(local.position,1/units);
-		const auto round=compose(local,s.round_in_wrist);
-		s.load_distance=length(sub(round.position,s.loading_local.position))/units;
-		s.load_alignment=dot(rotate(round.rotation,{1,0,0}),rotate(s.loading_local.rotation,{1,0,0}));
-		s.waist_distance=10;
-		for(const auto& volume:body_supply_volumes(head,body_axis,units,s.supply,s.waist_radius))
-			s.waist_distance=std::min(s.waist_distance,volume.distance(wrist.position)/units);
-		s.muzzle=compose(gun,s.muzzle_local);return s;
+		{
+			float q{};
+			for (int i = 0; i < 4; ++i)
+				q += local.rotation[i] * s.firing_local.rotation[i];
+			s.facing = 2 * q * q - 1;
+		}
+		const auto action = add(s.action_local.position, scale(s.axis, travel * units));
+		s.action_distance = length(sub(local.position, action)) / units;
+		s.stroke_hand = scale(local.position, 1 / units);
+		s.action_retention_distance = s.action_distance;
+		const auto round = compose(local, s.round_in_wrist);
+		s.load_distance = length(sub(round.position, s.loading_local.position)) / units;
+		s.load_alignment =
+		    dot(rotate(round.rotation, {1, 0, 0}), rotate(s.loading_local.rotation, {1, 0, 0}));
+		s.waist_distance = 10;
+		for (const auto& volume : body_supply_volumes(head, body_axis, units, s.supply, s.waist_radius))
+			s.waist_distance = std::min(s.waist_distance, volume.distance(wrist.position) / units);
+		s.muzzle = compose(gun, s.muzzle_local);
+		return s;
 	}
 	hands::anchor support_anchor(const part_rig&,const hands::rig&,const hands::pose_library&,hands::anchor ordinary,
 		int hand,const presentation&,float units)noexcept;

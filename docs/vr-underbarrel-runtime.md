@@ -22,6 +22,32 @@ new secondary acquisition against conflicting primary-part contacts regardless
 of whether input or rendering evaluates first. A blocked edge cannot replay
 later while Trigger remains held.
 
+Releasing the host's control grip while the other hand continues holding the
+module retains that module hand and its firing/support/action grasp. It carries
+the weapon without firing or advancing a reload action. Regrasping the host
+control rebases the existing stroke and consumes that transition sample; it
+does not release the module hand or replay a Trigger press. Retention requires
+the same physical weapon, assembly, tracking reference and uninterrupted module
+Grip press. Releasing that hand, losing tracking/focus or changing the input
+generation still ends the grasp. This policy is shared by all admitted M203,
+GP-25 and underbarrel-shotgun assemblies, including retained partial action
+travel on an open launcher or shotgun.
+
+Carry-release preparation checks the released-hand mask before clearing module
+state. Releasing only the host control preserves the validated module Grip;
+releasing the module hand or both hands still interrupts the grasp and settles
+any held round. This check runs before inventory ownership changes, as well as
+the subsequent carry-only and control-regrasp checks.
+
+| Mechanism | Registered host families | Grip during host release/regrasp | Action measurement |
+| --- | --- | --- | --- |
+| M203 | M4, M16, SCAR-H, ACR | Retain the same firing, support or action grasp | Shared hand-span slider |
+| GP-25 | AK-47 | Retain the same support/firing grasp | No sliding or pump action |
+| Underbarrel shotgun | AK-47, SCAR-H, FAL | Retain the same firing, support or pump grasp | Separate rear-hand pump frame |
+
+Admitted cosmetic and optic variants inherit their mechanism's policy. Native
+host/module identity and attachment checks still determine admission.
+
 The body-supply modifier uses the existing belt interaction and escrow rules.
 The secondary module receives the round only after the host, module, hand, and
 native capacity have been validated. Reserve changes do not convert to loaded
@@ -75,6 +101,13 @@ grenade, trigger, and sight groups. A GP-25 sight is not a barrel endpoint.
 Shotgun sound feedback uses the module's native aliases; M203 and GP-25 retain
 their own native notetrack mappings. Sound and haptic delivery are presentation
 events and cannot authorize a shot or change ammunition.
+
+All three mechanisms use the current visible weapon pose for muzzle origin,
+firing direction, loading contacts and acquisition of a new grasp. Only an
+already held shotgun pump uses the separate rear-hand frame for stroke and
+positional retention. These two measurements are sampled independently, so a
+pump-to-firing-grip transition cannot inherit a shot direction from the pump
+frame. M203 retains its shared hand-span measurement; GP-25 has no moving action.
 
 ## Admission, state, and diagnostics
 
