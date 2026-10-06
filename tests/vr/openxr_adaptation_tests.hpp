@@ -276,9 +276,14 @@ namespace openxr_adaptation_tests
 		vr::engine_stereo_bridge::set_render_hook_installed(true);
 		vr::engine_stereo_bridge::set_enabled(true);
 	}
-	template <class Loader> void native_pair(Loader& loader, const d3d11::device_snapshot& graphics)
+	template <class Loader>
+	void native_pair(Loader& loader, const d3d11::device_snapshot& graphics,
+	                 vr::tests::mock::scenario scenario = vr::tests::mock::scenario::happy)
 	{
-		configure(loader, graphics, vr::tests::mock::scenario::happy);
+		configure(loader, graphics, scenario);
+		vr::head_pose_bridge::reset();
+		vr::head_pose_bridge::configure_target(true);
+		vr::head_pose_bridge::set_enabled(true);
 		loader.set_synthetic_checks(FALSE);
 		loader.set_eye_extent(256, 256);
 		vr::tests::native_resolution_override = vr::engine_scene_resolution::extent{256, 256};
@@ -287,6 +292,7 @@ namespace openxr_adaptation_tests
 		    {
 			    vr::tests::native_resolution_override.reset();
 			    vr::engine_stereo_bridge::set_enabled(false);
+			    vr::head_pose_bridge::reset();
 		    });
 		renderer_proof = {
 		    .state = vr::native_stereo_source::phase::ready,
@@ -321,6 +327,24 @@ namespace openxr_adaptation_tests
 		                               runtime.get_status().native_renderer_ready,
 		                               runtime.get_status().last_error,
 		                               runtime.get_status().native_renderer_error));
+		vr::head_pose_bridge::tracking_reference reference;
+		vr::engine_stereo_bridge::view_family family;
+		vr::tests::require(vr::head_pose_bridge::get_tracking_reference(reference) &&
+		                       vr::engine_stereo_bridge::get_view_family(family),
+		                   "native prediction did not publish a head and eye family");
+		const bool rotated = scenario == vr::tests::mock::scenario::parallel_views;
+		const vr::pose_filter::vec center = rotated ? vr::pose_filter::vec{.1f, .02f, -.03f}
+		                                           : vr::pose_filter::vec{};
+		const auto expected_rotation = vr::pose_filter::rotation(
+		    {0, rotated ? std::sin(.1f) : 0, 0, rotated ? std::cos(.1f) : 1});
+		vr::tests::require(vr::pose_filter::length(vr::pose_filter::sub(reference.origin.position_meters, center)) < .00001f &&
+		                       vr::pose_filter::length(vr::pose_filter::sub(family.left_position, {-.032f, 0, 0})) < .00001f &&
+		                       vr::pose_filter::length(vr::pose_filter::sub(family.right_position, {.032f, 0, 0})) < .00001f,
+		                   "native eye offsets and head origin must use the same located eye sample");
+		for (unsigned row = 0; row < 3; ++row)
+			vr::tests::require(vr::pose_filter::length(vr::pose_filter::sub(
+			                       reference.origin.orientation[row], expected_rotation[row])) < .00001f,
+			                   "native shared rotation differs from the located eye cameras");
 		Microsoft::WRL::ComPtr<ID3D11Texture2D> texture;
 		Microsoft::WRL::ComPtr<ID3D11RenderTargetView> target;
 		vr::tests::require(
@@ -525,6 +549,23 @@ namespace openxr_adaptation_tests
 		        status.last_error.find("canted eye orientations") != std::string::npos &&
 		        loader.statistics().frames_waited == 1 && loader.statistics().zero_layer_frames == 1,
 		    "unrepresentable native eye rotations must stop without submitting a flattened view");
+		for (const auto* evidence : {"reason=stereo_eye_orientation_mismatch source=adapter_guard",
+		                             "pair=1 predicted_display_time=1", "session_generation=1",
+		                             "view_flags=0xF head_flags=0xF",
+		                             "raw_left_q_xyzw=[0.000000000,-0.050000001,",
+		                             "raw_right_q_xyzw=[0.000000000,0.050000001,",
+		                             "raw_head_q_xyzw=[0.000000000,0.000000000,0.000000000,1.000000000]"})
+			vr::tests::require(status.last_error.find(evidence) != std::string::npos,
+			                   std::format("cant rejection lost trigger evidence: {}", evidence));
+		const auto angle_field = [&](const std::string& key)
+		{
+			const auto start = status.last_error.find(key);
+			vr::tests::require(start != std::string::npos, "cant rejection omitted its angle or limit");
+			return std::stof(status.last_error.substr(start + key.size()));
+		};
+		vr::tests::require(angle_field("eye_angle_deg=") > 11 && angle_field("eye_angle_deg=") < 12 &&
+		                       angle_field("max_eye_angle_deg=") > .4f && angle_field("max_eye_angle_deg=") < .6f,
+		                   "cant rejection must report the measured angle and enforced limit in degrees");
 		runtime.shutdown();
 	}
 

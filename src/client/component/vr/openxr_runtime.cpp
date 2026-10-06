@@ -16,7 +16,6 @@
 #include "present_transaction.hpp"
 #include "pose_filter.hpp"
 #include "touch_controller_reference.hpp"
-#include "spatial_math.hpp"
 #include "engine_scene_resolution.hpp"
 #include "movie_presentation.hpp"
 #include "presentation_options.hpp"
@@ -1401,36 +1400,69 @@ namespace vr::openxr
 				(void)finish_prediction(world_submission::omit);
 				return false;
 			}
+			std::array<head_pose_bridge::tracking_pose, 2> eye_poses{};
+			std::array<pose_filter::quat, 2> eye_rotations{};
 			for (unsigned eye = 0; eye < 2; ++eye)
 			{
-				head_pose_bridge::tracking_pose checked;
-					if (!copy_pose(prediction_.views[eye].pose, checked))
-					{
-						inputs_.invalidate(controller_input::input_reason::pose_invalid);
+				if (!copy_pose(prediction_.views[eye].pose, eye_poses[eye]))
+				{
+					inputs_.invalidate(controller_input::input_reason::pose_invalid);
 					(void)finish_prediction(world_submission::omit);
 					return false;
 				}
-				// H2's current family bridge expresses eye positions and FOV, with
-				// a shared head rotation. Do not silently flatten canted eye cameras.
-				const auto& eye_rotation = prediction_.views[eye].pose.orientation;
-				const auto& head_rotation = head.pose.orientation;
-				const float alignment = eye_rotation.x * head_rotation.x + eye_rotation.y * head_rotation.y +
-				                        eye_rotation.z * head_rotation.z + eye_rotation.w * head_rotation.w;
-					if (status_.requested_scene_mode == scene_mode::engine_stereo &&
-					    std::abs(alignment) < .99999f)
-					{
-						inputs_.invalidate(controller_input::input_reason::view_configuration_unsupported,XR_ERROR_FEATURE_UNSUPPORTED);
-					head_pose_bridge::invalidate_pose();
-					(void)finish_prediction(world_submission::omit);
-					return fail(runtime_state::fatal_for_vr,
-					            "OpenXR native bridge cannot represent canted eye orientations",
-					            XR_ERROR_FEATURE_UNSUPPORTED);
-				}
+				const auto& q = prediction_.views[eye].pose.orientation;
+				eye_rotations[eye] = pose_filter::normalize({q.x, q.y, q.z, q.w});
 				const auto& f = prediction_.views[eye].fov;
 				projections_[eye] = {std::tan(f.angleLeft),
 				                     std::tan(f.angleRight),
 				                     std::tan(f.angleDown),
 				                     std::tan(f.angleUp)};
+			}
+			if (status_.requested_scene_mode == scene_mode::engine_stereo)
+			{
+				// Only relative eye rotation determines whether H2's shared camera can
+				// represent this family. Separate locate calls may update prediction even
+				// at the same display time; VIEW-space disagreement is not optical cant.
+				const auto alignment = std::abs(pose_filter::dot(eye_rotations[0], eye_rotations[1]));
+				constexpr float minimum_eye_alignment = .99999f;
+				if (alignment < minimum_eye_alignment)
+				{
+					// Capture the rejected sample before finish_prediction clears it. This
+					// is an adapter rejection, not an error returned by xrLocateViews.
+					constexpr float radians_to_degrees = 57.29577951308232f;
+					const auto& left = prediction_.views[0].pose.orientation;
+					const auto& right = prediction_.views[1].pose.orientation;
+					const auto& view_head = head.pose.orientation;
+					const auto error = std::format(
+					    "OpenXR native bridge cannot represent canted eye orientations: "
+					    "reason=stereo_eye_orientation_mismatch source=adapter_guard "
+					    "(left/right rotation exceeds the native shared-camera limit); "
+					    "eye_angle_deg={:.6f} max_eye_angle_deg={:.6f} "
+					    "eye_alignment={:.8f} min_eye_alignment={:.8f} "
+					    "pair={} predicted_display_time={} observed_tick_ms={} session_generation={} "
+					    "view_flags=0x{:X} head_flags=0x{:X} "
+					    "raw_left_q_xyzw=[{:.9f},{:.9f},{:.9f},{:.9f}] "
+					    "raw_right_q_xyzw=[{:.9f},{:.9f},{:.9f},{:.9f}] "
+					    "raw_head_q_xyzw=[{:.9f},{:.9f},{:.9f},{:.9f}]",
+					    pose_filter::angle(eye_rotations[0], eye_rotations[1]) * radians_to_degrees,
+					    2 * std::acos(minimum_eye_alignment) * radians_to_degrees,
+					    alignment, minimum_eye_alignment,
+					    prediction_.pair, prediction_.state.predictedDisplayTime, GetTickCount64(),
+					    status_.session_generation, state.viewStateFlags, head.locationFlags,
+					    left.x, left.y, left.z, left.w, right.x, right.y, right.z, right.w,
+					    view_head.x, view_head.y, view_head.z, view_head.w);
+					inputs_.invalidate(controller_input::input_reason::view_configuration_unsupported,
+					                   XR_ERROR_FEATURE_UNSUPPORTED);
+					head_pose_bridge::invalidate_pose();
+					(void)finish_prediction(world_submission::omit);
+					return fail(runtime_state::fatal_for_vr, error.c_str(), XR_ERROR_FEATURE_UNSUPPORTED);
+				}
+				// Render head, offsets and submitted views must describe one located
+				// sample. Keep the SDK's original eye poses for projection submission.
+				prediction_.head = {
+				    pose_filter::scale(pose_filter::add(eye_poses[0].position_meters,
+				                                       eye_poses[1].position_meters), .5f),
+				    pose_filter::rotation(pose_filter::slerp(eye_rotations[0], eye_rotations[1], .5f))};
 			}
 			head_pose_bridge::publish_tracking_pose(
 			    prediction_.head, pair, std::chrono::steady_clock::now(),
@@ -1480,15 +1512,12 @@ namespace vr::openxr
 					}
 					prediction_.native_pair_admitted = true;
 				}
-				const auto q = head.pose.orientation;
-				const spatial_math::quat inverse{-q.x, -q.y, -q.z, q.w};
+				const auto inverse = pose_filter::transpose(prediction_.head.orientation);
 				std::array<std::array<float, 3>, 2> eye_offsets;
 				for (unsigned eye = 0; eye < 2; ++eye)
 				{
-					const auto p = prediction_.views[eye].pose.position;
-					eye_offsets[eye] = spatial_math::rotate(
-					    inverse,
-					    {p.x - head.pose.position.x, p.y - head.pose.position.y, p.z - head.pose.position.z});
+					eye_offsets[eye] = pose_filter::rotate(
+					    inverse, pose_filter::sub(eye_poses[eye].position_meters, prediction_.head.position_meters));
 				}
 				if (!engine_stereo_bridge::publish_view_family(
 				        pair, eye_offsets[0], eye_offsets[1], projections_))

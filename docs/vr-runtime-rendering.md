@@ -304,10 +304,26 @@ GPU work completes before swapchain destruction, and failed destroy handles
 remain available for a later cleanup attempt.
 
 The current native family bridge has one head rotation plus per-eye positions
-and FOV. Independently rotated (canted) SDK eye cameras are explicitly rejected
+and FOV. Its render head uses the eye midpoint and common orientation from one
+`xrLocateViews` sample; offsets use that same basis and submission retains the
+original SDK eye poses. The adapter compares normalized left/right orientations,
+including quaternion sign equivalence. A separate `VIEW`-space query still gates
+tracking/recenter eligibility, but its orientation is not a cant test:
+[predictions may change between queries at the same display time](https://registry.khronos.org/OpenXR/specs/1.1/man/html/xrLocateViews.html).
+Independently rotated (canted) SDK eye cameras are explicitly rejected
 in native mode; supporting them requires a renderer-level camera representation
 change and headset acceptance. Profile binding presence does not establish
 support for every device exposing that profile.
+
+For this rejection, `vr_status` and its saved status report retain
+`reason=stereo_eye_orientation_mismatch source=adapter_guard` in `last_error`.
+The record includes the measured eye angle and limit, normalized alignment,
+frame pair, predicted display time, observation tick, session generation,
+tracking validity flags and the raw left/right/VIEW-space quaternions in XYZW
+order. Evidence is copied before frame cleanup, so subsequent Presents cannot
+replace it with a cleared sample. The feature-unsupported result is generated
+by the adapter guard; it is not an SDK query failure. Formatting occurs only
+on rejection, without per-frame logging.
 
 The strict mock rejects `xrEndSession` outside STOPPING. Explicit teardown
 retires frame/GPU use before destroying a session in another state.

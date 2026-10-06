@@ -10,6 +10,8 @@ namespace vr::tests::mock
 	{
 		happy,
 		canted_views,
+		parallel_views,
+		scaled_view_quaternions,
 		runtime_unavailable,
 		no_hmd,
 		graphics_mismatch,

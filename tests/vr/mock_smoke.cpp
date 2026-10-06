@@ -621,6 +621,8 @@ int main()
 		openxr_adaptation_tests::virtualdesktop_grip_reference(loader,graphics);
 		openxr_adaptation_tests::focused_input(loader,graphics);
 		openxr_adaptation_tests::native_pair(loader,graphics);
+		openxr_adaptation_tests::native_pair(loader,graphics,vr::tests::mock::scenario::parallel_views);
+		openxr_adaptation_tests::native_pair(loader,graphics,vr::tests::mock::scenario::scaled_view_quaternions);
 		openxr_adaptation_tests::frontend_menu(loader,graphics,false);
 		openxr_adaptation_tests::frontend_menu(loader,graphics,true);
 		openxr_adaptation_tests::canted_native_views(loader,graphics);

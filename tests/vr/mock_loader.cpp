@@ -31,6 +31,7 @@ struct XrSession_T
 	bool running{};
 	bool frame_waited{};
 	bool frame_begun{};
+	std::array<XrView, 2> located_views{};
 	XrActionSet actions{};bool synced{};XrTime display_time{};
 };
 
@@ -855,7 +856,21 @@ XrResult XRAPI_CALL mockLocateViews(const XrSession session, const XrViewLocateI
 		if(g_scenario==scenario::canted_views){views[index].pose.orientation.y=index==0?-.05f:.05f;views[index].pose.orientation.w=std::sqrt(1-.05f*.05f);}
 		views[index].pose.position.x = index == 0 ? -0.032f : 0.032f;
 		views[index].pose.position.y = g_head_height;
+		if (g_scenario == scenario::parallel_views)
+		{
+			// One coherent eye sample, different from the separately located VIEW space.
+			views[index].pose.orientation = {0, std::sin(.1f), 0, std::cos(.1f)};
+			const float offset = index == 0 ? -.032f : .032f;
+			views[index].pose.position = {.1f + offset * std::cos(.2f), g_head_height + .02f,
+			                              -.03f - offset * std::sin(.2f)};
+		}
+		if (g_scenario == scenario::scaled_view_quaternions)
+		{
+			// Equivalent rotations: opposite signs and small accepted length error.
+			views[index].pose.orientation.w = index == 0 ? .999f : -1.001f;
+		}
 		views[index].fov = {-0.7f, 0.7f, 0.7f, -0.7f};
+		session->located_views[index] = views[index];
 	}
 	const std::lock_guard lock(g_mutex);
 	++g_statistics.views_located;
@@ -878,8 +893,10 @@ XrResult XRAPI_CALL mockEndFrame(XrSession session,const XrFrameEndInfo* end)
 			for(unsigned eye=0;eye<2;++eye)
 			{
 				const auto& view=p->views[eye];
-				if(view.pose.orientation.x!=0 || view.pose.orientation.y!=0 || view.pose.orientation.z!=0 || view.pose.orientation.w!=1 ||
-					view.pose.position.x!=(eye==0?-.032f:.032f) || view.pose.position.y!=g_head_height || view.pose.position.z!=0 ||
+				const auto& expected = session->located_views[eye].pose;
+				if(view.pose.orientation.x!=expected.orientation.x || view.pose.orientation.y!=expected.orientation.y ||
+					view.pose.orientation.z!=expected.orientation.z || view.pose.orientation.w!=expected.orientation.w ||
+					view.pose.position.x!=expected.position.x || view.pose.position.y!=expected.position.y || view.pose.position.z!=expected.position.z ||
 					view.fov.angleLeft!=-.7f || view.fov.angleRight!=.7f || view.fov.angleUp!=.7f || view.fov.angleDown!=-.7f ||
 					view.type!=XR_TYPE_COMPOSITION_LAYER_PROJECTION_VIEW||!view.subImage.swapchain||view.subImage.imageArrayIndex||
 					view.subImage.imageRect.extent.width!=int(g_eye_width)||view.subImage.imageRect.extent.height!=int(g_eye_height)||
