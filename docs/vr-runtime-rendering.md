@@ -58,7 +58,7 @@ configurations. Install and activate the vendor runtime separately. The currentl
 validated combination uses SteamVR/OpenXR and Meta Quest controllers.
 See [installation and manual fallback](client-installation.md#runtime-selection).
 
-Defaults are `vr_enable=1`, `vr_headTracking=1`, and `vr_worldScale=39.3700787`. Saved settings are applied automatically at startup; see [launcher VR settings](vr-launcher-settings.md). After changing these initialization settings during a session, run `vr_reinit`. Use `vr_recenter` for recentering. `vr_status` prints status and attempts to write `minidumps/h2-mod-vr-status-latest.txt`.
+Defaults are `vr_enable=1`, `vr_headTracking=1`, and `vr_worldScale=39.3700787`. Saved settings are applied automatically at startup; see [launcher VR settings](vr-launcher-settings.md). After changing these initialization settings during a session, run `vr_reinit`. Use `vr_recenter` for recentering. `vr_status` prints status and attempts to write `minidumps/overlord-status-latest.txt`.
 
 `engine_stereo` is the production scene path. The desktop backbuffer is never used to replace missing eye data; both eyes must come from one immutable view family. Texture pixel dimensions do not define the camera's optical aspect ratio; projection uses runtime optical parameters. Full head orientation and special pitch handling are described in [terrain tessellation and head pitch](vr-shared-tessellation-and-head-pitch.md).
 

@@ -312,7 +312,7 @@ scans the entity pool, waits on the server, or calls the script VM.
 
 `vr_turret_status` prints/saves attachment, phase, captured wrists, grip/fire masks,
 pitch/yaw, client-controller updates, world-depth submissions, hand applications/rejection and camera/update
-counters to `minidumps/h2-mod-vr-turret.txt`.
+counters to `minidumps/overlord-turret.txt`.
 Offline regressions exercise held input on entry, separate takeover/grab,
 wrong-side contact, all 16 grip/trigger combinations, overlapping trigger release,
 tracking/focus/reference loss, stale samples, missing calibration, physical hand

@@ -247,7 +247,7 @@ namespace vr::gameplay::sequences
 					std::format("scripted_load_recenters={}\n",load_recenters.load())+
 					camera_reference::status()+prompt_status()+oilrig::angle_status();
 				console::info("[VR sequence] %s",report.c_str());
-				utils::io::write_file_atomic("minidumps/h2-mod-vr-sequence.txt",report);
+				utils::io::write_file_atomic("minidumps/overlord-sequence.txt",report);
 			});
 		}
 		void pre_destroy() override {invalidate();}

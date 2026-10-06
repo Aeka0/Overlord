@@ -64,7 +64,7 @@ namespace vr::gameplay::weapons::independent_fire_probe
 			out << "[VR independent fire probe] diagnostic_only=1 shots_requested=" << count << '\n';
 			const auto publish=gsl::finally([&] {
 				const auto text=out.str();console::info("%s",text.c_str());
-				scheduler::once([text] {utils::io::write_file_atomic("minidumps/h2-mod-vr-independent-fire.txt",text);},scheduler::pipeline::async);
+				scheduler::once([text] {utils::io::write_file_atomic("minidumps/overlord-independent-fire.txt",text);},scheduler::pipeline::async);
 			});
 			if (!game::CL_IsCgameInitialized() || !game::g_entities[0].client || !install())
 			{out << "rejected: world or native signatures unavailable\n";return;}

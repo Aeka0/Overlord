@@ -290,7 +290,7 @@ namespace vr::gameplay::equipment::nightvision
 				const auto current=observe();const auto text=std::format("verified={} slot={} on={} grasped={} requests={} presentation={} device_transitions={} sound_requests={} foley_requests={} reason={}\n",
 					verified,current.slot,current.on,gesture.active(),requests,transition_ready,presentations_started.load(),sound_requests.load(),foley_requests.load(),reason);
 				console::info("[VR nightvision] %s",text.c_str());
-				scheduler::once([text]{utils::io::write_file_atomic("minidumps/h2-mod-vr-nightvision.txt",text);},scheduler::pipeline::async);
+				scheduler::once([text]{utils::io::write_file_atomic("minidumps/overlord-nightvision.txt",text);},scheduler::pipeline::async);
 			},scheduler::pipeline::server);});
 		}
 	};

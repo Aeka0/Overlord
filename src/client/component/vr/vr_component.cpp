@@ -699,7 +699,7 @@ namespace vr
 			// transaction. Individual module reset APIs remain available to isolated
 			// tests, but cannot safely reset the renderer's immutable artifact set.
 			console::error("[VR] vr_engineProbe_reset is disabled: complete VR evidence "
-				"is a process-lifetime one-shot; restart H2-MOD VR to sample again\n");
+				"is a process-lifetime one-shot; restart Overlord to sample again\n");
 		}
 
 		void dump_engine_probe()

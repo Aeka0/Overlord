@@ -912,7 +912,7 @@ namespace vr::diagnostics
 			const auto engine_probe = format_engine_probe_text(
 				engine_stereo_probe::get_status());
 			return utils::io::write_file_atomic(
-				"minidumps/h2-mod-vr-status-latest.txt", status + engine_probe);
+				"minidumps/overlord-status-latest.txt", status + engine_probe);
 		}
 		catch (...)
 		{
@@ -932,7 +932,7 @@ namespace vr::diagnostics
 				engine_probe = format_engine_probe_text(
 					engine_stereo_probe::get_status());
 				(void)utils::io::write_file_atomic(
-					"minidumps/h2-mod-vr-status-latest.txt", status + engine_probe);
+					"minidumps/overlord-status-latest.txt", status + engine_probe);
 			}
 			console::print_text(console::con_type_info, status);
 			console::print_text(console::con_type_info, engine_probe);
@@ -1029,9 +1029,9 @@ namespace vr::diagnostics
 		const auto raw_time = _time64(nullptr);
 		_localtime64_s(&local_time, &raw_time);
 		strftime(timestamp, sizeof(timestamp), "%Y-%m-%d-%H-%M-%S", &local_time);
-		const auto stem = std::string("minidumps/h2-mod-soft-freeze-") + timestamp;
+		const auto stem = std::string("minidumps/overlord-soft-freeze-") + timestamp;
 		std::ostringstream report;
-		report << "H2-MOD VR soft-freeze report\r\n"
+		report << "Overlord soft-freeze report\r\n"
 			<< "Present age: " << age.count() << " ms\r\n"
 			<< "Present thread: " << graphics.present_thread_id << "\r\n"
 			<< "Last Present thread: " << graphics.last_present_thread_id << "\r\n"
@@ -1063,9 +1063,9 @@ namespace vr::diagnostics
 		const auto raw_time = _time64(nullptr);
 		_localtime64_s(&local_time, &raw_time);
 		strftime(timestamp, sizeof(timestamp), "%Y-%m-%d-%H-%M-%S", &local_time);
-		const auto stem = std::string("minidumps/h2-mod-scene-stall-") + timestamp;
+		const auto stem = std::string("minidumps/overlord-scene-stall-") + timestamp;
 		std::ostringstream report;
-		report << "H2-MOD VR scene-hook stall report\r\n"
+		report << "Overlord scene-hook stall report\r\n"
 			<< "Scene sequence: " << scene.sequence << "\r\n"
 			<< "Scene thread: " << scene.thread_id << "\r\n"
 			<< "Scene depth: " << scene.depth << "\r\n"
@@ -1100,9 +1100,9 @@ namespace vr::diagnostics
 		const auto raw_time = _time64(nullptr);
 		_localtime64_s(&local_time, &raw_time);
 		strftime(timestamp, sizeof(timestamp), "%Y-%m-%d-%H-%M-%S", &local_time);
-		const auto stem = std::string("minidumps/h2-mod-interop-stall-") + timestamp;
+		const auto stem = std::string("minidumps/overlord-interop-stall-") + timestamp;
 		std::ostringstream report;
-		report << "H2-MOD VR GPU-interop stall report\r\n"
+		report << "Overlord GPU-interop stall report\r\n"
 			<< "Interop sequence: " << interop.sequence << "\r\n"
 			<< "Interop thread: " << interop.thread_id << "\r\n"
 			<< "Interop depth: " << interop.depth << "\r\n"
@@ -1140,9 +1140,9 @@ namespace vr::diagnostics
 		const auto raw_time = _time64(nullptr);
 		_localtime64_s(&local_time, &raw_time);
 		strftime(timestamp, sizeof(timestamp), "%Y-%m-%d-%H-%M-%S", &local_time);
-		const auto stem = std::string("minidumps/h2-mod-backend-stall-") + timestamp;
+		const auto stem = std::string("minidumps/overlord-backend-stall-") + timestamp;
 		std::ostringstream report;
-		report << "H2-MOD VR backend CPU stall report\r\n"
+		report << "Overlord backend CPU stall report\r\n"
 			<< "Backend sequence: " << backend.sequence << "\r\n"
 			<< "Backend thread: " << backend.thread_id << "\r\n"
 			<< "Backend depth: " << backend.depth << "\r\n"
@@ -1172,7 +1172,7 @@ namespace vr::diagnostics
 		try
 		{
 			std::ostringstream report;
-			report << "H2-MOD VR live trace snapshot\r\n"
+			report << "Overlord live trace snapshot\r\n"
 				<< "Tick: " << GetTickCount64() << "\r\n"
 				<< "Generation: " << graphics.generation << "\r\n"
 				<< "Present active: " << (graphics.present_active ? "yes" : "no") << "\r\n"
@@ -1194,7 +1194,7 @@ namespace vr::diagnostics
 			// 18 KiB of zeros. Flush a sibling first, then atomically replace the final
 			// path so a sudden reset preserves the preceding complete checkpoint.
 			return utils::io::write_file_atomic(
-				"minidumps/h2-mod-vr-live-trace.txt", report.str());
+				"minidumps/overlord-live-trace.txt", report.str());
 		}
 		catch (...)
 		{

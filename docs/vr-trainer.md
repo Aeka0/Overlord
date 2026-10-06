@@ -40,7 +40,7 @@ earlier registration need not execute again. An observed live wait for
 The original helper retains its flash, delay, cleanup
 and continuation; no keyboard input, weapon grant or completion flag is forced.
 `vr_trainer_status` reports query, hint-registration and physical-completion
-counts, also saved to `minidumps/h2-mod-vr-trainer.txt`.
+counts, also saved to `minidumps/overlord-trainer.txt`.
 
 ## Firing-range pickup camera
 

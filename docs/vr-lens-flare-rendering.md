@@ -11,7 +11,7 @@ Start the game using the normal HMD workflow. Face a visibly misaligned
 artificial light, execute `vr_flareSample`, then close the console within two
 seconds. Hold the view approximately steady for another four seconds. The
 diagnostic stops automatically and writes a uniquely named
-`minidumps/h2-mod-vr-flare-sample-<tick>.txt` relative to the game directory.
+`minidumps/overlord-flare-sample-<tick>.txt` relative to the game directory.
 Repeat only when another view/light is needed. Do not arm GPU census.
 
 The Debug-only component is isolated in `vr/diagnostics/native_flare_probe.cpp`.

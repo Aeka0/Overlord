@@ -148,7 +148,7 @@ paths. Runtime contracts are checked against the saved native code independently
 of CPU geometry tests.
 
 `vr_physicalShield` defaults to true. `vr_shield_status` prints and saves
-`minidumps/h2-mod-vr-shield.txt`, with installation status, query/block/event
+`minidumps/overlord-shield.txt`, with installation status, query/block/event
 counts, filtered native player parts, stale-pose rejections, `fire_blocks` and
 the `arm_blocks` subset.
 `vr_melee_status` separately reports native shield hit/blood event submissions.

@@ -151,7 +151,7 @@ before admitting its cloned definitions. The original flare core already uses
 
 `vr_signalFlare_status` prints physical state, native binding/waiter state,
 ignition/recovery counters and resource failures. It also writes
-`minidumps/h2-mod-vr-signal-flare.txt`.
+`minidumps/overlord-signal-flare.txt`.
 It includes `story_ready`, `story_done`, `cap_authorized`, `ignored_drops` and
 sound counters, so story admission, contact, timed-drop suppression and audio
 requests can be distinguished.

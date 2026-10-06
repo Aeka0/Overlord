@@ -276,7 +276,7 @@ Both rendering and later muzzle consumers must observe the resulting pose.
 
 `vr_fire_status` reports `recoil`, the numeric `penalty` mode, and
 `climb_degrees`, along with the selected owner/support and muzzle frame. It
-also writes `minidumps/h2-mod-vr-fire-latest.txt` relative to the game directory.
+also writes `minidumps/overlord-fire-latest.txt` relative to the game directory.
 The angle is a current sample for the selected weapon, not a shot history;
 zero after two seconds without firing is expected.
 

@@ -36,7 +36,7 @@ for an agreed 30-second reproduction window, invalid-span marking and offline pr
 `vr_status` prints complete VR status and attempts an atomic write to:
 
 ```text
-minidumps/h2-mod-vr-status-latest.txt
+minidumps/overlord-status-latest.txt
 ```
 
 This file holds the latest snapshot and is overwritten. Copy it into the incident's evidence directory after capture. If writing fails, an older file may remain; check its timestamp and contents before attributing it to the current command.
@@ -62,7 +62,7 @@ These commands primarily provide snapshots. The shared file path above is docume
 For an input problem, ask the player to close the VR dashboard, return to the
 game, release the controller buttons and sticks, then try moving each hand,
 moving a stick, and pressing a trigger. Run `vr_status` once and share
-`minidumps/h2-mod-vr-status-latest.txt`. The player does not need to compare
+`minidumps/overlord-status-latest.txt`. The player does not need to compare
 several logs or interpret individual counters. Do this before restarting the
 game; input history is retained across runtime reinitialization within the
 process, but a new process starts a new history.
@@ -134,7 +134,7 @@ See [region capture](vr-region-capture.md) for the full format, queue limits, an
 Crash handling is implemented in [exception.cpp](../src/client/component/exception.cpp); VR status and watchdog reports are in [diagnostics.cpp](../src/client/component/vr/diagnostics.cpp). Available evidence can include:
 
 - `h2-mod-emergency-*.dmp/.txt` and `h2-mod-crash-*.dmp/.txt`: exception context and raw reports.
-- `h2-mod-vr-live-trace.txt`: recent progress from the bounded trace.
+- `overlord-live-trace.txt`: recent progress from the bounded trace.
 - `h2-mod-soft-freeze-*`, `h2-mod-scene-stall-*`, `h2-mod-interop-stall-*`, and `h2-mod-backend-stall-*`: reports/dumps from the corresponding detection paths.
 
 These files exist only when the relevant handling path triggers and writing succeeds. Preserve raw dumps and sidecars first; a missing or empty historical ZIP does not mean raw evidence is absent. Exception handling must not read an entire large dump into memory, format it, or compress it before saving the original evidence.

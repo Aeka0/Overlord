@@ -760,7 +760,7 @@ namespace vr::gameplay::equipment::special::cliffhanger
 				        console::print_text(console::con_type_info, value);
 				        scheduler::once(
 				            [value]
-				            { utils::io::write_file_atomic("minidumps/h2-mod-vr-cliffhanger.txt", value); },
+				            { utils::io::write_file_atomic("minidumps/overlord-cliffhanger.txt", value); },
 				            scheduler::pipeline::async);
 			        },
 			        scheduler::pipeline::server);

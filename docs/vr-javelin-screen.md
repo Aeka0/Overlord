@@ -104,4 +104,4 @@ WARP fixed-screen composition. Headset readability and live target alignment
 still require user acceptance; mathematical and GPU fixtures do not establish it.
 
 `vr_javelinDisplay_status` reports mode, trigger arming, camera epoch/origin/axis,
-planned views and composed eyes. It writes `minidumps/h2-mod-vr-javelin-display.txt`.
+planned views and composed eyes. It writes `minidumps/overlord-javelin-display.txt`.

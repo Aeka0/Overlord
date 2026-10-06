@@ -207,7 +207,7 @@ namespace mod_stats
 	public:
 		void post_unpack() override
 		{
-			globals.stats_write_thread = utils::thread::create_named_thread("Stats Write (H2-Mod)", []()
+			globals.stats_write_thread = utils::thread::create_named_thread("Stats Write (Overlord)", []()
 			{
 				while (!globals.kill_thread)
 				{

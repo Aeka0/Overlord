@@ -20,7 +20,7 @@
     "LOCALE_18": "Turkish",
     
     "LUA_MENU_FALLBACK_DISABLE": "Apply built-in fonts",
-    "LUA_MENU_FALLBACK_ENABLE": "Apply H2-MOD VR fonts",
+    "LUA_MENU_FALLBACK_ENABLE": "Apply Overlord fonts",
 
     "UPDATER_POPUP_NO_UPDATES_AVAILABLE": "No updates available",
     "MENU_CCS_NEW_PATCH_NOTICE": "An update is available, proceed with installation?",
@@ -42,8 +42,8 @@
     "LUA_MENU_WORKSHOP": "Workshop",
     "LUA_MENU_WORKSHOP_DESC": "Download and install mods.",
 
-    "MENU_GENERAL": "H2-MOD VR",
-    "MENU_GENERAL_DESC": "Set H2-MOD VR's settings.",
+    "MENU_GENERAL": "Overlord",
+    "MENU_GENERAL_DESC": "Set Overlord's settings.",
     "LUA_MENU_AUTO_UPDATE": "Automatic updates",
     "LUA_MENU_AUTO_UPDATE_DESC": "Enable or disable automatic updates on startup.",
     "LUA_MENU_CHECK_UPDATES": "Check for updates",
@@ -67,7 +67,7 @@
     "LUA_MENU_INTRO_DESC": "Show or skip intro movie with companies' logos on startup.",
     "LUA_MENU_SWITCH_TO_DEVELOP": "Switch to the ^3Develop^7 branch",
     "LUA_MENU_SWITCH_TO_MAIN": "Switch to the ^3Main^7 branch",
-    "LUA_MENU_SWITCH_BRANCH_DESC": "Switch the H2-MOD VR branch (develop: latest changes, main: latest stable release).",
+    "LUA_MENU_SWITCH_BRANCH_DESC": "Switch the Overlord branch (develop: latest changes, main: latest stable release).",
     "LUA_MENU_SOLDIER_PRONOUNS": "Soldier pronouns",
     "LUA_MENU_SOLDIER_PRONOUNS_DESC": "Show random soldier pronouns.",
 

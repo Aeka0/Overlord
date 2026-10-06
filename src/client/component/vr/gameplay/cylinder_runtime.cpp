@@ -397,7 +397,7 @@ namespace vr::gameplay::weapons::cylinder
 					<< " commits/failures/shots=" << ok << '/' << bad << '/' << fired << " reason=" << why
 					<< "\npresentation=" << presentation_status() << '\n';
 				const auto text=out.str();
-				scheduler::once([text] {utils::io::write_file_atomic("minidumps/h2-mod-vr-cylinder.txt",text);},scheduler::pipeline::async);
+				scheduler::once([text] {utils::io::write_file_atomic("minidumps/overlord-cylinder.txt",text);},scheduler::pipeline::async);
 			},scheduler::pipeline::server);});
 			// Updated by the single hand-interaction coordinator.
 		}

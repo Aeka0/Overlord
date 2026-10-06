@@ -297,7 +297,7 @@ namespace vr::gameplay::equipment::special
 			command::add("vr_special_equipment_status",[]{scheduler::once([]{
 				const auto text=std::format("[VR special] ready={} slot={} weapon={} quantity={} held={} support={} preview={} valid={} takes={} placed={} recovered={} rejected={} resources={} native={}\n",
 					ready.load(),selection.slot.index,selection.slot.weapon,selection.quantity,int(grip.primary),int(grip.support),grip.preview,preview.valid,takes.load(),placed.load(),recovered.load(),rejected.load(),reason.load(),native::status())+notebook::status();
-				console::print_text(console::con_type_info,text);scheduler::once([text]{utils::io::write_file_atomic("minidumps/h2-mod-vr-special-equipment.txt",text);},scheduler::pipeline::async);
+				console::print_text(console::con_type_info,text);scheduler::once([text]{utils::io::write_file_atomic("minidumps/overlord-special-equipment.txt",text);},scheduler::pipeline::async);
 			},scheduler::pipeline::server);});
 		}
 		void pre_destroy()override{alive=false;retire();}

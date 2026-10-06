@@ -411,7 +411,7 @@ namespace console
 		void post_unpack() override
 		{
 			ShowWindow(GetConsoleWindow(), SW_SHOW);
-			SetConsoleTitle("h2-mod-vr");
+			SetConsoleTitle("Overlord");
 
 #ifndef DEBUG
 			SetConsoleCtrlHandler(console_ctrl_handler, TRUE);

@@ -667,7 +667,7 @@ namespace vr::gameplay::mounted
 					<<" skin_preparations="<<skin_preparations.load()<<" skin_pose_changes="<<skin_pose_changes.load()<<" skin_rejections="<<skin_rejections.load()
 					<<" gripped="<<published.state.gripped<<" fire_armed="<<published.state.fire_armed<<" pitch="<<published.state.angles[0]<<" yaw="<<published.state.angles[1]
 					<<" requested_pitch="<<published.requested_angles[0]<<" requested_yaw="<<published.requested_angles[1]<<'\n';}
-				const auto text=out.str();console::info("%s",text.c_str());utils::io::write_file_atomic("minidumps/h2-mod-vr-turret.txt",text);
+				const auto text=out.str();console::info("%s",text.c_str());utils::io::write_file_atomic("minidumps/overlord-turret.txt",text);
 			});
 		}
 		void pre_destroy() override {alive=false;}

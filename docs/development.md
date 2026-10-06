@@ -17,14 +17,14 @@ From the repository root in a VS Developer Command Prompt, run:
 ```bat
 git submodule update --init --recursive
 tools\premake5.exe vs2022 --with-vr-tests
-msbuild build\h2-mod.sln /m /v:minimal /p:Configuration=Debug /p:Platform=x64
+msbuild build\overlord.sln /m /v:minimal /p:Configuration=Debug /p:Platform=x64
 ```
 
 `generate.bat --with-vr-tests` also initializes submodules and generates the solution. Regenerate after adding source files or test targets, or changing Premake. Do not maintain generated `.vcxproj` files directly.
 
 For Release, use the same command and change the value in `Configuration=Debug` to `Release`. Release enables optimization and treats compiler warnings as errors; a passing Debug build does not establish that Release builds successfully.
 
-Artifacts are written to `build/bin/x64/<Configuration>/`. The client project is named `client`. Debug produces `h2-mod-vr-debug.exe` and `h2-mod-vr-debug.pdb`; RelWithDebInfo/Release produce `h2-mod-vr.exe` and `h2-mod-vr.pdb`. The embedded TLS helper keeps its configuration-local `tlsdll.dll` name. The `openxr-loader` dependency builds one optimized SDK loader for both client configurations, so both EXEs can share an installation. CMake is discovered from PATH or Visual Studio installation roots; direct helper runs can pass `--cmake`, `--generator` and `--toolset`. To build and run one target:
+Artifacts are written to `build/bin/x64/<Configuration>/`. The client project is named `client`. Debug produces `overlord-debug.exe` and `overlord-debug.pdb`; RelWithDebInfo/Release produce `overlord.exe` and `overlord.pdb`. The embedded TLS helper keeps its configuration-local `tlsdll.dll` name. The `openxr-loader` dependency builds one optimized SDK loader for both client configurations, so both EXEs can share an installation. CMake is discovered from PATH or Visual Studio installation roots; direct helper runs can pass `--cmake`, `--generator` and `--toolset`. To build and run one target:
 
 ```bat
 msbuild build\vr-weapon-grip-tests.vcxproj /m /v:minimal /p:Configuration=Debug /p:Platform=x64
@@ -84,8 +84,8 @@ python tools/native_bindings/cli.py check --target h2-sp --repo .
 python tests/vr/test_region_capture_analysis.py
 python tests/vr/aim_assist_adapter_tests.py
 node tests/vr/launcher_settings_ui_tests.js
-python tests/vr/client_feature_parity_tests.py build/bin/x64/RelWithDebInfo/h2-mod-vr.exe
-python tests/vr/client_feature_parity_tests.py build/bin/x64/Debug/h2-mod-vr-debug.exe
+python tests/vr/client_feature_parity_tests.py build/bin/x64/RelWithDebInfo/overlord.exe
+python tests/vr/client_feature_parity_tests.py build/bin/x64/Debug/overlord-debug.exe
 ```
 
 For native executable versions, source inventories and H2/H1 adapter boundaries,
@@ -146,7 +146,7 @@ In addition to the executable, the client's post-build steps copy these resource
 The application manifest uses paths relative to its installed location. After
 `VR_Init`, the client registers it through `AddApplicationManifest` and identifies
 the current process before initializing input. Normal and Debug clients use
-`h2mod.vr` and `h2mod.vr.debug` respectively, so their launch paths cannot overwrite
+`overlord` and `overlord.debug` respectively, so their launch paths cannot overwrite
 each other. SteamVR launch uses `-singleplayer` to enter the game directly; run the
 EXE normally to access launcher settings. Registration persists across shutdown.
 SteamVR uses the 920 x 430 horizontal cover through `image_path` and the separate
@@ -162,13 +162,13 @@ Local performance deployments include both builds from the same source checkout:
 
 | Purpose | Configuration | Files in game directory |
 | --- | --- | --- |
-| Normal gameplay and performance baseline | RelWithDebInfo | `h2-mod-vr.exe`, `h2-mod-vr.pdb` |
-| Debugging and controlled build comparison | Debug | `h2-mod-vr-debug.exe`, `h2-mod-vr-debug.pdb` |
+| Normal gameplay and performance baseline | RelWithDebInfo | `overlord.exe`, `overlord.pdb` |
+| Debugging and controlled build comparison | Debug | `overlord-debug.exe`, `overlord-debug.pdb` |
 
 ```bat
 tools\premake5.exe vs2022 --with-vr-tests
-msbuild build\h2-mod.sln /t:client /m /p:Configuration=RelWithDebInfo /p:Platform=x64
-msbuild build\h2-mod.sln /t:client /m /p:Configuration=Debug /p:Platform=x64
+msbuild build\overlord.sln /t:client /m /p:Configuration=RelWithDebInfo /p:Platform=x64
+msbuild build\overlord.sln /t:client /m /p:Configuration=Debug /p:Platform=x64
 python tools\deploy_client_pair.py "<game-directory>"
 ```
 

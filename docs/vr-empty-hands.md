@@ -89,5 +89,5 @@ Headset checks:
    and that recovery causes no drop or pickup gesture.
 
 `vr_independentHands` controls both held and empty-hand IK. `vr_hands_status`
-writes `minidumps/h2-mod-vr-hands-latest.txt`; its `empty_hands` line records hook
+writes `minidumps/overlord-hands-latest.txt`; its `empty_hands` line records hook
 installation, object builds/releases, accepted submissions and rejection state.

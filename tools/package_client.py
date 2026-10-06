@@ -41,7 +41,7 @@ LICENSE_SOURCES = {
 
 def collect(configuration: str, base_data: Path | None = None) -> dict[str, Path]:
     build = ROOT / "build/bin/x64" / configuration
-    binary = "h2-mod-vr-debug" if configuration == "Debug" else "h2-mod-vr"
+    binary = "overlord-debug" if configuration == "Debug" else "overlord"
     files: dict[str, Path] = {}
 
     def add(source: Path, destination: str) -> None:
@@ -131,7 +131,7 @@ def version_directory(base: Path, name: str) -> Path:
 def stage(configuration: str, destination: Path, base_data: Path | None = None) -> dict:
     """Stage a local candidate without publishing or requiring a Git commit."""
     files = collect(configuration, base_data)
-    binary = "h2-mod-vr-debug" if configuration == "Debug" else "h2-mod-vr"
+    binary = "overlord-debug" if configuration == "Debug" else "overlord"
     symbols = ROOT / "build/bin/x64" / configuration / f"{binary}.pdb"
     if not symbols.is_file() or symbols.is_symlink() or not symbols.stat().st_size:
         raise ValueError(f"Missing symbols from the selected build: {binary}.pdb")
@@ -182,7 +182,7 @@ def main() -> int:
         version = json.loads((ROOT / "version.json").read_text(encoding="utf-8"))
         output = version_directory(ROOT / "output/packages", version["name"])
         output.mkdir(parents=True, exist_ok=True)
-        destination = output / f"h2-mod-vr-{args.configuration}-{revision}.zip"
+        destination = output / f"overlord-{args.configuration}-{revision}.zip"
         with tempfile.NamedTemporaryFile(dir=output, suffix=".tmp", delete=False) as handle:
             temporary = Path(handle.name)
         try:

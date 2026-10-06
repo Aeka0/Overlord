@@ -128,7 +128,7 @@ namespace vr::menu_overlay
 				if(menu&&image->owner.menus[i].id!=id){release(s);continue;}
 				if(!s.handle)
 				{
-					const auto key="h2mod.native.menu."+std::to_string(GetCurrentProcessId())+"."+std::to_string(i);
+					const auto key="overlord.native.menu."+std::to_string(GetCurrentProcessId())+"."+std::to_string(i);
 					auto error=api_->CreateOverlay(key.c_str(),"H2 native menu",&s.handle);
 					if(error==VROverlayError_None)error=api_->SetOverlayFlag(s.handle,VROverlayFlags_IsPremultiplied,true);
 					if(error==VROverlayError_None)error=api_->SetOverlayFlag(s.handle,VROverlayFlags_NoBackside,true);

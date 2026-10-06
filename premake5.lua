@@ -64,7 +64,7 @@ dofile(path.join(_MAIN_SCRIPT_DIR, "tools/premake_version.lua"))
 
 dependencies.load()
 
-workspace "h2-mod"
+workspace "overlord"
 startproject "client"
 location "./build"
 objdir "%{wks.location}/obj"
@@ -149,7 +149,7 @@ project "client"
 kind "ConsoleApp"
 language "C++"
 
-targetname "h2-mod-vr"
+targetname "overlord"
 filter "configurations:Debug"
 	targetsuffix "-debug"
 filter {}
@@ -168,6 +168,7 @@ filter {}
 linkoptions {"/IGNORE:4254", "/DYNAMICBASE:NO", "/SAFESEH:NO", "/LARGEADDRESSAWARE", "/LAST:.main", "/PDBCompress"}
 
 files {"./src/client/**.rc", "./src/client/**.hpp", "./src/client/**.cpp", "./src/client/resources/**.*"}
+files {"./assets/icon/Icon.ico"}
 
 includedirs {"./src/client", "./src/common", "%{prj.location}/src"}
 

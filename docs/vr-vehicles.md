@@ -183,12 +183,12 @@ emitted and rejected frontend FX requests, held handle mask, physical steering,
 raw/filtered handle angles, input sequence, plane axis, pivot and both raw wrists
 in tracking-reference metres.
 It writes
-`minidumps/h2-mod-vr-vehicle.txt`.
+`minidumps/overlord-vehicle.txt`.
 
 Enable **VR Settings > Debug > Vehicle steering recording** before launch to
 collect this history (`vr_debugVehicle`, default off).
 `vr_vehicle_steering_trace` saves the most recent 512 unique driver input samples
-to `minidumps/h2-mod-vr-steering.csv`. The bounded in-memory history retains the
+to `minidumps/overlord-steering.csv`. The bounded in-memory history retains the
 last driving samples across pause/console entry; normal frames perform no file
 I/O. It records both physical wrists, the shared axis/pivot, grasp mask and
 raw/filtered angles, physical steering/throttle output, Grip/Trigger masks and

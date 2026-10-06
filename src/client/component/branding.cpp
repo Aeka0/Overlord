@@ -1,5 +1,6 @@
 #include <std_include.hpp>
 #include "loader/component_loader.hpp"
+#include "product.hpp"
 
 #include "game/game.hpp"
 #include "game/dvars.hpp"
@@ -38,9 +39,9 @@ namespace branding
 			const auto placement = game::ScrPlace_GetViewPlacement();
 
 #ifdef DEBUG
-			const auto text = "h2-mod-vr " GIT_BRANCH ": " VERSION " (" __DATE__ " " __TIME__ ")";
+			const auto text = utils::string::va("%s " GIT_BRANCH ": " VERSION " (" __DATE__ " " __TIME__ ")", product::name);
 #else
-			const auto text = "h2-mod-vr " GIT_BRANCH ": " VERSION;
+			const auto text = utils::string::va("%s " GIT_BRANCH ": " VERSION, product::name);
 #endif
 
 			game::rectDef_s rect{};
@@ -64,11 +65,11 @@ namespace branding
 		{
 			scheduler::loop(draw, scheduler::pipeline::renderer);
 
-			cg_draw_branding = dvars::register_bool("cg_drawBranding", true, game::DVAR_FLAG_SAVED, "Draw h2-mod-vr branding");
+			cg_draw_branding = dvars::register_bool("cg_drawBranding", true, game::DVAR_FLAG_SAVED, "Draw overlord branding");
 
 			ui_get_formatted_build_number_hook.create(0x1406057D0, ui_get_formatted_build_number_stub);
 		}
 	};
 }
 
-REGISTER_COMPONENT(branding::component) 
+REGISTER_COMPONENT(branding::component)

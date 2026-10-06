@@ -423,7 +423,7 @@ namespace vr::gameplay::ladders
             if(verified)verified=native::initialize();
             scripting::on_level_start([]{forget();scene::reset();});
             scripting::on_shutdown([](bool,bool after){if(!after){try{detach(false);}catch(...){forget();}scene::reset();}});
-            command::add("vr_ladder_status",[]{scheduler::once([]{const auto text=status();console::info("[VR ladder] %s",text.c_str());scheduler::once([text]{utils::io::write_file_atomic("minidumps/h2-mod-vr-ladder.txt",text);},scheduler::pipeline::async);},scheduler::pipeline::server);});
+            command::add("vr_ladder_status",[]{scheduler::once([]{const auto text=status();console::info("[VR ladder] %s",text.c_str());scheduler::once([text]{utils::io::write_file_atomic("minidumps/overlord-ladder.txt",text);},scheduler::pipeline::async);},scheduler::pipeline::server);});
         }
         void pre_destroy()override{running=false;}
     };

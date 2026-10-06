@@ -123,6 +123,6 @@ namespace vr::diagnostics
 		    << prefix
 		    << "input_help: Close the VR dashboard, return to the game and release then operate both controllers.\n"
 		    << prefix
-		    << "input_help: Run vr_status once after the problem and share minidumps/h2-mod-vr-status-latest.txt.\n";
+		    << "input_help: Run vr_status once after the problem and share minidumps/overlord-status-latest.txt.\n";
 	}
 }

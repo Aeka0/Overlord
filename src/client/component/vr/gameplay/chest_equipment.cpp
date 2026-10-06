@@ -136,7 +136,7 @@ namespace vr::gameplay::equipment::chest_items
 				snapshot s;{const std::lock_guard lock(mutex);s=published;}
 				std::string report=std::format("[VR chest equipment] enabled={} verified={} submissions={} prepared={} order=knife,tactical,lethal interactive=knife_and_grenades\n",running(),verified,submissions.load(),placements.load());
 				for(unsigned i=0;i<2;++i)report+=std::format("slot={} weapon={} quantity={} visible={}\n",i==0?"tactical":"lethal",s.items[i].weapon,s.items[i].quantity,s.items[i].model!=nullptr);
-				console::print_text(console::con_type_info,report);scheduler::once([report]{utils::io::write_file("minidumps/h2-mod-vr-chest-equipment.txt",report);},scheduler::pipeline::async);
+				console::print_text(console::con_type_info,report);scheduler::once([report]{utils::io::write_file("minidumps/overlord-chest-equipment.txt",report);},scheduler::pipeline::async);
 			});
 		}
 		void pre_destroy() override {alive=false;retire();}

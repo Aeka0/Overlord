@@ -13,7 +13,7 @@ checked against the motion rules below; HMD acceptance still needs a retest.
 - `vr_hkSlap_status`: print the latest pose age, exact profile thresholds, current
   simulation observation and last contact, including all measured gates.
 - `vr_hkSlap_dump`: save that status and up to 128 pose-history observations to
-  `h2-mod-vr-hk-slap.txt` in the game's working directory. Repeated simulation
+  `overlord-hk-slap.txt` in the game's working directory. Repeated simulation
   sequences are omitted. This replaces the previous diagnostic dump.
 
 Opening the console can pause updates. `LAST` persists until the next contact

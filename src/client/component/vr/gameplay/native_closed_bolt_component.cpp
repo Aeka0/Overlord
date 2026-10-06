@@ -154,7 +154,7 @@ namespace vr::gameplay::weapons::native_closed_bolt
 			command::add("vr_chamber_status", [] {
 				const auto text = report();
 				console::info("%s", text.c_str());
-				scheduler::once([text] { utils::io::write_file_atomic("minidumps/h2-mod-vr-chamber.txt", text); },
+				scheduler::once([text] { utils::io::write_file_atomic("minidumps/overlord-chamber.txt", text); },
 					scheduler::pipeline::async);
 			});
 			constexpr std::uint8_t admission[]{0x48,0x89,0x5c,0x24,0x10,0x48,0x89,0x6c,0x24,0x18,0x48,0x89,0x74,0x24,0x20};

@@ -126,7 +126,7 @@ namespace vr::gameplay::fixed_sniper
 				const auto s=current();
 				const auto report=std::format("epoch={} entity={} commands={} shots={} head_gain={}\nhand_mask={} hand_updates={} hand_travel_m={} hand_deadzone_m={}\n",
 					s.epoch,s.entity,commands.load(),shots.load(),head_gain(),hand_mask.load(),hand_updates.load(),hand_travel_dvar->current.value,hand_noise_dvar->current.value);
-				console::info("[VR fixed sniper] %s",report.c_str());utils::io::write_file_atomic("minidumps/h2-mod-vr-fixed-sniper-input.txt",report);
+				console::info("[VR fixed sniper] %s",report.c_str());utils::io::write_file_atomic("minidumps/overlord-fixed-sniper-input.txt",report);
 			});
 		}
 		void pre_destroy() override{alive=false;auxiliary_scene::screen_scope_epoch=nullptr;invalidate();}

@@ -20,7 +20,7 @@ class DeploymentTests(unittest.TestCase):
         self.build, self.game, self.backup = [self.root / name for name in ('build', 'game', 'backup')]
         self.game.mkdir()
         self.old, self.new = {}, {}
-        for config, name in [('RelWithDebInfo', 'h2-mod-vr'), ('Debug', 'h2-mod-vr-debug')]:
+        for config, name in [('RelWithDebInfo', 'overlord'), ('Debug', 'overlord-debug')]:
             folder = self.build / config
             folder.mkdir(parents=True)
             for suffix in ('.exe', '.pdb'):
@@ -41,7 +41,7 @@ class DeploymentTests(unittest.TestCase):
                 (self.build / config / relative).write_bytes(self.new[relative])
 
         artwork = Path(__file__).resolve().parents[2] / 'assets/steamvr'
-        for config, name in [('RelWithDebInfo', 'h2-mod-vr'), ('Debug', 'h2-mod-vr-debug')]:
+        for config, name in [('RelWithDebInfo', 'overlord'), ('Debug', 'overlord-debug')]:
             filename = name + '.vrmanifest'
             self.old[filename] = b'{"old": true}'
             self.new[filename] = (artwork / filename).read_bytes()
@@ -68,7 +68,7 @@ class DeploymentTests(unittest.TestCase):
         self.assertNotEqual(second['backup'], record['backup'])
 
     def test_missing_debug_pdb_leaves_installation_untouched(self):
-        (self.build / 'Debug/h2-mod-vr-debug.pdb').unlink()
+        (self.build / 'Debug/overlord-debug.pdb').unlink()
         with self.assertRaises(FileNotFoundError):
             module.deploy(self.build, self.game, self.backup)
         for name in self.old:

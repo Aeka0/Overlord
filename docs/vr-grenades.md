@@ -155,7 +155,7 @@ untouched; topology mismatch rejects the asset instead of cutting arbitrary face
 
 `vr_grenade_status` reports native readiness, model readiness by type, acquisition,
 pin, return, throw/cook/handoff counters, native spawn/audio failures and current slot state.
-It also writes `minidumps/h2-mod-vr-grenades.txt` without triggering an action.
+It also writes `minidumps/overlord-grenades.txt` without triggering an action.
 
 Automated coverage: safe return, failed debit, pin commitment, frag-only cooking,
 repeated B/Y, remaining fuse, held expiry, stale/teleported throw motion, opposite

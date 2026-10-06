@@ -4,7 +4,7 @@ For the current code entry points and the steps to add a reviewed assembly,
 see [Weapon registration](vr-weapon-registration.md).
 
 This document defines the shared architecture for native VR arms, hands, and
-weapon manipulation in H2-Mod VR. It separates gameplay authority, mechanical state, presentation, and native engine adapters so implementation does not inherit the timing assumptions of first-person animation.
+weapon manipulation in Overlord. It separates gameplay authority, mechanical state, presentation, and native engine adapters so implementation does not inherit the timing assumptions of first-person animation.
 
 The parent [VR gameplay and interaction architecture](./vr-gameplay-interaction-architecture.md)
 owns canonical input frames, spatial frames, body/hand solving, interaction
@@ -79,7 +79,7 @@ and fallback presentation.
 
 ## 3. Confirmed project facts
 
-### Current H2-Mod VR project
+### Current Overlord project
 
 - Controller input, independent hands and muzzle-directed native firing are now
   implemented. Current acceptance and the M9 profile increment are recorded in

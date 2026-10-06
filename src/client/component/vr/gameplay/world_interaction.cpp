@@ -219,7 +219,7 @@ namespace vr::gameplay::interaction
 						<<" weapon="<<t.weapon<<" cosine="<<t.cosine<<" distance="<<t.distance<<'\n';}
 					out<<prompt_status();
 					const auto text=out.str();console::info("%s",text.c_str());
-					scheduler::once([text]{utils::io::write_file_atomic("minidumps/h2-mod-vr-interaction.txt",text);},scheduler::pipeline::async);
+					scheduler::once([text]{utils::io::write_file_atomic("minidumps/overlord-interaction.txt",text);},scheduler::pipeline::async);
 				},scheduler::pipeline::server);
 			});
 		}

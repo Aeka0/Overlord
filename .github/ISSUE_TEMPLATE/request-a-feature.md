@@ -1,6 +1,6 @@
 ---
 name: Feature request / 功能建议
-about: Suggest an improvement to H2-MOD VR / 提出改进建议
+about: Suggest an improvement to Overlord / 提出改进建议
 title: ''
 labels: ''
 assignees: ''

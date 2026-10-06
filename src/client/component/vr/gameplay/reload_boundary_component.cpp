@@ -236,7 +236,7 @@ namespace vr::gameplay::weapons::reload_boundary
 						if (revision == written) return;
 					}
 					const auto [version, text] = report();
-					if (utils::io::write_file_atomic("minidumps/h2-mod-vr-reload-boundary.txt", text))
+					if (utils::io::write_file_atomic("minidumps/overlord-reload-boundary.txt", text))
 						written = version;
 				},
 				scheduler::pipeline::async, 1s);

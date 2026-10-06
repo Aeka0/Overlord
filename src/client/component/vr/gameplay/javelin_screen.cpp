@@ -468,7 +468,7 @@ namespace vr::gameplay::weapons::javelin_screen
 				        aim.axis[0][1],
 				        aim.axis[0][2]);
 				    console::info("[VR Javelin display] %s", report.c_str());
-				    utils::io::write_file_atomic("minidumps/h2-mod-vr-javelin-display.txt", report);
+				    utils::io::write_file_atomic("minidumps/overlord-javelin-display.txt", report);
 			    });
 		}
 		void pre_destroy() override

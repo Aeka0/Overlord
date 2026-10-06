@@ -352,7 +352,7 @@ namespace vr::gameplay::weapons::break_action
 				const auto text=std::format("native={} name={} capacity={} profile={} active={} fault={} live_mask={} spent_mask={} reserve={} held={} hinge={:.3f} barrel_held={} fire_armed={} reason={}\nscene={} manipulation={} waist={:.3f} barrel_distance={:.3f} barrel_angle={:.3f} contact0={:.3f},{:.3f},{:.3f} alignment0={:.3f} contact1={:.3f},{:.3f},{:.3f} alignment1={:.3f}\n",
 					native.valid,native.native_name.data(),native.base_capacity,v.definition ? v.definition->id : "none",v.active,v.fault,v.ammo.live,v.ammo.spent,v.ammo.reserve,v.ammo.held_rounds,v.ammo.hinge,v.barrel_held,v.fire_armed,why,
 					g.valid,scene.manipulation,g.waist_distance,g.barrel_distance,g.barrel_angle,g.shell_in_chamber[0][0],g.shell_in_chamber[0][1],g.shell_in_chamber[0][2],g.alignment[0],g.shell_in_chamber[1][0],g.shell_in_chamber[1][1],g.shell_in_chamber[1][2],g.alignment[1]);
-				utils::io::write_file("minidumps/h2-mod-vr-break-action.txt",text);
+				utils::io::write_file("minidumps/overlord-break-action.txt",text);
 			},scheduler::pipeline::server);});
 			// Updated by the single hand-interaction coordinator.
 		}

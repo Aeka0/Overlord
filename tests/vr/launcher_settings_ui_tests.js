@@ -938,6 +938,29 @@ console.log('Launcher first-use and quick-guide tests passed');
 }
 console.log('Launcher shared scrollbar tests passed');
 
+// Help's article and topic-list scroll owners reuse the settings interactions.
+for (const area of ['help', 'helpSidebar']) {
+    const app = setup(), c = app.context, n = app.nodes;
+    c.window.onload();
+    const ids = c.settingsScrollAreas[area], viewport = n[ids.viewport];
+    n['vr-settings-viewport'].scrollTop = 121;
+    c.onSettingsScrollKey(event({ keyCode: 35 }), area);
+    assert.equal(viewport.scrollTop, 600);
+    c.beginSettingsScroll(event({ button: 0, target: n[ids.thumb], clientY: 110 }), area);
+    c.moveSettingsScroll(event({ clientY: 10 }));
+    assert.equal(viewport.scrollTop, 300);
+    assert.equal(n['vr-settings-viewport'].scrollTop, 121, 'help scrolling leaves settings alone');
+    c.endSettingsScroll('vr');
+    assert.equal(c.settingsScrollDrag.area, area, 'scoped cancellation leaves other owners alone');
+    c.endSettingsScroll({ type: 'mouseup' });
+    assert.equal(c.settingsScrollDrag, null, 'native mouseup events release capture');
+    viewport.scrollHeight = viewport.clientHeight;
+    c.updateSettingsScrollbar(area);
+    assert.equal(n[ids.track].style.visibility, 'hidden');
+    assert.equal(n[ids.track].tabIndex, -1);
+}
+console.log('Launcher help scrollbar interactions tests passed');
+
 // New presentation toggles share save/reset across category and language changes.
 {
     const app = setup(), c = app.context, n = app.nodes;

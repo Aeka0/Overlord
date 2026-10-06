@@ -74,7 +74,7 @@ segments after the completed rappel do not enter the rappel-specific adapter.
   hints across maps; see [estate and common hint handling](vr-estate-scripted-scenes.md).
 
 `vr_sequence_status` prints phase, epoch, native time and observation failures and
-saves `minidumps/h2-mod-vr-sequence.txt`, including instruction range admission
+saves `minidumps/overlord-sequence.txt`, including instruction range admission
 counters. `vr_input_status` reports
 `story_brake_commands` and `story_melee_commands`; these count requests, not accepted
 script outcomes. The new observer uses the existing server scheduler and passes

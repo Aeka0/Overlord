@@ -84,7 +84,7 @@ Entity poses always take precedence. The controller records the final finger pos
 
 ## Diagnostics
 
-`vr_hand_interaction_status` prints current sessions and the most recent candidate decision and writes `minidumps/h2-mod-vr-hand-interaction.txt`. Records include physical hand, input event, weapon-instance generation, binding, purpose, distance, rejection reason, and blocking session. Existing domain status commands continue to provide mechanical/ammunition details.
+`vr_hand_interaction_status` prints current sessions and the most recent candidate decision and writes `minidumps/overlord-hand-interaction.txt`. Records include physical hand, input event, weapon-instance generation, binding, purpose, distance, rejection reason, and blocking session. Existing domain status commands continue to provide mechanical/ammunition details.
 
 Candidate authorization is reserved only within the current batch. If the actual provider does not enter the corresponding state, mark a domain rejection rather than publishing a ghost grasp to rendering. The core holds eight sessions and 64 candidates; overflow rejects new requests while preserving existing relationships.
 

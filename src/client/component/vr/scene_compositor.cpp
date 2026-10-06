@@ -296,7 +296,7 @@ float4 main(float4 position : SV_Position, float2 uv : TEXCOORD0) : SV_Target
 		Microsoft::WRL::ComPtr<ID3DBlob> vertex_bytecode;
 		Microsoft::WRL::ComPtr<ID3DBlob> compile_errors;
 		auto result = D3DCompile(fullscreen_vertex_shader,
-			sizeof(fullscreen_vertex_shader) - 1, "h2-mod-vr-blit-vs", nullptr,
+			sizeof(fullscreen_vertex_shader) - 1, "overlord-blit-vs", nullptr,
 			nullptr, "main", "vs_5_0", D3DCOMPILE_OPTIMIZATION_LEVEL3, 0,
 			&vertex_bytecode, &compile_errors);
 		if (FAILED(result))
@@ -316,7 +316,7 @@ float4 main(float4 position : SV_Position, float2 uv : TEXCOORD0) : SV_Target
 		compile_errors.Reset();
 		Microsoft::WRL::ComPtr<ID3DBlob> pixel_bytecode;
 		result = D3DCompile(fullscreen_pixel_shader,
-			sizeof(fullscreen_pixel_shader) - 1, "h2-mod-vr-blit-ps", nullptr,
+			sizeof(fullscreen_pixel_shader) - 1, "overlord-blit-ps", nullptr,
 			nullptr, "main", "ps_5_0", D3DCOMPILE_OPTIMIZATION_LEVEL3, 0,
 			&pixel_bytecode, &compile_errors);
 		if (FAILED(result))

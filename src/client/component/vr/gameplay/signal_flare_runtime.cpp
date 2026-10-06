@@ -227,7 +227,7 @@ namespace vr::gameplay::equipment::special::flare
         scheduler::loop(feedback,scheduler::pipeline::main);
         scheduler::loop(refresh,scheduler::pipeline::main,250ms);scene_models::on_submit(submit);scene_models::on_prepare_placement(prepare);
         command::add("vr_signalFlare_status",[]{scheduler::once([]{const auto text=status()+mission::status();console::print_text(console::con_type_info,text);
-            scheduler::once([text]{utils::io::write_file_atomic("minidumps/h2-mod-vr-signal-flare.txt",text);},scheduler::pipeline::async);},scheduler::pipeline::server);});
+            scheduler::once([text]{utils::io::write_file_atomic("minidumps/overlord-signal-flare.txt",text);},scheduler::pipeline::async);},scheduler::pipeline::server);});
     }
     void retire()
     {

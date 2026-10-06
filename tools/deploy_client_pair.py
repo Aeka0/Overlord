@@ -50,7 +50,7 @@ def input_sources(build_root: Path) -> dict[str, Path]:
 
 def application_sources(build_root: Path) -> dict[str, Path]:
     sources = {}
-    for config, name in [('RelWithDebInfo', 'h2-mod-vr'), ('Debug', 'h2-mod-vr-debug')]:
+    for config, name in [('RelWithDebInfo', 'overlord'), ('Debug', 'overlord-debug')]:
         manifest = build_root / config / (name + '.vrmanifest')
         json.loads(manifest.read_text(encoding='utf-8'))
         sources[manifest.name] = manifest
@@ -65,7 +65,7 @@ def application_sources(build_root: Path) -> dict[str, Path]:
 def deploy(build_root: Path, destination: Path, backup_root: Path) -> dict:
     build_root, destination, backup_root = (p.resolve() for p in (build_root, destination, backup_root))
     sources = {name + suffix: build_root / config / (name + suffix)
-               for config, name in [('RelWithDebInfo', 'h2-mod-vr'), ('Debug', 'h2-mod-vr-debug')]
+               for config, name in [('RelWithDebInfo', 'overlord'), ('Debug', 'overlord-debug')]
                for suffix in ('.exe', '.pdb')}
     sources.update(input_sources(build_root))
     sources.update(application_sources(build_root))

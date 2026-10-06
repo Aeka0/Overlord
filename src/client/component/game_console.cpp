@@ -196,7 +196,7 @@ namespace game_console
 			con.globals.left_x = con.screen_min[0] + 6.0f;
 
 			draw_input_box(1, dvars::con_inputBoxColor->current.vector);
-			draw_input_text_and_over("h2-mod-vr >", color_h2);
+			draw_input_text_and_over("Overlord >", color_h2);
 
 			con.globals.left_x = con.globals.x;
 			con.globals.auto_complete_choice[0] = 0;

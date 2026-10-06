@@ -1,10 +1,10 @@
 {
-  "source": "h2-mod-vr",
+  "source": "overlord",
   "applications": [
     {
-      "app_key": "h2mod.vr",
+      "app_key": "overlord",
       "launch_type": "binary",
-      "binary_path_windows": "h2-mod-vr.exe",
+      "binary_path_windows": "overlord.exe",
       "working_directory": ".",
       "arguments": "-singleplayer",
       "image_path": "steamvr/cover.png",
@@ -12,7 +12,7 @@
       "action_manifest_path": "vr_input/actions.json",
       "strings": {
         "en_us": {
-          "name": "H2-MOD VR"
+          "name": "Overlord"
         }
       }
     }

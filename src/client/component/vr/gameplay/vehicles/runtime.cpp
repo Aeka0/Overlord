@@ -963,10 +963,10 @@ namespace vr::gameplay::vehicles
 					        s.trigger_down,
 					        s.tracked);
 				    }
-				    utils::io::write_file_atomic("minidumps/h2-mod-vr-steering.csv", csv);
+				    utils::io::write_file_atomic("minidumps/overlord-steering.csv", csv);
 				    console::print_text(
 				        console::con_type_info,
-				        std::format("Saved {} steering samples to minidumps/h2-mod-vr-steering.csv\n",
+				        std::format("Saved {} steering samples to minidumps/overlord-steering.csv\n",
 				                    count));
 			    });
 			command::add(
@@ -1023,7 +1023,7 @@ namespace vr::gameplay::vehicles
 				            s.steering_hands[1][1],
 				            s.steering_hands[1][2]);
 				    console::print_text(console::con_type_info, complete);
-				    utils::io::write_file_atomic("minidumps/h2-mod-vr-vehicle.txt", complete);
+				    utils::io::write_file_atomic("minidumps/overlord-vehicle.txt", complete);
 			    });
 		}
 	};

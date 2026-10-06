@@ -14,7 +14,7 @@ menu buttons and wrappers twice. The campaign buttons wrapper always restores
 The existing `Engine.Localize` bridge also owns a narrow allowlist of product
 titles, product descriptions and project URLs. It corrects inherited fastfile
 values at display time without rewriting credits, dialogue, documents or
-internal asset identifiers. Project links resolve to H2-MOD VR; the legacy
+internal asset identifiers. Project links resolve to Overlord; the legacy
 donation action is labeled as a project page. Contributor links and the named
 external Spec Ops mod retain their original targets.
 

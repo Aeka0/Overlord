@@ -1167,7 +1167,7 @@ namespace vr::gameplay::cliffhanger_physical
 			             {
 				             const auto text = status();
 				             console::info("%s", text.c_str());
-				             utils::io::write_file_atomic("minidumps/h2-mod-vr-physical-climb.txt", text);
+				             utils::io::write_file_atomic("minidumps/overlord-physical-climb.txt", text);
 			             });
 		}
 		void pre_destroy() override

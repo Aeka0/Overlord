@@ -333,7 +333,7 @@ namespace vr::gameplay::interaction::debug
 			const auto text = out.str();
 			console::info("%s", text.c_str());
 			scheduler::once(
-			    [text] { utils::io::write_file_atomic("minidumps/h2-mod-vr-interaction-debug.txt", text); },
+			    [text] { utils::io::write_file_atomic("minidumps/overlord-interaction-debug.txt", text); },
 			    scheduler::pipeline::async);
 		}
 		void labels()

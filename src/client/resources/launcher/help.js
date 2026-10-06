@@ -96,6 +96,7 @@ var LauncherHelp = (function (catalog) {
             render();
             document.getElementById(button.id).focus();
             viewport.scrollTop = position;
+            updateSettingsScrollbar('help');
         };
         heading.appendChild(button); card.appendChild(heading);
         if (prose.intro) card.appendChild(proseElement('p', 'help-summary', prose.intro));
@@ -129,6 +130,8 @@ var LauncherHelp = (function (catalog) {
     function render() {
         var viewport = document.getElementById('help-viewport');
         if (!viewport) return;
+        endSettingsScroll('help');
+        endSettingsScroll('helpSidebar');
         var articles = results(), searching = query.replace(/\s/g, '') !== '';
         var locked = category === 'story' && !storyAcknowledged;
         var titleKey = locked ? 'help.category.story' : searching ? 'help.searchResults' : 'help.category.' + category;
@@ -161,6 +164,8 @@ var LauncherHelp = (function (catalog) {
             tab.setAttribute('aria-selected', selected ? 'true' : 'false');
             tab.tabIndex = selected ? 0 : -1;
         }
+        updateSettingsScrollbar('help');
+        updateSettingsScrollbar('helpSidebar');
     }
     function selectCategory(next) {
         if (categories.indexOf(next) < 0) return;
@@ -168,6 +173,7 @@ var LauncherHelp = (function (catalog) {
         if (!query) scrollPositions[category] = viewport.scrollTop;
         category = next; query = ''; document.getElementById('help-search').value = '';
         render(); viewport.scrollTop = scrollPositions[category] || 0;
+        updateSettingsScrollbar('help');
     }
     function openArticle(id) {
         var article = find(id);
@@ -178,6 +184,7 @@ var LauncherHelp = (function (catalog) {
     function search(value) {
         query = String(value).slice(0, 256);
         render(); document.getElementById('help-viewport').scrollTop = 0;
+        updateSettingsScrollbar('help');
     }
     function clearSearch() {
         document.getElementById('help-search').value = ''; search('');

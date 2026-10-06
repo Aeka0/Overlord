@@ -193,7 +193,7 @@ The next increment is in-engine acceptance of native transfer postconditions and
 headset interaction, plus save/checkpoint persistence. Auxiliary feeds need their
 own per-instance state before duplicate admission can include them.
 `vr_carry_status` now records each physical clip, native key, epoch, projection,
-loaded count and shared reserve in `minidumps/h2-mod-vr-carry.txt`.
+loaded count and shared reserve in `minidumps/overlord-carry.txt`.
 
 ## Acceptance cases
 

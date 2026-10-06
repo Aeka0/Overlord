@@ -36,7 +36,7 @@ jobs:
         run: tools/premake5.exe vs2022 --with-vr-tests
 
       - name: Build client
-        run: msbuild build/h2-mod.sln /t:client /m:2 /v:minimal /p:Configuration=${{ matrix.configuration }} /p:Platform=x64 /p:PreferredToolArchitecture=x64 /p:CL_MPCount=4
+        run: msbuild build/overlord.sln /t:client /m:2 /v:minimal /p:Configuration=${{ matrix.configuration }} /p:Platform=x64 /p:PreferredToolArchitecture=x64 /p:CL_MPCount=4
 
       - name: Build no-loader smoke test
         run: msbuild build/vr-runtime-no-loader-smoke.vcxproj /m:2 /v:minimal /p:Configuration=${{ matrix.configuration }} /p:Platform=x64 /p:PreferredToolArchitecture=x64 /p:CL_MPCount=4
@@ -54,7 +54,7 @@ jobs:
       - name: Upload client overlay
         uses: actions/upload-artifact@v4
         with:
-          name: h2-mod-vr-${{ matrix.configuration }}-${{ github.sha }}
+          name: overlord-${{ matrix.configuration }}-${{ github.sha }}
           path: output/packages/**/*.zip
           if-no-files-found: error
           retention-days: 14

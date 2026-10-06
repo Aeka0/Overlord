@@ -904,7 +904,7 @@ namespace vr::gameplay::weapons::underbarrel
 					<<" loaded="<<v.ammo.loaded<<" reserve="<<v.ammo.reserve<<" held="<<v.ammo.held<<" chamber="<<v.ammo.chamber<<" open="<<v.ammo.open<<" spent="<<v.ammo.spent<<" travel="<<v.travel<<" grip="<<int(v.grip)<<" fault="<<v.fault
 					<<" input="<<r.sequence<<" same_hand_chords="<<r.same_hand_chords<<" native_reductions="<<r.native_reductions<<" last_native="<<r.last_native_before<<"->"<<r.last_native_after
 					<<" decision="<<r.decision<<" fire_distance/up/inward/waist="<<r.contact[0]<<'/'<<r.contact[1]<<'/'<<r.contact[2]<<'/'<<r.contact[3]<<'\n';}
-				const auto text=out.str();console::info("[VR underbarrel] %s",text.c_str());scheduler::once([text]{utils::io::write_file_atomic("minidumps/h2-mod-vr-underbarrel.txt",text);},scheduler::pipeline::async);
+				const auto text=out.str();console::info("[VR underbarrel] %s",text.c_str());scheduler::once([text]{utils::io::write_file_atomic("minidumps/overlord-underbarrel.txt",text);},scheduler::pipeline::async);
 			},scheduler::pipeline::server);});
 		}
 		void pre_destroy()override{alive=false;}

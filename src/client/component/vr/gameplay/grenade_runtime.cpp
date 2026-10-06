@@ -562,7 +562,7 @@ namespace vr::gameplay::grenades
 				out<<"throw_gain="<<throw_gain->current.value<<" football_gain="<<football_gain->current.value<<" last_raw_mps="<<last_raw_speed<<" last_scaled_mps="<<last_throw_speed
 					<<" native_attempts="<<native.attempts<<" native_spawns="<<native.spawned<<" actor_clearances="<<native.actor_clearances<<" world_clearances="<<native.world_clearances
 					<<" requested_units_per_second="<<native.requested_speed<<" admitted_units_per_second="<<native.native_speed<<" obstruction="<<native.obstruction<<'\n';
-				const auto text=out.str();console::print_text(console::con_type_info,text);scheduler::once([text]{utils::io::write_file_atomic("minidumps/h2-mod-vr-grenades.txt",text);},scheduler::pipeline::async);
+				const auto text=out.str();console::print_text(console::con_type_info,text);scheduler::once([text]{utils::io::write_file_atomic("minidumps/overlord-grenades.txt",text);},scheduler::pipeline::async);
 			},scheduler::pipeline::server);});
 		}
 		void pre_destroy()override{alive=false;retire();}

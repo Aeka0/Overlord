@@ -166,9 +166,9 @@ Offline coverage:
 Diagnostics: `vr_fixedSniper_status` reports ownership/input requests;
 `vr_fixedSniper_renderStatus` reports planned scopes, composed eyes and missing
 pairs. Existing `vr_hud_capture_status` identifies unsupported native blend/depth
-state. The render-status command also saves `minidumps/h2-mod-vr-fixed-sniper.txt`.
+state. The render-status command also saves `minidumps/overlord-fixed-sniper.txt`.
 Counters are requests/compositions, not confirmation of hits or heat pixels.
-The input-status command also saves `minidumps/h2-mod-vr-fixed-sniper-input.txt`,
+The input-status command also saves `minidumps/overlord-fixed-sniper-input.txt`,
 including active hand mask, applied displacement count and current hand tuning.
 
 The failed build's live counters showed zero planned auxiliary views, zero

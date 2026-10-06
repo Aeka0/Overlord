@@ -2,8 +2,9 @@
 
 ## Parent project and dependency notices
 
-H2-MOD VR is based on H2-Mod and retains its GNU GPLv3 license and upstream
-acknowledgements in README.md. Dependency versions are pinned by the Git tree;
+Overlord includes code derived from H2-Mod and retains its GNU GPLv3 license
+and existing source notices. See `docs/source-provenance.md` for source and asset
+provenance. Dependency versions are pinned by the Git tree;
 their own licenses remain applicable. Do not replace their notices with the
 root project license.
 
@@ -50,7 +51,7 @@ online storage or downloads. See [CascLib](https://github.com/ladislav-zezula/Ca
 
 ## Valve OpenVR SDK
 
-h2-mod includes the public OpenVR client shim and headers from OpenVR SDK 2.15.6.
+Overlord includes the public OpenVR client shim and headers from OpenVR SDK 2.15.6.
 The shim is linked statically, while the application resolves the user's active
 SteamVR library from its registered OpenXR runtime manifest; no Valve runtime binary is redistributed. The retained
 license is available at `deps/openvr/LICENSE`.

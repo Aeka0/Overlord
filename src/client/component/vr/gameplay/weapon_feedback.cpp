@@ -170,7 +170,7 @@ namespace vr::gameplay::weapons::feedback
 			native_weapon_fx::initialize();
 			command::add("vr_weapon_fx_status",[] {
 				const auto text=native_weapon_fx::status();console::info("%s",text.c_str());
-				scheduler::once([text]{utils::io::write_file_atomic("minidumps/h2-mod-vr-weapon-fx.txt",text);},scheduler::pipeline::async);
+				scheduler::once([text]{utils::io::write_file_atomic("minidumps/overlord-weapon-fx.txt",text);},scheduler::pipeline::async);
 			});
 			command::add("vr_weapon_feedback_status", [] {
 				std::uint64_t dropped{}; { const std::lock_guard lock(mutex); dropped = overflow; }

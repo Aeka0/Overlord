@@ -217,7 +217,7 @@ namespace vr::gameplay::weapons
 				<< " R=" << input.trigger[1].active << '/' << input.trigger[1].down << '\n';
 			const auto text = out.str();
 			console::info("%s", text.c_str());
-			utils::io::write_file_atomic("minidumps/h2-mod-vr-fire-latest.txt", text);
+			utils::io::write_file_atomic("minidumps/overlord-fire-latest.txt", text);
 		}
 	} // namespace
 	namespace recoil

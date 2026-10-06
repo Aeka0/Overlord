@@ -1,16 +1,21 @@
-# H2-Mod-VR
+# Overlord
 
 English | [简体中文](README.zh-CN.md)
 
-![H2-MOD VR](assets/steamvr/cover.png)
+![Overlord](assets/steamvr/cover.png)
 
 Bilibili/Aeka0: https://space.bilibili.com/10077845
 
 Reposting is welcome; please include a link to this GitHub Repo.
 
-H2-Mod-VR is a VR mod for *Call of Duty: Modern Warfare 2 Campaign Remastered*. It adds native stereoscopic rendering, 6DOF head and hand tracking, physical weapon handling, and VR interactions for equipment, environments, and story sequences to the original campaign. The adaptations build on the game's existing weapon, ammunition, animation, and mission logic, preserving the original story presentation wherever possible.
+Overlord is a VR mod for *Call of Duty: Modern Warfare 2 Campaign Remastered*. It adds native stereoscopic rendering, 6DOF head and hand tracking, physical weapon handling, and VR interactions for equipment, environments, and story sequences to the original campaign. The adaptations build on the game's existing weapon, ammunition, animation, and mission logic, preserving the original story presentation wherever possible.
 
-> This is currently a Beta release. You are likely to encounter adaptation issues in some scenes or story scripts during play. Reports of problems and suggestions for improving the experience are welcome. Custom mods made for the H2-Mod are not expected to work. Large code changes and refactoring may still take place, so developing mods at this stage is not recommended. Version updates may also break game saves and progress.
+> This is currently a Beta release. You are likely to encounter adaptation issues in some scenes or story scripts during play. Reports of problems and suggestions for improving the experience are welcome. Custom mods made for the non-VR client are not expected to work with Overlord. Large code changes and refactoring may still take place, so developing mods at this stage is not recommended. Version updates may also break game saves and progress.
+
+## Known issues:
+
+- If you encounter a `Create2DTexture` error, try disabling Shader Preloading in the game's graphics settings.
+- MSI Afterburner may prevent Overlord from starting. This issue is still under investigation; for now, exit MSI Afterburner before launching Overlord.
 
 ## Main Features
 
@@ -39,19 +44,19 @@ Pirated or cracked copies of the game are not supported. Mod releases do not inc
 
 When Beta and stable releases are published, installation packages will be available on the [Releases page](https://github.com/Aeka0/h2-mod-vr/releases). Before a release is available, refer to the source build instructions below.
 
-1. Make sure the original game installation is complete and prepare the corresponding H2-Mod base data.
-2. Extract the VR client package into the game's root directory and run `h2-mod-vr.exe`.
+1. Make sure the original game installation is complete.
+2. Extract the VR client package into the game's root directory and run `overlord.exe`.
 3. Start SteamVR, make sure your headset and controllers are connected, then click "Singleplayer".
 
-When using the OpenVR backup, the client registers H2-MOD VR with SteamVR after its first successful connection. The standard and Debug builds register separately, with their own launch entries.
+When using the OpenVR backup, the client registers Overlord with SteamVR after its first successful connection. The standard and Debug builds register separately, with their own launch entries.
 
 Keep the client and its resources in a layout similar to this:
 
 ~~~text
 Game directory/
-├─ h2-mod-vr.exe
+├─ overlord.exe
 ├─ openxr_loader.dll
-├─ h2-mod-vr.vrmanifest
+├─ overlord.vrmanifest
 ├─ steamvr/
 ├─ vr_input/
 └─ h2-mod/
@@ -100,18 +105,18 @@ Clone the repository with Git and initialize its submodules. Downloading GitHub'
 Install Visual Studio's Desktop development with C++ tools and the Windows SDK, then run the following in the appropriate Developer Command Prompt:
 
 ~~~bat
-git clone --recurse-submodules https://github.com/Aeka0/h2-mod-vr.git
-cd h2-mod-vr
+git clone --recurse-submodules https://github.com/Aeka0/h2-mod-vr.git Overlord
+cd Overlord
 generate.bat
-msbuild build\h2-mod.sln /t:client /m:2 /p:Configuration=RelWithDebInfo /p:Platform=x64 /p:PreferredToolArchitecture=x64 /p:CL_MPCount=4
+msbuild build\overlord.sln /t:client /m:2 /p:Configuration=RelWithDebInfo /p:Platform=x64 /p:PreferredToolArchitecture=x64 /p:CL_MPCount=4
 ~~~
 
-`generate.bat` generates a Visual Studio 2022 project. The default toolset is v143. If you use an existing Visual Studio 2019 v142 toolchain, use its x64 MSBuild and also specify `/p:PlatformToolset=v142`.
+`generate.bat` generates a Visual Studio 2022 project. The default toolset is v143. For an existing Visual Studio 2019 v142 toolchain, generate with `tools\premake5.exe vs2019`, use its x64 MSBuild, and specify `/p:PlatformToolset=v142`.
 
 | Purpose | Build configuration | Client file |
 | --- | --- | --- |
-| Normal play and performance checks | `RelWithDebInfo` | `h2-mod-vr.exe` |
-| Development and troubleshooting | `Debug` | `h2-mod-vr-debug.exe` |
+| Normal play and performance checks | `RelWithDebInfo` | `overlord.exe` |
+| Development and troubleshooting | `Debug` | `overlord-debug.exe` |
 
 Build output is placed in `build/bin/x64/<Configuration>/`. Use the executable and resources produced by the same build; do not mix mismatched versions.
 

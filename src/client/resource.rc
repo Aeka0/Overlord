@@ -70,19 +70,19 @@ BEGIN
     BEGIN
         BLOCK "040904b0"
         BEGIN
-            VALUE "CompanyName", "Aeka0 / h2-mod-vr contributors"
-            VALUE "FileDescription", "h2-mod-vr"
+            VALUE "CompanyName", "Aeka0 / Overlord contributors"
+            VALUE "FileDescription", "Overlord"
             VALUE "FileVersion", VERSION_FILE
-            VALUE "InternalName", "h2-mod-vr"
-            VALUE "LegalCopyright", "Copyright (C) 2026 Aeka0 and h2-mod-vr contributors; original h2-mod authors."
+            VALUE "InternalName", "overlord"
+            VALUE "LegalCopyright", "Copyright (C) 2026 Aeka0 and Overlord contributors; original H2-Mod authors."
             VALUE "Licence", "GPLv3"
             VALUE "Info", "https://github.com/Aeka0/h2-mod-vr"
 #ifdef _DEBUG
-            VALUE "OriginalFilename", "h2-mod-vr-debug.exe"
+            VALUE "OriginalFilename", "overlord-debug.exe"
 #else
-            VALUE "OriginalFilename", "h2-mod-vr.exe"
+            VALUE "OriginalFilename", "overlord.exe"
 #endif
-            VALUE "ProductName", "h2-mod-vr"
+            VALUE "ProductName", "Overlord"
             VALUE "ProductVersion", VERSION_PRODUCT
         END
     END
@@ -97,7 +97,7 @@ END
 // Binary Data
 //
 
-ID_ICON               ICON   "resources/icon.ico"
+ID_ICON               ICON   "../../assets/icon/Icon.ico"
 
 MENU_MAIN             RCDATA "resources/main.html"
 LAUNCHER_APP          RCDATA "resources/launcher/app.js"

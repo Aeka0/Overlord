@@ -15,7 +15,7 @@ finish-change adapter now expires only that completed physical acquisition's
 raise timer, after native selection/events run and ownership is revalidated.
 It leaves native state completion to the next tick and does not reset shooting
 or reload timers. `vr_carry_selection_status` records the original raise durations
-and roles in `minidumps/h2-mod-vr-carry-selection.txt`. Immediate arrival remains
+and roles in `minidumps/overlord-carry-selection.txt`. Immediate arrival remains
 a headset acceptance check for this candidate.
 
 ## Interaction
@@ -173,7 +173,7 @@ headset test candidate; the following remain acceptance checks:
 8. Pause, lose controller tracking and recenter while holding a gun; confirm
    that none causes a physical drop or unintended firing.
 
-`vr_carry_status` writes `minidumps/h2-mod-vr-carry.txt` in the game directory.
+`vr_carry_status` writes `minidumps/overlord-carry.txt` in the game directory.
 It also retains the latest sixteen release transactions with input age, native
 transaction time, weapon/hand, outcome and diagnostic detail. Pose admission is
 per hand: losing the opposite controller cannot swallow a valid hand's release.
@@ -192,7 +192,7 @@ handle and magazine gestures keep their own existing admission rules.
 Empty-hand pickup now uses the directional native interaction query described
 in [World interaction](vr-world-interaction.md), with extended reach and world
 `Hold Grip` labels, instead of the original 23 cm proximity pickup.
-`vr_hands_status` writes `minidumps/h2-mod-vr-hands-latest.txt`. Slot dimensions
+`vr_hands_status` writes `minidumps/overlord-hands-latest.txt`. Slot dimensions
 are saved meter-based dvars: `vr_holsterWaistWidth`, `vr_holsterWaistDown`,
 `vr_holsterBackDistance`, `vr_holsterBackDown`, `vr_holsterWaistRadius`, and
 `vr_holsterBackRadius`.

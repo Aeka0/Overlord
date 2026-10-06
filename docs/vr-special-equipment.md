@@ -332,4 +332,4 @@ see [model lighting cache](scene-model-lighting.md) for its bounded native sizin
 
 `vr_special_equipment_status` reports slot, weapon, quantity, both hand owners,
 preview validity, placement/recovery counters and resource/native rejection
-reasons. It writes `minidumps/h2-mod-vr-special-equipment.txt` on demand.
+reasons. It writes `minidumps/overlord-special-equipment.txt` on demand.

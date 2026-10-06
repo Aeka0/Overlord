@@ -1,4 +1,5 @@
 #include <std_include.hpp>
+#include "product.hpp"
 
 #include "steamvr_runtime.hpp"
 
@@ -111,7 +112,7 @@ namespace vr::steamvr
 			std::error_code error;
 			const auto root = std::filesystem::temp_directory_path(error);
 			if (error) return {};
-			return root / std::format("h2-mod-openvr-{}-{}", GetCurrentProcessId(), GetTickCount64());
+			return root / std::format("overlord-openvr-{}-{}", GetCurrentProcessId(), GetTickCount64());
 		}
 
 		std::string win32_message(const DWORD error)
@@ -335,7 +336,7 @@ namespace vr::steamvr
 				if (error == ERROR_ACCESS_DENIED)
 				{
 					return std::format("SteamVR vrserver PID {} is running, but Windows denied "
-						"process access. Launch H2-MOD VR under the same Windows user and elevation "
+						"process access. Launch Overlord under the same Windows user and elevation "
 						"level as SteamVR (do not run one side as administrator).", *server_pid);
 				}
 				return std::format("SteamVR vrserver PID {} is unavailable: {}", *server_pid,
@@ -358,8 +359,8 @@ namespace vr::steamvr
 				server_elevated.has_value() && client_elevated.has_value() && *server_elevated != *client_elevated)
 			{
 				CloseHandle(server);
-				return std::format("SteamVR vrserver and H2-MOD VR have different elevation levels "
-					"(vrserver elevated={}, H2-MOD VR elevated={}). Run both at the same elevation level.",
+				return std::format("SteamVR vrserver and Overlord have different elevation levels "
+					"(vrserver elevated={}, Overlord elevated={}). Run both at the same elevation level.",
 					*server_elevated ? "true" : "false", *client_elevated ? "true" : "false");
 			}
 			HANDLE server_token{};
@@ -371,7 +372,7 @@ namespace vr::steamvr
 				if (server_sid.has_value() && client_sid.has_value() && *server_sid != *client_sid)
 				{
 					CloseHandle(server);
-					return "SteamVR vrserver is running under a different Windows user. Start H2-MOD VR "
+					return "SteamVR vrserver is running under a different Windows user. Start Overlord "
 						"from the interactive SteamVR user session so OpenVR can share its IPC resources.";
 				}
 			}
@@ -385,13 +386,8 @@ namespace vr::steamvr
 	{
 		try
 		{
-#ifdef DEBUG
-			constexpr auto manifest_name = L"h2-mod-vr-debug.vrmanifest";
-			constexpr auto app_key = "h2mod.vr.debug";
-#else
-			constexpr auto manifest_name = L"h2-mod-vr.vrmanifest";
-			constexpr auto app_key = "h2mod.vr";
-#endif
+			constexpr auto manifest_name = product::application_manifest;
+			constexpr auto app_key = product::application_key;
 			std::array<wchar_t, 32768> executable{};
 			const auto length = GetModuleFileNameW(nullptr, executable.data(), static_cast<DWORD>(executable.size()));
 			if (length == 0 || length >= executable.size())

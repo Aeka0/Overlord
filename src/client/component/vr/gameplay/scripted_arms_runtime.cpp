@@ -255,7 +255,7 @@ namespace vr::gameplay::scripted_arms
         {
             command::add("vr_scripted_arms_status",[] {
                 const auto report=status();console::info("%s",report.c_str());
-                utils::io::write_file_atomic("minidumps/h2-mod-vr-scripted-arms.txt",report);
+                utils::io::write_file_atomic("minidumps/overlord-scripted-arms.txt",report);
             });
         }
         void pre_destroy() override {alive=false;}

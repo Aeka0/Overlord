@@ -85,7 +85,7 @@ namespace vr::gameplay::npc_collision
 			}
 			command::add("vr_npc_collision_status",[] {
 				const auto report=status();console::print_text(console::con_type_info,report);
-				scheduler::once([report]{utils::io::write_file("minidumps/h2-mod-vr-npc-collision.txt",report);},scheduler::pipeline::async);
+				scheduler::once([report]{utils::io::write_file("minidumps/overlord-npc-collision.txt",report);},scheduler::pipeline::async);
 			});
 		}
 		void pre_destroy() override {installed=false;}

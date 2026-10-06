@@ -2,6 +2,7 @@
 #include "launcher.hpp"
 #include "vr_settings.hpp"
 #include "localization.hpp"
+#include "product.hpp"
 
 #include <utils/nt.hpp>
 
@@ -77,7 +78,7 @@ void launcher::create_main_menu()
 			return DefWindowProcA(*window, message, w_param, l_param);
 		});
 
-	this->main_window_.create("h2-mod-vr", 960, 640);
+	this->main_window_.create(product::name, 960, 640);
 	this->main_window_.load_html(load_content(MENU_MAIN));
 	this->main_window_.show();
 }

@@ -1,7 +1,7 @@
 # VR gameplay and interaction architecture
 
 This document defines the parent architecture for native VR gameplay in
-H2-Mod VR. It owns input semantics, spatial frames, player-body interpretation,
+Overlord. It owns input semantics, spatial frames, player-body interpretation,
 interaction arbitration, gameplay-context transitions, locomotion and stance
 policy, combat policy, engine authority, failure handling, and cross-domain
 testing.
@@ -134,7 +134,7 @@ match the native gameplay stance. Replacing individual buttons or animations
 without a shared gameplay model would create inconsistent authority and repeated
 interaction systems.
 
-**Decision:** H2-Mod VR will add a global VR gameplay layer that translates one
+**Decision:** Overlord will add a global VR gameplay layer that translates one
 coherent tracking/action frame into validated semantic intentions. Domain
 systems such as weapons, offhand items, melee, UI, and locomotion consume those
 intentions and request native engine transactions. H2 remains authoritative for

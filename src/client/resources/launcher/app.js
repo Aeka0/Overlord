@@ -3,10 +3,12 @@ var settingsCategory = 'basics';
 var settingsCategories = ['basics', 'gameplay', 'cheats', 'other', 'debug'];
 var settingsScrollPositions = { basics: 0, gameplay: 0, cheats: 0, other: 0, debug: 0 };
 var settingsScrollDrag = null;
-// Settings and onboarding share one scrollbar implementation and CSS surface.
+// Settings, onboarding and help share one scrollbar implementation and CSS surface.
 var settingsScrollAreas = {
     vr: { viewport: 'vr-settings-viewport', track: 'vr-scrollbar', thumb: 'vr-scrollbar-thumb' },
-    oobe: { viewport: 'oobe-viewport', track: 'oobe-scrollbar', thumb: 'oobe-scrollbar-thumb' }
+    oobe: { viewport: 'oobe-viewport', track: 'oobe-scrollbar', thumb: 'oobe-scrollbar-thumb' },
+    help: { viewport: 'help-viewport', track: 'help-scrollbar', thumb: 'help-scrollbar-thumb' },
+    helpSidebar: { viewport: 'help-sidebar-viewport', track: 'help-sidebar-scrollbar', thumb: 'help-sidebar-scrollbar-thumb' }
 };
 var settingsDropdownChoices = {};
 var settingsDropdown = null;
@@ -429,8 +431,9 @@ function moveSettingsScroll(event) {
     event.preventDefault();
 }
 
-function endSettingsScroll() {
-    if (!settingsScrollDrag) return;
+function endSettingsScroll(area) {
+    // Event listeners pass an event object; only a string scopes cancellation.
+    if (!settingsScrollDrag || (typeof area === 'string' && settingsScrollDrag.area !== area)) return;
     var track = document.getElementById(settingsScrollAreas[settingsScrollDrag.area].track);
     settingsScrollDrag = null;
     if (track.releaseCapture) track.releaseCapture();

@@ -67,7 +67,7 @@ namespace launcher_vr_settings
 			if (payload.size() > max_payload_bytes) throw std::runtime_error("VR settings are too large.");
 			const auto values = json::parse(payload, nullptr, false);
 			if (!validate(values)) throw std::runtime_error("Check the VR setting values and allowed ranges.");
-			if (!game_data::is_game_directory_available()) throw std::runtime_error("Place h2-mod-vr in a supported game directory before saving VR settings.");
+			if (!game_data::is_game_directory_available()) throw std::runtime_error("Place Overlord in a supported game directory before saving VR settings.");
 			game_data::initialize_players_folder();
 			const auto path = game_data::get_config_file_path();
 			// Re-read immediately before merging so unrelated profile edits survive.

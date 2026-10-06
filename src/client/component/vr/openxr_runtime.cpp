@@ -1,6 +1,7 @@
 #include <std_include.hpp>
 
 #include "openxr_runtime.hpp"
+#include "product.hpp"
 
 #include "engine_stereo_bridge.hpp"
 #include "frame_capture.hpp"
@@ -589,7 +590,7 @@ namespace vr::openxr
 				SetLastError(last_error_before_load);
 				status_.state = runtime_state::loader_missing;
 				status_.last_error = std::format(
-				    "openxr_loader.dll was not loadable beside the active h2-mod-vr/game modules (Win32={})",
+				    "openxr_loader.dll was not loadable beside the active overlord/game modules (Win32={})",
 				    load_error);
 				return false;
 			}
@@ -652,9 +653,9 @@ namespace vr::openxr
 			const char* enabled_extensions[]{XR_KHR_D3D11_ENABLE_EXTENSION_NAME,
 			                                 XR_KHR_COMPOSITION_LAYER_CYLINDER_EXTENSION_NAME};
 			XrInstanceCreateInfo instance_info{XR_TYPE_INSTANCE_CREATE_INFO};
-			strcpy_s(instance_info.applicationInfo.applicationName, "h2-mod-vr");
+			strcpy_s(instance_info.applicationInfo.applicationName, product::name);
 			instance_info.applicationInfo.applicationVersion = 1;
-			strcpy_s(instance_info.applicationInfo.engineName, "h2-mod");
+			strcpy_s(instance_info.applicationInfo.engineName, product::name);
 			instance_info.applicationInfo.engineVersion = 1;
 			instance_info.applicationInfo.apiVersion = requested_api_version;
 			instance_info.enabledExtensionCount = cylinder_supported_ ? 2 : 1;

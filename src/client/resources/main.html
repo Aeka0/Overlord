@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8" />
 
-    <title>h2-mod-vr</title>
+    <title>Overlord</title>
 
     <style>
         * {
@@ -941,10 +941,10 @@
                                 </section>
                                 <section id="oobe-step-finish" class="oobe-step" style="display:none">
                                     <div class="oobe-credits">
-                                        <h3>h2-mod-vr</h3>
+                                        <h3>Overlord</h3>
                                         <div class="hint" data-i18n="about.stage"></div>
                                         <dl class="oobe-author"><dt data-i18n="about.developers">Developers</dt><dd><a href="https://github.com/Aeka0" onclick="window.external.openUrl(this.href); return false;">Aeka0</a></dd></dl>
-                                        <a class="oobe-project-link" href="https://github.com/Aeka0/h2-mod-vr" onclick="window.external.openUrl(this.href); return false;">github.com/Aeka0/h2-mod-vr</a>
+                                        <a class="oobe-project-link" href="https://github.com/Aeka0/h2-mod-vr" onclick="window.external.openUrl(this.href); return false;"><span data-i18n="about.github">GitHub Page</span></a>
                                         <div class="hint" data-i18n="oobe.finishNote">Return to this guide anytime from VR Settings &gt; Basics. The Help page explains movement, interactions and weapon handling.</div>
                                     </div>
                                 </section>
@@ -1360,14 +1360,19 @@
 
                 <div class="_help">
                     <div class="launcher-panel vr-settings help-page" id="help-page">
-                        <div class="settings-sidebar">
-                            <h2 class="help-sidebar-title" data-i18n="nav.help">Help</h2>
-                            <div class="help-categories" role="tablist" aria-label="Help topics" data-i18n-aria-label="help.topics" aria-orientation="vertical">
-                                <button type="button" class="category-tab" id="help-tab-movement" role="tab" aria-controls="help-viewport" aria-selected="true" onclick="LauncherHelp.selectCategory('movement')" onkeydown="LauncherHelp.categoryKey(event, 'movement')" data-i18n="help.category.movement">Basic movement</button>
-                                <button type="button" class="category-tab" id="help-tab-world" role="tab" aria-controls="help-viewport" aria-selected="false" tabindex="-1" onclick="LauncherHelp.selectCategory('world')" onkeydown="LauncherHelp.categoryKey(event, 'world')" data-i18n="help.category.world">World interaction</button>
-                                <button type="button" class="category-tab" id="help-tab-equipment" role="tab" aria-controls="help-viewport" aria-selected="false" tabindex="-1" onclick="LauncherHelp.selectCategory('equipment')" onkeydown="LauncherHelp.categoryKey(event, 'equipment')" data-i18n="help.category.equipment">Equipment</button>
-                                <button type="button" class="category-tab" id="help-tab-weapons" role="tab" aria-controls="help-viewport" aria-selected="false" tabindex="-1" onclick="LauncherHelp.selectCategory('weapons')" onkeydown="LauncherHelp.categoryKey(event, 'weapons')" data-i18n="help.category.weapons">Weapons</button>
-                                <button type="button" class="category-tab" id="help-tab-story" role="tab" aria-controls="help-viewport" aria-selected="false" tabindex="-1" onclick="LauncherHelp.selectCategory('story')" onkeydown="LauncherHelp.categoryKey(event, 'story')" data-i18n="help.category.story">Story interactions</button>
+                        <div class="help-sidebar-shell">
+                            <div class="settings-sidebar help-sidebar-viewport" id="help-sidebar-viewport" onscroll="updateSettingsScrollbar('helpSidebar')">
+                                <h2 class="help-sidebar-title" id="help-sidebar-title" data-i18n="nav.help">Help</h2>
+                                <div class="help-categories" role="tablist" aria-label="Help topics" data-i18n-aria-label="help.topics" aria-orientation="vertical">
+                                    <button type="button" class="category-tab" id="help-tab-movement" role="tab" aria-controls="help-viewport" aria-selected="true" onclick="LauncherHelp.selectCategory('movement')" onkeydown="LauncherHelp.categoryKey(event, 'movement')" data-i18n="help.category.movement">Basic movement</button>
+                                    <button type="button" class="category-tab" id="help-tab-world" role="tab" aria-controls="help-viewport" aria-selected="false" tabindex="-1" onclick="LauncherHelp.selectCategory('world')" onkeydown="LauncherHelp.categoryKey(event, 'world')" data-i18n="help.category.world">World interaction</button>
+                                    <button type="button" class="category-tab" id="help-tab-equipment" role="tab" aria-controls="help-viewport" aria-selected="false" tabindex="-1" onclick="LauncherHelp.selectCategory('equipment')" onkeydown="LauncherHelp.categoryKey(event, 'equipment')" data-i18n="help.category.equipment">Equipment</button>
+                                    <button type="button" class="category-tab" id="help-tab-weapons" role="tab" aria-controls="help-viewport" aria-selected="false" tabindex="-1" onclick="LauncherHelp.selectCategory('weapons')" onkeydown="LauncherHelp.categoryKey(event, 'weapons')" data-i18n="help.category.weapons">Weapons</button>
+                                    <button type="button" class="category-tab" id="help-tab-story" role="tab" aria-controls="help-viewport" aria-selected="false" tabindex="-1" onclick="LauncherHelp.selectCategory('story')" onkeydown="LauncherHelp.categoryKey(event, 'story')" data-i18n="help.category.story">Story interactions</button>
+                                </div>
+                            </div>
+                            <div class="scrollbar" id="help-sidebar-scrollbar" role="scrollbar" aria-controls="help-sidebar-viewport" aria-labelledby="help-sidebar-title" aria-orientation="vertical" aria-valuemin="0" aria-valuemax="0" aria-valuenow="0" tabindex="-1" style="visibility:hidden" onmousedown="beginSettingsScroll(event, 'helpSidebar')" onkeydown="onSettingsScrollKey(event, 'helpSidebar')" onlosecapture="endSettingsScroll()">
+                                <div class="scrollbar-thumb" id="help-sidebar-scrollbar-thumb"></div>
                             </div>
                         </div>
                         <div class="settings-main">
@@ -1380,16 +1385,21 @@
                                 <h2 id="help-title">Basic movement</h2>
                                 <p class="help-summary" id="help-search-hint" data-i18n="help.searchHint">Search all topics by weapon, action or mission name. Story tips are included after acknowledging the spoiler notice.</p>
                             </div>
-                            <div class="help-viewport" id="help-viewport" role="tabpanel" tabindex="0" aria-labelledby="help-title"></div>
+                            <div class="settings-scroll-shell">
+                                <div class="help-viewport" id="help-viewport" role="tabpanel" tabindex="0" aria-labelledby="help-title" onscroll="updateSettingsScrollbar('help')"></div>
+                                <div class="scrollbar" id="help-scrollbar" role="scrollbar" aria-controls="help-viewport" aria-labelledby="help-title" aria-orientation="vertical" aria-valuemin="0" aria-valuemax="0" aria-valuenow="0" tabindex="-1" style="visibility:hidden" onmousedown="beginSettingsScroll(event, 'help')" onkeydown="onSettingsScrollKey(event, 'help')" onlosecapture="endSettingsScroll()">
+                                    <div class="scrollbar-thumb" id="help-scrollbar-thumb"></div>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
 
                 <div class="_about">
-                    <div class="launcher-panel about-page" tabindex="0" aria-label="About H2-Mod-VR" data-i18n-aria-label="a11y.about">
+                    <div class="launcher-panel about-page" tabindex="0" aria-label="About Overlord" data-i18n-aria-label="a11y.about">
                         <div class="about-header">
                             <div class="about-heading">
-                                <h1>h2-mod-vr</h1>
+                                <h1>Overlord</h1>
                                 <div class="about-version"><span data-i18n="about.stage"></span></div>
                             </div>
                             <a class="about-project-link" href="https://github.com/Aeka0/h2-mod-vr" onclick="window.external.openUrl(this.href); return false;"><span data-i18n="about.github">GitHub Page</span></a>
@@ -1401,7 +1411,7 @@
                             </ul>
                         </section>
                         <section class="about-credits">
-                            <h2><span data-i18n="about.upstream">H2-Mod Developers</span></h2>
+                            <h2><span data-i18n="about.upstream">Upstream contributors</span></h2>
                             <ul class="about-people">
                                 <li><a href="https://github.com/VladWinner" onclick="window.external.openUrl(this.href); return false;">Vlad</a></li>
                                 <li><a href="https://github.com/diamante0018" onclick="window.external.openUrl(this.href); return false;">Future</a></li>

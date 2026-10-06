@@ -1,4 +1,4 @@
-# H2-MOD VR client overlay
+# Overlord client overlay
 
 This bundle requires a legally owned Windows installation of Call of Duty:
 Modern Warfare 2 Campaign Remastered, a supported VR runtime with tracked controllers, and the
@@ -10,16 +10,16 @@ the client build.
 
 1. Close the game before installing or updating.
 2. Extract the bundle into the game directory, preserving its folder layout.
-3. Run h2-mod-vr.exe and complete the launcher's first-use setup. A Debug bundle
-   instead contains h2-mod-vr-debug.exe.
+3. Run overlord.exe and complete the launcher's first-use setup. A Debug bundle
+   instead contains overlord-debug.exe.
 4. Connect the headset and wake both controllers before entering the campaign.
    Steam Link requires SteamVR; Virtual Desktop can use VDXR or SteamVR according
    to its selected OpenXR runtime.
 
 Keep openxr_loader.dll, the application manifest, steamvr/, vr_input/ and h2-mod/ resources beside
 the executable. Install updates manually from
-[H2-MOD VR Releases](https://github.com/Aeka0/h2-mod-vr/releases).
-The inherited upstream auto-update service is unconfigured for VR builds.
+[Overlord Releases](https://github.com/Aeka0/h2-mod-vr/releases).
+Install Overlord updates from this project's release packages.
 
 See the [project documentation](https://github.com/Aeka0/h2-mod-vr/tree/main/docs)
 for controls, settings, supported behavior and remaining compatibility work.
@@ -50,8 +50,8 @@ forced into VDXR when the user selected SteamVR. The system registration is
 never changed. Connect before starting the game, or use `vr_reinit` after
 connecting to repeat selection. There is no mid-frame runtime switch.
 
-Run h2-mod-vr.exe normally for the launcher; a Debug bundle contains
-h2-mod-vr-debug.exe. Select **VR Settings > Basics > VR backend**. OpenXR is
+Run overlord.exe normally for the launcher; a Debug bundle contains
+overlord-debug.exe. Select **VR Settings > Basics > VR backend**. OpenXR is
 recommended and OpenVR is the manual backup. The selection saves immediately
 and applies when you click Singleplayer in that same launcher session. No
 launcher restart is needed, and changing the selection does not switch an
@@ -63,7 +63,7 @@ that direct path, from a Command Prompt in the game directory:
 
 ~~~bat
 set H2V_VR_BACKEND=openvr
-h2-mod-vr.exe -singleplayer
+overlord.exe -singleplayer
 ~~~
 
 Use `openxr` to force OpenXR or clear the variable to return to the saved

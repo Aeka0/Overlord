@@ -2,10 +2,10 @@
 
 ## Code
 
-H2-MOD VR is a modified version of H2-Mod with VR rendering, input, and gameplay
-adaptations maintained in this repository. The parent project and earlier
-contributors are acknowledged in the root README. Its GPLv3 license and
-existing source notices are retained.
+Overlord includes code derived from H2-Mod, with independently maintained VR
+rendering, input, and gameplay adaptations. The parent project's GPLv3 license
+and existing source notices are retained. See THIRD_PARTY_NOTICES.md for the
+applicable project and dependency notices.
 A new Git root does not change ownership or third-party license terms.
 
 The .gitmodules file and Git tree pin dependency sources. Dependencies retain
@@ -32,6 +32,10 @@ copyright attribution for a merged font.
 
 ## Other inherited assets and tools
 
+- assets/icon/Icon.ico is the supplied Overlord application icon. The executable
+  embeds this ICO directly; src/client/resources/icon.png is its largest embedded
+  PNG frame, extracted without image edits. Retain the icon's permission evidence
+  alongside the other project artwork before public redistribution.
 - data/zonetool/ contains source textures, font files and asset descriptions
   inherited from H2-Mod. Confirm the origins and redistribution rights of image
   resources before publishing them or compiled fastfiles. The code license is
@@ -41,8 +45,8 @@ copyright attribution for a merged font.
   without image edits for SteamVR's vertical capsule.
   Retain the source/permission evidence for artwork used in a public release.
 - data/cdata/ also contains six inherited voice-over FLAC files. Confirm their
-  redistribution rights before making the source snapshot public; the client
-  overlay packager deliberately excludes these audio files.
+  redistribution rights before publishing the source or a client overlay; the
+  package helper currently collects `.flac` files from this directory.
 - The pinned deps/shader-tool checkout has no standalone license file. Confirm
   its applicable permission before redistributing its code or linked
   implementation; a submodule URL does not supply missing permission.

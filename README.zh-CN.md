@@ -1,16 +1,21 @@
-# H2-Mod-VR
+# Overlord
 
 [English](README.md) | 简体中文
 
-![H2-MOD VR](assets/steamvr/cover.png)
+![Overlord](assets/steamvr/cover.png)
 
 Bilibili/Aeka0：https://space.bilibili.com/10077845
 
 允许转载，请附上本项目链接。
 
-H2-Mod-VR 是《使命召唤：现代战争 2 战役重制版》的 VR 化模组。项目为原有战役加入原生双眼视差画面、6DOF头部与双手追踪、物理枪械操作，以及面向 VR 的装备、场景和剧情交互。适配以游戏原有的武器、弹药、动画和任务逻辑为基础，尽量保留原版的剧情表现。
+Overlord 是《使命召唤：现代战争 2 战役重制版》的 VR 化模组。项目为原有战役加入原生双眼视差画面、6DOF头部与双手追踪、物理枪械操作，以及面向 VR 的装备、场景和剧情交互。适配以游戏原有的武器、弹药、动画和任务逻辑为基础，尽量保留原版的剧情表现。
 
-> 目前为 Beta 版本，在游玩期间很可能会出现部分场景/剧情脚本的适配问题。如遭遇问题或有改善游玩体验方面的建议欢迎进行反馈。请注意 H2-Mod 的自定义 Mod 预期无法工作，同时现阶段可能进行大规模的代码调整和重构，不建议在现阶段进行 Mod 开发。同时请知悉版本更迭可能会破坏游戏存档和进度。
+> 目前为 Beta 版本，在游玩期间很可能会出现部分场景/剧情脚本的适配问题。如遭遇问题或有改善游玩体验方面的建议欢迎进行反馈。请注意针对非 VR 客户端制作的自定义 Mod 预期无法在 Overlord 中工作，同时现阶段可能进行大规模的代码调整和重构，不建议在现阶段进行 Mod 开发。同时请知悉版本更迭可能会破坏游戏存档和进度。
+
+## 已知问题：
+
+- 如果遭遇 `Create2DTexture` 错误，请尝试在游戏内的图形设置中关闭“着色器预载”。
+- MSI Afterburner 可能导致 Overlord 无法启动。该问题目前仍在调查，现阶段建议在启动 Overlord 前退出 MSI Afterburner。
 
 ## 主要功能
 
@@ -39,19 +44,19 @@ H2-Mod-VR 是《使命召唤：现代战争 2 战役重制版》的 VR 化模组
 
 Beta 及正式版本发布时，可从 [Releases 页面](https://github.com/Aeka0/h2-mod-vr/releases) 获取安装包；尚未发布时，可参考下方的源码构建说明。
 
-1. 确认原版游戏安装完整，并准备好对应的 H2-Mod 基础数据。
-2. 将 VR 客户端包解压到游戏根目录，运行 `h2-mod-vr.exe`。
+1. 确认原版游戏安装完整。
+2. 将 VR 客户端包解压到游戏根目录，运行 `overlord.exe`。
 3. 启动 SteamVR，确认头显和控制器已正常连接，然后点击“单人战役”。
 
-使用 OpenVR 备选后端时，首次成功连接会将 H2-MOD VR 注册到 SteamVR。普通版本与 Debug 版本分别注册，不共用同一个启动项。
+使用 OpenVR 备选后端时，首次成功连接会将 Overlord 注册到 SteamVR。普通版本与 Debug 版本分别注册，不共用同一个启动项。
 
 客户端及资源应保持类似以下的相对位置：
 
 ~~~text
 游戏目录/
-├─ h2-mod-vr.exe
+├─ overlord.exe
 ├─ openxr_loader.dll
-├─ h2-mod-vr.vrmanifest
+├─ overlord.vrmanifest
 ├─ steamvr/
 ├─ vr_input/
 └─ h2-mod/
@@ -100,18 +105,18 @@ Beta 及正式版本发布时，可从 [Releases 页面](https://github.com/Aeka
 准备 Visual Studio 的 C++ 桌面开发工具和 Windows SDK，在相应的开发者命令提示符中执行：
 
 ~~~bat
-git clone --recurse-submodules https://github.com/Aeka0/h2-mod-vr.git
-cd h2-mod-vr
+git clone --recurse-submodules https://github.com/Aeka0/h2-mod-vr.git Overlord
+cd Overlord
 generate.bat
-msbuild build\h2-mod.sln /t:client /m:2 /p:Configuration=RelWithDebInfo /p:Platform=x64 /p:PreferredToolArchitecture=x64 /p:CL_MPCount=4
+msbuild build\overlord.sln /t:client /m:2 /p:Configuration=RelWithDebInfo /p:Platform=x64 /p:PreferredToolArchitecture=x64 /p:CL_MPCount=4
 ~~~
 
-`generate.bat` 生成 Visual Studio 2022 工程。默认工具集为 v143；如果使用本机已有的 Visual Studio 2019 v142 工具链，应使用对应的 x64 MSBuild，并额外指定 `/p:PlatformToolset=v142`。
+`generate.bat` 生成 Visual Studio 2022 工程。默认工具集为 v143；如果使用已有的 Visual Studio 2019 v142 工具链，应先执行 `tools\premake5.exe vs2019` 生成工程，再使用对应的 x64 MSBuild，并指定 `/p:PlatformToolset=v142`。
 
 | 用途 | 构建配置 | 客户端文件 |
 | --- | --- | --- |
-| 正常游玩与性能检查 | `RelWithDebInfo` | `h2-mod-vr.exe` |
-| 开发与问题诊断 | `Debug` | `h2-mod-vr-debug.exe` |
+| 正常游玩与性能检查 | `RelWithDebInfo` | `overlord.exe` |
+| 开发与问题诊断 | `Debug` | `overlord-debug.exe` |
 
 构建输出位于 `build/bin/x64/<Configuration>/`。请使用同一次构建产生的程序与资源，不要混用不匹配的版本。
 

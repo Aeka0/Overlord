@@ -172,7 +172,7 @@ namespace vr::gameplay::weapons::independent_fire
 					<< " shots=" << v.shots << " last_command=" << v.last_shot << " ammo=" << v.before << "->" << v.after << " outcome=" << int(v.outcome) << " reason=" << v.reason << '\n';
 				out<<aim_assist::status();
 				const auto text=out.str();console::info("%s",text.c_str());scheduler::once([text] {
-					utils::io::write_file_atomic("minidumps/h2-mod-vr-dual-fire.txt",text);},scheduler::pipeline::async);
+					utils::io::write_file_atomic("minidumps/overlord-dual-fire.txt",text);},scheduler::pipeline::async);
 			},scheduler::pipeline::server);});
 		}
 		void pre_destroy() override {alive=false;}

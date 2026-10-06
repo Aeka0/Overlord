@@ -105,7 +105,7 @@ support and is not used to authorize that combination.
 ## Diagnostics and limits
 
 `vr_ladder_status` prints and saves
-`minidumps/h2-mod-vr-ladder.txt`: admission readiness, phase, held hands, carrier,
+`minidumps/overlord-ladder.txt`: admission readiness, phase, held hands, carrier,
 move/fall/exit/block counts, top height, cache state and last reason.
 
 Meshes without usable horizontal indexed edges, the unresolved invisible world

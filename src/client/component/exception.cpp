@@ -112,17 +112,17 @@ namespace exception
 			};
 
 			sprintf_s(emergency_dump.dump_path,
-				"minidumps/h2-mod-emergency-%04u-%02u-%02u-%02u-%02u-%02u-p%lu-t%lu.dmp",
+				"minidumps/overlord-emergency-%04u-%02u-%02u-%02u-%02u-%02u-p%lu-t%lu.dmp",
 				timestamp.wYear, timestamp.wMonth, timestamp.wDay, timestamp.wHour,
 				timestamp.wMinute, timestamp.wSecond, GetCurrentProcessId(),
 				emergency_dump.exception_thread_id);
 			sprintf_s(emergency_dump.report_path,
-				"minidumps/h2-mod-emergency-%04u-%02u-%02u-%02u-%02u-%02u-p%lu-t%lu.txt",
+				"minidumps/overlord-emergency-%04u-%02u-%02u-%02u-%02u-%02u-p%lu-t%lu.txt",
 				timestamp.wYear, timestamp.wMonth, timestamp.wDay, timestamp.wHour,
 				timestamp.wMinute, timestamp.wSecond, GetCurrentProcessId(),
 				emergency_dump.exception_thread_id);
 			const auto report_size = sprintf_s(emergency_dump.report,
-				"H2-MOD VR emergency crash evidence\r\n"
+				"Overlord emergency crash evidence\r\n"
 				"Exception: 0x%08lX\r\nAddress: 0x%p\r\nProcess/thread: %lu/%lu\r\n"
 				"RIP/RSP/RBP: 0x%llX/0x%llX/0x%llX\r\n"
 				"Parameter count: %lu\r\nParameter 0/1/2: 0x%llX/0x%llX/0x%llX\r\n",
@@ -210,7 +210,7 @@ namespace exception
 			utils::thread::suspend_other_threads();
 			show_mouse_cursor();
 
-			MessageBoxA(nullptr, error_str.data(), "h2-mod-vr ERROR", MB_ICONERROR);
+			MessageBoxA(nullptr, error_str.data(), "Overlord ERROR", MB_ICONERROR);
 			TerminateProcess(GetCurrentProcess(), exception_data.code);
 		}
 
@@ -226,7 +226,7 @@ namespace exception
 				recovery_data.last_recovery = std::chrono::high_resolution_clock::now();
 				++recovery_data.recovery_counts;
 				game::Com_Error(game::ERR_DROP, "Fatal error (0x%08X) at 0x%p.\nA minidump has been written.\n\n"
-				                "h2-mod-vr has tried to recover your game, but it might not run stable anymore.\n\n"
+				                "Overlord has tried to recover your game, but it might not run stable anymore.\n\n"
 				                "Make sure to update your graphics card drivers and install operating system updates!\n",
 				                exception_data.code, exception_data.address);
 			}
@@ -269,7 +269,7 @@ namespace exception
 				info.append("\r\n");
 			};
 
-			line("H2-MOD VR Crash Dump");
+			line("Overlord Crash Dump");
 			line("");
 			line("Version: "s + VERSION);
 			line("Environment: "s + game::environment::get_string());
@@ -293,7 +293,7 @@ namespace exception
 
 		void write_minidump(const LPEXCEPTION_POINTERS exceptioninfo)
 		{
-			const std::string crash_stem = utils::string::va("minidumps/h2-mod-crash-%d-%s",
+			const std::string crash_stem = utils::string::va("minidumps/overlord-crash-%d-%s",
 			                                                 game::environment::get_real_mode(),
 			                                                 get_timestamp().data());
 			const auto dump = create_minidump(exceptioninfo);
@@ -308,7 +308,7 @@ namespace exception
 			utils::compression::zip::archive zip_file{};
 			zip_file.add("crash.dmp", dump);
 			zip_file.add("info.txt", info);
-			zip_file.write(crash_stem + ".zip", "h2-mod-vr Crash Dump");
+			zip_file.write(crash_stem + ".zip", "Overlord Crash Dump");
 		}
 
 		bool is_harmless_error(const LPEXCEPTION_POINTERS exceptioninfo)

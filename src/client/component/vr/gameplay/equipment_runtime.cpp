@@ -443,7 +443,7 @@ namespace vr::gameplay::equipment
 					report+=std::format("motion hand={} kind={} sequence={} speed_mps={:.3f} travel_m={:.3f} armed_points={} rejected={} tracking_rejections={}\n",
 						h,d.kind.load(),d.sequence.load(),d.speed.load(),d.path.load(),d.armed_points.load(),d.rejected.load(),d.tracking_rejections.load());
 				}
-				console::print_text(console::con_type_info,report);scheduler::once([report]{utils::io::write_file("minidumps/h2-mod-vr-melee.txt",report);},scheduler::pipeline::async);
+				console::print_text(console::con_type_info,report);scheduler::once([report]{utils::io::write_file("minidumps/overlord-melee.txt",report);},scheduler::pipeline::async);
 			});
 		}
 		void pre_destroy() override {alive=false;model=nullptr;}

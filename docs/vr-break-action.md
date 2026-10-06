@@ -132,7 +132,7 @@ cases have bounded cosmetic lifetimes; their rendering never mutates ammunition.
 ## Diagnostics and acceptance
 
 `vr_breakActionReload` enables the family. `vr_break_action_status` prints its
-current state and saves `minidumps/h2-mod-vr-break-action.txt`, including native
+current state and saves `minidumps/overlord-break-action.txt`, including native
 name/capacity, live/spent masks, hinge amount, hand lease and cartridge contacts.
 Sound notetrack keys come from the respective original reload animations and are
 resolved through that weapon's current native sound map. Missing keys stay silent.

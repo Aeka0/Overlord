@@ -32,7 +32,7 @@ queries resolve native muzzle and normal/last-shot shell effects, including
 variants, and the native oriented FX queue owns particle lifetime and shell
 physics. These frames retain the weapon's real ejection side when held left.
 Revolvers retain their cases and bolt-action weapons do not eject on the shot.
-`vr_weapon_fx_status` writes `minidumps/h2-mod-vr-weapon-fx.txt`; counters measure
+`vr_weapon_fx_status` writes `minidumps/overlord-weapon-fx.txt`; counters measure
 spawn requests, not proof of visible particles. HMD testing confirmed visible muzzle
 flame and shell ejection before the instance refactor; their FX assets and lifetime
 implementation were not changed by this refactor.
@@ -103,7 +103,7 @@ resource contracts, not headset appearance or pickup latency. Regression tests
 cover simultaneous rear buttons, opposite tracking loss, neutral rearming,
 per-object skin binding, record reuse and multi-bone skin subsets.
 
-`vr_dual_fire_status` writes `minidumps/h2-mod-vr-dual-fire.txt`: instance IDs,
+`vr_dual_fire_status` writes `minidumps/overlord-dual-fire.txt`: instance IDs,
 attempts, emitted shots, ammunition, rejection reasons and same-tick pairs.
 Clock regressions cover L86/MG4 75/100 ms cadence, duplicates, neutral rearming,
 semi-auto, burst completion and cooldown. The current native ABI and live L86,
@@ -238,7 +238,7 @@ were not verified by this ground-impact experiment.
 In a Debug build, while holding two loaded native inventory weapons in an idle
 playable scene, execute `vr_fire_owned_probe <owned_name> [second_owned_name]`.
 This explicitly fires one real shot from each requested weapon toward the ground.
-The bounded report is written to `minidumps/h2-mod-vr-independent-fire.txt` off the
+The bounded report is written to `minidumps/overlord-independent-fire.txt` off the
 simulation thread. The command is absent in Release builds and never fires on
 startup. It does not grant weapons or modify selection to make a test pass.
 

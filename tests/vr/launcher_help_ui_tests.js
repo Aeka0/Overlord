@@ -62,7 +62,10 @@ const document = {
     getElementById: id => nodes[id] || walk(nodes['help-viewport']).find(node => node.id === id)
 };
 let language = 'zh-CN';
+const scrollbar = { top: 0 };
 const context = vm.createContext({ document, launcherHelpCatalog: catalog,
+    endSettingsScroll() {},
+    updateSettingsScrollbar(area) { if (area === 'help') scrollbar.top = nodes['help-viewport'].scrollTop; },
     LauncherI18n: { language: () => language, text: (key, values = {}) =>
         locales[language][key].replace(/\{(\w+)\}/g, (_, token) => values[token]) } });
 vm.runInContext(fs.readFileSync(path.join(resources, 'help.js'), 'utf8'), context);
@@ -138,6 +141,16 @@ assert.ok(titles().some(title => title.includes('Cliffhanger')), 'translated hel
 language = 'ko'; help.refresh();
 assert.ok(titles().some(title => title.includes('얼음도끼')), 'search is independent of the displayed language');
 language = 'en';
+help.selectCategory('movement');
+viewport.scrollTop = 160;
+document.getElementById('help-article-controls').onclick();
+assert.equal(viewport.scrollTop, 160, 'accordion updates preserve the reader position');
+assert.equal(scrollbar.top, 160, 'the scrollbar follows the restored reader position');
+help.selectCategory('weapons'); help.selectCategory('movement');
+assert.equal(scrollbar.top, 160, 'returning to a category restores its scrollbar position');
+help.search('no-such-help-entry');
+assert.equal(viewport.scrollTop, 0);
+assert.equal(scrollbar.top, 0, 'empty search resets the scrollbar with the reader');
 // A new launcher document resets acknowledgement without a storage API.
 vm.runInContext(fs.readFileSync(path.join(resources, 'help.js'), 'utf8'), context);
 context.LauncherHelp.selectCategory('story');

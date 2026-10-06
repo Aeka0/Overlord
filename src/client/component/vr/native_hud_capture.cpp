@@ -264,7 +264,7 @@ namespace vr::native_hud_capture
 					<< " last_blend=" << last_blend_src.load() << '/' << last_blend_dst.load() << '/' << last_blend_op.load()
 					<< " material=" << std::hex << last_material.load() << " color=" << last_color.load() << std::dec << '\n'
 					<< "pending=" << (diagnostic_deadline.load() != 0) << " busy=" << diagnostic_busy.load() << '\n';
-				utils::io::write_file_atomic("minidumps/h2-mod-vr-hud-capture.txt", report.str());
+				utils::io::write_file_atomic("minidumps/overlord-hud-capture.txt", report.str());
 				if (!alive.load() || (!diagnostic_deadline.load() && !diagnostic_busy.load()))
 				{ report_pending.store(false); return scheduler::cond_end; }
 				return scheduler::cond_continue;

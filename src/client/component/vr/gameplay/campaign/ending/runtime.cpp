@@ -1175,7 +1175,7 @@ namespace vr::gameplay::ending
 			             {
 				             const auto text = status();
 				             console::print_text(console::con_type_info, text);
-				             utils::io::write_file_atomic("minidumps/h2-mod-vr-ending.txt", text);
+				             utils::io::write_file_atomic("minidumps/overlord-ending.txt", text);
 			             });
 		}
 		void pre_destroy() override

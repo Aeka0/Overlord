@@ -18,7 +18,7 @@
     "LOCALE_16": "Inglese (sicuro)",
     "LOCALE_17": "Russo (parziale)",
     "LUA_MENU_FALLBACK_DISABLE": "Ripristina caratteri predefiniti",
-    "LUA_MENU_FALLBACK_ENABLE": "Usare caratteri di H2-MOD VR",
+    "LUA_MENU_FALLBACK_ENABLE": "Usare caratteri di Overlord",
 
     "LUA_MENU_CAMPAIGN_UNLOCKED_ALL_TITLE": "Sblocca tutte le missioni",
     "LUA_MENU_CANCEL_UNLOCK_CAPS": "Annulla sblocco",
@@ -35,8 +35,8 @@
 
     "MENU_MUSIC_VOLUME": "Volume musica",
 
-    "MENU_GENERAL": "H2-MOD VR",
-    "MENU_GENERAL_DESC": "Imposta le opzioni di H2-MOD VR.",
+    "MENU_GENERAL": "Overlord",
+    "MENU_GENERAL_DESC": "Imposta le opzioni di Overlord.",
     "LUA_MENU_AUTO_UPDATE": "Aggiornamenti automatici",
     "LUA_MENU_AUTO_UPDATE_DESC": "Controlla automaticamente gli aggiornamenti all'avvio.",
     "LUA_MENU_CHECK_UPDATES": "Controlla gli aggiornamenti",

@@ -160,7 +160,7 @@ namespace vr::gameplay::hand_interaction
 				std::ostringstream out;out<<"hand interaction frames="<<frames<<" overflows="<<overflows<<" incompatible observations="<<unplanned<<'\n';
 				for(const auto& s:authority.sessions())if(s)out<<"session="<<s.id<<" hand="<<int(s.actor)<<" domain="<<name(s.held.destination.provider)<<" host="<<s.held.destination.object.value<<" generation="<<s.held.destination.object.generation<<" component="<<s.held.destination.component<<" binding="<<s.held.destination.binding<<" role="<<name(s.held.purpose)<<" recipe="<<unsigned(s.held.pose)<<'\n';
 				for(size_t i=0;i<last_count;++i){const auto& d=last_decisions[i];out<<"frame="<<last_frame<<" candidate hand="<<int(d.request.actor)<<" domain="<<name(d.request.desired.destination.provider)<<" host="<<d.request.desired.destination.object.value<<" role="<<name(d.request.desired.purpose)<<" event="<<d.request.event<<" distance="<<d.request.distance<<" result="<<name(d.result)<<" blocking_session="<<d.blocking_session<<'\n';}
-				const auto text=out.str();console::info("%s",text.c_str());scheduler::once([text]{utils::io::write_file_atomic("minidumps/h2-mod-vr-hand-interaction.txt",text);},scheduler::pipeline::async);
+				const auto text=out.str();console::info("%s",text.c_str());scheduler::once([text]{utils::io::write_file_atomic("minidumps/overlord-hand-interaction.txt",text);},scheduler::pipeline::async);
 			},scheduler::pipeline::server);});
 		}
 	};

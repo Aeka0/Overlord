@@ -4,7 +4,14 @@
 
 namespace product
 {
-	inline constexpr auto name = "H2-MOD VR";
+	inline constexpr auto name = "Overlord";
+#ifdef _DEBUG
+	inline constexpr auto application_key = "overlord.debug";
+	inline constexpr auto application_manifest = L"overlord-debug.vrmanifest";
+#else
+	inline constexpr auto application_key = "overlord";
+	inline constexpr auto application_manifest = L"overlord.vrmanifest";
+#endif
 	inline constexpr auto repository_url = "https://github.com/Aeka0/h2-mod-vr";
 	inline constexpr auto releases_url = "https://github.com/Aeka0/h2-mod-vr/releases";
 
@@ -36,18 +43,21 @@ namespace product
 		// Only these product descriptions are ours. Never rewrite dialogue,
 		// credits, URLs inside documents, asset identifiers or arbitrary prose.
 		if (!product_description(key) || text.size() > 4096) return text;
-		constexpr std::string_view legacy = "h2-mod";
+		// Older installed locale fastfiles can still contain the upstream name.
+		constexpr std::string_view legacy_names[] = {"h2-mod-vr", "h2-mod vr", "h2-mod"};
 		const auto lower = [](char c) {return c >= 'A' && c <= 'Z' ? char(c + ('a' - 'A')) : c;};
-		for (std::size_t at = 0; at + legacy.size() <= text.size(); ++at)
+		for (std::size_t at = 0; at < text.size(); ++at)
 		{
-			bool match = true;
-			for (std::size_t i = 0; i < legacy.size(); ++i) match &= lower(text[at + i]) == legacy[i];
-			if (!match) continue;
-			const auto after = at + legacy.size();
-			if (after + 3 <= text.size() && (text[after] == ' ' || text[after] == '-') &&
-				lower(text[after + 1]) == 'v' && lower(text[after + 2]) == 'r') continue;
-			text.replace(at, legacy.size(), name);
-			at += std::char_traits<char>::length(name) - 1;
+			for (const auto legacy : legacy_names)
+			{
+				if (at + legacy.size() > text.size()) continue;
+				bool match = true;
+				for (std::size_t i = 0; i < legacy.size(); ++i) match &= lower(text[at + i]) == legacy[i];
+				if (!match) continue;
+				text.replace(at, legacy.size(), name);
+				at += std::char_traits<char>::length(name) - 1;
+				break;
+			}
 		}
 		return text;
 	}

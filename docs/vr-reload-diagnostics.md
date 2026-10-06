@@ -37,7 +37,7 @@ recording** separately enables native reload/closed-bolt observations and automa
 reload-boundary reports; ordinary ammunition hooks remain active when it is off.
 
 - `vr_reload_interaction_status`: report native ammunition, physical instances and asset
-  admission in `minidumps/h2-mod-vr-physical-reload.txt`. The leading
+  admission in `minidumps/overlord-physical-reload.txt`. The leading
   `runtime_models`, `registration_failures` and `asset_retirements` counters
   distinguish rejected subset registration from a missing contact scene.
 - `vr_reloadWell_status`: print a bounded copy of the most recent debug sample,
@@ -117,7 +117,7 @@ failure has been eliminated. HMD edge-of-view acceptance is still required.
 
 ## Cylinder admission and empty native stores
 
-`vr_cylinder_status` also writes `minidumps/h2-mod-vr-cylinder.txt`. The report
+`vr_cylinder_status` also writes `minidumps/overlord-cylinder.txt`. The report
 contains the latest presented cylinder's token, native name/capacity, native
 ammunition validity and counts, mechanical phase, loader ownership and rejection
 reason. Native observation runs on the server scheduler; file I/O runs async.

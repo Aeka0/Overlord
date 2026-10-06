@@ -57,15 +57,16 @@ int main(int argc, char** argv)
 	};
 	try
 	{
-		require(std::string(product::fixed_menu_text("@MENU_SP_CAMPAIGN")) == "H2-MOD VR", "campaign title uses current product");
-		require(std::string(product::fixed_menu_text("MENU_GENERAL")) == "H2-MOD VR", "settings title uses current product");
+		require(std::string(product::fixed_menu_text("@MENU_SP_CAMPAIGN")) == "Overlord", "campaign title uses current product");
+		require(std::string(product::fixed_menu_text("MENU_GENERAL")) == "Overlord", "settings title uses current product");
 		for (const auto* key : {"MENU_SYSINFO_CUSTOMER_SUPPORT_URL", "@MENU_SYSINFO_DONATION_URL"})
 			require(product::fixed_menu_text(key) == product::repository_url, "displayed project URLs cannot retain an upstream destination");
 		require(std::string(product::menu_text_alias("MENU_SYSINFO_DONATION_LINK")) == "MENU_SYSINFO_CUSTOMER_SUPPORT_LINK",
 			"legacy donation action is labeled as a project link");
-		require(product::menu_description("MENU_GENERAL_DESC", "Set h2-mod's settings.") == "Set H2-MOD VR's settings.", "localized product descriptions are rebranded");
-		require(product::menu_description("LUA_MENU_FALLBACK_ENABLE", "使用 h2-mod 字体") == "使用 H2-MOD VR 字体", "native UTF-8 wording is retained");
-		require(product::menu_description("LUA_MENU_FALLBACK_ENABLE", "H2-MOD VR / h2-mod-vr") == "H2-MOD VR / h2-mod-vr", "already updated branding is not duplicated");
+		require(product::menu_description("MENU_GENERAL_DESC", "Set h2-mod's settings.") == "Set Overlord's settings.", "localized product descriptions are rebranded");
+		require(product::menu_description("LUA_MENU_FALLBACK_ENABLE", "使用 h2-mod 字体") == "使用 Overlord 字体", "native UTF-8 wording is retained");
+		require(product::menu_description("LUA_MENU_FALLBACK_ENABLE", "Overlord / overlord") == "Overlord / overlord", "already updated branding is not duplicated");
+		require(product::menu_description("MENU_GENERAL_DESC", "H2-MOD VR / h2-mod-vr") == "Overlord / Overlord", "older installed VR locale names are replaced completely");
 		require(!product::fixed_menu_text("CREDIT_H2MOD_VLAD") && !product::menu_text_alias("CREDIT_H2MOD_VLAD") &&
 			product::menu_description("CREDIT_H2MOD_VLAD", "H2-Mod Developers") == "H2-Mod Developers", "upstream credit identity and prose are preserved");
 		require(product::menu_description("UNRELATED", "https://github.com/alicealys/h2-mod") == "https://github.com/alicealys/h2-mod", "unrelated documents and links are never globally rewritten");

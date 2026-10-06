@@ -40,7 +40,7 @@ Category selection follows these native slots, not guessed OffhandClass values.
 
 `vr_chestEquipment` controls the two display-only slots, independently of knife
 interaction. `vr_chestEquipment_status` reports selected tokens, quantities and
-submission/preparation counts to `minidumps/h2-mod-vr-chest-equipment.txt`.
+submission/preparation counts to `minidumps/overlord-chest-equipment.txt`.
 Automated tests cover the layout, native selector reads, zero/one/many quantities,
 invalid inputs, upright placement and the retained knife lifecycle. Headset
 acceptance for the added models remains pending.
@@ -309,7 +309,7 @@ actor hits from `PM_GroundTrace` at return address `0x140689bcf`, with player
 bounds 15 x 15, mask `0x281c011` and NPC contents `0x4000`.
 
 `vr_physicalMelee` enables this interaction alongside physical carry.
-`vr_melee_status` prints and saves `minidumps/h2-mod-vr-melee.txt`: native asset
+`vr_melee_status` prints and saves `minidumps/overlord-melee.txt`: native asset
 readiness, holder/grip, draw/return counts, contacts, damage attempts/results,
 last target/damage, and exact-record presentation counters, including chest
 preparation, grab availability/pending masks and both palm distances. This command does

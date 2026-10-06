@@ -139,7 +139,7 @@ namespace vr::gameplay::trainer
 			scheduler::loop(complete_hint,scheduler::pipeline::server);
 			command::add("vr_trainer_status",[] {
 				const auto report=std::format("weapon_queries={} hint_requests={} physical_completions={}\n",query_count.load(),request_count.load(),completion_count.load());
-				console::info("[VR trainer] %s",report.c_str());utils::io::write_file_atomic("minidumps/h2-mod-vr-trainer.txt",report);
+				console::info("[VR trainer] %s",report.c_str());utils::io::write_file_atomic("minidumps/overlord-trainer.txt",report);
 			});
 		}
 	};

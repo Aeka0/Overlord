@@ -1,26 +1,25 @@
 ---
-name: Bug report / 错误报告
-about: Report a reproducible H2-MOD VR problem / 报告可复现的问题
+name: Bug report
+about: Report a reproducible Overlord problem
 title: ''
 labels: ''
 assignees: ''
 ---
 
-### Build and hardware / 版本与设备
+### Build and hardware
 
 - Build or commit:
 - Windows and SteamVR version:
 - Headset and controllers:
 - Mission / checkpoint:
 
-### Reproduction / 复现步骤
-
+### Reproduction
 1.
 2.
 
-### Expected and actual behavior / 预期与实际表现
+### Expected and actual behavior
 
-### Diagnostics / 诊断信息
+### Diagnostics
 
 Include relevant error text and a small, redacted log excerpt.
 Do not attach game files, credentials or full memory dumps to a public issue.

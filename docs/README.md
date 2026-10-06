@@ -1,4 +1,4 @@
-# H2-MOD VR documentation
+# Overlord documentation
 
 This index groups the engineering guides by the task they support. Start with
 the project guide or architecture overview before changing a shared subsystem.

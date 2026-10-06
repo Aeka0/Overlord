@@ -156,7 +156,7 @@ namespace vr::gameplay::weapons::shield
    command::add("vr_shield_status",[] {
     const auto text=std::format("installed={} enabled={} queries={} blocked={} events={} filtered_native_parts={} stale_poses={} fire_blocks={} arm_blocks={}\n",
      installed.load(),enabled(),queries.load(),blocks.load(),events.load(),filtered.load(),stale.load(),fire_blocks.load(),arm_blocks.load());
-    console::info("%s",text.c_str());utils::io::write_file("minidumps/h2-mod-vr-shield.txt",text);
+    console::info("%s",text.c_str());utils::io::write_file("minidumps/overlord-shield.txt",text);
    });
   }
   void pre_destroy() override {alive=false;}

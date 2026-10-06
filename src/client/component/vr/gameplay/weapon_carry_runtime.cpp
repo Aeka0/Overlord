@@ -1724,7 +1724,7 @@ namespace vr::gameplay::weapons::carry
 					        console::info("%s", text.c_str());
 					        scheduler::once(
 					            [text]
-					            { utils::io::write_file_atomic("minidumps/h2-mod-vr-carry.txt", text); },
+					            { utils::io::write_file_atomic("minidumps/overlord-carry.txt", text); },
 					            scheduler::pipeline::async);
 				        },
 				        scheduler::pipeline::server);

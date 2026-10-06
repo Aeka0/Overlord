@@ -210,7 +210,7 @@ namespace vr::gameplay::fixed_sniper
 				        bool(capture.flash),
 				        ink ? GetTickCount64() - ink->timestamp : 0);
 				    console::info("[VR fixed sniper] %s", report.c_str());
-				    utils::io::write_file_atomic("minidumps/h2-mod-vr-fixed-sniper.txt", report);
+				    utils::io::write_file_atomic("minidumps/overlord-fixed-sniper.txt", report);
 			    });
 		}
 		void pre_destroy() override

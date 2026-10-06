@@ -199,7 +199,7 @@ namespace vr::diagnostics::native_flare_probe
 				}
 			}
 			out << "completed=" << completed << '\n';
-			const auto path = "minidumps/h2-mod-vr-flare-sample-" + std::to_string(capture->begin) + ".txt";
+			const auto path = "minidumps/overlord-flare-sample-" + std::to_string(capture->begin) + ".txt";
 			const bool saved = utils::io::write_file_atomic(path, out.str());
 			console::info("[VR flare] CPU sample finished: %u records, saved=%d %s\n", completed, saved, path.c_str());
 			// Keep the arm gate closed until this run no longer owns publication.

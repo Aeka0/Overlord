@@ -43,7 +43,7 @@ namespace vr::gameplay::weapons::carry_probe
 		void publish(const std::string& text)
 		{
 			console::info("%s",text.c_str());
-			scheduler::once([text] {utils::io::write_file_atomic("minidumps/h2-mod-vr-carry-probe.txt",text);},scheduler::pipeline::async);
+			scheduler::once([text] {utils::io::write_file_atomic("minidumps/overlord-carry-probe.txt",text);},scheduler::pipeline::async);
 		}
 	}
 	class component final : public component_interface

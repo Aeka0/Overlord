@@ -448,7 +448,7 @@ namespace d3d11::swap_chain_hook
 				return false;
 			}
 
-			const auto dummy_window = CreateWindowExW(0, L"STATIC", L"h2-mod DXGI probe", WS_POPUP,
+			const auto dummy_window = CreateWindowExW(0, L"STATIC", L"Overlord DXGI probe", WS_POPUP,
 				0, 0, 1, 1, nullptr, nullptr, GetModuleHandleW(nullptr), nullptr);
 			if (dummy_window == nullptr)
 			{

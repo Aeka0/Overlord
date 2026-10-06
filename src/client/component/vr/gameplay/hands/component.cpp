@@ -2051,7 +2051,7 @@ namespace vr::gameplay::hands
 			text << scripted_arms::status();
 			const auto formatted = text.str();
 			console::info("%s", formatted.c_str());
-			if (!utils::io::write_file_atomic("minidumps/h2-mod-vr-hands-latest.txt", formatted))
+			if (!utils::io::write_file_atomic("minidumps/overlord-hands-latest.txt", formatted))
 				console::warn("[VR hands] Could not persist hand status snapshot\n");
 		}
 	} // namespace

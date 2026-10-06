@@ -762,7 +762,7 @@ namespace vr::gameplay::weapons::physical_reload
 				// invalid-parameter termination path of _vsnprintf_s.
 				console::print_text(console::con_type_info, text);
 				scheduler::once([text] {
-					if (!utils::io::write_file_atomic("minidumps/h2-mod-vr-physical-reload.txt", text))
+					if (!utils::io::write_file_atomic("minidumps/overlord-physical-reload.txt", text))
 						console::warn("[VR physical reload] status file write failed\n");
 				}, scheduler::pipeline::async);
 			});

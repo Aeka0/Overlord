@@ -146,7 +146,7 @@ namespace
 		if (!utils::io::read_file(binary, &data))
 		{
 			throw std::runtime_error(utils::string::va(
-				"Failed to read game binary (%s)!\nPlease copy h2-mod-vr.exe into your Call of Duty: Modern Warfare 2 Campaign Remastered installation folder and run it from there.",
+				"Failed to read game binary (%s)!\nPlease copy overlord.exe into your Call of Duty: Modern Warfare 2 Campaign Remastered installation folder and run it from there.",
 				binary.data()));
 		}
 

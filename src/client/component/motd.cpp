@@ -16,7 +16,7 @@
 #include <utils/io.hpp>
 #include <utils/cryptography.hpp>
 
-// Temporarily paused for Beta 1. Keep the implementation for a future VR-owned
+// Temporarily paused for VR releases. Keep the implementation for a future VR-owned
 // content service. Before restoring, fix cache validation, request cancellation
 // and network IO under the publication lock. Do not reuse the upstream feed.
 // #define H2VR_ENABLE_LEGACY_MOTD

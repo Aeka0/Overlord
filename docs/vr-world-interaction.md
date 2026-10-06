@@ -280,7 +280,7 @@ Saved dvars: `vr_worldInteraction` (on), `vr_interactionReach` (2.2, range 0.5â€
 metres), and `vr_interactionCone` (12, range 1â€“25 degrees). Requires physical carry
 and the normal VR controller/gameplay gate. `vr_interaction_status` reports the
 hover entities, angular scores, lease, pickup counts and paired notifications
-to `minidumps/h2-mod-vr-interaction.txt`.
+to `minidumps/overlord-interaction.txt`.
 
 Offline checks cover angular priority, deterministic overlap, bounds aiming,
 near contact (including origins inside bounds), malformed geometry, floor reach,

@@ -314,8 +314,8 @@ namespace vr::gameplay::weapons::physical_reload::debug
 					    previous = s.input_sequence;
 					    cover_text(out, s);
 				    }
-				    const bool ok = utils::io::write_file("h2-mod-vr-cover-push.txt", out.str());
-				    console::info("cover push dump %s: h2-mod-vr-cover-push.txt\n", ok ? "saved" : "failed");
+				    const bool ok = utils::io::write_file("overlord-cover-push.txt", out.str());
+				    console::info("cover push dump %s: overlord-cover-push.txt\n", ok ? "saved" : "failed");
 			    });
 			command::add(
 			    "vr_reloadWell_status",
@@ -385,8 +385,8 @@ namespace vr::gameplay::weapons::physical_reload::debug
 					        << " reference=" << s.reference << " pose_input=" << s.input_sequence << '\n';
 					    observation_text(out, "HISTORY", s.trace.latest);
 				    }
-				    const bool ok = utils::io::write_file("h2-mod-vr-hk-slap.txt", out.str());
-				    console::info("hk_slap dump %s: h2-mod-vr-hk-slap.txt\n", ok ? "saved" : "failed");
+				    const bool ok = utils::io::write_file("overlord-hk-slap.txt", out.str());
+				    console::info("hk_slap dump %s: overlord-hk-slap.txt\n", ok ? "saved" : "failed");
 			    });
 			if (well.enabled() || slap.enabled() || bolt.enabled() || cover.enabled())
 				composition_registration =

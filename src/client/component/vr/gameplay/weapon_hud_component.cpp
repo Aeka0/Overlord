@@ -615,7 +615,7 @@ namespace vr::gameplay::weapon_hud
 				    const auto text = status();
 				    console::info("%s", text.c_str());
 				    scheduler::once(
-				        [text] { utils::io::write_file_atomic("minidumps/h2-mod-vr-weapon-hud.txt", text); },
+				        [text] { utils::io::write_file_atomic("minidumps/overlord-weapon-hud.txt", text); },
 				        scheduler::pipeline::async);
 			    });
 			// Capability, not a visibility control. Native LUI source animation is

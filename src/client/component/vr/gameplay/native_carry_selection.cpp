@@ -94,7 +94,7 @@ namespace vr::gameplay::weapons::native_carry_selection
 				for (auto i=count>samples.size() ? count-samples.size() : 0;i<count;++i) {const auto& s=samples[i%samples.size()];
 					out << "role=" << s.role << " weapon=" << s.weapon << " state=" << s.state << " raise_ms=" << s.milliseconds << "->0\n";}}
 				const auto text=out.str();console::info("%s",text.c_str());
-				scheduler::once([text]{utils::io::write_file_atomic("minidumps/h2-mod-vr-carry-selection.txt",text);},scheduler::pipeline::async);
+				scheduler::once([text]{utils::io::write_file_atomic("minidumps/overlord-carry-selection.txt",text);},scheduler::pipeline::async);
 			});
 		}
 	};

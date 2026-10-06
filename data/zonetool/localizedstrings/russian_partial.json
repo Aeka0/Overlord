@@ -18,7 +18,7 @@
     "LOCALE_16": "Английский цензурный",
     "LOCALE_17": "Русский (английская озвучка)",
     "LUA_MENU_FALLBACK_DISABLE": "Вернуться к встроенным шрифтам",
-    "LUA_MENU_FALLBACK_ENABLE": "Применить шрифты от H2-MOD VR",
+    "LUA_MENU_FALLBACK_ENABLE": "Применить шрифты от Overlord",
 
     "UPDATER_POPUP_NO_UPDATES_AVAILABLE": "У вас установлены все последние обновления",
     "MENU_CCS_NEW_PATCH_NOTICE": "Доступно обновление клиента игры,\nначать установку сейчас?",
@@ -40,8 +40,8 @@
     "LUA_MENU_WORKSHOP": "Мастерская",
     "LUA_MENU_WORKSHOP_DESC": "Скачивание и установка модов.",
 
-    "MENU_GENERAL": "H2-MOD VR",
-    "MENU_GENERAL_DESC": "Настройка параметров от H2-MOD VR.",
+    "MENU_GENERAL": "Overlord",
+    "MENU_GENERAL_DESC": "Настройка параметров от Overlord.",
     "LUA_MENU_AUTO_UPDATE": "Автообновления",
     "LUA_MENU_AUTO_UPDATE_DESC": "Включить или отключить автоматическое обновление клиента при запуске игры.",
     "LUA_MENU_CHECK_UPDATES": "Проверить сейчас",

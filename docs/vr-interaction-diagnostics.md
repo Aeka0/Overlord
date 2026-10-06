@@ -32,7 +32,7 @@ facing and patch calculations are shared with the push controller.
 
 `vr_coverPush_status` prints the latest state and renderer counters.
 `vr_coverPush_dump` saves up to 4096 enabled-view samples to
-`h2-mod-vr-cover-push.txt` in the game working directory. It includes raw/displayed
+`overlord-cover-push.txt` in the game working directory. It includes raw/displayed
 palm positions and longitudinal axis, local skin gap and facing, input activity, occupancy, simulation
 sequence, cover amount and rejection reason. The history is bounded; dump after
 the agreed reproduction window. Toggling the view clears its history. The dump
@@ -100,7 +100,7 @@ shows the insertion well; **Handle slap geometry** shows authored HK slap contac
 `vr_interaction_debug_status` prints and saves the sampled candidate verdicts,
 model/native centres, script-model status, visibility trace point, separate
 head/hand visibility verdicts, slot occupancy, timestamps and renderer counters to
-`minidumps/h2-mod-vr-interaction-debug.txt`. This distinguishes absent native
+`minidumps/overlord-interaction-debug.txt`. This distinguishes absent native
 candidates, stale input, geometric rejection and occlusion while reproducing.
 Visibility is `not-tested`, `blocked` or `clear`. Diagnostic queries test both
 ends even when the first is blocked; ordinary queries retain short-circuiting.
