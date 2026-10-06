@@ -18,7 +18,7 @@ namespace vr::gameplay::weapons::fn2000
 	};
 	// The recessed release ahead of the magazine is pressed upward by a spare.
 	inline constexpr physical_reload::magazine_manipulation manual_magazine{
-	    .grab_radius = physical_reload::defaults::magazine_grab_radius_m,
+	    .grab_radius = .08f, // Extra reach around the recessed bullpup magazine.
 	    .pull_travel = physical_reload::defaults::magazine_pull_travel_m,
 	    .pull_lateral_limit = physical_reload::defaults::magazine_pull_lateral_limit_m,
 	    .pull_axis = {0, 0, -1},

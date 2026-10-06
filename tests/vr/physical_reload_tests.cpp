@@ -489,7 +489,7 @@ int main()
 		for (const auto* p:w::reload_profiles)
 		{
 			const bool crowded=p==&w::p90::physical || p==&w::p90::arctic;
-			const bool precision=p->native_name=="m14" || p->native_name.starts_with("dragunov");
+			const bool precision=p->native_name=="m14" || p->native_name.starts_with("dragunov") || p->native_name=="barrett";
 			check(p->interaction.slide_radius==((crowded || precision) ? .06f : w::part_grip_capture::radius_m+(p==&w::fn2000::physical?.03f:0.f)),
 				"P90 and magazine-adjacent precision handles narrow capture; F2000 retains its explicit expansion");
 			check(bool(p->interaction.manual_magazine && p->interaction.manual_magazine->prefer_grasp_facing)==crowded,

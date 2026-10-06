@@ -17,7 +17,12 @@ old right-index override contained duplicate, nonexistent `j_leng*` bones and
 is removed together with the unused wrist/contact data. Both styles remain
 selectable and retain the M82's real exposed handle contact and full travel.
 
-Dragunov and M14/M21 reduce charging-handle capture assistance from 11 to 6 cm
+MP5K (base and arctic) and F2000 use an 8 cm seated-magazine grab tolerance,
+up from 5 cm around their authored contact boxes. Physical pull distance,
+spare-magazine latch strikes and magazine-well insertion tolerances retain
+their existing settings.
+
+M82, Dragunov and M14/M21 reduce charging-handle capture assistance from 11 to 6 cm
 and reuse the AK receiver-side wrist boundary. The wrist must remain outside
 the right receiver wall; angular assistance cannot reach through the magazine.
 The boundary follows handle travel without moving the hardware or hand poses.

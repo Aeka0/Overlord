@@ -1,6 +1,9 @@
 #pragma once
 #include "component/vr/gameplay/weapons/dragunov/profile.hpp"
 #include "component/vr/gameplay/weapons/m14ebr/profile.hpp"
+#include "component/vr/gameplay/weapons/m82/profile.hpp"
+#include "component/vr/gameplay/weapons/mp5/profile.hpp"
+#include "component/vr/gameplay/weapons/fn2000/profile.hpp"
 #include "component/vr/gameplay/physical_reload_contact_sample.hpp"
 #include "component/vr/gameplay/weapon_reload_profiles.hpp"
 
@@ -53,7 +56,30 @@ namespace weapon_polish_tests
 				if(mode==5){f.writable=true;sweep();check(!f.state.magazine_inserted,"failed native latch write retries only after a fresh separated stroke");}
 			}
 		}
-		for(const auto* d:{&w::dragunov::physical,&w::dragunov::arctic_physical,&w::dragunov::woodland_physical,&w::m14ebr::physical,&w::m14ebr::arctic})
+		for(const auto* d:{&w::mp5::physical,&w::mp5::arctic,&w::fn2000::physical})for(int actor=0;actor<2;++actor)
+		for(float margin:{.075f,.085f})
+		{
+			// Sample a real contact below the magazine body, through the same
+			// controller-relative wrist mapping as acquisition in the game.
+			const auto grasp=w::select_magazine_grip(*d,{0,0,0,1},actor,mirror,false,false,0,std::nullopt,true);
+			const auto rotation=w::magazine_wrist_basis(*d,grasp,{0,0,0,1},false);
+			auto point=scale(add(d->magazine_contacts->grab_low,d->magazine_contacts->grab_high),.5f);
+			point[2]=d->magazine_contacts->grab_low[2]-margin*units;
+			const anchor wrist{sub(point,rotate(rotation,grasp.contact)),{0,0,0,1}};
+			Fixture f(d);f.owner.rear=vr::hand(1-actor);f.step();
+			w::sample_attached_magazine(*d,f.geometry,{{},{0,0,0,1}},wrist,wrist.rotation,{0,0,0,1},grasp,{},units,false);
+			f.geometry.hand_in_gun=scale(wrist.position,1/units);f.trigger(true);
+			check(f.control.magazine_grabbed()==(margin<.08f) && !f.control.slide_held(),
+				"MP5K and F2000 acquire below the old magazine reach and reject beyond the expanded boundary in either hand");
+			if(f.control.magazine_grabbed())
+			{
+				const auto total=m::total_rounds(f.state);
+				f.geometry.hand_in_gun[2]-=d->interaction.manual_magazine->pull_travel+.001f;f.step();
+				check(!f.state.magazine_inserted && f.state.magazine_hand==vr::hand(actor) && m::total_rounds(f.state)==total,
+					"expanded magazine contact still requires physical extraction and preserves ammunition ownership");
+			}
+		}
+		for(const auto* d:{&w::dragunov::physical,&w::dragunov::arctic_physical,&w::dragunov::woodland_physical,&w::m14ebr::physical,&w::m14ebr::arctic,&w::m82::physical})
 		for(int actor=0;actor<2;++actor)
 		{
 			std::array<w::part_grip_pose,2> poses{};
@@ -79,9 +105,14 @@ namespace weapon_polish_tests
 			frame.objects[0].owner=f.owner;frame.objects[0].assembly=1;frame.objects[0].gun.rotation={0,0,0,1};
 			const auto grasp=w::select_magazine_grip(*d,{0,0,0,1},actor,mirror,false,false,0,std::nullopt,true);
 			const auto wrist=compose(d->magazine_rest,inverse(grasp.in_wrist));
-			frame.wrists[actor]=wrist;
-			check(p::sample_contact(scene,view,frame) && scene.contact.slide_distance>d->interaction.slide_radius,
+			frame.wrists[actor]={wrist.position,multiply(wrist.rotation,
+				conjugate(w::magazine_wrist_basis(*d,grasp,scene.binding.wrist,false)))};
+			check(p::sample_contact(scene,view,frame) && scene.contact.slide_distance>d->interaction.slide_radius &&
+				p::attached_magazine_contact(d->interaction,f.state,scene.contact),
 				"authored seated-magazine grasp cannot be stolen by the nearby precision charging handle");
+			f.geometry=scene.contact;f.trigger(true);
+			check(f.control.magazine_grabbed() && !f.control.slide_held(),
+				"precision magazine contact acquires the magazine through the production gesture controller");
 		}
 	}
 }

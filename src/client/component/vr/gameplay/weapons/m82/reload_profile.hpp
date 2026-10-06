@@ -30,9 +30,11 @@ namespace vr::gameplay::weapons::m82
 	    .latch_direction = {1, 0, 0},
 	    .spare_strike = false,
 	};
+	// Keep assisted contact outside the right receiver wall, away from the magazine.
+	inline constexpr part_capture_halfspace handle_capture{{0, 1, 0}, action_grab_high[1]};
 	inline constexpr physical_reload::profile reload_interaction{
 	    .waist_radius = physical_reload::defaults::waist_radius_m,
-	    .slide_radius = part_grip_capture::radius_m,
+	    .slide_radius = .06f,
 	    .slide_stroke = action_stroke_m,
 	    .locked_travel = 0.f,
 	    .full_stroke = action_stroke_m * .95f,
@@ -91,6 +93,7 @@ namespace vr::gameplay::weapons::m82
 		                     .magazine_contacts = &contacts,
 		                     .rigid_magazine_source = "h2_viewmodel_m82_base"};
 		    p.additional_bullet_bones = extra_rounds;
+		    p.slide_capture = &handle_capture;
 		    p.bullet_parents = round_parents;
 		    p.magazine_grasps = magazine_grasps;
 		    return with_controller_magazine(p);

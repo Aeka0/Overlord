@@ -7,7 +7,12 @@
 namespace vr::gameplay::weapons::mp5
 {
 	// Preserve the downward pull and reuse the shared forward latch strike.
-	inline constexpr auto manual_magazine = physical_reload::rocking_magazine();
+	inline constexpr auto manual_magazine = [] {
+		auto p = physical_reload::rocking_magazine();
+		// Extra reach around the narrow body, shared by base and arctic skins.
+		p.grab_radius = .08f;
+		return p;
+	}();
 	inline constexpr physical_reload::handle_catch manual_catch{};
 	// Native rear stroke; the shared catch handles lift, roll and palm impact.
 	inline constexpr physical_reload::profile reload_interaction{
