@@ -184,6 +184,7 @@ namespace vr
 		std::string implicit_layer_policy_warning;
 		std::string runtime_override_manifest;
 		std::string runtime_override_source;
+		std::string runtime_selection_diagnostic;
 		std::string runtime_name;
 		bool application_registered{};
 		std::string application_registration_error;

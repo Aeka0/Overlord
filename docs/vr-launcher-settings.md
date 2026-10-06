@@ -18,6 +18,15 @@ use the saved choice unless `H2V_VR_BACKEND` explicitly overrides it for diagnos
 Backend changes do not rewrite controller calibration or switch the vendor's
 system-wide OpenXR registration.
 
+OpenXR resolves its runtime during initialization: explicit `XR_RUNTIME_JSON`
+wins, a positively identified connected Steam Link HMD can choose SteamVR/OpenXR,
+and other connections retain the configured runtime. VD may use either VDXR or
+SteamVR, so the presence of its Streamer alone does not decide the runtime.
+OpenVR always uses SteamVR, including its supported VD and native-headset routes.
+No additional runtime dropdown is required. `vr_status` reports the effective
+runtime, selection source and evidence; `vr_reinit` repeats the initialization
+decision after reconnecting. See [installation and runtime selection](client-installation.md#runtime-selection).
+
 ## First-use setup and quick guide
 
 The six-step guide opens automatically only when the working directory contains

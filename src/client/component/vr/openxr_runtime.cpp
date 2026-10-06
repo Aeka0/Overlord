@@ -179,11 +179,11 @@ namespace vr::openxr
 		menu_layers menus_;
 		texture_blit::renderer blit_;
 
-		controller_reference_query reference_query_{};
+		startup_query startup_query_{};
 
 	  public:
-		explicit implementation(controller_reference_query reference_query)
-		    : reference_query_(reference_query)
+		explicit implementation(startup_query query)
+		    : startup_query_(query)
 		{
 		}
 
@@ -483,10 +483,34 @@ namespace vr::openxr
 				return false;
 			}
 
-			// Query the selected SteamVR service's static grip reference BEFORE any
-			// OpenXR instance/session exists. Other runtimes never initialize OpenVR.
-			auto controller_reference =
-			    reference_query_ ? reference_query_() : controller_pose_reference::configuration{};
+			// Selection and static controller metadata share one short OpenVR query,
+			// after teardown and before any OpenXR loader/instance/session exists.
+			publish_progress_locked("runtime_selection", "identify the connected runtime");
+			auto startup = startup_query_ ? startup_query_() : startup_configuration{};
+			auto controller_reference = std::move(startup.controller_reference);
+			const auto preference = apply_runtime_preference(startup.preferred_runtime, startup.preference_source);
+			const auto restore_preference = gsl::finally([&] { restore_runtime_preference(preference); });
+			status_.runtime_override_active = preference.override_active;
+			status_.runtime_override_set_by_policy = preference.override_set_by_policy;
+			status_.runtime_override_source = preference.source;
+			status_.runtime_override_manifest = preference.manifest_path;
+			status_.runtime_manifest = preference.override_active ? preference.manifest_path : startup.runtime_manifest;
+			status_.runtime_library = status_.runtime_manifest == startup.runtime_manifest ? startup.runtime_library : "";
+			status_.runtime_selection_diagnostic = startup.selection_diagnostic;
+			if (!preference.warning.empty())
+				status_.runtime_selection_diagnostic += "; " + preference.warning;
+			if (!preference.blocking_error.empty())
+			{
+				status_.state = runtime_state::runtime_unavailable;
+				status_.last_error = preference.blocking_error;
+				return false;
+			}
+			if (!startup.preferred_runtime.empty() && !preference.override_active)
+			{
+				status_.state = runtime_state::runtime_unavailable;
+				status_.last_error = "selected OpenXR runtime became unavailable: " + preference.warning;
+				return false;
+			}
 
 			publish_progress_locked("layer_policy", "isolate incompatible implicit OpenXR layers");
 			const auto layer_policy = apply_native_implicit_layer_policy();
@@ -669,7 +693,10 @@ namespace vr::openxr
 			result = dispatch_.get_system(instance_, &system_info, &system_id_);
 			if (result == XR_ERROR_FORM_FACTOR_UNAVAILABLE)
 			{
-				fail(runtime_state::no_hmd, "xrGetSystem", result);
+				const auto unavailable_headset = std::format(
+				    "xrGetSystem: {} has no available headset; check the connection and selected runtime, "
+				    "then use vr_reinit after reconnecting", status_.runtime_name);
+				fail(runtime_state::no_hmd, unavailable_headset.c_str(), result);
 				(void)teardown_preserving_error();
 				return false;
 			}
@@ -1765,7 +1792,7 @@ namespace vr::openxr
 	class runtime_backend::implementation final
 	{
 	  public:
-		explicit implementation(controller_reference_query)
+		explicit implementation(startup_query)
 		{
 			status_.state = runtime_state::sdk_headers_unavailable;
 		}
@@ -1841,8 +1868,8 @@ namespace vr::openxr
 	};
 #endif
 
-	runtime_backend::runtime_backend(controller_reference_query reference_query)
-	    : implementation_(std::make_unique<implementation>(reference_query))
+	runtime_backend::runtime_backend(startup_query query)
+	    : implementation_(std::make_unique<implementation>(query))
 	{
 	}
 	runtime_backend::~runtime_backend()

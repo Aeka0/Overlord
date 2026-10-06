@@ -5,15 +5,15 @@
 
 #include "openxr_dispatch.hpp"
 #include "vr_runtime.hpp"
-#include "controller_pose_reference.hpp"
+#include "openxr_startup.hpp"
 
 namespace vr::openxr
 {
-	using controller_reference_query = controller_pose_reference::configuration (*)();
+	using startup_query = startup_configuration (*)();
 	class runtime_backend final
 	{
 	  public:
-		explicit runtime_backend(controller_reference_query reference_query = nullptr);
+		explicit runtime_backend(startup_query query = nullptr);
 		~runtime_backend();
 
 		void set_desired_enabled(bool enabled);

@@ -335,6 +335,8 @@ XrResult XRAPI_CALL mockCreateInstance(const XrInstanceCreateInfo* const create_
 	const std::lock_guard lock(g_mutex);
 	*instance = new XrInstance_T{g_next_handle++};
 	++g_statistics.instances_created;
+	if (GetEnvironmentVariableW(L"XR_RUNTIME_JSON", nullptr, 0) != 0)
+		++g_statistics.instances_with_runtime_override;
 	return XR_SUCCESS;
 }
 

@@ -333,15 +333,41 @@ namespace vr::openxr
 		return applied;
 	}
 
-	runtime_preference_result apply_runtime_preference(const std::filesystem::path& runtime_manifest)
+	runtime_preference_result apply_runtime_preference(const std::filesystem::path& runtime_manifest,
+	    const std::string& source)
 	{
 		runtime_preference_result result;
 		result.applied = true;
 		if (const auto existing = read_environment(runtime_override_environment); existing.has_value())
 		{
+			if (is_high_integrity_process())
+			{
+				result.blocking_error = "the OpenXR loader ignores XR_RUNTIME_JSON in elevated processes; "
+				    "run the game without elevation to honor the explicit runtime";
+				return result;
+			}
 			result.override_active = true;
 			result.manifest_path = path_for_diagnostic(*existing);
 			result.source = "existing_environment";
+			return result;
+		}
+
+		if (runtime_manifest.empty())
+		{
+			result.source = "system_active_runtime";
+			return result;
+		}
+		if (is_high_integrity_process())
+		{
+			result.blocking_error = "automatic OpenXR runtime selection requires a non-elevated game process; "
+			    "the loader ignores process runtime overrides at high integrity";
+			return result;
+		}
+		std::error_code size_error;
+		const auto manifest_size = std::filesystem::file_size(runtime_manifest, size_error);
+		if (size_error || manifest_size > 1024 * 1024)
+		{
+			result.warning = "preferred OpenXR runtime manifest is unavailable or exceeds 1 MiB";
 			return result;
 		}
 
@@ -369,6 +395,11 @@ namespace vr::openxr
 		}
 
 		const auto library_text = library_value->get<std::string>();
+		if (library_text.empty() || library_text.find('\0') != std::string::npos)
+		{
+			result.warning = "preferred OpenXR runtime library_path is empty or contains NUL";
+			return result;
+		}
 		const auto library_wide = widen_utf8(library_text);
 		if (!library_wide.has_value())
 		{
@@ -402,8 +433,20 @@ namespace vr::openxr
 		result.override_active = true;
 		result.override_set_by_policy = true;
 		result.manifest_path = path_for_diagnostic(absolute_manifest);
-		result.source = "automatic_virtual_desktop_vdxr";
+		result.source = source;
 		return result;
+	}
+
+	void restore_runtime_preference(const runtime_preference_result& preference) noexcept
+	{
+		if (!preference.override_set_by_policy) return;
+		try
+		{
+			const auto current = read_environment(runtime_override_environment);
+			if (current && path_for_diagnostic(*current) == preference.manifest_path)
+				(void)SetEnvironmentVariableW(runtime_override_environment, nullptr);
+		}
+		catch (...) {} // Cleanup must not unwind through the runtime owner.
 	}
 
 	runtime_preference_result apply_virtual_desktop_runtime_preference()

@@ -41,6 +41,7 @@ namespace vr::tests::mock
 		std::array<std::uint32_t, 2> last_projection_pixels{};
 		std::uint32_t last_menu_pixel{};
 		std::uint64_t instances_created{};
+		std::uint64_t instances_with_runtime_override{};
 		std::uint64_t instances_destroyed{};
 		std::uint64_t sessions_created{};
 		std::uint64_t sessions_destroyed{};

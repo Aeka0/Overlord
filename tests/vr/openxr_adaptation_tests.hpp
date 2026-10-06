@@ -21,7 +21,7 @@ namespace openxr_adaptation_tests
 	inline vr::controller_pose_reference::configuration grip_fixture;
 	inline unsigned grip_fixture_calls{};
 	inline vr::tests::mock::get_statistics_fn grip_statistics{};
-	inline vr::controller_pose_reference::configuration query_grip_fixture()
+	inline vr::openxr::startup_configuration query_grip_fixture()
 	{
 		++grip_fixture_calls;
 		if (grip_statistics)
@@ -30,7 +30,7 @@ namespace openxr_adaptation_tests
 			grip_statistics(&stats);
 			vr::tests::require(stats.instances_created == 0, "metadata query overlapped an OpenXR instance");
 		}
-		return grip_fixture;
+		return {.controller_reference = grip_fixture};
 	}
 	inline void wrist_reference_trajectory()
 	{

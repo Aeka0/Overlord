@@ -262,10 +262,43 @@ pointers. `vr_status` reports `controller_grip_reference`, both reference identi
 (selected SteamVR models or canonical Touch frame identifiers) and errors. Missing, ambiguous or invalid reference metadata rejects
 the affected gameplay grip instead of applying the wrong lever.
 
-The host's Utility query completes and shuts down before loading OpenXR, so
-OpenVR does not participate in frame pacing or submission. Standalone SDK tests
-inject copied metadata and do not query a live runtime. After replacing SteamVR
+The host's short Background query completes and shuts down before loading
+OpenXR. It runs only after the existing SteamVR server passes user/session/IPC
+preflight. It can copy the actual HMD driver and remote-client identity alongside
+the controller metadata, without compositor, pose or GPU calls. OpenVR does not
+participate in OpenXR frame pacing or submission. Standalone SDK tests inject
+copied metadata and do not query a live runtime. After replacing SteamVR
 controller hardware, run `vr_reinit` to refresh its static reference.
+
+Runtime selection is separate from the user's OpenXR/OpenVR API choice.
+`openxr_startup.hpp` keeps the decision independent from live discovery. Explicit
+`XR_RUNTIME_JSON` wins. A connected HMD with actual driver `vrlink`
+can select SteamVR/OpenXR, using OpenVR's runtime
+path registry to discover the manifest. An already configured SteamVR runtime
+needs no override. VD can use both VDXR and SteamVR, so VD and ambiguous/missing
+connection evidence preserve the configured runtime instead of guessing from
+process names. OpenVR continues to use SteamVR without a transport whitelist.
+`Prop_SteamRemoteClientID_Uint64` is optional diagnostic metadata: the status
+records its property error separately from whether the returned ID is nonzero.
+A missing or zero ID does not negate a connected HMD's actual driver identity.
+
+Automatic overrides are scoped to initialization, applied before the loader
+is used and restored on success or failure. Every `vr_reinit` queries fresh
+evidence after retiring the previous OpenXR objects. The system registry is
+never modified, and explicit environment overrides survive cleanup. If the
+chosen manifest disappears, initialization reports that failure instead of
+silently loading another provider. Elevated processes cannot use the loader's
+environment override mechanism and receive a specific error when an override
+is required. Manifest/provider inspection and actual runtime/device admission
+remain separate; only the runtime can confirm that a headset is available.
+
+`vr_status` retains `runtime_override`, `runtime_override_manifest`,
+`runtime_manifest`, `runtime_library` and `runtime_selection` through initialization
+failure. `automatic_steam_link_vrlink` identifies automatic selection;
+`existing_environment` and `system_active_runtime` identify configured choices.
+These describe the effective initialization choice, not a permanently installed
+environment variable. A no-HMD error includes the runtime name and reconnect/
+`vr_reinit` guidance.
 
 For `VirtualDesktopXR`, the activated Oculus Touch interaction profile selects
 [the canonical legacy Touch frame](../src/client/component/vr/touch_controller_reference.hpp).

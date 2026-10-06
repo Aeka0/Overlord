@@ -43,5 +43,9 @@ namespace vr::openxr
 	// An existing XR_RUNTIME_JSON always wins.
 	[[nodiscard]] runtime_preference_result apply_virtual_desktop_runtime_preference();
 	[[nodiscard]] runtime_preference_result apply_runtime_preference(
-		const std::filesystem::path& runtime_manifest);
+		const std::filesystem::path& runtime_manifest,
+		const std::string& source = "automatic_virtual_desktop_vdxr");
+	// Restore only an environment value installed by this policy and still owned
+	// by it. Explicit overrides and later external changes are preserved.
+	void restore_runtime_preference(const runtime_preference_result& preference) noexcept;
 }

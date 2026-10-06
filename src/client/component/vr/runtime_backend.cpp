@@ -39,21 +39,19 @@ namespace vr
 			return value;
 		}
 
-		controller_pose_reference::configuration query_controller_reference()
+		openxr::startup_configuration query_openxr_startup()
 		{
 			const auto selected = steamvr::locate_active_runtime();
-			if (!selected.steamvr_manifest || !selected.valid)
-				return {};
+			const bool steamvr_selected = selected.steamvr_manifest && selected.valid;
+			const bool explicit_runtime = GetEnvironmentVariableW(L"XR_RUNTIME_JSON", nullptr, 0) != 0;
+			if (explicit_runtime && !steamvr_selected)
+				return openxr::choose_startup(selected, true, {}, {}, "skipped for explicit runtime");
 			if (const auto error = steamvr::diagnose_ipc_environment(); !error.empty())
-			{
-				controller_pose_reference::configuration unavailable;
-				unavailable.target = controller_pose_reference::basis::calibration_frame;
-				unavailable.expected_runtime = "SteamVR/OpenXR";
-				unavailable.name = "steamvr_device_origin";
-				unavailable.error = error;
-				return unavailable;
-			}
-			return steamvr::query_openxr_grip_reference();
+				return openxr::choose_startup(selected, explicit_runtime, {}, {}, error);
+			const auto metadata = steamvr::query_openxr_metadata(steamvr_selected);
+			const auto installed = !explicit_runtime && !steamvr_selected && metadata.connected_steam_link()
+			    ? steamvr::locate_installed_runtime() : steamvr::runtime_location{};
+			return openxr::choose_startup(selected, explicit_runtime, metadata, installed);
 		}
 
 		struct backend_choice
@@ -65,7 +63,7 @@ namespace vr
 			};
 			kind selected{kind::openxr};
 			bool valid{true};
-			std::string reason{"OpenXR is the default; using the active OpenXR runtime"};
+			std::string reason{"OpenXR is the default; runtime selected at initialization"};
 		};
 
 		backend_choice choose_backend()
@@ -80,7 +78,7 @@ namespace vr
 			{
 				return {backend_choice::kind::openxr,
 				        true,
-				        "H2V_VR_BACKEND explicitly selected the active OpenXR runtime"};
+				        "H2V_VR_BACKEND explicitly selected OpenXR; runtime selected at initialization"};
 			}
 			if (!requested.empty())
 			{
@@ -106,7 +104,7 @@ namespace vr
 		static backends make_backend(backend_choice::kind kind)
 		{
 			if (kind == backend_choice::kind::openxr)
-				return std::make_unique<openxr::runtime_backend>(query_controller_reference);
+				return std::make_unique<openxr::runtime_backend>(query_openxr_startup);
 			return std::make_unique<openvr::runtime_backend>();
 		}
 		template <class Operation> decltype(auto) visit(Operation&& operation) const

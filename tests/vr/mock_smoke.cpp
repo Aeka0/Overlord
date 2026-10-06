@@ -578,6 +578,7 @@ namespace
 }
 
 #include "openxr_adaptation_tests.hpp"
+#include "openxr_startup_tests.hpp"
 
 int main()
 {
@@ -626,6 +627,7 @@ int main()
 		openxr_adaptation_tests::frontend_menu(loader,graphics,false);
 		openxr_adaptation_tests::frontend_menu(loader,graphics,true);
 		openxr_adaptation_tests::canted_native_views(loader,graphics);
+		openxr_startup_tests::initialization(loader,graphics);
 		loader.unload();
 		vr::tests::require(GetModuleHandleW(L"openxr_loader.dll") == nullptr,
 			"production runtime leaked an openxr_loader.dll module reference");

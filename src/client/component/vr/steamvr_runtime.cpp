@@ -39,7 +39,8 @@ namespace vr::steamvr
 			{
 				return std::filesystem::path(*override_path);
 			}
-			for (const auto root : {HKEY_CURRENT_USER, HKEY_LOCAL_MACHINE})
+			// Match the bundled OpenXR loader's Windows ActiveRuntime lookup.
+			for (const auto root : {HKEY_LOCAL_MACHINE})
 			{
 				DWORD type{};
 				DWORD bytes{};
@@ -440,48 +441,84 @@ namespace vr::steamvr
 			result.error = "Windows has no active OpenXR runtime manifest";
 			return result;
 		}
-		result.manifest_path = utf8_path(*manifest_path);
-		result.steamvr_manifest = is_steamvr_manifest(*manifest_path);
-		if (!result.steamvr_manifest)
+		return inspect_runtime_manifest(*manifest_path);
+	}
+
+	runtime_location locate_installed_runtime()
+	{
+		std::array<char, 32768> path{};
+		std::uint32_t required{};
+		if (!VR_GetRuntimePath(path.data(), unsigned(path.size()), &required) || required <= 1 || required > path.size())
+			return {.error = "OpenVR runtime installation path is unavailable"};
+		const auto wide = widen_utf8(std::string_view(path.data(), required - 1));
+		if (!wide)
+			return {.error = "OpenVR runtime installation path is not valid UTF-8"};
+		return inspect_runtime_manifest(std::filesystem::path(*wide) / L"steamxr_win64.json");
+	}
+
+	runtime_location inspect_runtime_manifest(const std::filesystem::path& manifest_path)
+	{
+		runtime_location result;
+		result.manifest_path = utf8_path(manifest_path);
+		result.steamvr_manifest = is_steamvr_manifest(manifest_path);
+		std::error_code size_error;
+		const auto manifest_size = std::filesystem::file_size(manifest_path, size_error);
+		if (size_error || manifest_size > 1024 * 1024)
 		{
-			result.error = "the active OpenXR runtime manifest is not SteamVR";
+			result.error = "the OpenXR runtime manifest is unavailable or exceeds 1 MiB";
 			return result;
 		}
-
-		std::ifstream stream(*manifest_path, std::ios::binary);
+		std::ifstream stream(manifest_path, std::ios::binary);
 		if (!stream)
 		{
-			result.error = "the active SteamVR runtime manifest cannot be opened";
+			result.error = "the OpenXR runtime manifest cannot be opened";
 			return result;
 		}
 		const auto manifest = nlohmann::json::parse(stream, nullptr, false);
 		const auto runtime = manifest.is_object() ? manifest.find("runtime") : manifest.end();
 		if (manifest.is_discarded() || runtime == manifest.end() || !runtime->is_object())
 		{
-			result.error = "the active SteamVR runtime manifest is invalid";
+			result.error = "the OpenXR runtime manifest is invalid";
 			return result;
 		}
+		if (const auto name = runtime->find("name"); name != runtime->end() && name->is_string())
+			result.runtime_name = name->get<std::string>();
+		if (const auto marker = runtime->find("VALVE_runtime_is_steamvr");
+		    marker != runtime->end() && marker->is_boolean())
+			result.steamvr_manifest = marker->get<bool>();
 		const auto library_value = runtime->find("library_path");
 		if (library_value == runtime->end() || !library_value->is_string())
 		{
-			result.error = "the active SteamVR runtime manifest has no runtime.library_path";
+			result.error = "the OpenXR runtime manifest has no runtime.library_path";
 			return result;
 		}
 		const auto library_text = library_value->get<std::string>();
+		if (library_text.empty() || library_text.find('\0') != std::string::npos)
+		{
+			result.error = "OpenXR runtime.library_path is empty or contains NUL";
+			return result;
+		}
 		const auto wide_library = widen_utf8(library_text);
 		if (!wide_library.has_value())
 		{
-			result.error = "SteamVR runtime.library_path is not valid UTF-8";
+			result.error = "OpenXR runtime.library_path is not valid UTF-8";
 			return result;
 		}
 		auto library_path = std::filesystem::path(*wide_library);
-		if (library_path.is_relative()) library_path = manifest_path->parent_path() / library_path;
+		if (library_path.is_relative()) library_path = manifest_path.parent_path() / library_path;
 		library_path = library_path.lexically_normal();
 		result.client_library_path = utf8_path(library_path);
 		std::error_code file_error;
 		if (!std::filesystem::is_regular_file(library_path, file_error))
 		{
-			result.error = "the library declared by SteamVR runtime.library_path does not exist";
+			result.error = "the library declared by OpenXR runtime.library_path does not exist";
+			return result;
+		}
+		if (!result.steamvr_manifest)
+		{
+			// Let the OpenXR loader negotiate the vendor ABI. Never load it as an
+			// OpenVR client merely to inspect its name or installation path.
+			result.valid = true;
 			return result;
 		}
 

@@ -60,6 +60,7 @@ namespace vr::diagnostics::detail
 		output << " automatic=" << yes_no(runtime_status.runtime_override_set_by_policy);
 		output << " source=" << available(runtime_status.runtime_override_source) << '\n';
 		output << "  runtime_override_manifest=" << available(runtime_status.runtime_override_manifest) << '\n';
+		output << "  runtime_selection=" << available(runtime_status.runtime_selection_diagnostic) << '\n';
 		output << "  runtime_manifest=" << available(runtime_status.runtime_manifest) << '\n';
 		output << "  runtime_library=" << available(runtime_status.runtime_library) << '\n';
 		output << "  session_generation=" << runtime_status.session_generation;

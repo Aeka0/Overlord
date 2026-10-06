@@ -43,26 +43,42 @@ namespace vr::steamvr
 		}
 	}
 
-	controller_pose_reference::configuration query_openxr_grip_reference()
+	openxr_metadata query_openxr_metadata(bool steamvr_selected)
 	{
-		controller_pose_reference::configuration reference;
+		openxr_metadata metadata;
+		auto& reference = metadata.reference;
 		reference.target = controller_pose_reference::basis::calibration_frame;
 		reference.expected_runtime = "SteamVR/OpenXR";
 		reference.name = "steamvr_device_origin";
 		EVRInitError initialization{};
-		auto* system = VR_Init(&initialization, VRApplication_Utility);
+		auto* system = VR_Init(&initialization, VRApplication_Background);
 		const auto shutdown = gsl::finally([] { VR_Shutdown(); });
 		if (!system)
 		{
 			reference.error = std::format("SteamVR controller metadata unavailable: {}",
 			                              VR_GetVRInitErrorAsEnglishDescription(initialization));
-			return reference;
+			return metadata;
 		}
+		metadata.hmd_connected = system->GetTrackedDeviceClass(k_unTrackedDeviceIndex_Hmd) == TrackedDeviceClass_HMD &&
+		                         system->IsTrackedDeviceConnected(k_unTrackedDeviceIndex_Hmd);
+		std::array<char, 256> driver{};
+		ETrackedPropertyError property_error{};
+		const auto driver_size = system->GetStringTrackedDeviceProperty(k_unTrackedDeviceIndex_Hmd,
+		    Prop_ActualTrackingSystemName_String, driver.data(), unsigned(driver.size()), &property_error);
+		if (property_error == TrackedProp_Success && driver_size > 1 && driver_size <= driver.size())
+			metadata.hmd_driver.assign(driver.data(), driver_size - 1);
+		const auto remote_client = system->GetUint64TrackedDeviceProperty(k_unTrackedDeviceIndex_Hmd,
+		    Prop_SteamRemoteClientID_Uint64, &property_error);
+		metadata.remote_client_id_error = static_cast<std::int32_t>(property_error);
+		if (property_error == TrackedProp_Success)
+			metadata.remote_client_id = remote_client;
+		if (!steamvr_selected && !metadata.connected_steam_link())
+			return metadata;
 		auto* models = VRRenderModels();
 		if (!models)
 		{
 			reference.error = "SteamVR render-model metadata interface unavailable";
-			return reference;
+			return metadata;
 		}
 		for (unsigned hand = 0; hand < reference.hands.size(); ++hand)
 		{
@@ -97,6 +113,6 @@ namespace vr::steamvr
 		if (!reference.hands[0].ready || !reference.hands[1].ready)
 			reference.error =
 			    "SteamVR static openxr_grip reference missing or ambiguous; affected gameplay hand is unavailable; use vr_reinit after controller identification";
-		return reference;
+		return metadata;
 	}
 }

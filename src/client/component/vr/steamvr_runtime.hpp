@@ -51,11 +51,18 @@ namespace vr::steamvr
 		bool valid{};
 		std::string manifest_path;
 		std::string client_library_path;
+		std::string runtime_name;
 		std::string error;
 	};
 
-	// Resolves the active SteamVR manifest for backend selection and diagnostics.
+	// Resolves the active OpenXR manifest for selection and diagnostics. Vendor
+	// manifests remain eligible without SteamVR; SteamVR additionally needs its
+	// client factory for the short metadata connection.
 	[[nodiscard]] runtime_location locate_active_runtime();
+	// Resolves the installation selected by OpenVR's path registry, independently
+	// of the system's active OpenXR provider. Does not start SteamVR.
+	[[nodiscard]] runtime_location locate_installed_runtime();
+	[[nodiscard]] runtime_location inspect_runtime_manifest(const std::filesystem::path& manifest);
 
 	// Validates the DXGI 1.1 factory lineage required by OpenVR texture sharing
 	// and that H2's D3D11 device and SteamVR select the same physical adapter.
