@@ -44,6 +44,10 @@ void launcher::create_main_menu()
 		if (params->arguments.size() != 1 || !params->arguments[0].is_string()) return;
 		params->result.set_string(launcher_vr_settings::save(params->arguments[0].get_string()));
 	});
+	this->main_window_.register_callback("disableVRRiskSettings", [](html_frame::callback_params* params)
+	{
+		params->result.set_string(launcher_vr_settings::disable_risk_settings());
+	});
 
 	this->main_window_.register_callback("openUrl", [](html_frame::callback_params* params)
 	{

@@ -1,4 +1,9 @@
 {
+  "settings.riskHeading": "风险设置",
+  "settings.disableRisk": "关闭所有风险设置",
+  "settings.riskHint": "无需启动游戏，即可关闭游戏配置中的 SSAA、着色器缓存以及两项阴影缓存。点击后立即保存。",
+  "status.riskDisabled": "已关闭 SSAA、着色器缓存以及两项阴影缓存，配置已保存，下次启动游戏时生效。",
+  "error.disableRisk": "无法关闭风险设置。",
   "nav.play": "开始游戏",
   "nav.language": "语言",
   "nav.settings": "VR 设置",

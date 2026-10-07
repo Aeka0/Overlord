@@ -27,6 +27,8 @@ namespace game_data
 	{
 		std::optional<std::string> find_bnet_player_folder()
 		{
+			// The launcher can save settings before the game's first profile creation.
+			if (!utils::io::directory_exists(PLAYERS_FOLDER)) return {};
 			const auto dirs = utils::io::list_files(PLAYERS_FOLDER);
 			for (const auto& dir : dirs)
 			{

@@ -2,6 +2,21 @@
 
 The desktop launcher exposes **Play / Language / VR Settings / Help / About**.
 
+## Disable risk settings before launch
+
+**VR Settings > Debug > Disable all risk settings** immediately saves the native
+game configuration without starting the game. It disables SSAA, shader caching
+(frontend precaching and level preloading), cached sun shadows and cached spot
+shadows. A status message beside the button reports success or a retryable error.
+Other settings, bindings and any unsaved VR draft are preserved.
+
+The action uses the same profile selection and atomic writer as VR settings.
+It writes `r_ssaaSamples = 1`, `r_preloadShadersFrontendAllow = 0`,
+`r_preloadShaders = 0`, `sm_cacheSunShadow = Disabled` and
+`sm_cacheSpotShadows = Disabled`. Named and hexadecimal-hash assignments are
+merged together, including duplicates. The game reads the saved values on its
+next start; this action does not delete cache files or alter a running game.
+
 ## VR backend selection
 
 **VR Settings > Basics > VR backend** uses the shared choice catalog: OpenXR

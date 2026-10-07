@@ -1,5 +1,6 @@
 #include <std_include.hpp>
 #include "launcher/vr_settings_config.hpp"
+#include "launcher/risk_settings_config.hpp"
 #include "launcher/localization.hpp"
 #include "launcher/game_language_catalog.hpp"
 #include "launcher/html/html_argument.hpp"
@@ -334,6 +335,34 @@ int main(int argc, char** argv)
 		require(update_config(long_bind, initial).find(long_bind) == 0, "Long unrelated bindings must survive");
 		require(read_values(update_config("// no final newline", changed)) == changed,
 			"Appended settings must not join an existing comment");
+		const std::string graphics_profile = "\xef\xbb\xbfseta r_ssaaSamples \"16\"\r\n"
+			"seta 0x70BF1633 \"4\"\nset R_SSAASAMPLES 2\n"
+			"seta r_preloadShadersFrontendAllow 1\nseta r_preloadShaders 1\n"
+			"seta sm_cacheSunShadow Enabled\nseta sm_cacheSpotShadows Enabled\n"
+			"// Keep these settings and bindings\nseta vr_turnSpeed 123\n"
+			"seta r_preloadShadersAfterCinematic 1\nseta sm_enable 1\nbind F \"+activate\"\n";
+		const auto safe_graphics = disable_risk_settings(graphics_profile);
+		require(safe_graphics.substr(0, 3) == "\xef\xbb\xbf", "Offline repair preserves UTF-8 BOM");
+		require(safe_graphics.find("0x70BF1633") == std::string::npos && safe_graphics.find("R_SSAASAMPLES") == std::string::npos,
+			"Offline repair removes duplicate hashed and named SSAA assignments");
+		require(safe_graphics.find("// Keep these settings and bindings\nseta vr_turnSpeed 123\n"
+			"seta r_preloadShadersAfterCinematic 1\nseta sm_enable 1\nbind F \"+activate\"\n") != std::string::npos,
+			"Offline repair preserves VR options, shadow rendering, preload timing and bindings");
+		require(safe_graphics.find("seta r_ssaaSamples \"1\"\r\nseta r_preloadShadersFrontendAllow \"0\"\r\n"
+			"seta r_preloadShaders \"0\"\r\nseta sm_cacheSunShadow \"Disabled\"\r\n"
+			"seta sm_cacheSpotShadows \"Disabled\"\r\n") != std::string::npos,
+			"Offline repair uses native Off values for SSAA, shaders and both shadow caches");
+		require(disable_risk_settings(safe_graphics) == safe_graphics, "Repeated offline repair must be idempotent");
+		require(read_values(safe_graphics) == read_values(graphics_profile), "Offline repair leaves VR settings unchanged");
+		require(update_config(safe_graphics, changed).find("seta r_ssaaSamples \"1\"\r\nseta r_preloadShadersFrontendAllow \"0\"\r\n"
+			"seta r_preloadShaders \"0\"\r\nseta sm_cacheSunShadow \"Disabled\"\r\n"
+			"seta sm_cacheSpotShadows \"Disabled\"\r\n") != std::string::npos,
+			"Saving a VR draft cannot restore risk settings");
+		require(disable_risk_settings("").find("seta r_ssaaSamples \"1\"") == 0,
+			"Offline repair also works before the first game start");
+		require(disable_risk_settings(long_bind).find(long_bind) == 0, "Offline repair preserves long unrelated lines");
+		require(disable_risk_settings("// no final newline").find("// no final newline\r\nseta ") == 0,
+			"Offline repair terminates the final comment before appending settings");
 		if (argc > 1)
 		{
 			// Optional read-only check against a real engine-generated profile.

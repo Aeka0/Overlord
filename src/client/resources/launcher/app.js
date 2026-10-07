@@ -15,6 +15,7 @@ var settingsDropdown = null;
 
 
 var vrStatusState = null;
+var riskSettingsStatusState = null;
 var languageStatusState = null;
 var gameLanguage = { busy: false, saving: false, available: null, selected: '', status: '', error: false };
 
@@ -99,6 +100,7 @@ function applyLauncherLanguage(language) {
     syncSettingsDropdowns();
     updateBuildNotice();
     if (vrStatusState) vrStatus(vrStatusState.key, vrStatusState.error, vrStatusState.values);
+    if (riskSettingsStatusState) riskSettingsStatus(riskSettingsStatusState.key, riskSettingsStatusState.error);
     if (languageStatusState) languageStatus(languageStatusState.key, languageStatusState.error);
     gameLanguageStatus(gameLanguage.status, gameLanguage.error);
     layoutSettings();
@@ -540,6 +542,7 @@ function loadVRSettings() {
         document.getElementById('vr-fields').disabled = false;
         document.getElementById('vr-save').disabled = true;
         document.getElementById('vr-reset').disabled = false;
+        document.getElementById('vr-disable-risk').disabled = false;
         document.getElementById('vr-retry').style.display = 'none';
         vrStatus('status.loaded', false);
         if (typeof LauncherOnboarding !== 'undefined') LauncherOnboarding.consider(response.onboarding);
@@ -615,6 +618,32 @@ function saveVRSettings() {
     } catch (error) {
         reportVRSettingsError(error);
         return false;
+    }
+}
+
+function riskSettingsStatus(key, error) {
+    riskSettingsStatusState = { key: key, error: error };
+    var node = document.getElementById('vr-risk-status');
+    node.textContent = LauncherI18n.text(key);
+    node.className = 'hint' + (error ? ' error' : '');
+    updateSettingsScrollbar();
+}
+
+function disableVRRiskSettings() {
+    var button = document.getElementById('vr-disable-risk');
+    if (!vrSettings.loaded || button.disabled) return false;
+    button.disabled = true;
+    try {
+        var response = JSON.parse(window.external.disableVRRiskSettings());
+        if (!response.ok) throw new Error(response.error || 'error.disableRisk');
+        // This independent action never saves, replaces or validates the VR draft.
+        riskSettingsStatus('status.riskDisabled', false);
+        return true;
+    } catch (error) {
+        riskSettingsStatus(LauncherI18n.errorKey(error.message, 'error.disableRisk'), true);
+        return false;
+    } finally {
+        button.disabled = false;
     }
 }
 

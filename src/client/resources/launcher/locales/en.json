@@ -1,4 +1,9 @@
 {
+  "settings.riskHeading": "Risk settings",
+  "settings.disableRisk": "Disable all risk settings",
+  "settings.riskHint": "Turn off SSAA, shader caching and both shadow caches in the game configuration without starting the game. Saves immediately.",
+  "status.riskDisabled": "SSAA, shader caching and both shadow caches are off. Saved for the next game start.",
+  "error.disableRisk": "Could not disable risk settings.",
   "nav.play": "Play",
   "nav.language": "Language",
   "nav.settings": "VR Settings",

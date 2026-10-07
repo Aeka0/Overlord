@@ -199,19 +199,32 @@ namespace launcher_vr_settings
 		return result;
 	}
 
-	inline std::string update_config(std::string_view config, const json& values)
+	template <typename Predicate>
+	std::string remove_config_assignments(std::string_view config, Predicate replace)
 	{
-		if (!validate(values)) throw std::runtime_error("Invalid VR settings.");
 		std::string result;
 		result.reserve(config.size() + 512);
+		if (config.substr(0, 3) == "\xef\xbb\xbf")
+		{
+			result.append(config.substr(0, 3));
+			config.remove_prefix(3);
+		}
 		while (!config.empty())
 		{
 			const auto end = config.find('\n');
 			const auto length = end == std::string_view::npos ? config.size() : end + 1;
-			if (setting_name(tokens(config.substr(0, end))).empty()) result.append(config.substr(0, length));
+			if (!replace(tokens(config.substr(0, end)))) result.append(config.substr(0, length));
 			config.remove_prefix(length);
 		}
-		if (!result.empty() && result.back() != '\n') result += "\r\n";
+		if (!result.empty() && result != "\xef\xbb\xbf" && result.back() != '\n') result += "\r\n";
+		return result;
+	}
+
+	inline std::string update_config(std::string_view config, const json& values)
+	{
+		if (!validate(values)) throw std::runtime_error("Invalid VR settings.");
+		auto result = remove_config_assignments(config,
+			[](const auto& parts) { return !setting_name(parts).empty(); });
 		for (auto it = values.begin(); it != values.end(); ++it)
 		{
 			const auto value = it->is_string() ? it->get<std::string>() :

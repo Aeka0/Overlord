@@ -1,6 +1,7 @@
 #include <std_include.hpp>
 #include "vr_settings.hpp"
 #include "vr_settings_config.hpp"
+#include "risk_settings_config.hpp"
 #include "build_config.hpp"
 #include "component/game_data.hpp"
 #include <utils/io.hpp>
@@ -23,6 +24,18 @@ namespace launcher_vr_settings
 			if (file.bad()) throw std::runtime_error("Could not read the game configuration.");
 			if (data.find('\0') != std::string::npos) throw std::runtime_error("The game configuration is not a valid text file.");
 			return data;
+		}
+
+		template <typename Update>
+		void update_profile(Update update)
+		{
+			if (!game_data::is_game_directory_available()) throw std::runtime_error("Place Overlord in a supported game directory before saving VR settings.");
+			game_data::initialize_players_folder();
+			const auto path = game_data::get_config_file_path();
+			// Re-read immediately before merging so unrelated profile edits survive.
+			const auto updated = update(read_profile(path));
+			if (updated.size() > max_config_bytes || !utils::io::write_file_atomic(path, updated))
+				throw std::runtime_error("Could not save VR settings. Check folder permissions and free disk space.");
 		}
 
 		std::string response(const json& values, const bool has_vr_config = true)
@@ -67,14 +80,18 @@ namespace launcher_vr_settings
 			if (payload.size() > max_payload_bytes) throw std::runtime_error("VR settings are too large.");
 			const auto values = json::parse(payload, nullptr, false);
 			if (!validate(values)) throw std::runtime_error("Check the VR setting values and allowed ranges.");
-			if (!game_data::is_game_directory_available()) throw std::runtime_error("Place Overlord in a supported game directory before saving VR settings.");
-			game_data::initialize_players_folder();
-			const auto path = game_data::get_config_file_path();
-			// Re-read immediately before merging so unrelated profile edits survive.
-			const auto updated = update_config(read_profile(path), values);
-			if (updated.size() > max_config_bytes || !utils::io::write_file_atomic(path, updated))
-				throw std::runtime_error("Could not save VR settings. Check folder permissions and free disk space.");
+			update_profile([&](const auto& profile) { return update_config(profile, values); });
 			return response(values);
+		}
+		catch (const std::exception& e) { return json{{"ok", false}, {"error", e.what()}}.dump(); }
+	}
+
+	std::string disable_risk_settings()
+	{
+		try
+		{
+			update_profile([](const auto& profile) { return disable_risk_settings(profile); });
+			return json{{"ok", true}}.dump();
 		}
 		catch (const std::exception& e) { return json{{"ok", false}, {"error", e.what()}}.dump(); }
 	}

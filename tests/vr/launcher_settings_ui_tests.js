@@ -81,7 +81,7 @@ function setup(initialLanguage = 'en', build = { configuration: 'RelWithDebInfo'
         nodes['vr-panel-' + category].contains = node => Object.keys(nodes).some(id => nodes[id] === node && panel.includes('id="' + id + '"'));
     }
     let stored = { ...defaults }, failLoad = false, failSave = false;
-    let writes = 0, launches = 0;
+    let writes = 0, launches = 0, riskWrites = 0;
     let savedLanguage = initialLanguage, languageWrites = 0, failLanguageLoad = false, failLanguageSave = false;
     let gameLanguage = 'english', gameWrites = 0, gameFailure = false, pendingGame = false, pendingLanguage = null;
     let gameChoices = [{value:'english', label:'English'}, {value:'simplified_chinese', label:'简体中文'}];
@@ -129,17 +129,54 @@ function setup(initialLanguage = 'en', build = { configuration: 'RelWithDebInfo'
                 if (onboarding) onboarding.hasVRConfig = true;
                 return JSON.stringify({ ok: true, values: stored });
             },
+            disableVRRiskSettings() {
+                if (failSave) return JSON.stringify({ ok: false, error: catalog.en['error.disk'] });
+                ++riskWrites;
+                return JSON.stringify({ ok: true });
+            },
             selectMode(mode) { assert.equal(mode, 1); ++launches; }
         } }
     });
     vm.runInContext(script, context);
-    return { context, nodes, documentEvents, rootAttributes, localizedNodes,
+    return { context, nodes, documentEvents, rootAttributes, localizedNodes, riskWrites: () => riskWrites,
         gameLanguage: () => gameLanguage, gameWrites: () => gameWrites,
         gameFailure: value => { gameFailure = value; }, gameChoices: value => { gameChoices = value; },
         pendingGame: value => { pendingGame = value; }, timers,
         language: () => savedLanguage, languageWrites: () => languageWrites,
         failLanguageLoad: value => { failLanguageLoad = value; }, failLanguageSave: value => { failLanguageSave = value; }, stored: () => stored, writes: () => writes, launches: () => launches,
         failLoad: value => { failLoad = value; }, failSave: value => { failSave = value; } };
+}
+
+// Offline risk repair preserves even an invalid unsaved draft, and never launches.
+{
+    const app = setup('zh-CN'), c = app.context, n = app.nodes;
+    assert.equal(c.disableVRRiskSettings(), false);
+    c.window.onload(); c.showSettingsCategory('debug');
+    n.vr_turnSpeed.value = 'invalid'; c.markVRDirty();
+    assert.equal(c.disableVRRiskSettings(), true);
+    assert.equal(app.riskWrites(), 1);
+    assert.equal(app.writes(), 0);
+    assert.equal(app.launches(), 0);
+    assert.equal(n.vr_turnSpeed.value, 'invalid');
+    assert.equal(c.vrSettings.dirty, true);
+    assert.equal(n['vr-save'].disabled, false);
+    assert.equal(c.settingsCategory, 'debug');
+    assert.equal(n['vr-risk-status'].textContent, catalog['zh-CN']['status.riskDisabled']);
+    c.applyLauncherLanguage('en');
+    assert.equal(n['vr-risk-status'].textContent, catalog.en['status.riskDisabled']);
+    app.failSave(true);
+    assert.equal(c.disableVRRiskSettings(), false);
+    assert.equal(n['vr-risk-status'].className, 'hint error');
+    assert.equal(n['vr-risk-status'].textContent, catalog.en['error.disk']);
+    assert.equal(n['vr-disable-risk'].disabled, false);
+    assert.equal(app.riskWrites(), 1);
+    app.failSave(false);
+    assert.equal(c.disableVRRiskSettings(), true);
+    c.window.external.disableVRRiskSettings = () => '{';
+    assert.equal(c.disableVRRiskSettings(), false);
+    assert.equal(n['vr-disable-risk'].disabled, false);
+    assert.equal(app.launches(), 0);
+    assert.equal(c.vrSettings.dirty, true);
 }
 
 // Backend selection applies to the upcoming game without restarting the launcher.

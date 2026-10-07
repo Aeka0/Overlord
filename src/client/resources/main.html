@@ -1290,6 +1290,12 @@
                                         </section>
                                         <section class="category-panel" id="vr-panel-debug" role="tabpanel" aria-labelledby="vr-tab-debug">
                                             <div class="setting-group">
+                                                <h3><span data-i18n="settings.riskHeading">Risk settings</span></h3>
+                                                <div class="hint" id="vr-risk-hint" data-i18n="settings.riskHint">Turn off SSAA, shader caching and both shadow caches in the game configuration without starting the game. Saves immediately.</div>
+                                                <button type="button" class="guide-button" id="vr-disable-risk" onclick="disableVRRiskSettings()" aria-describedby="vr-risk-hint" data-i18n="settings.disableRisk" disabled>Disable all risk settings</button>
+                                                <div class="hint" id="vr-risk-status" role="status" aria-live="polite"></div>
+                                            </div>
+                                            <div class="setting-group">
                                                 <h3><span data-i18n="settings.buildHeading">Current build</span></h3>
                                                 <div class="hint" id="vr-build-hint"></div>
                                             </div>
