@@ -360,8 +360,32 @@ namespace
 		}
 	}
 
+	DWORD process_integrity_level()
+	{
+		HANDLE token{};
+		vr::tests::require(OpenProcessToken(GetCurrentProcess(), TOKEN_QUERY, &token) != FALSE,
+			"cannot query smoke-test process token");
+		const auto close_token = gsl::finally([&] { CloseHandle(token); });
+		alignas(TOKEN_MANDATORY_LABEL) std::array<unsigned char,
+			sizeof(TOKEN_MANDATORY_LABEL) + SECURITY_MAX_SID_SIZE> buffer{};
+		DWORD size{};
+		vr::tests::require(GetTokenInformation(token, TokenIntegrityLevel, buffer.data(),
+			static_cast<DWORD>(buffer.size()), &size) != FALSE,
+			"cannot query smoke-test process integrity level");
+		const auto label = reinterpret_cast<const TOKEN_MANDATORY_LABEL*>(buffer.data());
+		vr::tests::require(IsValidSid(label->Label.Sid) != FALSE,
+			"smoke-test process integrity SID is invalid");
+		const auto count = *GetSidSubAuthorityCount(label->Label.Sid);
+		vr::tests::require(count != 0, "smoke-test process integrity SID is empty");
+		return *GetSidSubAuthority(label->Label.Sid, count - 1);
+	}
+
 	void expect_process_runtime_preference()
 	{
+		// GitHub-hosted Windows runners use a high-integrity administrator token.
+		// Match the loader's contract: overrides apply only below high integrity.
+		const auto integrity = process_integrity_level();
+		const auto elevated = integrity >= SECURITY_MANDATORY_HIGH_RID;
 		constexpr wchar_t runtime_environment[] = L"XR_RUNTIME_JSON";
 		const auto existing_size = GetEnvironmentVariableW(runtime_environment, nullptr, 0);
 		std::wstring existing(existing_size, L'\0');
@@ -370,12 +394,23 @@ namespace
 			const auto written = GetEnvironmentVariableW(runtime_environment, existing.data(), existing_size);
 			existing.resize(written);
 		}
-		SetEnvironmentVariableW(runtime_environment, nullptr);
+		const auto restore_environment = gsl::finally([&]
+		{
+			SetEnvironmentVariableW(runtime_environment, existing_size == 0 ? nullptr : existing.c_str());
+		});
+		vr::tests::require(SetEnvironmentVariableW(runtime_environment, nullptr) != FALSE,
+			"cannot clear runtime override for the smoke test");
 
 		const auto base = std::filesystem::temp_directory_path() /
 			std::format("h2v-openxr-runtime-policy-{}-{}", GetCurrentProcessId(), GetTickCount64());
 		const auto manifest = base.string() + ".json";
 		const auto library = base.string() + ".dll";
+		const auto remove_files = gsl::finally([&]
+		{
+			std::error_code error;
+			std::filesystem::remove(manifest, error);
+			std::filesystem::remove(library, error);
+		});
 		{
 			std::ofstream stream(library, std::ios::binary);
 			stream << "runtime-probe";
@@ -394,17 +429,28 @@ namespace
 			const auto written = GetEnvironmentVariableW(runtime_environment, selected.data(), selected_size);
 			selected.resize(written);
 		}
-		SetEnvironmentVariableW(runtime_environment, existing_size == 0 ? nullptr : existing.c_str());
-		std::error_code remove_error;
-		std::filesystem::remove(manifest, remove_error);
-		std::filesystem::remove(library, remove_error);
-
-		vr::tests::require(result.applied && result.override_active && result.override_set_by_policy &&
-			result.source == "automatic_virtual_desktop_vdxr" && result.blocking_error.empty(),
-			"process-local OpenXR runtime preference was not applied");
-		vr::tests::require(selected_size != 0 &&
-			std::filesystem::path(selected) == std::filesystem::absolute(manifest),
-			"process-local OpenXR runtime preference selected the wrong manifest");
+		const auto diagnostic = std::format("integrity=0x{:x}, blocking_error={}, warning={}",
+			integrity, result.blocking_error, result.warning);
+		if (elevated)
+		{
+			vr::tests::require(result.applied && !result.override_active && !result.override_set_by_policy &&
+				result.blocking_error.find("high integrity") != std::string::npos && selected_size == 0,
+				"high-integrity runtime override did not fail closed: " + diagnostic);
+		}
+		else
+		{
+			vr::tests::require(result.applied && result.override_active && result.override_set_by_policy &&
+				result.source == "automatic_virtual_desktop_vdxr" && result.blocking_error.empty(),
+				"process-local OpenXR runtime preference was not applied: " + diagnostic);
+			vr::tests::require(selected_size != 0 &&
+				std::filesystem::path(selected) == std::filesystem::absolute(manifest),
+				"process-local OpenXR runtime preference selected the wrong manifest");
+		}
+		vr::openxr::restore_runtime_preference(result);
+		vr::tests::require(GetEnvironmentVariableW(runtime_environment, nullptr, 0) == 0,
+			"runtime preference cleanup left an environment override behind");
+		std::cout << std::format("OpenXR runtime preference: integrity=0x{:x}, {}: PASS\n",
+			integrity, elevated ? "override rejected" : "override applied and restored");
 	}
 
 	void expect_incompatible_layer_isolated()
