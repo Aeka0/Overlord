@@ -48,7 +48,10 @@ namespace dragunov_profile_tests
 		test(dragunov::arctic,dragunov_data::receiver,true);
 		check(native_reload_profile("dragunov_arctic",10)==&dragunov::arctic_physical && !native_reload_profile("dragunov_arctic",11) &&
 			!native_reload_profile("dragunov_arctic_unknown",10),"captured arctic native identity is exact and capacity checked");
-		check(native_reload_profile("deserteagle_gold",7)==&de50::physical && de50::gold.reload==de50::base.reload,"gold Desert Eagle shares existing mechanics with its own render identity");
+		check(native_reload_profile("deserteagle_gold",7)==&de50::physical &&
+			native_reload_profile("deserteagle_gold",7,de50::gold.reload)==&de50::gold_physical &&
+			de50::gold.reload->id==de50::base.reload->id,
+			"gold Desert Eagle shares feed rules while its scene selects the exact render recipe");
 		check(!native_reload_profile("deserteagle_gold",8) && !native_reload_profile("deserteagle_gold_unknown",7),"gold admission remains exact and capacity checked");
 		check(native_reload_profile("dragunov",10)==&dragunov::physical && !native_reload_profile("dragunov",7),"Dragunov admits its captured native capacity");
 

@@ -75,7 +75,9 @@ visual pose use the same per-hand grasp; wrist rotation cannot switch knobs.
 M14's `j_bullet` is a direct `tag_clip` child in the native skeleton, but its
 geometry depicts the chamber cartridge. An explicit receiver-local chamber
 anchor overrides magazine motion; visibility follows `chamber_loaded`, and
-detached magazine subsets exclude it even when the magazine still has rounds.
+the original cartridge stays with the chamber when the magazine is detached.
+The counted magazine uses separate immutable copies below the measured feed lips;
+its 0–3 population never includes the chamber in its ammunition count.
 M82 explicitly retains
 `tag_clip -> tag_bullet2 -> tag_bullet -> tag_bullet_single`, including the
 intermediate carrier, rather than flattening its skeleton. The common binder

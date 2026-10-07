@@ -8,9 +8,10 @@
 namespace game { struct XModel; struct Material; struct GfxPackedVertex; }
 namespace scene_models
 {
-	// Immutable rigid view over a loaded asset. Builds only runtime
-	// index buffers; never edits the source XModel/material/vertex buffer or writes
-	// extracted assets to disk. Construct on the engine's main asset owner thread.
+	// Immutable rigid geometry over a loaded asset. Face selections share source
+	// vertices; static baking and composition own their copied vertex buffers.
+	// Never edits source XModel/material/buffers or exports assets to disk.
+	// Construct on the engine's main asset owner thread.
 	class rigid_part
 	{
 		struct storage;
@@ -21,7 +22,18 @@ namespace scene_models
 		bool create_impl(game::XModel*,unsigned,std::span<const unsigned>,membership,
 			std::span<const surface_face_range> face_ranges={},bool include=true);
 	public:
+		struct instance
+		{
+			const rigid_part* geometry{};
+			std::array<float, 3> translation{}; // Source bind coordinates; original orientation is retained.
+		};
 		rigid_part(); ~rigid_part();
+		// Main owner only. Combine validated parts of the same source into a
+		// private immutable model, merging compatible material surfaces. Only
+		// referenced vertices are copied; source buffers and descriptors stay intact.
+		// Bounded to five instances (body, follower, three rounds) and 262144
+		// copied vertices/triangles in total.
+		bool create_instances(std::span<const instance> instances);
 		bool create(game::XModel* source, unsigned bone);
 		// A rigid mechanical bone may live in a skinned surface. Accept only
 		// complete triangles whose every influence is this one bone; reject mixed
@@ -49,6 +61,11 @@ namespace scene_models
 		// Exact face subset across several rigid groups (e.g. magazine + rounds).
 		bool create_face_partition(game::XModel*,unsigned anchor,std::span<const unsigned> bones,
 			std::span<const surface_face_range>);
+		// Authored static parts may occupy rigid and skinned surfaces together.
+		// Every selected face must belong wholly to the requested bones; reject
+		// mixed ownership rather than freezing a deforming receiver boundary.
+		bool create_static_face_partition(game::XModel*, unsigned anchor, std::span<const unsigned> bones,
+		                                  std::span<const surface_face_range>);
 		game::XModel* model() const noexcept;
 		// Must publish descriptor -> actual source identity before native submit.
 		// GPU/geometry validation alone does not grant a native asset-pool index.

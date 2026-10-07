@@ -1,4 +1,5 @@
 #pragma once
+#include "magazine_fill.hpp"
 #include "../../magazine_grasp_profile.hpp"
 #include "reload_poses.hpp"
 #include "magazine_grasps.hpp"
@@ -68,40 +69,42 @@ namespace vr::gameplay::weapons::m82
 	inline constexpr std::array<std::string_view, 1> extra_rounds{"tag_bullet_single"};
 	inline constexpr std::array<part_parent_contract, 3> round_parents{
 	    {{"tag_bullet2", "tag_clip"}, {"tag_bullet", "tag_bullet2"}, {"tag_bullet_single", "tag_bullet"}}};
-	inline const reload_profile physical = with_split_sounds(
-	    []
-	    {
-		    reload_profile p{.id = "m82",
-		                     .native_name = "barrett",
-		                     .ammunition = reload_rules,
-		                     .interaction = reload_interaction,
-		                     .magazine_bone = "tag_clip",
-		                     .slide_bone = "j_bolt",
-		                     .bullets_bone = "tag_bullet",
-		                     .magazine_rest = magazine_rest,
-		                     .slide_rest = action_rest,
-		                     .rigid_in_magazine = {},
-		                     .magazine_in_wrist = magazine_in_wrist,
-		                     .magazine_top = magazine_top,
-		                     .well = magazine_well,
-		                     .slide_grab_low = action_grab_low,
-		                     .slide_grab_high = action_grab_high,
-		                     .magazine_fingers = magazine_fingers,
-		                     .slide_grips = action_grips,
-		                     .sound_key = sound_key,
-		                     .native_family = native_family,
-		                     .magazine_contacts = &contacts,
-		                     .rigid_magazine_source = "h2_viewmodel_m82_base"};
-		    p.additional_bullet_bones = extra_rounds;
-		    p.slide_capture = &handle_capture;
-		    p.bullet_parents = round_parents;
-		    p.magazine_grasps = magazine_grasps;
-		    return with_controller_magazine(p);
-	    }(),
-	    {
-	        .cycle_notetrack = "weap_m82_chamber_close_plr",
-	        .retain_close = false,
-	        .split_removal = true,
-	    });
+	inline const reload_profile physical =
+	    with_magazine_population(with_split_sounds(
+	                                 []
+	                                 {
+		                                 reload_profile p{.id = "m82",
+		                                                  .native_name = "barrett",
+		                                                  .ammunition = reload_rules,
+		                                                  .interaction = reload_interaction,
+		                                                  .magazine_bone = "tag_clip",
+		                                                  .slide_bone = "j_bolt",
+		                                                  .bullets_bone = "tag_bullet",
+		                                                  .magazine_rest = magazine_rest,
+		                                                  .slide_rest = action_rest,
+		                                                  .rigid_in_magazine = {},
+		                                                  .magazine_in_wrist = magazine_in_wrist,
+		                                                  .magazine_top = magazine_top,
+		                                                  .well = magazine_well,
+		                                                  .slide_grab_low = action_grab_low,
+		                                                  .slide_grab_high = action_grab_high,
+		                                                  .magazine_fingers = magazine_fingers,
+		                                                  .slide_grips = action_grips,
+		                                                  .sound_key = sound_key,
+		                                                  .native_family = native_family,
+		                                                  .magazine_contacts = &contacts,
+		                                                  .rigid_magazine_source = "h2_viewmodel_m82_base"};
+		                                 p.additional_bullet_bones = extra_rounds;
+		                                 p.slide_capture = &handle_capture;
+		                                 p.bullet_parents = round_parents;
+		                                 p.magazine_grasps = magazine_grasps;
+		                                 return with_controller_magazine(p);
+	                                 }(),
+	                                 {
+	                                     .cycle_notetrack = "weap_m82_chamber_close_plr",
+	                                     .retain_close = false,
+	                                     .split_removal = true,
+	                                 }),
+	                             magazine_fills);
 	inline const std::array<const reload_profile*, 1> skins{&physical};
 } // namespace vr::gameplay::weapons::m82

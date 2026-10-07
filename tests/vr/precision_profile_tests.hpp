@@ -222,7 +222,9 @@ namespace precision_profile_tests
 		fixture wa(wa2000::assemblies[0], {});
 		for (const auto* definition:m14ebr::skins)
 		{
-			check(definition->magazine_subset_count()==1,"M14 detached magazine never contains the chamber cartridge");
+			check(definition->magazine_subset_count()==4 && definition->magazine_fill()->stack &&
+				definition->magazine_fill()->stack->rounds[0].translation[2]<0,
+				"M14 magazine copies sit below the lips while the original chamber remains independently owned");
 			for (bool inserted:{false,true}) for (bool chamber:{false,true}) for (int rounds:{0,9})
 			{
 				mechanics::state ammo{};ammo.magazine_inserted=inserted;ammo.chamber_loaded=chamber;ammo.magazine_rounds=rounds;

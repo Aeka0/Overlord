@@ -14,6 +14,7 @@ using vr::hand;
 #include "skinned_part_tests.hpp"
 #include "opaque_mesh_tests.hpp"
 #include "native_fx_world_space_tests.hpp"
+#include <limits>
 #include "component/vr/gameplay/immutable_surface_cache.hpp"
 #include "component/vr/gameplay/hands/pose_math.hpp"
 
@@ -92,6 +93,54 @@ int main()
 		check(model->bounds.midPoint[0]==4 && model->bounds.halfSize[0]==1 && model->radius>=5,
 			"part culling bounds include actual selected geometry, not source model approximate radius");
 		check(selected.bind()[0]==4 && selected.bind()[6]==1,"part pivot retains native bind transform");
+		{
+			auto skin_surface = surface;
+			skin_surface.flags = 4;
+			skin_surface.blendVertCounts[0] = 6;
+			std::array<unsigned short, 6> weights{0, 0, 0, 64, 64, 64};
+			skin_surface.blendVerts = weights.data();
+			auto skin_model = source;
+			skin_model.lodInfo[0].surfs = &skin_surface;
+			const std::array<unsigned, 1> owned_bones{1};
+			const std::array<scene_models::surface_face_range, 1> owned_face{{{0, 1, 1}}};
+			const std::array<scene_models::surface_face_range, 1> foreign_face{{{0, 0, 0}}};
+			scene_models::rigid_part frozen, foreign, mixed;
+			check(frozen.create_static_face_partition(&skin_model, 1, owned_bones, owned_face) &&
+				frozen.model()->lodInfo[0].surfs[0].triCount == 1,
+				"static magazine faces can be isolated from a shared skinned receiver surface");
+			check(!foreign.create_static_face_partition(&skin_model, 1, owned_bones, foreign_face),
+				"authored face ranges cannot capture foreign receiver vertices");
+			weights[3] = 0;
+			check(!mixed.create_static_face_partition(&skin_model, 1, owned_bones, owned_face),
+				"cross-part skinned triangles reject before static publication");
+		}
+		{
+			const std::array<scene_models::rigid_part::instance, 2> instances{{
+				{&selected, {}}, {&selected, {1, 2, 3}}
+			}};
+			scene_models::rigid_part combined;
+			check(combined.create_instances(instances), "immutable instances combine translated source geometry");
+			if (auto* result = combined.model())
+			{
+				const auto& combined_surface = result->lodInfo[0].surfs[0];
+				check(result->numsurfs == 1 && combined_surface.triCount == 2 &&
+					combined_surface.vertCount == 6 && combined.source() == &source,
+					"instances compact referenced vertices and merge compatible native materials");
+				check(combined_surface.vb0 != surface.vb0 && combined_surface.indexBuffer != surface.indexBuffer,
+					"combined geometry owns immutable buffers instead of modifying the native source");
+				const auto& moved = combined_surface.verts0.packedVerts0[3];
+				check(moved.xyz[0] == vertices[3].xyz[0] + 1 && moved.xyz[1] == vertices[3].xyz[1] + 2 &&
+					moved.xyz[2] == 3 && vertices[3].xyz[0] == 3 && vertices[3].xyz[2] == 0,
+					"source vertices remain unchanged while copied vertices receive their authored offset");
+				check(result->bounds.midPoint[2] == 1.5f && result->bounds.halfSize[2] == 1.5f &&
+					combined.bind() == selected.bind(), "composed bounds and anchor follow the complete population");
+			}
+			auto invalid = instances;
+			invalid[1].translation[0] = std::numeric_limits<float>::quiet_NaN();
+			scene_models::rigid_part rejected;
+			check(!rejected.create_instances(invalid) && !rejected.model(),
+				"invalid stack transforms cannot publish partial geometry");
+		}
 		{
 			using namespace vr::gameplay::hands::pose_math;
 			const anchor wanted{{9,7,5},{0,0,.70710678f,.70710678f}};

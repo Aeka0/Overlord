@@ -1,4 +1,5 @@
 #pragma once
+#include "magazine_fill.hpp"
 #include "../../physical_reload_profile.hpp"
 #include "mechanics.hpp"
 #include "reload_interaction.hpp"
@@ -23,7 +24,7 @@ namespace vr::gameplay::weapons::vector
 	inline constexpr std::array<bolt_travel_sample, 2> bolt_curve{{{0, 0}, {.061f, .03940248f}}};
 	inline constexpr charging_handle_bolt internal_bolt{
 	    "j_bolt", equip_rest[0].local, bolt_curve, .03940248f};
-	inline const reload_profile physical =
+	inline const reload_profile physical = with_magazine_population(
 	    with_split_sounds(reload_profile{.id = "vector",
 	                                     .native_name = "kriss",
 	                                     .ammunition = reload_rules,
@@ -52,7 +53,8 @@ namespace vr::gameplay::weapons::vector
 	                          .cycle_notetrack = "weap_kriss_chamber_plr",
 	                          .retain_close = false,
 	                          .split_removal = true,
-	                      });
+	                      }),
+	    magazine_fills);
 	inline const reload_profile black = []
 	{
 		auto p = physical;

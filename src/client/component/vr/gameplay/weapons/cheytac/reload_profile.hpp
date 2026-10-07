@@ -1,4 +1,5 @@
 #pragma once
+#include "magazine_fill.hpp"
 #include "../../magazine_grasp_profile.hpp"
 #include "reload_poses.hpp"
 
@@ -73,32 +74,34 @@ namespace vr::gameplay::weapons::cheytac
 	    {{{17.849387f / 2.54f, .011326f / 2.54f, 8.455921f / 2.54f}, {0, 0, 0, 1}},
 	     {{17.396844f / 2.54f, .070768f / 2.54f, 9.817501f / 2.54f}, {0, 0, 0, 1}},
 	     {{39.814776f / 2.54f, -.146145f / 2.54f, 10.084354f / 2.54f}, {0, 0, 0, 1}}}};
-	inline const reload_profile physical = []
-	{
-		reload_profile p{.id = "cheytac",
-		                 .native_name = "cheytac",
-		                 .ammunition = reload_rules,
-		                 .interaction = reload_interaction,
-		                 .magazine_bone = "tag_clip",
-		                 .slide_bone = "j_bolt",
-		                 .bullets_bone = "j_bullet",
-		                 .magazine_rest = magazine_rest,
-		                 .slide_rest = action_rest,
-		                 .rigid_in_magazine = {},
-		                 .magazine_in_wrist = magazine_in_wrist,
-		                 .magazine_top = magazine_top,
-		                 .well = magazine_well,
-		                 .slide_grab_low = action_grab_low,
-		                 .slide_grab_high = action_grab_high,
-		                 .magazine_fingers = magazine_fingers,
-		                 .slide_grips = action_grips,
-		                 .sound_key = sound_key,
-		                 .native_family = native_family,
-		                 .magazine_contacts = &contacts,
-		                 .rigid_magazine_source = "h2_viewmodel_cheytac_base"};
-		p.feeding_path = &feeding_path;
-		return with_controller_magazine(p);
-	}();
+	inline const reload_profile physical = with_magazine_population(
+	    []
+	    {
+		    reload_profile p{.id = "cheytac",
+		                     .native_name = "cheytac",
+		                     .ammunition = reload_rules,
+		                     .interaction = reload_interaction,
+		                     .magazine_bone = "tag_clip",
+		                     .slide_bone = "j_bolt",
+		                     .bullets_bone = "j_bullet",
+		                     .magazine_rest = magazine_rest,
+		                     .slide_rest = action_rest,
+		                     .rigid_in_magazine = {},
+		                     .magazine_in_wrist = magazine_in_wrist,
+		                     .magazine_top = magazine_top,
+		                     .well = magazine_well,
+		                     .slide_grab_low = action_grab_low,
+		                     .slide_grab_high = action_grab_high,
+		                     .magazine_fingers = magazine_fingers,
+		                     .slide_grips = action_grips,
+		                     .sound_key = sound_key,
+		                     .native_family = native_family,
+		                     .magazine_contacts = &contacts,
+		                     .rigid_magazine_source = "h2_viewmodel_cheytac_base"};
+		    p.feeding_path = &feeding_path;
+		    return with_controller_magazine(p);
+	    }(),
+	    magazine_fills);
 	// Live desert receiver has identical bone hierarchy and bind transforms.
 	// Keep its actual mesh source so magazine subsets retain desert materials.
 	inline const reload_profile desert = []

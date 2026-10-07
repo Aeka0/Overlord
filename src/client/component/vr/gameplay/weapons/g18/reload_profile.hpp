@@ -1,4 +1,5 @@
 #pragma once
+#include "magazine_fill.hpp"
 #include "../../physical_reload_profile.hpp"
 #include "mechanics.hpp"
 #include "poses.hpp"
@@ -9,7 +10,7 @@
 
 namespace vr::gameplay::weapons::g18
 {
-	inline const reload_profile physical =
+	inline const reload_profile physical = with_magazine_population(
 	    with_split_sounds(reload_profile{.id = "g18",
 	                                     .native_name = native_name,
 	                                     .ammunition = reload_rules,
@@ -35,6 +36,7 @@ namespace vr::gameplay::weapons::g18
 	                          .cycle_notetrack = "weap_glock_first_lift_chamber_plr",
 	                          .retain_close = true,
 	                          .split_removal = false,
-	                      });
+	                      }),
+	    magazine_fills);
 	static_assert(slide_grips.size() == reload_interaction.slide_pose_count);
 }

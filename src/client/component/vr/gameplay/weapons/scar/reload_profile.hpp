@@ -1,4 +1,5 @@
 #pragma once
+#include "magazine_fill.hpp"
 #include "../../magazine_grasp_profile.hpp"
 #include "mechanics.hpp"
 #include "reload_interaction.hpp"
@@ -38,6 +39,7 @@ namespace vr::gameplay::weapons::scar
 		                     .magazine_contacts = &contacts,
 		                     .rigid_magazine_source = "h2_viewmodel_scar_h_base"};
 		    p.magazine_grasps = magazine_grasps;
+		    p.magazine_fills = magazine_fills;
 		    return with_controller_magazine(p);
 	    }(),
 	    {

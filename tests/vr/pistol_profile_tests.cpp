@@ -36,10 +36,10 @@ int main()
 		check(designator::base.fingers.data()==usp::idle_fingers && designator::base.support_enabled && designator::base.authored_rear==1,
 			"designator reuses USP complete hand pose and ordinary mirrored support adapter");
 	}
-	for (const auto* grip : {&m9::base,&m1911::base,&de50::base,&usp::base,&g18::base,&m93r::base,&tmp::base,&miniuzi::base})
+	for (const auto* grip : {&m9::base,&m1911::base,&de50::base,&de50::gold,&usp::base,&g18::base,&m93r::base,&tmp::base,&miniuzi::base})
 	{
 		const auto& p=*grip->reload;
-		check(p.id==grip->id && native_reload_profile(p.native_name,p.ammunition.magazine_capacity)==&p,"grip/native/mechanical identities agree");
+		check(p.id==grip->id && native_reload_profile(p.native_name,p.ammunition.magazine_capacity,&p)==&p,"grip/native/mechanical identities agree");
 		check(reload_profile_index(&p)<reload_profiles.size(),"asset registry contains each profile once");
 		check(grip->fingers.size()==(grip==&miniuzi::base ? 33 : 30) && p.magazine_fingers.size()==15,"complete live-glove finger sets and optional support palms");
 		const bool foregrip=grip==&tmp::base || grip==&miniuzi::base;
@@ -80,6 +80,16 @@ int main()
 		bones[round_root].name=p.bullets_bone; r.weapon_bones[round_root]=true; r.parent[round_root]=p.receiver_parented_bullets ? r.gun : magazine;
 		for (size_t i=0;i<p.additional_bullet_bones.size();++i)
 		{ bones[round_root+1+i].name=p.additional_bullet_bones[i]; r.weapon_bones[round_root+1+i]=true; r.parent[round_root+1+i]=magazine; }
+		for (const auto& contract : p.bullet_parents)
+		{
+			int child = -1, parent = -1;
+			for (int index = 0; index < r.count; ++index)
+			{
+				if (bones[index].name == contract.bone) child = index;
+				if (bones[index].name == contract.parent) parent = index;
+			}
+			if (child >= 0) r.parent[child] = parent;
+		}
 		// This fixture supplies round binding separately, even when equip-rest
 		// also contains the receiver-parented round's authored rest pose.
 		for (size_t i=0;i<grip->equip_rest.size();++i) if (bones[part_start+i].name==p.bullets_bone)
@@ -89,6 +99,13 @@ int main()
 		check(physical_reload::bind_parts(r,bones,p).valid,"expected three mechanical roots bind");
 		auto malformed=r; malformed.parent[round_root]=p.receiver_parented_bullets ? magazine : 1;
 		check(!physical_reload::bind_parts(malformed,bones,p).valid,"wrong bullet subtree fails closed");
+		if (!p.bullet_parents.empty())
+		{
+			malformed = r;
+			malformed.parent[round_root + 1] = magazine;
+			check(!physical_reload::bind_parts(malformed, bones, p).valid,
+				"nested cartridge cannot be silently reparented to the magazine");
+		}
 		malformed=r; malformed.count=257;
 		check(!physical_reload::bind_parts(malformed,bones,p).valid,"oversized rig rejected before indexing");
 		std::array<model_definition,1> models{{{grip->receiver,0,r.count}}};
@@ -294,12 +311,13 @@ int main()
 		!de50::suppress_equip("h2_wpn_pst_de50_reload") && !m1911::suppress_equip("h2_wpn_pst_m9_pullout"),"dual wield, reload and unrelated animations untouched");
 	check(reload_profile_index(nullptr)==reload_profiles.size(),"unknown profile has no asset cache slot");
 	check(!native_reload_profile("de50",7) && !native_reload_profile("desert_eagle",7),"animation aliases cannot accidentally opt into ammo writes");
-	check(de50::physical.rigid_in_magazine.rotation[1]<-.12f && de50::physical.magazine_rest.rotation[1]>.12f,
-		"standalone de50 mesh un-tilts the bone exactly once");
+	check(de50::physical.rigid_magazine_source && de50::physical.magazine_rest.rotation[1]>.12f,
+		"receiver-derived Deagle magazine retains the authored magazine rest frame");
 	check(m1911::base.viewmodel.visibility==part_visibility::rigid_groups &&
 		m9::base.viewmodel.visibility==part_visibility::rigid_groups && m9::physical.magazine_fill() &&
-		de50::base.viewmodel.visibility==part_visibility::surface,
-		"counted M9 magazine opts into precise group hiding while Deagle keeps its accepted visibility");
+		de50::base.viewmodel.visibility==part_visibility::rigid_groups &&
+		de50::gold.viewmodel.visibility==part_visibility::rigid_groups,
+		"counted pistol magazines use precise group hiding without suppressing receiver surfaces");
 	check(std::abs(m1911::slide_wrist_rest.position[0]*2.54f-(-10.88177031f))<.0001f &&
 		std::abs(usp::slide_wrist_rest.position[0]*2.54f-(-13.26409921f))<.0001f &&
 		std::abs(m1911::slide_finger_front_cm-(4.84335427f+1.5f))<.0001f &&

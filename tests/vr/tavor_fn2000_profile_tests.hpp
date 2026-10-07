@@ -76,7 +76,7 @@ namespace tavor_fn2000_profile_tests
 			check(native_reload_profile(name,30,&tavor::physical)==&tavor::physical,"captured TAR native host names admit thirty-round mechanics");
 		check(native_reload_profile("fn2000",30)==&fn2000::physical && !native_reload_profile("fn2000",20) && !native_reload_profile("tavor",30,&fn2000::physical),"FN2000 preserves its own native ammo and profile authority");
 		const auto recipe=tavor::physical.magazine_mesh();
-		check(recipe && recipe.count==3 && recipe.subsets==2 && recipe.selected_count(0)==2 && recipe.selected_count(1)==3 && recipe.selected_count(1000)==3 &&
+		check(recipe && recipe.count==3 && recipe.subsets==4 && recipe.selected_count(0)==2 && recipe.selected_count(1)==3 && recipe.selected_count(1000)==3 &&
 			recipe.names[0]=="tag_clip" && recipe.names[1]=="j_plate" && recipe.names[2]=="j_bullet","TAR empty/full subset keeps follower as permanent structure");
 		fixture tar(tavor::assemblies[0],{});auto invalid=tar;invalid.r.parent[84]=68;
 		check(!invalid.parts().valid,"TAR follower must belong directly to magazine");

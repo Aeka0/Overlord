@@ -27,7 +27,7 @@ int main()
 		check(q::supported(id),"explicit eligible feed");
 	for(const auto id:{"","m93r","mp5","p90","m4","m79","striker","de50_fake","ranger_akimbo"})
 		check(!q::supported(id),"unlisted feeds cannot inherit short-weapon eligibility");
-	check(w::de50::gold.reload==w::de50::base.reload && q::supported(w::de50::gold.reload->id),"gold Desert Eagle uses admitted feed");
+	check(w::de50::gold.reload->id==w::de50::base.reload->id && q::supported(w::de50::gold.reload->id),"gold Desert Eagle uses admitted feed independently of its geometry recipe");
 	check(w::de50::gold.reload->matches_native("deserteagle_gold",7),"gold native identity remains admitted");
 	const std::array<std::string_view,2> sounds{"h2_weapons/foley/wpn_handgun_ads_down_01.flac","h2_weapons\\foley\\wpn_handgun_ads_down_02.wav"};
 	check(w::sound_variant_mask(q::start_sound_files,sounds)==3,"stock random alias resolves the exact two requested recordings");

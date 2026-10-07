@@ -3,6 +3,7 @@
 #include "component/vr/gameplay/weapons/ak47/profile.hpp"
 #include "component/vr/gameplay/weapons/aug/profile.hpp"
 #include "component/vr/gameplay/weapons/cheytac/profile.hpp"
+#include "component/vr/gameplay/weapons/de50/profile.hpp"
 #include "component/vr/gameplay/weapons/fal/profile.hpp"
 #include "component/vr/gameplay/weapons/fn2000/profile.hpp"
 #include "component/vr/gameplay/weapons/l86/profile.hpp"
@@ -13,6 +14,9 @@
 #include "component/vr/gameplay/weapons/p90/profile.hpp"
 #include "component/vr/gameplay/weapons/pp2000/profile.hpp"
 #include "component/vr/gameplay/weapons/rpd/profile.hpp"
+#include "component/vr/gameplay/weapons/scar/profile.hpp"
+#include "component/vr/gameplay/weapons/g18/profile.hpp"
+#include "component/vr/gameplay/weapons/tavor/profile.hpp"
 #include "component/vr/gameplay/weapons/tmp/profile.hpp"
 #include "component/vr/gameplay/weapon_reload_profiles.hpp"
 #include "component/vr/gameplay/chamber_cartridge.hpp"
@@ -32,7 +36,9 @@ namespace ammunition_presentation_tests
 			{&acr::physical,{2228,2822,3416,4010}},{&aug::physical,{2412,2748,3084,3420}},
 			{&mp5::physical,{2686,3010,3334,3658}},{&fal::physical,{2974,3310,3646,3982}},
 			{&pp2000::physical,{600,1272,1944,2616}},{&l86::physical,{9778,10066,10354,10642}},
-			{&m9::physical,{564,874,1040,1182}},{&m93r::physical,{564,874,1040,1182}}};
+			{&m9::physical,{564,874,1040,1182}},{&m93r::physical,{564,874,1040,1182}},
+			{&de50::physical,{812,1134,1456,1778}},{&de50::gold_physical,{812,1134,1456,1778}},
+			{&scar::physical,{2448,2784,2965,3125}}};
 		for(const auto& c:cases)
 		{
 			const auto* recipe=c.p->magazine_fill();
@@ -55,11 +61,63 @@ namespace ammunition_presentation_tests
 			++enabled;check(valid_magazine_fill(*recipe) && std::string_view(recipe->source)==p->rigid_magazine_source,
 				"every enabled camouflage binds its own validated source");
 		}
-		check(enabled==15,"only fifteen reviewed receiver variants enable counted magazines");
+		check(enabled==42,"all forty-two reviewed counted-magazine profiles are registered");
+		for (const auto* definition : reload_profiles)
+		{
+			const auto* fill = definition->magazine_fill();
+			if (!fill || !fill->stack) continue;
+			check(definition->magazine_subset_count() == 4 && definition->magazine_subset(INT_MAX) == 3,
+				"authored stacks use bounded four-state population independently of extreme ammo counts");
+			for (const auto& round : fill->stack->rounds)
+				check(!round.faces.empty(), "every authored cartridge keeps an explicit source face selection");
+			auto invalid_stack = *fill->stack;
+			invalid_stack.rounds[2].translation[0] = std::numeric_limits<float>::quiet_NaN();
+			auto invalid_recipe = *fill;
+			invalid_recipe.stack = &invalid_stack;
+			check(!valid_magazine_fill(invalid_recipe), "nonfinite copy placement cannot enter asset preparation");
+			if (!fill->stack->follower_faces.empty())
+			{
+				const auto& travel = fill->stack->follower_translations;
+				check(travel[0] == vec{} && travel[3][2] < travel[1][2] && travel[1][2] <= 0,
+					"magazine support remains present and descends beneath the visible rounds");
+				invalid_stack = *fill->stack;
+				invalid_stack.follower_faces = fill->faces[0];
+				check(!valid_magazine_fill(invalid_recipe), "moving support cannot duplicate permanent body faces");
+				invalid_stack = *fill->stack;
+				invalid_stack.follower_translations[2][2] = std::numeric_limits<float>::quiet_NaN();
+				check(!valid_magazine_fill(invalid_recipe), "invalid support placement rejects the complete state set");
+			}
+		}
+		check(g18::physical.receiver_parented_bullets && g18::physical.magazine_fill() &&
+			tavor::physical.magazine_fill() && !tavor::physical.magazine_body_bones.empty() &&
+			cheytac::physical.magazine_fill() && cheytac::physical.feeding_path,
+			"counted population coexists with receiver parenting, permanent structure and manual feeding");
+		mechanics::state presentation_state{};
+		check(hide_counted_magazine_geometry(g18::physical, presentation_state, false, true) &&
+			!hide_counted_magazine_geometry(g18::physical, presentation_state, false, false),
+			"receiver-parented magazine rounds are replaced without hiding unrelated receiver bones");
+		check(!hide_counted_magazine_geometry(m14ebr::physical, presentation_state, true, true) &&
+			hide_counted_magazine_geometry(m14ebr::physical, presentation_state, true, false),
+			"counted M14 magazine replaces its body but never captures the original chamber round");
+		check(hide_counted_magazine_geometry(cheytac::physical, presentation_state, true, true),
+			"resting M200 top round is supplied by its counted magazine");
+		presentation_state.bolt.feeding = true;
+		check(!hide_counted_magazine_geometry(cheytac::physical, presentation_state, true, true),
+			"M200 in-transit round retains independent native visibility during feeding");
+		const auto* standard_deagle = de50::physical.magazine_fill();
+		const auto* gold_deagle = de50::gold_physical.magazine_fill();
+		check(standard_deagle && gold_deagle && standard_deagle != gold_deagle &&
+			standard_deagle->surfaces.size() == 7 && gold_deagle->surfaces.size() == 5,
+			"gold Desert Eagle keeps its captured surface layout rather than inheriting base face indices");
+		const auto deagle_mesh = de50::physical.magazine_mesh();
+		check(deagle_mesh.count == 3 && deagle_mesh.names[2] == "j_bullet01" &&
+			de50::physical.bullet_parents[0].parent == "tag_bullets",
+			"all three Deagle rounds include the nested top cartridge without changing its parent");
 		check(!ak47::desert.magazine_fill() && !ak47::woodland.magazine_fill() && !acr::arctic.magazine_fill() && !aug::plain.magazine_fill(),
 			"missing exports never inherit base-skin face indices");
-		check(!fn2000::physical.magazine_fill() && !p90::physical.magazine_fill() && !rpd::physical.magazine_fill(),
-			"unreviewed multi-round geometry and belt semantics remain outside counted box magazines");
+		check(fn2000::physical.magazine_fill() && !fn2000::physical.magazine_fill()->stack &&
+			!p90::physical.magazine_fill() && !rpd::physical.magazine_fill(),
+			"F2000 uses original face levels while transparent native bands and belts retain their policies");
 		for(const auto* p:{&m14ebr::physical,&m14ebr::arctic,&cheytac::physical,&cheytac::desert})
 		{
 			mechanics::state ammo{};ammo.chamber_loaded=true;

@@ -18,12 +18,14 @@ namespace vr::gameplay::weapons::de50
 	    .equip_rest = equip_rest,
 	    .suppress_equip = suppress_equip,
 	    .reload = &physical,
+	    .viewmodel = {.visibility = part_visibility::rigid_groups},
 	};
 	// Gold receiver has the identical 11-bone bind; keep its own material identity.
 	inline constexpr profile gold = []
 	{
 		auto p = base;
 		p.receiver = "h2_viewmodel_desert_eagle_gold";
+		p.reload = &gold_physical;
 		return p;
 	}();
 }

@@ -1,4 +1,5 @@
 #pragma once
+#include "magazine_fill.hpp"
 #include "../../physical_reload_profile.hpp"
 #include "mechanics.hpp"
 #include "poses.hpp"
@@ -18,7 +19,7 @@ namespace vr::gameplay::weapons::miniuzi
 	                                                               {.08463376f, .05251632f},
 	                                                               {.085f, .05251632f}}};
 	inline constexpr charging_handle_bolt internal_bolt{"j_open_reload", bolt_rest, bolt_curve, .05251312f};
-	inline const reload_profile physical =
+	inline const reload_profile physical = with_magazine_population(
 	    with_split_sounds(reload_profile{.id = "miniuzi",
 	                                     .native_name = native_name,
 	                                     .ammunition = reload_rules,
@@ -47,6 +48,7 @@ namespace vr::gameplay::weapons::miniuzi
 	                          .cycle_notetrack = "weap_miniuzi_chamber_plr",
 	                          .retain_close = false,
 	                          .split_removal = false,
-	                      });
+	                      }),
+	    magazine_fills);
 	static_assert(action_grips.size() == reload_interaction.slide_pose_count);
 }

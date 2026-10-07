@@ -17,9 +17,9 @@ namespace knife_reload_tests
 		using namespace vr::gameplay::hands::pose_math;
 		for (const auto* definition:reload_profiles)
 			check(bool(definition->knife_magazine_in_wrist)==(definition==&usp::physical || definition==&usp::silenced_physical ||
-				definition==&m9::physical || definition==&m1911::physical || definition==&de50::physical || definition==&m93r::physical),
+				definition==&m9::physical || definition==&m1911::physical || definition==&de50::physical || definition==&de50::gold_physical || definition==&m93r::physical),
 				"knife co-grasp capability stays limited to the five authored pistol families");
-		for (const auto* definition:{&usp::physical,&usp::silenced_physical,&m9::physical,&m1911::physical,&de50::physical,&m93r::physical})
+		for (const auto* definition:{&usp::physical,&usp::silenced_physical,&m9::physical,&m1911::physical,&de50::physical,&de50::gold_physical,&m93r::physical})
 			for (const auto rear:{hand::left,hand::right})
 				for (const auto mode:{equipment::knife_grip::forward,equipment::knife_grip::reverse})
 					for (bool spare_first:{false,true})

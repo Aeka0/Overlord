@@ -21,7 +21,10 @@ namespace scene_models
 		utils::hook::detour model_index_hook;
 		// Cover all retained subset producers together; admission must not depend
 		// on which weapon family happened to prepare its independent parts first.
-		identity::registry<256> model_identities;
+		// Counted magazines retain four states per receiver alongside chamber,
+		// action and equipment models. Keep this shared budget bounded and large
+		// enough for the comprehensive weapon scene without evicting queued models.
+		identity::registry<512> model_identities;
 		std::atomic_size_t registration_failures{},asset_retirements{};
 		identity::pool model_pool() noexcept
 		{

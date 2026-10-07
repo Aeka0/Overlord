@@ -1,4 +1,5 @@
 #pragma once
+#include "magazine_fill.hpp"
 #include "reload_poses.hpp"
 
 namespace vr::gameplay::weapons::wa2000
@@ -61,38 +62,40 @@ namespace vr::gameplay::weapons::wa2000
 			return nullptr;
 		}
 	}
-	inline const reload_profile physical = with_split_sounds(
-	    []
-	    {
-		    reload_profile p{.id = "wa2000",
-		                     .native_name = "wa2000",
-		                     .ammunition = reload_rules,
-		                     .interaction = reload_interaction,
-		                     .magazine_bone = "tag_clip",
-		                     .slide_bone = "j_reload",
-		                     .bullets_bone = "j_ammo",
-		                     .magazine_rest = magazine_rest,
-		                     .slide_rest = action_rest,
-		                     .rigid_in_magazine = {},
-		                     .magazine_in_wrist = magazine_in_wrist,
-		                     .magazine_top = magazine_top,
-		                     .well = magazine_well,
-		                     .slide_grab_low = action_grab_low,
-		                     .slide_grab_high = action_grab_high,
-		                     .magazine_fingers = magazine_fingers,
-		                     .slide_grips = action_grips,
-		                     .sound_key = sound_key,
-		                     .native_family = native_family,
-		                     .magazine_contacts = &contacts,
-		                     .rigid_magazine_source = "h2_viewmodel_wa2000_base"};
-		    p.receiver_parented_bullets = true;
-		    p.bolt = &bolt;
-		    return p;
-	    }(),
-	    {
-	        .cycle_notetrack = "weap_ak47_chamber_plr",
-	        .retain_close = false,
-	        .split_removal = false,
-	    });
+	inline const reload_profile physical = with_magazine_population(
+	    with_split_sounds(
+	        []
+	        {
+		        reload_profile p{.id = "wa2000",
+		                         .native_name = "wa2000",
+		                         .ammunition = reload_rules,
+		                         .interaction = reload_interaction,
+		                         .magazine_bone = "tag_clip",
+		                         .slide_bone = "j_reload",
+		                         .bullets_bone = "j_ammo",
+		                         .magazine_rest = magazine_rest,
+		                         .slide_rest = action_rest,
+		                         .rigid_in_magazine = {},
+		                         .magazine_in_wrist = magazine_in_wrist,
+		                         .magazine_top = magazine_top,
+		                         .well = magazine_well,
+		                         .slide_grab_low = action_grab_low,
+		                         .slide_grab_high = action_grab_high,
+		                         .magazine_fingers = magazine_fingers,
+		                         .slide_grips = action_grips,
+		                         .sound_key = sound_key,
+		                         .native_family = native_family,
+		                         .magazine_contacts = &contacts,
+		                         .rigid_magazine_source = "h2_viewmodel_wa2000_base"};
+		        p.receiver_parented_bullets = true;
+		        p.bolt = &bolt;
+		        return p;
+	        }(),
+	        {
+	            .cycle_notetrack = "weap_ak47_chamber_plr",
+	            .retain_close = false,
+	            .split_removal = false,
+	        }),
+	    magazine_fills);
 	inline const std::array<const reload_profile*, 1> skins{&physical};
 } // namespace vr::gameplay::weapons::wa2000

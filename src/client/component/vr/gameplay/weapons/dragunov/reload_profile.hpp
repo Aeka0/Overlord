@@ -1,4 +1,5 @@
 #pragma once
+#include "magazine_fill.hpp"
 #include "reload_poses.hpp"
 
 namespace vr::gameplay::weapons::dragunov
@@ -47,31 +48,33 @@ namespace vr::gameplay::weapons::dragunov
 			return nullptr;
 		}
 	}
-	inline const reload_profile physical = []
-	{
-		reload_profile p{.id = "dragunov",
-		                 .native_name = "dragunov",
-		                 .ammunition = reload_rules,
-		                 .interaction = reload_interaction,
-		                 .magazine_bone = "tag_clip",
-		                 .slide_bone = "j_bolt",
-		                 .bullets_bone = "tag_bullet_single",
-		                 .magazine_rest = magazine_rest,
-		                 .slide_rest = action_rest,
-		                 .rigid_in_magazine = {},
-		                 .magazine_in_wrist = magazine_in_wrist,
-		                 .magazine_top = magazine_top,
-		                 .well = magazine_well,
-		                 .slide_grab_low = action_grab_low,
-		                 .slide_grab_high = action_grab_high,
-		                 .magazine_fingers = magazine_fingers,
-		                 .slide_grips = action_grips,
-		                 .sound_key = sound_key,
-		                 .magazine_contacts = &contacts,
-		                 .rigid_magazine_source = "h2_viewmodel_dragunov_base"};
-		p.slide_capture = &handle_capture;
-		return p;
-	}();
+	inline const reload_profile physical = with_magazine_population(
+	    []
+	    {
+		    reload_profile p{.id = "dragunov",
+		                     .native_name = "dragunov",
+		                     .ammunition = reload_rules,
+		                     .interaction = reload_interaction,
+		                     .magazine_bone = "tag_clip",
+		                     .slide_bone = "j_bolt",
+		                     .bullets_bone = "tag_bullet_single",
+		                     .magazine_rest = magazine_rest,
+		                     .slide_rest = action_rest,
+		                     .rigid_in_magazine = {},
+		                     .magazine_in_wrist = magazine_in_wrist,
+		                     .magazine_top = magazine_top,
+		                     .well = magazine_well,
+		                     .slide_grab_low = action_grab_low,
+		                     .slide_grab_high = action_grab_high,
+		                     .magazine_fingers = magazine_fingers,
+		                     .slide_grips = action_grips,
+		                     .sound_key = sound_key,
+		                     .magazine_contacts = &contacts,
+		                     .rigid_magazine_source = "h2_viewmodel_dragunov_base"};
+		    p.slide_capture = &handle_capture;
+		    return p;
+	    }(),
+	    magazine_fills);
 	inline const reload_profile arctic_physical = []
 	{
 		auto p = physical;

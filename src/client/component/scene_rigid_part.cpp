@@ -39,6 +39,135 @@ namespace scene_models
 	};
 	rigid_part::rigid_part() = default;
 	rigid_part::~rigid_part() = default;
+
+	bool rigid_part::create_instances(std::span<const instance> instances)
+	{
+		status_ = "rigid instances owner/source contract rejected";
+		if (data_ || !scheduler::is_executing(scheduler::pipeline::main) ||
+		    instances.empty() || instances.size() > 5 || !instances[0].geometry ||
+		    !instances[0].geometry->data_)
+			return false;
+
+		const auto& first = *instances[0].geometry->data_;
+		unsigned surface_capacity{};
+		for (const auto& instance : instances)
+		{
+			if (!instance.geometry || !instance.geometry->data_ ||
+			    instance.geometry->source() != first.source)
+				return false;
+			for (const auto value : instance.translation)
+				if (!std::isfinite(value) || std::abs(value) > 10000)
+					return false;
+			surface_capacity += instance.geometry->data_->count;
+		}
+		if (!surface_capacity || surface_capacity > 255)
+			return false;
+
+		auto out = std::make_unique<storage>(surface_capacity);
+		out->source = first.source;
+		out->bind = first.bind;
+		unsigned copied_vertices{}, copied_faces{};
+		for (const auto& instance : instances)
+		{
+			const auto& source = *instance.geometry->data_;
+			for (unsigned surface_index = 0; surface_index < source.count; ++surface_index)
+			{
+				const auto& original = source.surfaces[surface_index];
+				const auto& input = source.meshes[surface_index];
+				// These parts have already passed the rigid-face/weight contract.
+				// Merge only identical native material/vertex-layout identities.
+				unsigned destination{};
+				for (; destination < out->count; ++destination)
+					if (out->materials[destination] == source.materials[surface_index] &&
+					    out->surfaces[destination].flags == original.flags &&
+					    out->meshes[destination].vertex_buffer == input.vertex_buffer)
+						break;
+				if (destination == out->count)
+				{
+					out->surfaces[destination] = original;
+					out->materials[destination] = source.materials[surface_index];
+					out->meshes[destination].vertex_buffer = input.vertex_buffer;
+					out->meshes[destination].vertex_view = input.vertex_view;
+					++out->count;
+				}
+
+				auto& output = out->meshes[destination];
+				if (output.indices.size() + input.indices.size() > UINT16_MAX)
+					return false;
+				std::vector<unsigned> remap(input.vertices.size(), UINT_MAX);
+				for (const auto& triangle : input.indices)
+				{
+					if (++copied_faces > 262144) return false;
+					game::Face copied{};
+					const unsigned indices[]{triangle.v1, triangle.v2, triangle.v3};
+					unsigned short* corners[]{&copied.v1, &copied.v2, &copied.v3};
+					for (unsigned corner = 0; corner < 3; ++corner)
+					{
+						const auto index = indices[corner];
+						if (index >= input.vertices.size())
+							return false;
+						if (remap[index] == UINT_MAX)
+						{
+							if (output.vertices.size() >= UINT16_MAX || ++copied_vertices > 262144)
+								return false;
+							auto vertex = input.vertices[index];
+							for (unsigned axis = 0; axis < 3; ++axis)
+								vertex.xyz[axis] += instance.translation[axis];
+							remap[index] = static_cast<unsigned>(output.vertices.size());
+							output.vertices.push_back(vertex);
+						}
+						*corners[corner] = static_cast<unsigned short>(remap[index]);
+					}
+					output.indices.push_back(copied);
+				}
+			}
+		}
+
+		for (unsigned index = 0; index < out->count; ++index)
+		{
+			auto& surface = out->surfaces[index];
+			auto& mesh = out->meshes[index];
+			ComPtr<ID3D11Device> device;
+			mesh.vertex_buffer->GetDevice(&device);
+			if (!device || !create_surface_indices(device.Get(), surface.indexBufferView,
+			        std::as_bytes(std::span(mesh.indices)), mesh.index_buffer, mesh.index_view))
+				return false;
+
+			surface.vertCount = static_cast<unsigned short>(mesh.vertices.size());
+			surface.triCount = static_cast<unsigned short>(mesh.indices.size());
+			surface.verts0.packedVerts0 = mesh.vertices.data();
+			surface.triIndices = surface.triIndices2 = mesh.indices.data();
+			surface.indexBuffer = mesh.index_buffer.Get();
+			surface.indexBufferView = mesh.index_view.Get();
+			mesh.group = {0, surface.vertCount, 0, surface.triCount, nullptr};
+			surface.rigidVertLists = &mesh.group;
+			surface.rigidVertListCount = 1;
+		}
+
+		// Rebind every pointer copied from the first validated model. Bounds and
+		// private vertex buffers are calculated by the existing baking path.
+		out->model = first.model;
+		out->lod = first.lod;
+		out->model.numsurfs = static_cast<unsigned char>(out->count);
+		out->model.boneNames = &out->name;
+		out->model.baseMat = &out->identity;
+		out->model.boneInfo = &out->bone_info;
+		out->model.materialHandles = out->materials.data();
+		out->lod.surfs = out->surfaces.data();
+		out->lod.numsurfs = static_cast<unsigned short>(out->count);
+		out->model.lodInfo[0].numsurfs = out->model.numsurfs;
+		out->model.lodInfo[0].surfs = out->surfaces.data();
+		out->model.lodInfo[0].modelSurfs = &out->lod;
+		data_ = std::move(out);
+		if (!bake_vertices([](unsigned, std::span<game::GfxPackedVertex>) { return true; }))
+		{
+			data_.reset();
+			status_ = "rigid instance bounds or vertex upload rejected";
+			return false;
+		}
+		status_ = "ready";
+		return true;
+	}
 	game::XModel* rigid_part::model() const noexcept { return data_ ? &data_->model : nullptr; }
 	game::XModel* rigid_part::source() const noexcept { return data_ ? data_->source : nullptr; }
 	std::array<float,7> rigid_part::bind() const noexcept { return data_ ? data_->bind : std::array<float,7>{}; }
@@ -122,6 +251,11 @@ namespace scene_models
 	{return !ranges.empty() && create_impl(source,bone,{&bone,1},membership::rigid,ranges,include);}
 	bool rigid_part::create_face_partition(game::XModel* source,unsigned anchor,std::span<const unsigned> bones,std::span<const surface_face_range> ranges)
 	{return !ranges.empty() && create_impl(source,anchor,bones,membership::rigid,ranges,true);}
+	bool rigid_part::create_static_face_partition(game::XModel* source, unsigned anchor,
+		std::span<const unsigned> bones, std::span<const surface_face_range> ranges)
+	{
+		return !ranges.empty() && create_impl(source, anchor, bones, membership::rigid_bone, ranges, true);
+	}
 	bool rigid_part::create_impl(game::XModel* source,unsigned bone,std::span<const unsigned> bones,membership mode,
 		std::span<const surface_face_range> face_ranges,bool include)
 	{
@@ -175,8 +309,31 @@ namespace scene_models
 				std::vector<std::uint16_t> blend(words),triangles(std::size_t(surface.triCount)*3);
 				if(!utils::native_memory::read_bytes(blend.data(),surface.blendVerts,blend.size()*2) ||
 					!utils::native_memory::read_bytes(triangles.data(),surface.triIndices,triangles.size()*2))return false;
-				const auto partition=vr::gameplay::weapons::partition_skin(surface.blendVertCounts,blend,triangles,surface.vertCount,model.numBones,excluded);
+				auto partition=vr::gameplay::weapons::partition_skin(surface.blendVertCounts,blend,triangles,surface.vertCount,model.numBones,excluded);
 				if(!partition.valid)return false;
+				if (!face_ranges.empty())
+				{
+					std::vector<std::uint16_t> filtered;
+					size_t retained_index{};
+					for (unsigned face = 0; face < surface.triCount; ++face)
+					{
+						const auto original = triangles.begin() + face * 3;
+						const bool owned = retained_index + 3 <= partition.retained.size() &&
+							std::equal(original, original + 3, partition.retained.begin() + retained_index);
+						const bool requested = face_in_partition(face_ranges, n, face);
+						if (requested)
+						{
+							if (!owned) return false;
+							++matched_faces;
+						}
+						if (owned)
+						{
+							if (requested == include) filtered.insert(filtered.end(), original, original + 3);
+							retained_index += 3;
+						}
+					}
+					partition.retained = std::move(filtered);
+				}
 				for(std::size_t at=0,extra=0;extra<8;++extra)for(int v=0;v<surface.blendVertCounts[extra];++v)
 				{
 					for(std::size_t k=0;k<=extra;++k){const auto b=blend[at+(k?2*k-1:0)]/64;

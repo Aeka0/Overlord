@@ -1,4 +1,5 @@
 #pragma once
+#include "magazine_fill.hpp"
 #include "../../magazine_grasp_profile.hpp"
 #include "mechanics.hpp"
 #include "reload_interaction.hpp"
@@ -11,33 +12,35 @@ namespace vr::gameplay::weapons::famas
 	{
 		return native_weapon_family(name, "famas");
 	}
-	inline const reload_profile physical = with_split_sounds(
-	    with_controller_magazine(reload_profile{.id = "famas",
-	                                            .native_name = "famas",
-	                                            .ammunition = reload_rules,
-	                                            .interaction = reload_interaction,
-	                                            .magazine_bone = "tag_clip",
-	                                            .slide_bone = "j_bolt",
-	                                            .bullets_bone = "j_bullet",
-	                                            .magazine_rest = magazine_rest,
-	                                            .slide_rest = action_rest,
-	                                            .rigid_in_magazine = {},
-	                                            .magazine_in_wrist = magazine_in_wrist,
-	                                            .magazine_top = magazine_top,
-	                                            .well = magazine_well,
-	                                            .slide_grab_low = action_grab_low,
-	                                            .slide_grab_high = action_grab_high,
-	                                            .magazine_fingers = magazine_fingers,
-	                                            .slide_grips = action_grips,
-	                                            .sound_key = sound_key,
-	                                            .native_family = native_family,
-	                                            .magazine_contacts = &contacts,
-	                                            .rigid_magazine_source = "h2_viewmodel_famas_base_arctic"}),
-	    {
-	        .cycle_notetrack = "weap_famas_chamber_plr",
-	        .retain_close = false,
-	        .split_removal = true,
-	    });
+	inline const reload_profile physical = with_magazine_population(
+	    with_split_sounds(with_controller_magazine(
+	                          reload_profile{.id = "famas",
+	                                         .native_name = "famas",
+	                                         .ammunition = reload_rules,
+	                                         .interaction = reload_interaction,
+	                                         .magazine_bone = "tag_clip",
+	                                         .slide_bone = "j_bolt",
+	                                         .bullets_bone = "j_bullet",
+	                                         .magazine_rest = magazine_rest,
+	                                         .slide_rest = action_rest,
+	                                         .rigid_in_magazine = {},
+	                                         .magazine_in_wrist = magazine_in_wrist,
+	                                         .magazine_top = magazine_top,
+	                                         .well = magazine_well,
+	                                         .slide_grab_low = action_grab_low,
+	                                         .slide_grab_high = action_grab_high,
+	                                         .magazine_fingers = magazine_fingers,
+	                                         .slide_grips = action_grips,
+	                                         .sound_key = sound_key,
+	                                         .native_family = native_family,
+	                                         .magazine_contacts = &contacts,
+	                                         .rigid_magazine_source = "h2_viewmodel_famas_base_arctic"}),
+	                      {
+	                          .cycle_notetrack = "weap_famas_chamber_plr",
+	                          .retain_close = false,
+	                          .split_removal = true,
+	                      }),
+	    magazine_fills);
 	inline const reload_profile tape = []
 	{
 		auto p = physical;

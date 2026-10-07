@@ -56,10 +56,11 @@ shared boundaries.
 
 | Profile | Native identity | Required base capacity | Receiver | Independent magazine |
 |:--|:--|--:|:--|:--|
-| M9 | `beretta` | 15 | `wpn_h1_pst_m9_vm` | `h2_weapon_beretta_clip` |
-| M1911 | `colt45` | 7 | `h2_viewmodel_colt45_base` | `h2_weapon_colt45_clip` |
-| Desert Eagle | `deserteagle` | 7 | `h2_viewmodel_desert_eagle_base` | `h2_weapon_desert_eagle_clip` |
-| USP | `usp` | 12 | `h2_viewmodel_usp_base` | `h2_weapon_usp_clip` |
+| M9 | `beretta` | 15 | `wpn_h1_pst_m9_vm` | exact receiver 0–3 round subsets |
+| M1911 | `colt45` | 7 | `h2_viewmodel_colt45_base` | measured native-round stack |
+| Desert Eagle | `deserteagle` | 7 | `h2_viewmodel_desert_eagle_base` | exact receiver 0–3 round subsets |
+| Desert Eagle gold | `deserteagle_gold` | 7 | `h2_viewmodel_desert_eagle_gold` | separate gold receiver 0–3 round subsets |
+| USP | `usp` | 12 | `h2_viewmodel_usp_base` | measured native-round stack |
 | USP suppressed | `usp_silencer` | 12 | same receiver + `attach_h2_silencer_02_vm` | same USP magazine |
 | G18 | `glock` | 32 | `h2_viewmodel_glock_base` | exact receiver body/round subsets |
 | M93R | `beretta393` | 20 | `h2_viewmodel_beretta_393_base` | exact receiver body/round subsets |
@@ -115,13 +116,16 @@ Desert Eagle:
 - `tag_clip` has a non-identity bind tilt. Relative translations add the bind
   origin; animation rotations remain parent-local rotations. Multiplying the
   animated rotation by bind rotation again would double the magazine tilt.
-- The rigid magazine contains extra/seam/round geometry (2180 vertices vs 674 VM
-  magazine-body vertices). Body alignment residual is below 0.00010 cm.
-  `rigid_in_magazine` includes inverse bind rotation, not translation alone.
-- This single-bone native rigid model has baked-in round geometry. Independent
-  empty drops do not yet hide those rounds individually; this is cosmetic only
-  and never changes the mechanical ammunition count. The gun's separate
-  `tag_bullets` subtree still follows the logical empty-magazine state.
+- Counted magazines use the exact receiver's body and three original cartridge
+  face sets. `tag_bullets` contains two rounds; its child `j_bullet01` supplies
+  the top round. The binder validates that nested parent instead of flattening
+  the hierarchy. Empty inserted, held and dropped magazines use the body-only
+  state; the chamber is excluded from their population count.
+- Base and gold receivers have seven and five material surfaces respectively.
+  Each binds its own face recipe and cache slot, preserving its native materials.
+  Both share the `de50` feed id and existing ammunition, quick-reload and knife
+  interaction rules. Exact rigid-group visibility hides only the replaced
+  magazine subtree, preserving the receiver and slide on shared surfaces.
 - Contact is transformed into an oriented well frame. Alignment compares the
   magazine against the seated magazine axis, not against an assumed gun +Z.
 - Exported settled last-fire lock is approximately 76.34 mm. Candidate manual

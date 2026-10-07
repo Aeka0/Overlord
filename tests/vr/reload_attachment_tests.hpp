@@ -96,7 +96,7 @@ namespace reload_attachment_tests
 				}
 			}
 		}
-		check(profiles==15,"support-transition coverage includes all counted-magazine receiver variants");
+		check(profiles==42,"support-transition coverage includes all counted-magazine receiver variants");
 		unsigned partitions{},chambers{};
 		for(const auto* definition:w::reload_profiles)
 		{

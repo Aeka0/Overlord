@@ -55,8 +55,8 @@ namespace weapon_registry_tests
 
 		// Regression snapshot: preserve every supported recipe and its default
 		// precedence when multiple skins admit the same native instance name.
-		const std::array<const reload_profile*, 59> expected_reload{
-			&m9::physical, &m1911::physical, &de50::physical, &usp::physical,
+		const std::array<const reload_profile*, 60> expected_reload{
+			&m9::physical, &m1911::physical, &de50::physical, &de50::gold_physical, &usp::physical,
 			&usp::silenced_physical, &m4::physical, &m4::arctic_physical, &ak47::physical, &ak47::arctic,
 			&ak47::digital, &ak47::desert, &ak47::woodland, &g18::physical, &m93r::physical,
 			&tmp::physical, &miniuzi::physical, &acr::physical, &acr::black,

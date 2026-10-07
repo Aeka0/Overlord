@@ -1,4 +1,5 @@
 #pragma once
+#include "magazine_fill.hpp"
 #include "reload_poses.hpp"
 
 namespace vr::gameplay::weapons::aa12
@@ -61,35 +62,37 @@ namespace vr::gameplay::weapons::aa12
 			return nullptr;
 		}
 	}
-	inline const reload_profile physical = with_split_sounds(
-	    reload_profile{
-	        .id = "aa12",
-	        .native_name = "aa12",
-	        .ammunition = reload_rules,
-	        .interaction = reload_interaction,
-	        .magazine_bone = "tag_clip",
-	        .slide_bone = "j_reload",
-	        .bullets_bone = "j_bullet",
-	        .magazine_rest = magazine_rest,
-	        .slide_rest = action_rest,
-	        .rigid_in_magazine = {},
-	        .magazine_in_wrist = magazine_in_wrist,
-	        .magazine_top = magazine_top,
-	        .well = magazine_well,
-	        .slide_grab_low = action_grab_low,
-	        .slide_grab_high = action_grab_high,
-	        .magazine_fingers = magazine_fingers,
-	        .slide_grips = action_grips,
-	        .sound_key = sound_key,
-	        .native_family = native_family,
-	        .magazine_contacts = &contacts,
-	        .rigid_magazine_source = "h2_viewmodel_aa12_base",
-	        .action_detail_bone = "j_reload_end" // Upper 494-triangle handle piece, child of j_reload.
-	    },
-	    {
-	        .cycle_notetrack = "weap_aa12_chamber_plr",
-	        .retain_close = false,
-	        .split_removal = false,
-	    });
+	inline const reload_profile physical = with_magazine_population(
+	    with_split_sounds(
+	        reload_profile{
+	            .id = "aa12",
+	            .native_name = "aa12",
+	            .ammunition = reload_rules,
+	            .interaction = reload_interaction,
+	            .magazine_bone = "tag_clip",
+	            .slide_bone = "j_reload",
+	            .bullets_bone = "j_bullet",
+	            .magazine_rest = magazine_rest,
+	            .slide_rest = action_rest,
+	            .rigid_in_magazine = {},
+	            .magazine_in_wrist = magazine_in_wrist,
+	            .magazine_top = magazine_top,
+	            .well = magazine_well,
+	            .slide_grab_low = action_grab_low,
+	            .slide_grab_high = action_grab_high,
+	            .magazine_fingers = magazine_fingers,
+	            .slide_grips = action_grips,
+	            .sound_key = sound_key,
+	            .native_family = native_family,
+	            .magazine_contacts = &contacts,
+	            .rigid_magazine_source = "h2_viewmodel_aa12_base",
+	            .action_detail_bone = "j_reload_end" // Upper 494-triangle handle piece, child of j_reload.
+	        },
+	        {
+	            .cycle_notetrack = "weap_aa12_chamber_plr",
+	            .retain_close = false,
+	            .split_removal = false,
+	        }),
+	    magazine_fills);
 	static_assert(action_grips.size() == reload_interaction.slide_pose_count);
 }

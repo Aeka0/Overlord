@@ -756,7 +756,14 @@ namespace vr::gameplay::weapons::physical_reload
 			held.counted_inserted=true;held.inserted_model=as_anchor(solved[parts.magazine]);held.inserted_origin=view_offset;
 			// Replace only this magazine subtree with the same immutable count
 			// view used in a hand or after a drop; never hide another gun's rounds.
-			for(int b=0;b<r.count;++b)if(descendant(b,parts.magazine,r))hidden[b/32]|=0x80000000u>>(b%32);
+			for (int bone = 0; bone < r.count; ++bone)
+			{
+				const auto bit = 0x80000000u >> (bone % 32);
+				const bool cartridge = (parts.bullet_mask[bone / 32] & bit) != 0;
+				if (hide_counted_magazine_geometry(
+					definition, state.ammo, descendant(bone, parts.magazine, r), cartridge))
+					hidden[bone / 32] |= bit;
+			}
 		}
 		if(state.active && !state.fault && partition_mesh(definition) && partition_assets::get(profile))
 		{

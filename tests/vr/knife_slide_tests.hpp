@@ -17,11 +17,11 @@ namespace knife_slide_tests
 		using namespace vr::gameplay::hands::pose_math;
 		for (const auto* p:reload_profiles)
 		{
-			const bool supported=p==&usp::physical || p==&usp::silenced_physical || p==&m9::physical || p==&m1911::physical || p==&de50::physical || p==&m93r::physical;
+			const bool supported=p==&usp::physical || p==&usp::silenced_physical || p==&m9::physical || p==&m1911::physical || p==&de50::physical || p==&de50::gold_physical || p==&m93r::physical;
 			check(!p->knife_slide_grips.empty()==supported && p->knife_slide_grips.size()==p->interaction.knife_slide_pose_count,
 				"knife slide capability and geometry agree only for the five admitted pistol families");
 		}
-		for (const auto* p:{&usp::physical,&usp::silenced_physical,&m9::physical,&m1911::physical,&de50::physical,&m93r::physical})
+		for (const auto* p:{&usp::physical,&usp::silenced_physical,&m9::physical,&m1911::physical,&de50::physical,&de50::gold_physical,&m93r::physical})
 			for (hand rear:{hand::left,hand::right})
 				for (auto mode:{equipment::knife_grip::forward,equipment::knife_grip::reverse})
 					for (bool return_knife:{false,true})
