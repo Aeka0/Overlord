@@ -46,7 +46,7 @@ namespace game_text::locales
 		{key::fixed_sniper_aim,u8"<em>어느 손이든 그립</em>을 누르고 컨트롤러를 평행 이동해 조준 미세 조정. 놓으면 조준 유지"},
 		{key::fixed_sniper_controls,u8"<em>왼쪽 스틱</em>으로 조준 방향 조정. <em>B/Y</em>를 눌러 저격 위치에서 나가기"},
 		{key::heartbeat_fold,u8"빈손의 <em>그립</em>으로 <em>감지기 외장</em>을 잡고 펼쳐 확인한 뒤 접어 보관"},
-		{key::snowmobile_board,u8"<em>스노모빌</em>을 가리키고 {button}을 길게 눌러 탑승"},
+		{key::snowmobile_board,u8"<em>스노모빌</em>이 멈추면 가까이 다가가 자동으로 탑승하세요"},
 		{key::vehicle_drive,u8"<em>스틱</em>으로 운전. <em>가슴</em>에서 무기를 꺼내 <em>트리거</em>로 사격. <em>그립</em>을 놓으면 <em>가슴</em>에 보관"},
 		{key::vehicle_reload,u8"<em>총을 든 손의 B/Y</em>로 탄창 분리. 다른 손으로 <em>가슴</em>에서 <em>트리거</em>를 눌러 새 탄창을 꺼내 <em>무기</em>에 삽입"},
 		{key::museum_warning,u8"절대로 {button}을 길게 누르지 마세요"},

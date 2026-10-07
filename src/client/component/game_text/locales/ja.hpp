@@ -46,7 +46,7 @@ namespace game_text::locales
 		{key::fixed_sniper_aim,u8"<em>左右いずれかのグリップ</em>を押しながらコントローラーを平行移動して微調整。離すと照準を維持"},
 		{key::fixed_sniper_controls,u8"<em>左スティック</em>で照準方向を調整。<em>B／Y</em> で狙撃位置から離れる"},
 		{key::heartbeat_fold,u8"空いた手で<em>グリップ</em>を押して<em>センサー外装</em>をつかみ、開いて確認、閉じて収納"},
-		{key::snowmobile_board,u8"<em>スノーモービル</em>に向けて{button}を押し続け、乗車"},
+		{key::snowmobile_board,u8"<em>スノーモービル</em>が完全に停止したら、近づくと自動で乗車します"},
 		{key::vehicle_drive,u8"<em>スティック</em>で運転。<em>胸元</em>から武器を取り、<em>トリガー</em>で射撃。<em>グリップ</em>を離すと<em>胸元</em>に戻る"},
 		{key::vehicle_reload,u8"<em>銃を持つ手の B／Y</em> でマガジンを外す。反対の手を<em>胸元</em>に伸ばして<em>トリガー</em>で新品を取り、<em>武器</em>に挿入"},
 		{key::museum_warning,u8"絶対に{button}を長押ししないこと"},

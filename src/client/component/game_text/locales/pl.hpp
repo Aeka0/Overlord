@@ -46,7 +46,7 @@ namespace game_text::locales
 		{key::fixed_sniper_aim,u8"Przytrzymaj <em>chwyt dowolnej ręki</em> i przesuwaj kontroler, aby doprecyzować cel; zwolnij, aby go utrzymać"},
 		{key::fixed_sniper_controls,u8"Celuj <em>lewym drążkiem</em>; naciśnij <em>B/Y</em>, aby opuścić stanowisko"},
 		{key::heartbeat_fold,u8"Wolną ręką przytrzymaj <em>chwyt</em> na <em>obudowie czujnika</em>; rozłóż, aby odczytać, i złóż, aby schować"},
-		{key::snowmobile_board,u8"Wskaż <em>skuter śnieżny</em> i przytrzymaj {button}, aby wsiąść"},
+		{key::snowmobile_board,u8"Gdy <em>skuter śnieżny</em> się zatrzyma, podejdź, aby automatycznie wsiąść"},
 		{key::vehicle_drive,u8"Steruj <em>drążkiem</em>; wyjmij broń z <em>klatki piersiowej</em> i strzelaj <em>spustem</em>; zwolnij <em>chwyt</em>, aby odłożyć na <em>klatkę piersiową</em>"},
 		{key::vehicle_reload,u8"Naciśnij <em>B/Y ręki z bronią</em>, aby wyrzucić magazynek; drugą ręką przytrzymaj <em>spust</em> przy <em>klatce piersiowej</em>, weź nowy i włóż do <em>broni</em>"},
 		{key::museum_warning,u8"Pod żadnym pozorem NIE przytrzymuj {button}"},

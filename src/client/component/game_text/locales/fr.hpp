@@ -46,7 +46,7 @@ namespace game_text::locales
 		{key::fixed_sniper_aim,u8"Maintenez une <em>prise</em> et déplacez le contrôleur pour affiner la visée ; relâchez pour la maintenir"},
 		{key::fixed_sniper_controls,u8"Visez avec le <em>stick gauche</em> ; appuyez sur <em>B/Y</em> pour quitter le poste"},
 		{key::heartbeat_fold,u8"Avec la main libre, maintenez la <em>prise</em> sur le <em>boîtier du capteur</em> ; ouvrez-le pour consulter, refermez pour ranger"},
-		{key::snowmobile_board,u8"Visez la <em>motoneige</em> et maintenez {button} pour monter"},
+		{key::snowmobile_board,u8"Une fois la <em>motoneige</em> arrêtée, approchez-vous pour monter automatiquement"},
 		{key::vehicle_drive,u8"Pilotez au <em>stick</em> ; prenez l’arme sur la <em>poitrine</em> et tirez à la <em>gâchette</em> ; relâchez la <em>prise</em> pour la remettre sur la <em>poitrine</em>"},
 		{key::vehicle_reload,u8"Appuyez sur <em>B/Y de la main armée</em> pour éjecter le chargeur ; maintenez la <em>gâchette</em> de l’autre main à la <em>poitrine</em> pour en prendre un neuf et l’insérer dans l’<em>arme</em>"},
 		{key::museum_warning,u8"Ne maintenez SURTOUT PAS {button}"},

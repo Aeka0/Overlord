@@ -46,7 +46,7 @@ namespace game_text::locales
 		{key::fixed_sniper_aim,u8"按住<em>任一手握持鍵</em>，平移手柄微調瞄準；松開后保持瞄準"},
 		{key::fixed_sniper_controls,u8"<em>左搖桿</em>調整瞄準方向；按 <em>B／Y 鍵</em>離開狙擊位"},
 		{key::heartbeat_fold,u8"用空閑手按住<em>握持鍵</em>抓住<em>感應器外殼</em>，掀開查看，合上收起"},
-		{key::snowmobile_board,u8"對準<em>雪地摩托</em>，按住{button}上車"},
+		{key::snowmobile_board,u8"<em>雪地摩托</em>停穩後，靠近即可自動上車"},
 		{key::vehicle_drive,u8"推動<em>搖桿</em>駕駛；從<em>胸前</em>取出武器，扣動<em>扳機</em>開火；松開<em>握持鍵</em>可將武器放回<em>胸前</em>"},
 		{key::vehicle_reload,u8"按<em>持槍手 B／Y 鍵</em>卸下彈匣；另一只手在<em>胸前</em>按住<em>扳機鍵</em>取出新彈匣，再插入<em>武器</em>"},
 		{key::museum_warning,u8"千萬別按住{button}"},

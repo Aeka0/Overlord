@@ -46,7 +46,7 @@ namespace game_text::locales
 		{key::fixed_sniper_aim,u8"Hold <em>either Grip</em> and move the controller to fine-tune aim; release to keep it steady"},
 		{key::fixed_sniper_controls,u8"Use the <em>left stick</em> to aim; press <em>B/Y</em> to leave the sniper position"},
 		{key::heartbeat_fold,u8"Hold <em>Grip</em> with your free hand at the <em>sensor housing</em>; flip it open to view, then fold it shut to stow"},
-		{key::snowmobile_board,u8"Point at the <em>snowmobile</em> and hold {button} to board"},
+		{key::snowmobile_board,u8"Once the <em>snowmobile</em> has stopped, approach it to board automatically"},
 		{key::vehicle_drive,u8"Use the <em>stick</em> to drive; draw a weapon from your <em>chest</em> and pull <em>Trigger</em> to fire; release <em>Grip</em> to return it to your <em>chest</em>"},
 		{key::vehicle_reload,u8"Press the <em>weapon hand's B/Y</em> to eject the magazine; hold <em>Trigger</em> with the other hand at your <em>chest</em> to draw a fresh magazine and insert it into the <em>weapon</em>"},
 		{key::museum_warning,u8"Do NOT hold {button}"},

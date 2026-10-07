@@ -46,7 +46,7 @@ namespace game_text::locales
 		{key::fixed_sniper_aim,u8"Eine <em>Greiftaste</em> halten und den Controller zum Feinjustieren verschieben; Loslassen hält das Ziel"},
 		{key::fixed_sniper_controls,u8"Mit dem <em>linken Stick</em> zielen; <em>B/Y</em> drücken, um den Scharfschützenposten zu verlassen"},
 		{key::heartbeat_fold,u8"Mit der freien Hand per <em>Greiftaste</em> das <em>Sensorgehäuse</em> greifen; zum Ablesen aufklappen, zum Verstauen zuklappen"},
-		{key::snowmobile_board,u8"Auf das <em>Schneemobil</em> zeigen und {button} zum Aufsteigen halten"},
+		{key::snowmobile_board,u8"Sobald das <em>Schneemobil</em> steht, nähere dich, um automatisch aufzusteigen"},
 		{key::vehicle_drive,u8"Mit dem <em>Stick</em> fahren; Waffe von der <em>Brust</em> ziehen und per <em>Abzug</em> feuern; <em>Greiftaste</em> loslassen, um sie an die <em>Brust</em> zurückzulegen"},
 		{key::vehicle_reload,u8"<em>B/Y der Waffenhand</em> zum Magazinauswurf drücken; mit der anderen Hand <em>Abzug</em> an der <em>Brust</em> halten, neues Magazin nehmen und in die <em>Waffe</em> einsetzen"},
 		{key::museum_warning,u8"Auf KEINEN FALL {button} halten"},

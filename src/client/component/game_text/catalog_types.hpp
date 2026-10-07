@@ -39,7 +39,6 @@ namespace game_text
 		case key::gulag_attach:
 		case key::briefcase_pickup:
 		case key::notebook_pickup:
-		case key::snowmobile_board:
 		case key::museum_warning:
 			return 1;
 		case key::interaction_pickup:return 3;

@@ -46,7 +46,7 @@ namespace game_text::locales
 		{key::fixed_sniper_aim,u8"Mantén <em>cualquier agarre</em> y desplaza el mando para afinar la mira; suelta para mantenerla"},
 		{key::fixed_sniper_controls,u8"Usa el <em>stick izquierdo</em> para apuntar; pulsa <em>B/Y</em> para dejar el puesto"},
 		{key::heartbeat_fold,u8"Con la mano libre mantén <em>agarre</em> en la <em>carcasa del sensor</em>; ábrelo para verlo y ciérralo para guardarlo"},
-		{key::snowmobile_board,u8"Apunta a la <em>moto de nieve</em> y mantén {button} para subir"},
+		{key::snowmobile_board,u8"Cuando la <em>moto de nieve</em> se detenga, acércate para subir automáticamente"},
 		{key::vehicle_drive,u8"Conduce con el <em>stick</em>; saca el arma del <em>pecho</em> y dispara con <em>gatillo</em>; suelta <em>agarre</em> para devolverla al <em>pecho</em>"},
 		{key::vehicle_reload,u8"Pulsa <em>B/Y de la mano del arma</em> para expulsar el cargador; mantén <em>gatillo</em> con la otra mano en el <em>pecho</em> para sacar otro e insertarlo en el <em>arma</em>"},
 		{key::museum_warning,u8"NO mantengas {button}"},

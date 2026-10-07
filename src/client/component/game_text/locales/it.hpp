@@ -46,7 +46,7 @@ namespace game_text::locales
 		{key::fixed_sniper_aim,u8"Tieni premuta una <em>presa</em> e sposta il controller per affinare la mira; rilascia per mantenerla"},
 		{key::fixed_sniper_controls,u8"Usa lo <em>stick sinistro</em> per mirare; premi <em>B/Y</em> per lasciare la postazione"},
 		{key::heartbeat_fold,u8"Con la mano libera tieni premuta la <em>presa</em> sull’<em>involucro del sensore</em>; aprilo per guardare e richiudilo per riporlo"},
-		{key::snowmobile_board,u8"Punta la <em>motoslitta</em> e tieni premuto {button} per salire"},
+		{key::snowmobile_board,u8"Quando la <em>motoslitta</em> si ferma, avvicinati per salire automaticamente"},
 		{key::vehicle_drive,u8"Usa lo <em>stick</em> per guidare; prendi l’arma dal <em>petto</em> e premi il <em>grilletto</em> per sparare; rilascia la <em>presa</em> per riportarla al <em>petto</em>"},
 		{key::vehicle_reload,u8"Premi <em>B/Y della mano armata</em> per espellere il caricatore; con l’altra mano tieni premuto il <em>grilletto</em> al <em>petto</em> per prenderne uno nuovo e inserirlo nell’<em>arma</em>"},
 		{key::museum_warning,u8"NON tenere premuto {button}"},

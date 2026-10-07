@@ -449,7 +449,10 @@ namespace vr::gameplay::interaction::native
 			const auto* entity=&game::g_entities[selected.key.entity];
 			const auto* classname=entity->script_classname?game::SL_ConvertToString(entity->script_classname):nullptr;
 			const auto type=read<std::uint8_t>(entity,0);
-			if(!read<const void*>(entity,0x120) && (type==5 || type==8 || (classname && use_trigger_class(classname))))
+			// Point-only script_origin proxies (including Cliffhanger boarding)
+			// use the same verified non-actor sethintstring field as model/use triggers.
+			if(!read<const void*>(entity,0x120) && (type==5 || type==8 ||
+				(classname && (use_trigger_class(classname) || std::string_view(classname)=="script_origin"))))
 			{
 				const auto hint=read<std::uint8_t>(entity,0xb5);
 				if(hint>0 && hint<32)selected.hint=hint;

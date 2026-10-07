@@ -5,6 +5,9 @@ template<class Check>void hud_prompt_tests(Check& check)
 {
 	using namespace vr::hud_prompts;using game_text::locale;
 	const auto en=locale::english,zh=locale::simplified_chinese;
+	const auto boarding = compose(key::snowmobile_board, zh);
+	check(boarding && text(*boarding) == game_text::utf8(u8"雪地摩托停稳后，靠近即可自动上车"),
+		"snowmobile boarding explains the story stop and proximity without a hand or button argument");
 	const context estate{true,"estate"},favela{true,"favela"},flare{true,"dc_whitehouse",feature::signal_flare};
 	for(const auto* name:{"ESTATE_LEARN_PRONE","ESTATE_LEARN_PRONE_TOGGLE","ESTATE_LEARN_PRONE_HOLDDOWN"})
 	{

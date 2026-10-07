@@ -49,7 +49,7 @@ namespace vr::hud_prompts
 		definition{key::fixed_sniper_aim,control::none},
 		definition{key::fixed_sniper_controls,control::none},
 		definition{key::heartbeat_fold,control::none},
-		definition{key::snowmobile_board,control::grip},
+		definition{key::snowmobile_board,control::none},
 		definition{key::vehicle_drive,control::none},
 		definition{key::vehicle_reload,control::none},
 		definition{key::museum_warning,control::grip},

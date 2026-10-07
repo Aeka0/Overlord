@@ -1,5 +1,6 @@
 #include "scripted_sequence_tests.hpp"
 #include "oilrig_sequence_tests.hpp"
+#include "snowmobile_boarding_tests.hpp"
 #include <iostream>
 
 int main()
@@ -12,6 +13,7 @@ int main()
 	};
 	scripted_sequence_tests(check);
 	oilrig_sequence_tests(check);
+	snowmobile_boarding_tests(check);
 	std::cout << "campaign policy: " << checks << " checks, " << failures << " failures\n";
 	return failures ? 1 : 0;
 }

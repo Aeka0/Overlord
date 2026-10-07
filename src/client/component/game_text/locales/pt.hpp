@@ -46,7 +46,7 @@ namespace game_text::locales
 		{key::fixed_sniper_aim,u8"Segure <em>Grip de qualquer mão</em> e desloque o controle para ajustar a mira; solte para mantê-la"},
 		{key::fixed_sniper_controls,u8"Use o <em>analógico esquerdo</em> para mirar; pressione <em>B/Y</em> para sair da posição"},
 		{key::heartbeat_fold,u8"Com a mão livre, segure <em>Grip</em> na <em>carcaça do sensor</em>; abra para consultar e feche para guardar"},
-		{key::snowmobile_board,u8"Aponte para o <em>snowmobile</em> e segure {button} para subir"},
+		{key::snowmobile_board,u8"Quando o <em>snowmobile</em> parar, aproxime-se para subir automaticamente"},
 		{key::vehicle_drive,u8"Use o <em>analógico</em> para dirigir; pegue a arma no <em>peito</em> e aperte o <em>gatilho</em> para atirar; solte <em>Grip</em> para devolvê-la ao <em>peito</em>"},
 		{key::vehicle_reload,u8"Pressione <em>B/Y da mão da arma</em> para ejetar; segure o <em>gatilho</em> com a outra mão no <em>peito</em> para pegar um carregador novo e inseri-lo na <em>arma</em>"},
 		{key::museum_warning,u8"NÃO segure {button}"},

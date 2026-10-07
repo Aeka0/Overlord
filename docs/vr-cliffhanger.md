@@ -83,6 +83,29 @@ the native asset-unload barrier. Rendering uses the current shared hand skin
 record. An unavailable model or invalid profile keeps the prop inactive rather
 than substituting an unrelated asset.
 
+## Snowmobile boarding
+
+After the story parks the snowmobile, approaching within 1.6 meters of its
+native boarding point automatically starts the original boarding sequence.
+No button press, hand aiming, or free hand is required.
+
+The adapter requires `player_snowmobile_available`, the exact vehicle published
+in `level._id_BE57`, and the usable `CLIFFHANGER_BOARD` / `CLIFFHANGER_BOARD_PRESS`
+proxy at `tag_driver + (0, 0, 30)`. The native story publishes these after
+`stop_lerp` and its additional 0.75-second wait. A spawned or stationary vehicle
+alone cannot authorize boarding. Native use admission and visibility still apply.
+Proximity and vehicle stillness must remain valid for 250 ms; pause, lost focus,
+tracking loss, death, linking, or a changed target interrupt that observation.
+
+The adapter sends one `trigger` to that existing proxy. The original script
+deletes it, plays the boarding animation, and mounts the player. Mission flags,
+vehicle spawning, and direct snowmobile/ending starts remain native. Checkpoint
+loads rediscover the current proxy instead of retaining script pointers.
+
+In-game acceptance should cover approaching before the fight animation ends,
+standing nearby as the vehicle parks, approaching from either side with occupied
+hands, pause/tracking recovery, and loading a checkpoint before boarding.
+
 ## Diagnostics and acceptance
 
 `vr_cliffhanger_status` reports the story phase, prop states, authorization,
