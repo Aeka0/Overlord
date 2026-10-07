@@ -28,6 +28,9 @@ $RECYCLE.BIN/
 # Icon must end with two \r
 Icon
 
+# Keep application icons visible on case-insensitive file systems.
+!/assets/icon/
+
 # Thumbnails
 ._*
 
