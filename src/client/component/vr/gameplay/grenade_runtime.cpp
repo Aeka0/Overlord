@@ -5,6 +5,8 @@
 #include "part_hand_constraint.hpp"
 #include "knife_profile.hpp"
 #include "native_grenade.hpp"
+#include "native_grenade_throwback.hpp"
+#include "grenade_throwback.hpp"
 #include "chest_equipment.hpp"
 #include "native_scripted_control.hpp"
 #include "weapon_feedback.hpp"
@@ -32,6 +34,7 @@ namespace vr::gameplay::grenades
 		using namespace hands::pose_math;
 		namespace hi=hand_interaction;
 		using clock=controller_input::clock;
+		constexpr unsigned chest_count=2,held_count=4;
 		struct asset
 		{
 			std::array<std::unique_ptr<scene_models::rigid_part>,8> pieces;
@@ -43,23 +46,25 @@ namespace vr::gameplay::grenades
 			state value;anchor root{};vec pull_start{},pull_delta{},velocity{};
 			int grasp_started{},pin_started{};clock::time_point grasp_at{},pin_at{};quat pull_rotation{0,0,0,1};
 			release_motion motion;std::uint64_t button_generation{},button_presses{};
+			throwback::candidate source{};
 		};
 		struct pin_debris {bool active{};kind type{};anchor root{};vec velocity{};int started{};std::uint64_t reference{};unsigned mask{};};
 		struct sound_event {std::uint32_t weapon{};bool release{};vec origin{};std::uint64_t reference{},epoch{},at{};};
 		struct snapshot
 		{
-			std::array<held,2> items{};std::array<std::shared_ptr<asset>,kind_count> assets{};
+			std::array<held,held_count> items{};std::array<std::shared_ptr<asset>,kind_count> assets{};
 			std::array<pin_debris,4> debris{};
 			std::array<quat,2> basis{},mirror{};bool hands_ready{};
 			std::uint64_t reference{};clock::time_point at{};
 		};
 		std::mutex mutex;
 		snapshot published,submitted;
-		std::array<held,2> items;
+		std::array<held,held_count> items;
+		std::array<throwback::candidate,2> throwback_candidates{};
 		equipment::grab_intent draw_intent;
 		std::array<pin_debris,4> debris;
 		std::array<std::shared_ptr<asset>,kind_count> assets;
-		std::array<std::array<unsigned short,8>,kind_count> lighting{};
+		std::array<std::array<unsigned short,8>,held_count> lighting{};
 		std::array<std::array<unsigned short,8>,kind_count> debris_lighting{};
 		std::mutex sound_mutex;std::array<sound_event,16> sounds{};unsigned sound_count{};
 		std::atomic_uint64_t sound_epoch{},sounds_played{},sounds_missing{};
@@ -67,6 +72,7 @@ namespace vr::gameplay::grenades
 		game::dvar_t *enabled{},*throw_gain{},*football_gain{};
 		std::atomic<float> last_raw_speed{},last_throw_speed{};
 		std::atomic_uint64_t takes{},pins{},returns{},throws{},cooks{},in_hand{},failed{},handoffs{};
+		std::atomic_uint64_t throwback_takes{},throwback_rejected{};
 		std::atomic<const char*> reason{"waiting for native grenade resources"};
 		const void* player{};int last_time{};
 		bool running()noexcept{return alive && ready && enabled && enabled->current.enabled && weapons::carry::active();}
@@ -218,8 +224,18 @@ namespace vr::gameplay::grenades
 			std::array<std::byte,0x3bc> bytes{};
 			return utils::native_memory::read_bytes(bytes.data(),game::g_entities[0].client,bytes.size())?equipment::selected_chest_items(bytes):std::array<std::uint32_t,2>{};
 		}
+		hi::object_identity identity(unsigned slot,std::uint32_t weapon,std::uint64_t revision)noexcept
+		{return {weapon,revision*held_count+slot};}
 		hi::target target(unsigned slot,unsigned component=0)noexcept
-		{return hi::object(hi::domain::grenade,{items[slot].value.weapon,items[slot].value.revision},component);}
+		{return hi::object(hi::domain::grenade,identity(slot,items[slot].value.weapon,items[slot].value.revision),component);}
+		hi::target world_target(const throwback::candidate& c)noexcept
+		{return hi::object(hi::domain::grenade,{c.grenade.weapon,c.entity.generation+1},3,unsigned(c.entity.entity));}
+		void grasp(held& item,vr::hand actor,const hi::frame& f,int now)
+		{
+			item.motion.reset();item.grasp_started=now;item.grasp_at=f.input.sampled_at;item.pull_delta={};
+			const auto& secondary=f.input.secondary[unsigned(actor)];item.button_generation=secondary.generation;item.button_presses=secondary.presses;
+			weapons::feedback::carry_confirmation(actor,f.input);
+		}
 		void release(held& item,int time,vec velocity)
 		{
 			if(item.value.stage==phase::release_pending)return;
@@ -230,14 +246,15 @@ namespace vr::gameplay::grenades
 		{
 			if(item.value.stage!=phase::release_pending)return;
 			if(!item.value.spent && !native::available(item.value.weapon)){item.value.stow();item.motion.reset();reason="unpaid throwable no longer in native inventory";return;}
-			if(native::launch(item.value.weapon,item.root.position,item.velocity,item.value.fuse_at(time),item.value.spent))
+			const int owner=item.source && time>=item.value.deadline?throwback::expired_owner(item.source):-1;
+			if(native::launch(item.value.weapon,item.root.position,item.velocity,item.value.fuse_at(time),item.value.spent,owner))
 			{queue_sound(item,true);item.value.stow();item.motion.reset();++throws;reason="native grenade released";}
 			else{++failed;reason="native grenade spawn rejected; committed grenade retained";}
 		}
 		void retire()
 		{
 			// Drained zone boundary: native inventory is being replaced as well.
-			draw_intent.reset();items={};debris={};player=nullptr;last_time=0;
+			draw_intent.reset();items={};throwback_candidates={};debris={};player=nullptr;last_time=0;
 			{const std::lock_guard lock(sound_mutex);++sound_epoch;sound_count=0;}
 			{const std::lock_guard lock(mutex);published={};submitted={};}
 			hands::attachments::clear_after_drain();assets={};
@@ -246,7 +263,7 @@ namespace vr::gameplay::grenades
 		{
 			snapshot s;{const std::lock_guard lock(mutex);s=published;submitted=s;}
 			if(!running() || !fresh(s.at))return;
-			for(unsigned slot=0;slot<2;++slot)
+			for(unsigned slot=0;slot<held_count;++slot)
 			{
 				const auto& item=s.items[slot];if(!item.value.held() || item.value.stage==phase::release_pending)continue;
 				auto a=s.assets[unsigned(item.value.type)];if(!a)continue;
@@ -256,7 +273,7 @@ namespace vr::gameplay::grenades
 					auto local=a->local[b];if(a->pin_mask&(1u<<b))local.position=add(local.position,item.pull_delta);
 					const auto world=compose(item.root,local);game::GfxScaledPlacement placement{};placement.scale=1;
 					std::copy(world.position.begin(),world.position.end(),placement.base.origin);std::copy(world.rotation.begin(),world.rotation.end(),placement.base.quat);
-					float color[4]{1,1,1,1};scene_models::submit(a->pieces[b]->model(),&placement,scene_models::no_cast_shadow,&lighting[unsigned(item.value.type)][b],color,color,color,8.f);
+					float color[4]{1,1,1,1};scene_models::submit(a->pieces[b]->model(),&placement,scene_models::no_cast_shadow,&lighting[slot][b],color,color,color,8.f);
 				}
 			}
 			for(const auto& pin:s.debris)
@@ -288,12 +305,12 @@ namespace vr::gameplay::grenades
 			const auto begin=reinterpret_cast<std::uintptr_t>(lighting.data());
 			if(handle<begin || handle>=begin+sizeof(lighting) || (handle-begin)%sizeof(unsigned short))return result::unchanged;
 			snapshot s,live;{const std::lock_guard lock(mutex);s=submitted;live=published;}
-			for(unsigned slot=0;slot<2;++slot)
+			for(unsigned slot=0;slot<held_count;++slot)
 			{
 				const auto& item=s.items[slot];if(!item.value.held())continue;auto a=s.assets[unsigned(item.value.type)];if(!a)continue;
 				for(unsigned b=0;b<a->count;++b)
 				{
-					if(handle!=reinterpret_cast<std::uintptr_t>(&lighting[unsigned(item.value.type)][b]))continue;
+					if(handle!=reinterpret_cast<std::uintptr_t>(&lighting[slot][b]))continue;
 					const auto& current_item=live.items[slot];
 					if(!fresh(live.at) || item.value.revision!=current_item.value.revision || item.value.stage!=current_item.value.stage ||
 						item.value.reference!=live.reference || item.value.holder!=current_item.value.holder)return result::omit;
@@ -327,7 +344,7 @@ namespace vr::gameplay::grenades
 	{const std::lock_guard lock(mutex);return slot<2 && published.items[slot].value.held();}
 	void report_interactions()noexcept
 	{
-		for(unsigned i=0;i<2;++i)
+		for(unsigned i=0;i<held_count;++i)
 		{
 			const auto& s=items[i].value;if(!s.held())continue;
 			if(vr::valid_hand(s.holder))hi::observed(s.holder,{target(i),hi::role::tactical,hi::button::grip,hi::recipe::single,hi::capability::action});
@@ -336,29 +353,46 @@ namespace vr::gameplay::grenades
 	}
 	void collect_interactions(const hi::frame& f)noexcept
 	{
+		throwback_candidates={};
 		if(!running()){draw_intent.reset();return;}
 		snapshot pub;{const std::lock_guard lock(mutex);pub=published;}
 		if(!pub.hands_ready){draw_intent.reset();return;}
-		const auto tokens=selected();const auto chest=equipment::locate_chest(f.body);if(!chest.valid){draw_intent.reset();return;}
+		const auto tokens=selected();const auto chest=equipment::locate_chest(f.body);
 		unsigned pressed{},released{},available{};
 		for(unsigned h=0;h<2;++h){const auto edge=hi::input(vr::hand(h),hi::button::grip);if(edge.press)pressed|=1u<<h;if(edge.release)released|=1u<<h;if(hi::free(vr::hand(h)))available|=1u<<h;}
 		const auto pending=draw_intent.consume(f.input,available&f.valid_hands,pressed,released);
+		const auto recover=throwback::query();
 		for(unsigned h=0;h<2;++h)
 		{
 			const auto actor=vr::hand(h);if(!hi::free(actor) || !(f.valid_hands&(1u<<h)))continue;
 			const auto grip=hi::input(actor,hi::button::grip),trigger=hi::input(actor,hi::button::trigger);
+			// A deliberate empty-hand squeeze can remain held while aiming or
+			// entering native range. The arbiter consumes the press once accepted.
+			if(recover && std::any_of(items.begin()+chest_count,items.end(),[](const held& item){return !item.value.held();}) &&
+				grip.down && grip.armed && grip.event && !grip.release &&
+				pub.assets[unsigned(recover.grenade.type)] && f.input.aim[h].valid)
+			{
+				head_pose_bridge::world_pose aim;
+				if(head_pose_bridge::tracking_to_world(f.body,f.input.aim[h].tracking,aim) &&
+					throwback_direction(aim.position,aim.axis[0],recover.position,f.body.units_per_meter))
+				{
+					throwback_candidates[h]=recover;
+					hi::offer({actor,{world_target(recover),hi::role::world,hi::button::grip,hi::recipe::single,hi::capability::action},grip.event,15,1,1,true,true});
+				}
+			}
 			if(!(pending&(1u<<h)) && !(grip.press && grip.down) && !(trigger.press && trigger.down))continue;
-			for(unsigned i=0;i<2;++i)
+			for(unsigned i=0;i<held_count;++i)
 			{
 				const auto& item=items[i];const auto& state=item.value;native::descriptor desc;
 				if(!state.held())
 				{
+					if(i>=chest_count || !chest.valid)continue;
 					if(!sequences::chest_equipment_visible()){draw_intent.reset();continue;}
 					if(!(pending&(1u<<h)) || !native::describe(tokens[i],desc) || !pub.assets[unsigned(desc.type)] || !native::available(tokens[i]))continue;
 					if(std::any_of(items.begin(),items.end(),[&](const held& other){return other.value.held() && other.value.type==desc.type;}))continue;
 					const auto palm=equipment::knife_profile::palm_contact(f.wrists[h],pub.basis[h],pub.mirror[h],h==1);
 					const float distance=equipment::chest_grab_distance(chest,equipment::item_slots[i],palm);
-					if(distance<=1)hi::offer({actor,{hi::object(hi::domain::grenade,{tokens[i],state.revision+1}),hi::role::tactical,hi::button::grip,hi::recipe::single,hi::capability::action},grip.event,20,distance,1,true,true});
+					if(distance<=1)hi::offer({actor,{hi::object(hi::domain::grenade,identity(i,tokens[i],state.revision+1)),hi::role::tactical,hi::button::grip,hi::recipe::single,hi::capability::action},grip.event,20,distance,1,true,true});
 					continue;
 				}
 				if(unsigned(state.holder)==h || state.stage==phase::release_pending || vr::valid_hand(state.puller))continue;
@@ -386,24 +420,36 @@ namespace vr::gameplay::grenades
 		const auto* frame=hi::simulation();if(!frame || !running())return;
 		const auto& f=*frame;const int now=native::time();const auto tokens=selected();
 		snapshot pub;{const std::lock_guard lock(mutex);pub=published;}
-		for(unsigned i=0;i<2;++i)
+		for(unsigned h=0;h<2;++h)
+		{
+			const auto& candidate=throwback_candidates[h];
+			const auto vacant=std::find_if(items.begin()+chest_count,items.end(),[](const held& item){return !item.value.held();});
+			if(!candidate || vacant==items.end() || !hi::granted(vr::hand(h),hi::domain::grenade,world_target(candidate).object,hi::button::grip,hi::role::world))continue;
+			auto& item=*vacant;
+			auto next=item.value;
+			if(!next.take_live(candidate.grenade.type,candidate.grenade.weapon,vr::hand(h),f.input.reference_generation,now,candidate.deadline) || !throwback::take(candidate))
+			{++throwback_rejected;reason="native throwback candidate changed or pickup refused";continue;}
+			hi::completed(vr::hand(h),world_target(candidate));item.value=next;item.source=candidate;
+			grasp(item,vr::hand(h),f,now);++throwback_takes;reason="native live grenade acquired; release grip to throw";
+		}
+		for(unsigned i=0;i<held_count;++i)
 		{
 			auto& item=items[i];auto& s=item.value;
-			if(!s.held())for(unsigned h=0;h<2;++h)
+			if(i<chest_count && !s.held())for(unsigned h=0;h<2;++h)
 			{
 				native::descriptor d;
 				if(!native::describe(tokens[i],d) || !pub.assets[unsigned(d.type)] || !native::available(tokens[i]))continue;
 				if(std::any_of(items.begin(),items.end(),[&](const held& other){return other.value.held() && other.value.type==d.type;}))continue;
-				if(hi::granted(vr::hand(h),hi::domain::grenade,{tokens[i],s.revision+1},hi::button::grip,hi::role::tactical) &&
+				if(hi::granted(vr::hand(h),hi::domain::grenade,identity(i,tokens[i],s.revision+1),hi::button::grip,hi::role::tactical) &&
 					s.take(d.type,d.weapon,vr::hand(h),f.input.reference_generation,d.fuse))
-				{item.motion.reset();item.grasp_started=now;item.grasp_at=f.input.sampled_at;item.pull_delta={};item.button_generation=f.input.secondary[h].generation;item.button_presses=f.input.secondary[h].presses;++takes;weapons::feedback::carry_confirmation(vr::hand(h),f.input);break;}
+				{item.source={};grasp(item,vr::hand(h),f,now);++takes;break;}
 			}
 			if(!s.held())continue;
 			if(s.stage==phase::release_pending){emit(item,now);continue;}
 			// Commit handoff before processing the old holder's release edge.
 			// A live pin grasp blocks both candidate generation and this state gate.
 			const auto next=vr::hand(1-unsigned(s.holder));const auto handoff_target=target(i,2);
-			if(hi::granted(next,hi::domain::grenade,{s.weapon,s.revision},hi::button::grip,hi::role::control) && s.handoff(next))
+			if(hi::granted(next,hi::domain::grenade,target(i).object,hi::button::grip,hi::role::control) && s.handoff(next))
 			{
 				hi::completed(next,handoff_target);item.motion.reset();item.pull_delta={};item.grasp_started=now;item.grasp_at=f.input.sampled_at;
 				item.button_generation=f.input.secondary[unsigned(next)].generation;item.button_presses=f.input.secondary[unsigned(next)].presses;
@@ -416,13 +462,13 @@ namespace vr::gameplay::grenades
 				item.root=compose(wrist,authored::attachment(s.type,pub.mirror[h],h==0));
 				item.motion.sample(item.root.position,f.input.sampled_at,f.body.units_per_meter);
 			}
-			if(s.stage==phase::safe && (tokens[i]!=s.weapon || !native::available(s.weapon))){s.stow();continue;}
+			if(s.stage==phase::safe && (i>=chest_count || tokens[i]!=s.weapon || !native::available(s.weapon))){s.stow();continue;}
 			const auto grip=hi::input(s.holder,hi::button::grip);
 			if(grip.release || (f.input.squeeze[h].active && !f.input.squeeze[h].down))
 			{
 				const auto chest=equipment::locate_chest(f.body);
 				const auto palm=equipment::knife_profile::palm_contact(f.wrists[h],pub.basis[h],pub.mirror[h],h==1);
-				if((f.valid_hands&(1u<<h)) && tokens[i]==s.weapon &&
+				if(i<chest_count && (f.valid_hands&(1u<<h)) && tokens[i]==s.weapon &&
 					equipment::chest_grab_distance(chest,equipment::item_slots[i],palm)<=1 && s.return_to_chest())
 				{item.motion.reset();++returns;reason="football returned to chest";continue;}
 				const auto raw=item.motion.velocity(f.input.sampled_at,f.body.units_per_meter);
@@ -433,7 +479,7 @@ namespace vr::gameplay::grenades
 			if(s.stage==phase::safe && behaviors[unsigned(s.type)].pin_gesture)
 			{
 				const unsigned other=1-h;
-				if(hi::granted(vr::hand(other),hi::domain::grenade,{s.weapon,s.revision},hi::button::trigger,hi::role::part) && s.puller==vr::hand::none)
+				if(hi::granted(vr::hand(other),hi::domain::grenade,target(i).object,hi::button::trigger,hi::role::part) && s.puller==vr::hand::none)
 				{s.puller=vr::hand(other);item.pin_started=now;item.pin_at=f.input.sampled_at;item.pull_start=compose(inverse(item.root),f.wrists[other]).position;item.pull_rotation=normalize(multiply(conjugate(item.root.rotation),multiply(f.wrists[other].rotation,pub.basis[other])));item.pull_delta={};}
 				if(vr::valid_hand(s.puller))
 				{
@@ -462,7 +508,7 @@ namespace vr::gameplay::grenades
 			const auto& button=f.input.secondary[h];
 			const bool pressed=button.active && button.generation==item.button_generation && button.presses>item.button_presses;
 			item.button_generation=button.generation;item.button_presses=button.presses;
-			if(pressed && s.cook(now))
+			if(i<chest_count && pressed && s.cook(now))
 			{
 				queue_sound(item,false);++cooks;weapons::feedback::carry_confirmation(s.holder,f.input);reason="frag cooking";
 				const auto a=pub.assets[unsigned(s.type)];
@@ -485,6 +531,7 @@ namespace vr::gameplay::grenades
 		for(auto& item:items)
 		{
 			auto& s=item.value;if(!s.held())continue;
+			if(item.source && item.source.timeline!=weapons::native_ammunition::timeline()){s.stow();item.motion.reset();continue;}
 			if(s.stage==phase::release_pending){emit(item,now);continue;}
 			const bool lost=suspended || !running() || !input.focused || !fresh(input.sampled_at) || input.reference_generation!=s.reference ||
 				!scripted_control::allowed(ps) || !input.grip[unsigned(s.holder)].valid || !input.aim[unsigned(s.holder)].valid ||
@@ -551,13 +598,16 @@ namespace vr::gameplay::grenades
 			throw_gain=dvars::register_float(general.name,general.default_value,general.min,general.max,game::DVAR_FLAG_SAVED,"Physical throwable velocity gain");
 			football_gain=dvars::register_float(football.name,football.default_value,football.min,football.max,game::DVAR_FLAG_SAVED,"Additional football throw gain");
 			ready=native::initialize();
+			throwback::initialize();
 			weapons::native_weapon_sound::initialize();scheduler::loop(play_sounds,scheduler::pipeline::main);
 			scheduler::loop(refresh,scheduler::pipeline::main,250ms);fastfiles::on_pre_unload(retire);
 			scene_models::on_submit(submit);scene_models::on_prepare_placement(prepare);
 			command::add("vr_grenade_status",[]{scheduler::once([]{
 				std::ostringstream out;out<<"grenades_ready="<<ready<<" takes="<<takes<<" pins="<<pins<<" returns="<<returns<<" throws="<<throws<<" cooks="<<cooks<<" in_hand="<<in_hand<<" spawn_failures="<<failed<<" handoffs="<<handoffs<<" sounds="<<sounds_played<<" missing_sounds="<<sounds_missing<<" reason="<<reason.load()<<'\n';
 				{const std::lock_guard lock(mutex);for(unsigned k=0;k<kind_count;++k)out<<"model="<<authored::profiles[k].model<<" ready="<<bool(published.assets[k])<<'\n';}
-				for(unsigned i=0;i<2;++i){const auto& s=items[i].value;out<<"slot="<<i<<" weapon="<<s.weapon<<" phase="<<unsigned(s.stage)<<" hand="<<int(s.holder)<<" puller="<<int(s.puller)<<" spent="<<s.spent<<" fuse="<<s.fuse_ms<<" deadline="<<s.deadline<<'\n';}
+				out<<"throwback_ready="<<throwback::ready()<<" throwback_takes="<<throwback_takes<<" throwback_rejected="<<throwback_rejected<<'\n';
+				const auto candidate=throwback::query();out<<"throwback_candidate="<<candidate.entity.entity<<" weapon="<<candidate.grenade.weapon<<" deadline="<<candidate.deadline<<'\n';
+				for(unsigned i=0;i<held_count;++i){const auto& s=items[i].value;out<<"slot="<<i<<" weapon="<<s.weapon<<" phase="<<unsigned(s.stage)<<" hand="<<int(s.holder)<<" puller="<<int(s.puller)<<" spent="<<s.spent<<" fuse="<<s.fuse_ms<<" deadline="<<s.deadline<<" throwback_entity="<<items[i].source.entity.entity<<'\n';}
 				const auto native=native::launch_status();
 				out<<"throw_gain="<<throw_gain->current.value<<" football_gain="<<football_gain->current.value<<" last_raw_mps="<<last_raw_speed<<" last_scaled_mps="<<last_throw_speed
 					<<" native_attempts="<<native.attempts<<" native_spawns="<<native.spawned<<" actor_clearances="<<native.actor_clearances<<" world_clearances="<<native.world_clearances

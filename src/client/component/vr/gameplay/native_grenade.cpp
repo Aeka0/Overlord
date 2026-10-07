@@ -1,5 +1,6 @@
 #include <std_include.hpp>
 #include "native_grenade.hpp"
+#include "native_grenade_throwback.hpp"
 #include "component/scheduler_context.hpp"
 #include <utils/native_memory.hpp>
 #include "game/game.hpp"
@@ -71,16 +72,17 @@ namespace vr::gameplay::grenades::native
 	}
 	launch_diagnostics launch_status()noexcept
 	{return {attempts.load(),spawned.load(),actor_clearances.load(),world_clearances.load(),requested_speed.load(),native_speed.load(),obstruction.load()};}
-	bool launch(std::uint32_t weapon,hands::vec position,hands::vec velocity,int fuse_ms,bool& committed)noexcept
+	bool launch(std::uint32_t weapon,hands::vec position,hands::vec velocity,int fuse_ms,bool& committed,int expired_owner)noexcept
 	{
 		descriptor d;
 		++attempts;obstruction=-1;requested_speed=0;native_speed=0;
 		if(!server() || !describe(weapon,d) || fuse_ms<0 || fuse_ms>60000 ||
 			(behaviors[unsigned(d.type)].timed ? fuse_ms==0 : fuse_ms!=0))return false;
+		if(expired_owner!=-1 && (!throwback::ready() || expired_owner<0 || expired_owner>=3999 || fuse_ms!=1 || !committed))return false;
 		for(float x:position)if(!std::isfinite(x) || std::abs(x)>1e7f)return false;
 		for(float x:velocity)if(!std::isfinite(x) || std::abs(x)>10000)return false;
 		requested_speed=hands::length(velocity);
-		auto* player=&game::g_entities[0];const auto* ps=reinterpret_cast<const game::playerState_s*>(player->client);
+		auto* player=&game::g_entities[0];auto* client=player->client;const auto* ps=reinterpret_cast<const game::playerState_s*>(client);
 		int native_cook{};
 		if(!utils::native_memory::read_bytes(&native_cook,reinterpret_cast<const std::byte*>(ps)+0x64,4) || native_cook)return false;
 		// Keep hand releases outside walls. A blocked release drops at the last
@@ -109,7 +111,16 @@ namespace vr::gameplay::grenades::native
 		// fuse milliseconds. Native owns projectile physics, think/explosion,
 		// damage attribution, AI grenade response and grenade_fire script notify.
 		native_speed=hands::length(velocity);
+		// Stock in-hand throwback expiry attributes the blast to the original
+		// thrower via PS cook<0/throwbackOwner. Scope that native context to this
+		// one synchronous spawn; ordinary releases keep player attribution.
+		auto* cook_cell=reinterpret_cast<int*>(reinterpret_cast<std::byte*>(player->client)+0x64);
+		auto* owner_cell=reinterpret_cast<std::uint16_t*>(reinterpret_cast<std::byte*>(player->client)+0x1c);
+		const auto old_owner=*owner_cell;const auto timeline=weapons::native_ammunition::timeline();
+		if(expired_owner!=-1){*cook_cell=-1;*owner_cell=static_cast<std::uint16_t>(expired_owner);}
 		const bool ok=spawn_projectile(weapon,position,velocity,true,fuse_ms)!=nullptr;
+		if(expired_owner!=-1 && player->client==client && timeline==weapons::native_ammunition::timeline())
+		{if(*cook_cell==-1)*cook_cell=native_cook;if(*owner_cell==expired_owner)*owner_cell=old_owner;}
 		if(ok)++spawned;return ok;
 	}
 }

@@ -2,12 +2,43 @@
 #include "component/vr/gameplay/grenade_state.hpp"
 #include "component/vr/gameplay/grenade_profile.hpp"
 #include "component/vr/gameplay/grenade_contact.hpp"
+#include "component/vr/gameplay/grenade_throwback.hpp"
+#include "component/vr/gameplay/hand_interaction/core.hpp"
 
 namespace grenade_tests
 {
 	template<class Check>void run(Check& check)
 	{
 		using namespace vr::gameplay;using namespace grenades;using vr::hand;
+		check(throwback_direction({},{1,0,0},{20,30,-30},40) && !throwback_direction({},{1,0,0},{-20,0,0},40),
+			"throwback admits rough controller aim but rejects a grenade behind the hand");
+		check(throwback_direction({},{1,0,0},{-2,0,0},40) && !throwback_direction({},{0,0,0},{2,0,0},40) &&
+			!throwback_direction({},{1,0,0},{NAN,0,0},40) && !throwback_direction({},{1,0,0},{20,0,0},0),
+			"near-hand throwback needs no exact aim; invalid geometry never qualifies");
+		state recovered;
+		check(recovered.take_live(kind::frag,50,hand::left,1,1000,7000) && recovered.spent && recovered.stage==phase::cooking,
+			"native live pickup adopts a paid grenade with its longer AI fuse, independently of chest ammo");
+		check(!recovered.pull_pin(true) && !recovered.cook(2000) && !recovered.return_to_chest() && recovered.deadline==7000,
+			"throwback cannot pull a second pin, restart cooking or enter chest inventory");
+		check(recovered.handoff(hand::right) && recovered.deadline==7000,"throwback handoff retains the native deadline");
+		recovered.release(2500);recovered.release(3000);
+		check(recovered.fuse_at(3000)==4000 && recovered.fuse_at(7100)==1,"throwback release and failed spawn retries preserve remaining time");
+		check(!state{}.take_live(kind::frag,50,hand::left,1,1000,1000) &&
+			!state{}.take_live(kind::frag,50,hand::left,1,1000,61001) &&
+			!state{}.take_live(kind::flash,50,hand::left,1,1000,2000),"expired, unbounded or unsupported native pickups are refused before consumption");
+		state last_moment;last_moment.take_live(kind::frag,50,hand::right,1,INT32_MAX-10,INT32_MAX);
+		check(last_moment.due(INT32_MAX) && !last_moment.due(INT32_MAX-1),"throwback deadline admission does not overflow near native time limit");
+		{
+			namespace hi=hand_interaction;hi::arbiter arbitration;arbitration.begin(1,1);
+			const hi::target missile{hi::domain::grenade,{50,1},3,128};
+			const hi::grasp grasp{missile,hi::role::world,hi::button::grip,hi::recipe::single,hi::capability::action};
+			for(auto h:{hand::left,hand::right})arbitration.offer({h,grasp,1,15,1,1,true,true});
+			unsigned picked{};arbitration.resolve([&](const auto&){++picked;return true;});
+			check(picked==1,"both free hands aiming at one HUD grenade consume only one world target");
+			arbitration.retain([](const auto&){return false;});arbitration.begin(2,1);
+			arbitration.offer({hand::left,grasp,1,15,1,1,true,true});arbitration.resolve([&](const auto&){++picked;return true;});
+			check(picked==1,"a consumed squeeze cannot auto-grab another grenade after ownership ends");
+		}
 		check(classify("h2_cheatfootball","weapon_m67_grenade")==kind::football && classify("h2_cheatpomegrenade","weapon_m67_grenade")==kind::pomegranate,
 			"cheat identity wins over the inherited ordinary M67 world model");
 		check(classify("unrelated")==kind::count && classify("smoke","weapon_us_smoke_grenade")==kind::smoke,"unsupported offhands remain outside the throwable provider");

@@ -47,6 +47,40 @@ at these defaults are 37.5 / 56.25 m/s, with a final native-unit safety bound.
 Zero/stale motion, forced drops and cook expiry do not gain a synthetic impulse.
 Spawn retries retain the already-scaled release vector and position.
 
+## Throwing back live grenades
+
+When the stock HUD changes to its grab icon, aim either empty controller roughly
+toward that grenade and hold Grip to snap it into the hand. The direction cone
+has a 70-degree half angle; within 12 cm of the hand, exact pointing is unnecessary.
+A deliberate squeeze may remain held while entering the native range or turning
+toward the target. Returning from tracking/focus loss with Grip already held
+requires a new squeeze.
+
+The native HUD chooses the entity and owns range, visibility and mission
+eligibility. This provider does not scan for nearby missiles or enlarge the
+native throwback radius. Only supported frag/pomegranate assets with a native
+throwback hint are admitted. An occupied hand cannot acquire another grenade,
+and simultaneous grips cannot consume the same missile twice.
+
+The recovered grenade is already live: no pin pull, B/Y press or chest-ammo
+debit is needed. Its original simulation-time deadline continues through
+holding, handoff, pause and release retries. Release Grip to throw with the
+existing physical throw-speed setting; it cannot be stowed in the chest.
+Two recovered grenades, or a chest grenade and a recovered grenade of the same
+type, use separate hand ownership and scene placements. Recovered grenades do
+not hide or replace either chest slot.
+
+Pickup calls the native `0x1404ADF60(player, missile)` path after rechecking
+entity generation, weapon, deadline and inventory timeline. Its native touch
+callback owns pickup/death notifications and removal of the world missile.
+The three flat-game handoff fields (throwback owner, active offhand and cook
+time) are transferred into VR state, preserving the player's previous offhand
+state. Ordinary release uses the native projectile route. Expiry while held
+uses the stock original-thrower attribution; a deleted/recycled thrower resolves
+to the native world entity. Tracking or control loss drops the committed
+grenade with zero synthetic velocity. Checkpoint/zone replacement invalidates
+the recovered state with its original native timeline.
+
 Clearance still prevents releases through walls. An obstructing NPC adjusts the
 spawn point outward while preserving velocity for the native hitbox/damage/pain
 path. The global `g_minGrenadeDamageSpeed` is unchanged; a weak toss can still
@@ -156,12 +190,20 @@ untouched; topology mismatch rejects the asset instead of cutting arbitrary face
 `vr_grenade_status` reports native readiness, model readiness by type, acquisition,
 pin, return, throw/cook/handoff counters, native spawn/audio failures and current slot state.
 It also writes `minidumps/overlord-grenades.txt` without triggering an action.
+Throwback diagnostics include contract readiness, the current native candidate,
+accepted/refused pickups and each held grenade's source entity and deadline.
 
 Automated coverage: safe return, failed debit, pin commitment, frag-only cooking,
 repeated B/Y, remaining fuse, held expiry, stale/teleported throw motion, opposite
 hand rotation, arbiter exclusivity, and GPU skinned prop partition construction.
 Native signatures and live frag/M84 geometry were inspected read-only.
+Throwback tests cover rough aim, invalid geometry, native deadline adoption,
+no second pin/cook/stow, handoff, retry expiry and simultaneous-hand arbitration.
+The HUD/pickup/attribution contracts were inspected from a read-only native
+image snapshot; this does not establish a successful in-game throwback.
 
 Headset acceptance remains required for grip alignment, ring reach, throw feel,
 native AI/mission behavior and in-hand explosion. Smoke definitions/models depend
 on the loaded mission; this work does not give the player unavailable equipment.
+Throwback additionally needs in-game acceptance of HUD range transitions,
+pickup notifications, remaining fuse, dual-hand presentation and thrower attribution.

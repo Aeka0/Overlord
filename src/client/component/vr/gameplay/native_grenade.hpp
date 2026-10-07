@@ -15,7 +15,7 @@ namespace vr::gameplay::grenades::native
 	bool debit(std::uint32_t)noexcept;
 	// Preflight before reserving unpaid ammo (football); committed remains true
 	// across failed spawn retries, so no duplicated debit is possible.
-	bool launch(std::uint32_t,hands::vec position,hands::vec velocity,int fuse_ms,bool& committed)noexcept;
+	bool launch(std::uint32_t,hands::vec position,hands::vec velocity,int fuse_ms,bool& committed,int expired_owner=-1)noexcept;
 	// Low-level type-2 native projectile route; callers own ammo and placement.
 	game::gentity_s* spawn_projectile(std::uint32_t,hands::vec,hands::vec,bool rotate,int fuse_ms)noexcept;
 }

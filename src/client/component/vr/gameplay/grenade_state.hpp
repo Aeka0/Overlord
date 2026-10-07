@@ -21,6 +21,14 @@ namespace vr::gameplay::grenades
 			const auto rev=revision+1;*this={};revision=rev;stage=behaviors[unsigned(k)].pin_gesture?phase::safe:phase::prepared;type=k;weapon=token;holder=h;reference=ref;fuse_ms=fuse;return true;
 		}
 		void stow()noexcept{const auto rev=revision+1;*this={};revision=rev;}
+		// Native pickup has already consumed the world missile. Its existing
+		// deadline is authoritative; no chest debit, pin pull or new cook timer.
+		bool take_live(kind k,std::uint32_t token,vr::hand h,std::uint64_t ref,int now,int expires)noexcept
+		{
+			if(!valid(k) || !behaviors[unsigned(k)].cook || now<0 || expires<=now ||
+				std::int64_t(expires)-now>60000 || !take(k,token,h,ref,expires-now))return false;
+			spent=true;stage=phase::cooking;deadline=expires;return true;
+		}
 		bool return_to_chest()noexcept
 		{if(type!=kind::football || stage!=phase::prepared || spent)return false;stow();return true;}
 		bool handoff(vr::hand next)noexcept
