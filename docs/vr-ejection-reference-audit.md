@@ -32,7 +32,24 @@ unverified uniform offset or automatic nearest-surface snap was applied.
 M200's frozen mechanical scene and loaded bind reference agreed to about 0.01 mm
 numerically, but this only validates its transform. Its live-cartridge velocity
 incorrectly applied gun-local -Y in tag-local coordinates; it now follows the
-tag's +X (right/up in the source receiver). The native spent-case FX is unchanged.
+tag's +X (right/up in the source receiver). Native spent-case motion is retained.
+
+Spent-case rendering uses the selected native view-shell FX with private,
+immutable world-depth descriptors. H2 maps `FX_ELEM_DRAW_WITH_VIEWMODEL` (`0x800`)
+to scene depth-hack bit 1 at `0x14042EC71..0x14042EC81`, so an oriented world-space
+spawn alone still draws flagged cases in front of the independently rendered
+weapon and arms. The shell adapter clears that element flag throughout the
+effect's impact, death, emission and runner graph. Models, materials, motion,
+collision and other flags remain native; shared asset definitions are untouched.
+Ordinary shots, last-shot effects, manual extraction and vehicle brass use the
+same adapter. Muzzle flashes and other frontend FX retain their existing path.
+
+Descriptors are reused across shots and retained until the native zone-unload
+drain. Invalid or over-budget graphs are omitted without evicting live entries;
+`world_shell_definitions` and `shell_depth_rejections` expose that admission in
+native weapon FX status. Offline tests cover descriptor isolation, child graphs,
+lifetime and bounded rejection. In-headset occlusion against both hands and
+weapons, including map transitions, still requires runtime acceptance.
 
 ## Reference coordinates
 

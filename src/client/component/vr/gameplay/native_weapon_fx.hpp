@@ -11,5 +11,7 @@ namespace vr::gameplay::weapons::native_weapon_fx
 	// Native frontend scene submission only (not a backend/eye callback).
 	// The caller has an accepted shot and current scene/model ownership.
 	bool play_frontend(game::FxEffectDef*,const hands::anchor&,int start_time=-1) noexcept;
+	// Same frontend ownership; shell FX use retained world-depth descriptors.
+	bool play_shell_frontend(game::FxEffectDef*,const hands::anchor&) noexcept;
 	std::string status();
 }

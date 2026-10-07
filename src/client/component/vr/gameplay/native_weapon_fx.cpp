@@ -1,6 +1,8 @@
 #include <std_include.hpp>
 #include "native_weapon_fx.hpp"
+#include "native_fx_world_space.hpp"
 #include "tube_profile.hpp"
+#include "component/fastfiles.hpp"
 #include "component/scheduler.hpp"
 #include "game/game.hpp"
 #include <utils/hook.hpp>
@@ -18,6 +20,17 @@ namespace vr::gameplay::weapons::native_weapon_fx
 		struct counters {std::uint64_t shots{},flashes{},shells{},no_flash{},no_brass{},extractions{};std::string flash,brass;};
 		std::array<counters,512> counts{};
 		std::mutex mutex;
+		native_fx::world_space_cache shell_effects;
+		std::mutex shell_mutex;
+		std::atomic_uint64_t shell_depth_rejections{};
+		game::FxEffectDef* world_shell(game::FxEffectDef* source) noexcept
+		{
+			if(!source)return nullptr;
+			const std::lock_guard lock(shell_mutex);
+			auto* effect=shell_effects.get(source);
+			if(!effect)++shell_depth_rejections;
+			return effect;
+		}
 		template<std::size_t N> bool verify(std::uintptr_t address,const std::array<std::uint8_t,N>& bytes) noexcept
 		{
 			std::array<std::uint8_t,N> mask;mask.fill(255);
@@ -45,6 +58,7 @@ namespace vr::gameplay::weapons::native_weapon_fx
 	}
 	bool initialize() noexcept
 	{
+		if(ready)return true;
 		static_assert(offsetof(game::WeaponDef,viewFlashEffect)==0xf8);
 		static_assert(offsetof(game::WeaponDef,viewShellEjectEffect)==0x438);
 		static_assert(offsetof(game::WeaponDef,viewLastShotEjectEffect)==0x448);
@@ -53,7 +67,15 @@ namespace vr::gameplay::weapons::native_weapon_fx
 			verify(flash_query+0x38,std::array<std::uint8_t,6>{0x41,0xb8,0xf8,0,0,0}) &&
 			verify(brass_query+0x38,std::array<std::uint8_t,6>{0x41,0xb8,0x38,4,0,0}) &&
 			verify(last_brass_query+0x38,std::array<std::uint8_t,6>{0x41,0xb8,0x48,4,0,0}) &&
-			verify(play_oriented,std::array<std::uint8_t,12>{0x48,0x89,0x5c,0x24,0x08,0x48,0x89,0x74,0x24,0x10,0x57,0x48});
+			verify(play_oriented,std::array<std::uint8_t,12>{0x48,0x89,0x5c,0x24,0x08,0x48,0x89,0x74,0x24,0x10,0x57,0x48}) &&
+			// Native model FX maps element flag 0x800 to scene depth-hack bit 1.
+			verify(0x14042EC71,std::array<std::uint8_t,19>{0x41,0x8b,0x01,0x8b,0xd1,0x83,0xca,0x01,
+				0x25,0x00,0x08,0x00,0x00,0x41,0x8b,0xc0,0x0f,0x44,0xd1});
+		if(ready)fastfiles::on_pre_unload([] {
+			// Same drained native zone boundary as native_followed_fx; queued
+			// particles must finish before their private descriptors are retired.
+			const std::lock_guard lock(shell_mutex);shell_effects.clear();
+		});
 		return ready;
 	}
 	void play(const feedback::event& event) noexcept
@@ -75,6 +97,7 @@ namespace vr::gameplay::weapons::native_weapon_fx
 		}
 		const int time=game::CG_GetGameTime(0);
 		if (flash) emit(flash,time,event.muzzle);
+		brass=world_shell(brass);
 		if (brass) emit(brass,time,event.brass);
 		// Counters mean calls admitted to the native bounded queue, not a claim
 		// that every particle survived native culling/resource limits.
@@ -90,9 +113,18 @@ namespace vr::gameplay::weapons::native_weapon_fx
 		if(start_time>now || std::int64_t(now)-start_time>60000)return false;
 		emit(effect,start_time,pose);return true;
 	}
+	bool play_shell_frontend(game::FxEffectDef* effect,const hands::anchor& pose) noexcept
+	{
+		if(!ready || !game::CL_IsCgameInitialized() || !valid(pose))return false;
+		effect=world_shell(effect);
+		if(!effect)return false;
+		emit(effect,game::CG_GetGameTime(0),pose);return true;
+	}
 	std::string status()
 	{
 		const std::lock_guard lock(mutex);std::ostringstream out;out << "native_fx_ready=" << ready << '\n';
+		{const std::lock_guard shell_lock(shell_mutex);out << "world_shell_definitions=" << shell_effects.size()
+			<< " shell_depth_rejections=" << shell_depth_rejections.load() << '\n';}
 		for (std::size_t i=1;i<counts.size();++i) if (const auto& c=counts[i];c.shots || c.extractions)
 			out << "weapon=" << i << " shots=" << c.shots << " flash_requests=" << c.flashes << " shell_requests=" << c.shells
 				<< " manual_extractions=" << c.extractions << " no_flash=" << c.no_flash << " no_shell=" << c.no_brass << " flash=" << c.flash << " shell=" << c.brass << '\n';

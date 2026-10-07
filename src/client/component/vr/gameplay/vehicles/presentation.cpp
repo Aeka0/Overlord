@@ -251,7 +251,8 @@ namespace vr::gameplay::vehicles
 				const bool brass = pending[i].brass;
 				const auto at = compose(gun.pose, brass ? r->brass : r->muzzle);
 				if ((!brass || r->has_brass) &&
-				    weapons::native_weapon_fx::play_frontend(brass ? r->brass_fx : r->flash_fx, at))
+				    (brass ? weapons::native_weapon_fx::play_shell_frontend(r->brass_fx, at) :
+				             weapons::native_weapon_fx::play_frontend(r->flash_fx, at)))
 					++fx_emitted;
 				else
 					++fx_rejected;
