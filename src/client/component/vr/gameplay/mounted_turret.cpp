@@ -3,6 +3,7 @@
 #include "component/vr/gameplay/hands/rig_builder.hpp"
 #include "mounted_turret.hpp"
 #include "mounted_turret_pose.hpp"
+#include "campaign/sequences/camera_policies.hpp"
 #include "shoulder_anchors.hpp"
 #include "native_carry.hpp"
 #include "native_player_life.hpp"
@@ -34,7 +35,7 @@ namespace vr::gameplay::mounted
 		struct geometry
 		{
 			int entity{-1},root_bone{-1};const mount_profile* profile{};
-			anchor root{},gun{};std::array<anchor,2> buttons{};vec pivot{},yaw_pivot{};
+			anchor root{},gun{},seat{};std::array<anchor,2> buttons{};vec pivot{},yaw_pivot{};
 			clock::time_point at{};
 		} rendered;
 		struct calibration
@@ -51,6 +52,14 @@ namespace vr::gameplay::mounted
 			std::array<float,2> requested_angles{};
 		} published;
 		controller control;
+		view_motion camera_motion;
+		struct view_publication
+		{
+			std::uint64_t instance{},reference{};
+			view_pose pose{};
+			clock::time_point at{};
+			int frame_time{};
+		} rendered_view;
 		int last_entity=-1,last_time{};
 		const mount_profile* last_profile{};
 		std::uint64_t last_generation{};
@@ -133,11 +142,27 @@ namespace vr::gameplay::mounted
 		}
 		bool admitted(const publication& p)
 		{return p.profile && predicted(p.entity,p.profile->kind) && fresh(p.at) && head_pose_bridge::get_status().enabled;}
+		bool camera_owned(const publication& p)
+		{
+			// A paused server stops publishing. Retain the current seat transform
+			// while native ownership persists; input projection still requires freshness.
+			const auto* ps=game::CG_GetPredictedPlayerState(0);
+			return p.profile==&suburban ? p.instance && ps && !player_life::dead(ps) && predicted(p.entity,p.profile->kind) &&
+				head_pose_bridge::get_status().enabled : admitted(p);
+		}
+		game_view::camera_request request_for_mount(const publication& p)
+		{
+			if(!camera_owned(p))return {};
+			const auto epoch=p.instance|(1ull<<62);
+			return p.profile==&suburban ? game_view::camera_request{sequences::scene_cameras::mounted_orbit,epoch,epoch} :
+				game_view::camera_request{sequences::scene_cameras::mounted,epoch};
+		}
 		void track_controls(controls& c,const controller_input::frame& input,const geometry& g,const calibration& a,
 			const head_pose_bridge::spatial_frame& body)
 		{
 			c.tracked=0;c.units=body.units_per_meter;c.pivot=g.pivot;c.yaw_pivot=g.yaw_pivot;
 			const auto root_inverse=inverse(g.root);
+			if(g.profile==&suburban)c.tracking_frame=compose(root_inverse,{body.world_origin,from_axis(body.world_yaw_axis)});
 			const auto* inward=game::Dvar_FindVar("vr_handOffsetInward");const auto* back=game::Dvar_FindVar("vr_handOffsetBack");const auto* up=game::Dvar_FindVar("vr_handOffsetUp");
 			for(unsigned h=0;h<2;++h)
 			{
@@ -215,6 +240,7 @@ namespace vr::gameplay::mounted
 			const auto bind=[&](int b) {const auto& m=model->baseMat[b];return anchor{{m.trans[0],m.trans[1],m.trans[2]},normalize({m.quat[0],m.quat[1],m.quat[2],m.quat[3]})};};
 			const auto seat=compose(g.root,compose(inverse(bind(bones[0])),bind(bones[4])));
 			if (!finite(seat.position) || length(sub(seat.position,g.root.position))>200.f) {reject("stable seat transform rejected");return;}
+			g.seat=seat;
 			// The horizontal joint is at the base; pitch rotates about the raised
 			// gun joint. Using j_mg for both reverses horizontal hand response.
 			anchor pitch_joint,yaw_joint;
@@ -394,20 +420,42 @@ namespace vr::gameplay::mounted
 	}
 	bool active() noexcept {return admitted(latest());}
 	bool hands_active() noexcept {const auto p=latest();return admitted(p) && p.state.free_hands;}
-	std::uint64_t camera_epoch() noexcept
-	{const auto p=latest();return p.profile==&blackhawk && admitted(p)?p.instance|(1ull<<62):0;}
+	game_view::camera_request camera_request() noexcept {return request_for_mount(latest());}
 	camera_view prepare_camera(float* origin,float (*axis)[3]) noexcept
 	{
-		const auto p=latest();if(!origin || !axis || p.profile!=&blackhawk || !admitted(p))return {};
+		const auto p=latest();if(!origin || !axis || !camera_owned(p))return {};
 		auto* object=vr::h2::sp::client_entity_dobj(p.entity,0);
-		if(mounted_model(object).profile!=&blackhawk)return {};
+		if(mounted_model(object).profile!=p.profile)return {};
 		// Blackhawk's default vehicle-camera mode skips CG_VehicleView. Use the
 		// existing final native-camera boundary, before HMD composition, in every
 		// vehicle camera mode. The native flight/animation still supplies the seat.
 		vec seat{origin[0],origin[1],origin[2]};std::array<vec,3> basis{};
 		camera_geometry(reinterpret_cast<void*>(0x141C328F0ull+std::uintptr_t(p.entity)*0x200),object,seat.data(),basis[0].data());
 		if(!valid_offset_axis(basis))return {};
-		camera_view view;view.epoch=p.instance|(1ull<<62);
+		if(p.profile==&suburban)
+		{
+			geometry g;calibration a;view_publication previous;
+			{const std::lock_guard lock(mutex);g=rendered;a=authored;previous=rendered_view;}
+			const auto input=controller_input::latest();const auto now=clock::now();
+			const auto frame_time=game::CG_GetGameTime(0);
+			head_pose_bridge::spatial_frame body;auto c=p.sampled;
+			const auto* paused=game::Dvar_FindVar("cl_paused");
+			c.valid=c.valid && fresh(p.at) && g.profile==p.profile && g.entity==p.entity && fresh(g.at) &&
+				input.reference_generation==p.reference && head_pose_bridge::get_spatial_frame(body) &&
+				fresh(body.captured_at) && body.generation==p.reference;
+			if(c.valid)track_controls(c,input,g,a,body);
+			const bool projecting=paused && !paused->current.integer && !*game::keyCatchers && c.valid &&
+				p.state.free_hands && input.focused && !input.orientation_settling && fresh(input.sampled_at);
+			const auto pose=projecting && previous.instance==p.instance && previous.reference==p.reference && previous.frame_time==frame_time ?
+				previous.pose : camera_motion.update(p.state,c,p.instance,input,projecting,now);
+			const auto orbit=orbit_seat(g.root,g.seat,g.yaw_pivot,pose.yaw);
+			seat=orbit.position;
+			basis={rotate(orbit.rotation,{1,0,0}),rotate(orbit.rotation,{0,1,0}),rotate(orbit.rotation,{0,0,1})};
+			// The later skeleton/skin refresh uses this exact camera projection,
+			// rather than projecting again at another time or XR sample.
+			const std::lock_guard lock(mutex);rendered_view={p.instance,p.reference,pose,now,frame_time};
+		}
+		camera_view view;view.request=request_for_mount(p);
 		static_assert(sizeof(basis) == 9 * sizeof(float));
 		game::AxisToAngles(reinterpret_cast<const float(*)[3]>(basis.data()),view.angles.data());
 		std::copy(seat.begin(),seat.end(),origin);std::memcpy(axis,basis.data(),sizeof(basis));return view;
@@ -529,10 +577,11 @@ namespace vr::gameplay::mounted
 		calibration a;
 		if(tracked)
 		{
-			geometry g;{const std::lock_guard lock(mutex);g=rendered;a=authored;}
+			geometry g;view_publication display;{const std::lock_guard lock(mutex);g=rendered;a=authored;display=rendered_view;}
 			auto c=p.sampled;c.valid=c.valid && g.entity==p.entity && fresh(g.at);
 			if(c.valid)track_controls(c,input,g,a,body);
-			angles=p.state.displayed_angles(input,c);
+			angles=p.profile==&suburban && display.instance==p.instance && display.reference==p.reference && fresh(display.at) ?
+				display.pose.aim : p.state.displayed_angles(input,c);
 		}
 		if(!project_model_pose(cached.gun,{cached.source.data(),size_t(cached.gun.layout.count)},
 			{matrices,size_t(cached.gun.layout.count)},angles,tracked))return;
@@ -666,7 +715,8 @@ namespace vr::gameplay::mounted
 					<<" render_preparations="<<render_preparations.load()
 					<<" skin_preparations="<<skin_preparations.load()<<" skin_pose_changes="<<skin_pose_changes.load()<<" skin_rejections="<<skin_rejections.load()
 					<<" gripped="<<published.state.gripped<<" fire_armed="<<published.state.fire_armed<<" pitch="<<published.state.angles[0]<<" yaw="<<published.state.angles[1]
-					<<" requested_pitch="<<published.requested_angles[0]<<" requested_yaw="<<published.requested_angles[1]<<'\n';}
+					<<" requested_pitch="<<published.requested_angles[0]<<" requested_yaw="<<published.requested_angles[1]
+					<<" view_frame="<<rendered_view.frame_time<<" view_yaw="<<rendered_view.pose.yaw<<'\n';}
 				const auto text=out.str();console::info("%s",text.c_str());utils::io::write_file_atomic("minidumps/overlord-turret.txt",text);
 			});
 		}

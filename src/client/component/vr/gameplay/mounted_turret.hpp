@@ -1,14 +1,15 @@
 #pragma once
 #include "mounted_turret_policy.hpp"
+#include "../scripted_camera.hpp"
 
 namespace vr::gameplay::mounted
 {
 	// Bounded publications; no entity scans or script calls on input/render threads.
 	bool active() noexcept;
 	bool hands_active() noexcept;
-	struct camera_view {std::uint64_t epoch{};std::array<float,3> angles{};};
-	std::uint64_t camera_epoch() noexcept;
-	// Final native-camera boundary, before HMD composition (Blackhawk only).
+	struct camera_view {game_view::camera_request request{};std::array<float,3> angles{};};
+	game_view::camera_request camera_request() noexcept;
+	// Final native-camera boundary, before HMD composition.
 	camera_view prepare_camera(float* origin,float (*axis)[3]) noexcept;
 	bool owns_hands(const void* object) noexcept;
 	bool owns_model(const void* object) noexcept;

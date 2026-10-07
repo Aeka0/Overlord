@@ -182,7 +182,7 @@ namespace vr::controllers
 				alive.load(std::memory_order_relaxed) && normal_gameplay())
 			{
 				const auto* const ps = game::CG_GetPredictedPlayerState(0);
-				const auto mounted_camera=gameplay::mounted::camera_epoch();
+				const auto mounted_camera=gameplay::mounted::camera_request();
 				if (ps)
 				{
 					const auto request=gameplay::sequences::camera_request_for(gameplay::sequences::for_player(ps),sniper,mounted_camera,remote);

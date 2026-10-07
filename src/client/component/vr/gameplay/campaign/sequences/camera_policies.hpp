@@ -82,5 +82,10 @@ namespace vr::gameplay::sequences::scene_cameras
 	                                       script_axes::yaw,
 	                                       rotation_source::view,
 	                                       camera_entry::align};
+	inline constexpr camera_policy mounted_orbit{camera_owner::script,
+	                                             head_rotation::free,
+	                                             head_translation::attenuated,
+	                                             script_rotation::additive,
+	                                             script_axes::yaw};
 	inline constexpr auto thermal_scope = camera_profiles::fixed_scope;
 }

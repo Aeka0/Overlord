@@ -42,11 +42,16 @@ namespace vr::gameplay::sequences
 			previous.linked_generation==next.linked_generation && previous.player==player && same_level && time>=previous.command_time;
 	}
 	// Both command and render adapters use this priority and ownership contract.
-	inline game_view::camera_request camera_request_for(const view& v,std::uint64_t scope=0,std::uint64_t mounted=0,std::uint64_t remote=0) noexcept
+	inline game_view::camera_request camera_request_for(const view& v,std::uint64_t scope=0,game_view::camera_request mounted={},std::uint64_t remote=0) noexcept
 	{
 		if(remote)return {game_view::camera_profiles::remote_control,remote|(1ull<<62)};
 		if(scope)return {scene_cameras::thermal_scope,scope|(1ull<<63)};
-		if(mounted)return {scene_cameras::mounted,mounted};
+		if(mounted.epoch)
+		{
+			if(mounted.policy.translation==game_view::head_translation::attenuated)
+				mounted.policy.translation_gain=v.camera.translation_gain;
+			return mounted;
+		}
         // A player-owned, fully tracked camera keeps its gameplay reference
         // even when movement uses a native link (physical ladder carrier).
         // Re-anchoring here cancels the pre-grasp head offset and shifts entry.

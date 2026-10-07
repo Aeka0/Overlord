@@ -188,7 +188,7 @@ namespace camera
 			const auto sniper=vr::gameplay::fixed_sniper::current(ps);
 			const auto mounted=vr::gameplay::mounted::prepare_camera(game::refdef->org,game::refdef->axis);
 			const auto remote=vr::gameplay::equipment::special::notebook::camera_epoch();
-			const auto camera_request=vr::gameplay::sequences::camera_request_for(sequence,sniper.epoch,mounted.epoch,remote);
+			const auto camera_request=vr::gameplay::sequences::camera_request_for(sequence,sniper.epoch,mounted.request,remote);
 			const auto rotation=sniper.epoch?vr::game_view::scripted_rotation_reference{}:vr::gameplay::sequences::camera_reference::sample(sequence);
 			int camera_command_time=ps?ps->commandTime:0;
 			if(remote)
@@ -200,10 +200,10 @@ namespace camera
 				if(game::CL_GetUserCmd(0,game::CL_GetCurrentCmdNumber(0),&latest) && (latest.buttons&0x100000))
 					camera_command_time=latest.serverTime;
 			}
-			if(ps && !mounted.epoch && !sniper.epoch)
+			if(ps && !mounted.request.epoch && !sniper.epoch)
 				vr::gameplay::ladders::apply_camera_origin(game::refdef->org,ps->viewHeightCurrent,sequence.linked_entity,game::CG_GetGameTime(0));
 			if (ps && vr::head_pose_bridge::apply_camera(game::refdef->org, game::refdef->axis,
-				camera_command_time, mounted.epoch ? mounted.angles.data() : game::cgs->refdefViewAngles,
+				camera_command_time, mounted.request.epoch ? mounted.angles.data() : game::cgs->refdefViewAngles,
 				camera_request,&rotation))
 			{
 				camera_origin[0] = game::refdef->org[0];

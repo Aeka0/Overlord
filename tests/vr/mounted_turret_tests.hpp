@@ -209,6 +209,114 @@ namespace mounted_turret_tests
 			}
 		}
 		check(attached(0x3002) && !attached(2),"native mounted flags distinguish turret ownership from on-foot movement");
+		{
+			fixture sample;view_motion view;sample.input.turn_active=true;sample.takeover();sample.step(3);
+			float previous_yaw{};
+			const auto read_turn=[&](bool allowed=true,std::uint64_t instance=1) {
+				const auto pose=view.update(sample.control,sample.geometry,instance,sample.input,allowed,sample.input.sampled_at);
+				const float delta=std::remainder(pose.yaw-previous_yaw,360.f);previous_yaw=pose.yaw;return delta;
+			};
+			check(read_turn()==0,"taking over the mounted view never replays earlier gun aim");
+			const auto wrists=sample.geometry.wrists;
+			float camera_yaw{};
+			sample.input.turn={1,0};
+			for(int frame=0;frame<160;++frame)
+			{
+				// The previous command rotates the tracking frame around the seat,
+				// which is offset from the gun joint. Physical hands stay stationary.
+				const float radians=camera_yaw*.00872664625997f;
+				sample.geometry.tracking_frame={{3.f,-2.f,1.f},{0,0,std::sin(radians),std::cos(radians)}};
+				for(unsigned h=0;h<2;++h)sample.geometry.wrists[h]=
+					vr::spatial_math::compose(sample.geometry.tracking_frame,{wrists[h]}).position;
+				sample.step(3);
+				camera_yaw+=read_turn();
+				check(read_turn()==0,"repeated commands cannot apply mounted view yaw twice");
+			}
+			check(std::abs(camera_yaw+60.f)<.002f && std::abs(sample.control.angles[1]-camera_yaw)<.002f &&
+				std::abs(sample.control.angles[0])<.002f && sample.control.gripped==3,
+				"held-stick yaw moves gun and player together up to the native limit without hand feedback or pitch drift");
+			sample.input.turn={0,1};sample.step(3);
+			check(read_turn()==0 && sample.control.angles[0]<-.9f,"vertical stick aims the gun without tilting the player view");
+			sample.input.turn={-1,0};sample.step(3);sample.step(3);
+			check(std::abs(read_turn()-2.88f)<.002f,"a skipped display sample integrates elapsed turn time once");
+			sample.input.turn={};sample.step(3);
+			const auto before=sample.control.angles;
+			for(auto& wrist:sample.geometry.wrists)wrist[1]+=2;
+			sample.step(3);
+			check(read_turn()==0 && std::abs(sample.control.angles[1]-before[1])>.1f,
+				"physical hand aim remains responsive without pulling the camera along");
+			sample.input.turn={1,0};sample.step(3);
+			check(read_turn(false)==0 && read_turn()==0,"pause drops pending mounted yaw instead of replaying it on resume");
+			sample.step(3);++sample.input.reference_generation;
+			check(read_turn()==0,"recenter rebases mounted view input without replaying an old reference");
+			sample.control.reset();previous_yaw=0;
+			check(read_turn(true,2)==0,"a new mount cannot inherit the previous seat's view turn");
+			sample.input.sampled_at+=std::chrono::seconds(1);
+			check(read_turn(true,2)==0,"a command gap discards pending turn instead of catching up after a stall");
+		}
+		{
+			fixture sample;sample.geometry.low[1]=-180;sample.geometry.high[1]=180;
+			sample.input.turn_active=true;sample.takeover();view_motion view;
+			(void)view.update(sample.control,sample.geometry,1,sample.input,true,sample.input.sampled_at);
+			sample.input.turn={-1,0};float yaw{};
+			for(int frame=0;frame<260;++frame)
+			{
+				sample.step();const auto pose=view.update(sample.control,sample.geometry,1,sample.input,true,sample.input.sampled_at);
+				const float delta=std::remainder(pose.yaw-yaw,360.f);
+				check(std::abs(delta-1.44f)<.001f,"full-circle mounted view crosses the wrap seam without a large turn");yaw+=delta;
+			}
+			check(std::abs(yaw-374.4f)<.003f && std::abs(std::remainder(yaw-sample.control.angles[1],360.f))<.003f,
+				"released handles retain stick aim and matching player yaw across a complete rotation");
+		}
+		{
+			using namespace vr::spatial_math;
+			fixture sample;sample.geometry.low[1]=-180;sample.geometry.high[1]=180;
+			sample.input.turn_active=true;sample.takeover();view_motion view;
+			const auto start=sample.input.sampled_at;const auto initial_sequence=sample.input.sequence;
+			(void)view.update(sample.control,sample.geometry,1,sample.input,true,start);
+			float previous{};int server_tick=1;
+			for(int frame=1;frame<=180;++frame)
+			{
+				const auto now=start+std::chrono::microseconds(frame*1000000/90);
+				// 90 Hz rendering, 45 Hz XR input publication and 20 Hz native aim.
+				sample.input.sequence=initial_sequence+1+frame/2;
+				sample.input.sampled_at=start+std::chrono::microseconds((frame/2)*2000000/90);
+				sample.input.turn={1,0};
+				if(now>=start+std::chrono::milliseconds(server_tick*50))
+				{sample.control.update(sample.input,sample.geometry);++server_tick;}
+				const auto pose=view.update(sample.control,sample.geometry,1,sample.input,true,now);
+				check(std::abs(std::remainder(pose.yaw-previous,360.f)+1.f)<.002f,
+					"mounted yaw advances every display frame despite repeated XR input and sparse server acknowledgements");
+				check(std::abs(std::remainder(pose.aim[1]-pose.yaw,360.f))<.003f,
+					"rendered gun and seat share the same continuous stick heading");
+				const auto repeated=view.update(sample.control,sample.geometry,1,sample.input,true,now);
+				check(repeated.yaw==pose.yaw && repeated.aim==pose.aim,"repeated camera reads cannot integrate another turn");
+				previous=pose.yaw;
+			}
+			sample.input.turn={};++sample.input.sequence;sample.input.sampled_at+=std::chrono::milliseconds(11);
+			const auto stopped=view.update(sample.control,sample.geometry,1,sample.input,true,sample.input.sampled_at);
+			check(stopped.yaw==previous,"releasing the stick stops immediately without snapping back to the server baseline");
+			sample.input.turn={-1,0};++sample.input.sequence;sample.input.sampled_at+=std::chrono::milliseconds(11);
+			const auto reversed=view.update(sample.control,sample.geometry,1,sample.input,true,sample.input.sampled_at);
+			check(std::abs(std::remainder(reversed.yaw-stopped.yaw,360.f)-.99f)<.002f,
+				"stick reversal changes continuous velocity without a server correction jump");
+			const anchor root{{100,200,30},from_to({1,0,0},{0,1,0})};
+			const vec pivot{3,4,5};const anchor local_seat{{-17,9,19}};
+			const auto seat=compose(root,local_seat);const auto center=compose(root,{pivot}).position;
+			const float radius=length(sub(seat.position,center));
+			for(float degrees:{0.f,90.f,179.f,180.f,-179.f,-90.f,360.f})
+			{
+				const auto moved=orbit_seat(root,seat,pivot,degrees);
+				check(std::abs(length(sub(moved.position,center))-radius)<.001f,
+					"the off-center player seat retains its distance from the gun through side and rear turns");
+				const auto local=compose(inverse(root),moved);
+				check(std::abs(local.position[2]-local_seat.position[2])<.001f,
+					"horizontal seat orbit keeps native seat height instead of pitching around the gun");
+			}
+			const auto rear=compose(inverse(root),orbit_seat(root,seat,pivot,180));
+			check(std::abs(rear.position[0]-23.f)<.001f && std::abs(rear.position[1]+1.f)<.001f,
+				"rear-facing player position rotates to the opposite side of the actual gun pivot");
+		}
 		fixture f;f.step(3,3);f.step(3,3);f.step();
 		check(!f.control.free_hands && !f.control.gripped,"buttons held on entry cannot take over or grab on their initial release");
 		f.step();f.step(1);f.step();

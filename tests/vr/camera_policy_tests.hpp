@@ -24,7 +24,7 @@ template<class Check> void camera_policy_tests(Check check)
     camera_rig rig;
     {
         camera_rig remote;
-        const auto request=vr::gameplay::sequences::camera_request_for({},0,0,17);
+        const auto request=vr::gameplay::sequences::camera_request_for({},0,{},17);
         camera_input view{axes(63,-80,3),vr::pose_filter::identity,{1,2,3},-80,0,0,100,1};
         auto frame=remote.compose(view,request);
         check(same(frame.axis,view.native_axis) && frame.head_offset==std::array<float,3>{},
@@ -285,9 +285,29 @@ template<class Check> void camera_policy_tests(Check check)
         "checkpoint time rollback allows a fresh player-owned entry alignment");
 
     vr::gameplay::sequences::view scene;scene.camera=camera_profiles::authored;scene.epoch=8;scene.position_epoch=9;
-    const auto selected=vr::gameplay::sequences::camera_request_for(scene,10,11);
+    const auto selected=vr::gameplay::sequences::camera_request_for(scene,10,{camera_profiles::vehicle,11});
     check(selected.policy==camera_profiles::fixed_scope && selected.epoch==(10|(1ull<<63)) && !selected.position_epoch,
         "native scope priority is identical for command suppression and final rendering");
+    {
+        camera_rig mounted_rig;camera_input tracked;tracked.reference=1;tracked.time=100;
+        tracked.head_axis=axes(12,15,5);tracked.head_heading=tracked.command_head_heading=15;
+        tracked.native_axis=axes(0,30,0);tracked.native_heading=30;
+        scene.camera.translation_gain=.25f;
+        const auto mounted_request=vr::gameplay::sequences::camera_request_for(scene,0,{scene_cameras::mounted_orbit,12,12});
+        check(mounted_request.policy.entry==camera_entry::preserve && mounted_request.policy.translation_gain==.25f,
+            "mounted orbit keeps boarding heading and the configured physical translation scale");
+        const auto entry=mounted_rig.compose(tracked,mounted_request);
+        for(int frame=1;frame<=10;++frame)
+        {
+            tracked.native_heading=30.f-frame;tracked.native_axis=axes(0,tracked.native_heading,0);
+            const auto current=mounted_rig.compose(tracked,mounted_request);
+            check(close(heading(current.axis),heading(entry.axis)-frame),
+                "mounted camera follows every rendered turn even while the native command time is unchanged");
+        }
+        float restored{};
+        check(mounted_rig.restore_command(0,1,restored,0,15,15,tracked.head_axis) && close(restored,20),
+            "dismount restores the final orbit heading through the existing native command bridge");
+    }
     scene={};scene.camera=vr::gameplay::sequences::scene_cameras::physical_ladder;scene.position_epoch=100;
     rig={};input.head_meters={.2f,-.3f,.15f};
     const auto before=rig.compose(input,{});

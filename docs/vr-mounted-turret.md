@@ -234,7 +234,25 @@ physical yaw and gives it the wrong lever length. Previous and current wrist
 positions are compared around the same current joints, preventing joint animation
 from feeding back into stationary controller input.
 Right-stick yaw/pitch use 90/60 degrees per second after a 0.2 deadzone and
-neutral rearming. Full-circle native yaw wraps at 180 degrees.
+neutral rearming. Full-circle native yaw wraps at 180 degrees.
+
+In Team Player, horizontal stick input turns the player's view and moves the
+off-center seat around the model's `tag_aim_pivot`. The native seat-to-pivot
+offset rotates with the player, preserving its radius and height when looking
+sideways or behind. Vertical stick input and physical hand aiming move only
+the gun; HMD look remains independent.
+
+The final native-camera boundary integrates horizontal input at the display
+cadence using the mounted controller's existing speed, deadzone, rearming and
+limits. The gun and camera share that frame's projected pose. Server aim
+publications acknowledge the baseline without quantizing the view to server
+ticks; releasing or reversing the stick does not rewind a predicted angle.
+Repeated camera queries in the same client frame reuse the pose. Pause and
+tracking interruptions hold the orbit, then require neutral input; a new mount
+starts a new orbit. The shared camera rig preserves head look and restores the
+player's heading on dismount. Previous physical wrists are re-expressed in the
+current tracking-to-vehicle frame so orbiting the player cannot steer the gun
+a second time. The Blackhawk retains its independent gun/view behavior.
 
 The native client turret controller at `0x14038D100`, called from `0x14038D093`,
 has an independent view-dependent branch: pose+`0x70` selects an angle pointer at
