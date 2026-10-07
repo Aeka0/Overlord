@@ -74,21 +74,21 @@ namespace vr::gameplay::weapons::physical_reload::cover_debug
 		rectangle(belt_feed::push_rearm_gap,belt_feed::push_palm_radius,{1,1,0,.9f});
 		for(float x:{-patch.inner,-patch.outer})for(float y:{patch.side_low,patch.side_high})
 			skin({x,y,patch.surface},{x,y,patch.surface+belt_feed::push_rearm_gap},{.5f,.5f,.5f,.8f});
-		const vec centre{-(patch.inner+patch.outer)*.5f,(patch.side_low+patch.side_high)*.5f,patch.surface};
-		skin(add(centre,{0,0,.10f}),centre,{0,1,0,1});
-		skin(centre,add(centre,{.012f,0,.02f}),{0,1,0,1});skin(centre,add(centre,{-.012f,0,.02f}),{0,1,0,1});
+		const vec patch_centre{-(patch.inner+patch.outer)*.5f,(patch.side_low+patch.side_high)*.5f,patch.surface};
+		skin(add(patch_centre,{0,0,.10f}),patch_centre,{0,1,0,1});
+		skin(patch_centre,add(patch_centre,{.012f,0,.02f}),{0,1,0,1});skin(patch_centre,add(patch_centre,{-.012f,0,.02f}),{0,1,0,1});
 		const auto cross=[&](vec v,float radius,spatial_panel::vec4 color){for(int i=0;i<3;++i){auto a=v,b=v;a[i]-=radius;b[i]+=radius;line(a,b,color);}};
 		if(s.raw.valid && finite_part_vec(s.raw.point) && finite_part_vec(s.raw.palm))
 		{
 			cross(s.raw.point,.006f,{1,1,1,1});
 			// Two semicircles plus longitudinal edges show the actual capsule.
 			const auto heading=length(extension)>1e-6f?std::atan2(extension[1],extension[0]):0.f;
-			const auto ring=[&](vec centre,float a){return add(s.raw.point,rotate(q,add(centre,vec{belt_feed::push_palm_radius*std::cos(a),belt_feed::push_palm_radius*std::sin(a),0})));};
+			const auto ring=[&](vec ring_centre,float a){return add(s.raw.point,rotate(q,add(ring_centre,vec{belt_feed::push_palm_radius*std::cos(a),belt_feed::push_palm_radius*std::sin(a),0})));};
 			for(int end=0;end<2;++end)
 			{
-				const auto centre=scale(extension,end?-1.f:1.f);const auto begin=heading-1.570796327f+end*3.141592654f;
-				for(int i=0;i<8;++i)line(ring(centre,begin+i*3.141592654f/8),ring(centre,begin+(i+1)*3.141592654f/8),{1,1,1,.85f});
-				line(ring(centre,begin+3.141592654f),ring(scale(centre,-1),begin+3.141592654f),{1,1,1,.85f});
+				const auto capsule_centre=scale(extension,end?-1.f:1.f);const auto begin=heading-1.570796327f+end*3.141592654f;
+				for(int i=0;i<8;++i)line(ring(capsule_centre,begin+i*3.141592654f/8),ring(capsule_centre,begin+(i+1)*3.141592654f/8),{1,1,1,.85f});
+				line(ring(capsule_centre,begin+3.141592654f),ring(scale(capsule_centre,-1),begin+3.141592654f),{1,1,1,.85f});
 			}
 			line(s.raw.point,add(s.raw.point,scale(s.raw.palm,.065f)),geometry.facing?spatial_panel::vec4{0,1,0,1}:spatial_panel::vec4{1,0,1,1});
 		}

@@ -50,12 +50,12 @@ namespace vr::body_pose
 			{
 				const float dt=std::chrono::duration<float>(at-at_).count();
 				vec neck{};for(unsigned i=0;i<3;++i)neck[i]=head[i]-eye[i]+eye_reference_[i];
-				const float dx=neck[0]-position_[0],dy=neck[1]-position_[1],distance=std::hypot(dx,dy);
+				const float delta_x=neck[0]-position_[0],delta_y=neck[1]-position_[1],distance=std::hypot(delta_x,delta_y);
 				const float blend=1-std::exp(-dt/.12f);
 				if(distance>.07f)
 				{
 					const float movement=std::max((distance-.07f)*blend,distance-.15f);
-					position_[0]+=dx/distance*movement;position_[1]+=dy/distance*movement;
+					position_[0]+=delta_x/distance*movement;position_[1]+=delta_y/distance*movement;
 				}
 				// Follow physical crouching; camera/native crouch already lives in
 				// the unfiltered world base. Neck compensation reduces nod motion.

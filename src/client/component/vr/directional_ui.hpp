@@ -100,8 +100,8 @@ namespace vr::directional_ui
 		const float sx=marker.pixels_per_meter>0 ? units/marker.pixels_per_meter : 2*depth*tangent[0]/marker.viewport[0];
 		const float sy=marker.pixels_per_meter>0 ? sx : 2*depth*tangent[1]/marker.viewport[1];
 		const auto& r=marker.crop;
-		const float dx=((r.x+r.right)*.5f-anchor[0])*sx, dy=(anchor[1]-(r.y+r.bottom)*.5f)*sy;
-		for (unsigned i=0;i<3;++i) center[i]+=right[i]*dx+up[i]*dy;
+		const float delta_x=((r.x+r.right)*.5f-anchor[0])*sx, delta_y=(anchor[1]-(r.y+r.bottom)*.5f)*sy;
+		for (unsigned i=0;i<3;++i) center[i]+=right[i]*delta_x+up[i]*delta_y;
 		return billboard(center,right,up,(r.right-r.x)*sx,(r.bottom-r.y)*sy,out);
 	}
 }

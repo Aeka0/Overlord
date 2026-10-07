@@ -18,6 +18,11 @@ namespace vr::engine_stereo_binding
 			claimed,
 		};
 
+#ifdef _MSC_VER
+#pragma warning(push)
+// Cache-line isolation intentionally pads each publication entry.
+#pragma warning(disable: 4324)
+#endif
 		struct alignas(64) publication_entry
 		{
 			std::atomic<entry_state> state{entry_state::free};
@@ -31,6 +36,9 @@ namespace vr::engine_stereo_binding
 			engine_stereo_view::slot_pair views{};
 			// Keep ownership words on distinct cache lines as camera metadata grows.
 		};
+#ifdef _MSC_VER
+#pragma warning(pop)
+#endif
 		static_assert(alignof(publication_entry)==64 && sizeof(publication_entry)%64==0);
 
 		static_assert(std::atomic<entry_state>::is_always_lock_free);

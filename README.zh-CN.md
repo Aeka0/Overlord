@@ -42,7 +42,7 @@ Overlord 是《使命召唤：现代战争 2 战役重制版》的 VR 化模组�
 
 ## 安装与首次使用
 
-Beta 及正式版本发布时，可从 [Releases 页面](https://github.com/Aeka0/h2-mod-vr/releases) 获取安装包；尚未发布时，可参考下方的源码构建说明。
+Beta 及正式版本发布时，可从 [Releases 页面](https://github.com/Aeka0/Overlord/releases) 获取安装包；尚未发布时，可参考下方的源码构建说明。
 
 1. 确认原版游戏安装完整。
 2. 将 VR 客户端包解压到游戏根目录，运行 `overlord.exe`。
@@ -87,7 +87,7 @@ Beta 及正式版本发布时，可从 [Releases 页面](https://github.com/Aeka
 
 启动器语言与游戏语言分别管理。切换启动器的中英文界面，不代表已经下载或切换原版游戏的语言资源。
 
-更新通过本项目的 [Releases 页面](https://github.com/Aeka0/h2-mod-vr/releases) 手动安装。当前 VR 版本暂未配置自动更新服务。
+更新通过本项目的 [Releases 页面](https://github.com/Aeka0/Overlord/releases) 手动安装。当前 VR 版本暂未配置自动更新服务。
 
 ## 当前状态与限制
 
@@ -105,7 +105,7 @@ Beta 及正式版本发布时，可从 [Releases 页面](https://github.com/Aeka
 准备 Visual Studio 的 C++ 桌面开发工具和 Windows SDK，在相应的开发者命令提示符中执行：
 
 ~~~bat
-git clone --recurse-submodules https://github.com/Aeka0/h2-mod-vr.git Overlord
+git clone --recurse-submodules https://github.com/Aeka0/Overlord.git Overlord
 cd Overlord
 generate.bat
 msbuild build\overlord.sln /t:client /m:2 /p:Configuration=RelWithDebInfo /p:Platform=x64 /p:PreferredToolArchitecture=x64 /p:CL_MPCount=4
@@ -124,7 +124,7 @@ msbuild build\overlord.sln /t:client /m:2 /p:Configuration=RelWithDebInfo /p:Pla
 
 ## 问题反馈与参与开发
 
-反馈前请先搜索[已有 Issue](https://github.com/Aeka0/h2-mod-vr/issues)。中英文报告均可，建议提供：
+反馈前请先搜索[已有 Issue](https://github.com/Aeka0/Overlord/issues)。中英文报告均可，建议提供：
 
 - 使用的版本或提交编号。
 - 头显、控制器、Windows、VR 运行时版本，以及所选的 OpenXR/OpenVR 后端。

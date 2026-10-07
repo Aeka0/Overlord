@@ -37,6 +37,16 @@ function gsc_tool.project()
 			buildoptions "/Zc:__cplusplus"
 		filter {}
 
+		-- These upstream catalogs initialize u8/u16 keys through std::pair's
+		-- forwarding constructor. Their literal keys fit the destination types;
+		-- MSVC v142 still reports C4244 inside <utility>. Limit the Release
+		-- exception to these three tables, retaining /WX for other diagnostics.
+		for _, source in ipairs({"h2_code.cpp", "h2_func.cpp", "h2_meth.cpp"}) do
+			filter {"action:vs*", "configurations:Release", "files:**/" .. source}
+				disablewarnings {"4244"}
+		end
+		filter {}
+
 		files {
 			path.join(gsc_tool.source, "include/xsk/stdinc.hpp"),
 

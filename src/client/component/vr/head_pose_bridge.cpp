@@ -643,8 +643,8 @@ namespace vr::head_pose_bridge
 		// Translate the tracking frame as a whole: hands retain 1:1 motion relative
 		// to the head instead of drifting away from a scaled cinematic camera.
 		auto tracking_origin=original_origin;
-		for(unsigned axis=0;axis<3;++axis)for(unsigned i=0;i<3;++i)
-			tracking_origin[axis]+=(head_offset[i]-local_position_units[i])*base_yaw_axis[i][axis];
+		for(unsigned coordinate=0;coordinate<3;++coordinate)for(unsigned i=0;i<3;++i)
+			tracking_origin[coordinate]+=(head_offset[i]-local_position_units[i])*base_yaw_axis[i][coordinate];
 		camera_frame = {reference_pose, tracking_origin, base_yaw_axis, world_scale, recenter_count,
 			std::chrono::steady_clock::now()};
 		camera_frame.head_position = composed_origin;

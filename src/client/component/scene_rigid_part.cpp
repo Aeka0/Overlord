@@ -336,7 +336,7 @@ namespace scene_models
 				}
 				for(std::size_t at=0,extra=0;extra<8;++extra)for(int v=0;v<surface.blendVertCounts[extra];++v)
 				{
-					for(std::size_t k=0;k<=extra;++k){const auto b=blend[at+(k?2*k-1:0)]/64;
+					for(std::size_t k=0;k<=extra;++k){const auto b=blend[at+(k?2*k-1:0)]/64u;
 						const auto found=std::find(bones.begin(),bones.end(),b);if(found!=bones.end())seen|=1u<<unsigned(found-bones.begin());}
 					at+=2*extra+1;
 				}

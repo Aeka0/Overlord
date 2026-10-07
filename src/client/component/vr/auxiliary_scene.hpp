@@ -93,15 +93,15 @@ namespace vr::auxiliary_scene
 	{
 		if (!valid_window(window)) return false;
 		output=source;
-		const float sx=window[2],sy=window[3],cx=2*window[0]+sx-1,cy=1-2*window[1]-sy;
+		const float sx=window[2],sy=window[3],center_x=2*window[0]+sx-1,center_y=1-2*window[1]-sy;
 		for (auto offset:{0x40u,0x80u})
 		{
 			std::array<float,16> m{};
 			std::memcpy(m.data(),source.data()+offset,sizeof(m));
 			for (unsigned row=0;row<4;++row)
 			{
-				m[row*4]=(m[row*4]-cx*m[row*4+3])/sx;
-				m[row*4+1]=(m[row*4+1]-cy*m[row*4+3])/sy;
+				m[row*4]=(m[row*4]-center_x*m[row*4+3])/sx;
+				m[row*4+1]=(m[row*4+1]-center_y*m[row*4+3])/sy;
 			}
 			for (float v:m) if (!std::isfinite(v)) return false;
 			std::memcpy(output.data()+offset,m.data(),sizeof(m));
@@ -111,7 +111,7 @@ namespace vr::auxiliary_scene
 		for (unsigned c=0;c<4;++c)
 		{
 			m[c]=sx*inverse[c];m[4+c]=sy*inverse[4+c];
-			m[12+c]=inverse[12+c]+cx*inverse[c]+cy*inverse[4+c];
+			m[12+c]=inverse[12+c]+center_x*inverse[c]+center_y*inverse[4+c];
 		}
 		for(float v:m) if(!std::isfinite(v)) return false;
 		std::memcpy(output.data()+0xC0,m.data(),sizeof(m));

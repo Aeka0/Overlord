@@ -42,7 +42,7 @@ Pirated or cracked copies of the game are not supported. Mod releases do not inc
 
 ## Installation and First Use
 
-When Beta and stable releases are published, installation packages will be available on the [Releases page](https://github.com/Aeka0/h2-mod-vr/releases). Before a release is available, refer to the source build instructions below.
+When Beta and stable releases are published, installation packages will be available on the [Releases page](https://github.com/Aeka0/Overlord/releases). Before a release is available, refer to the source build instructions below.
 
 1. Make sure the original game installation is complete.
 2. Extract the VR client package into the game's root directory and run `overlord.exe`.
@@ -87,7 +87,7 @@ The launcher offers visual, interaction, assistance, and cheat options. Get fami
 
 Launcher language and game language are managed separately. Switching the launcher's English or Chinese interface does not download or switch the original game's language assets.
 
-Install updates manually from this project's [Releases page](https://github.com/Aeka0/h2-mod-vr/releases). The current VR version does not have an automatic update service.
+Install updates manually from this project's [Releases page](https://github.com/Aeka0/Overlord/releases). The current VR version does not have an automatic update service.
 
 ## Current Status and Limitations
 
@@ -105,7 +105,7 @@ Clone the repository with Git and initialize its submodules. Downloading GitHub'
 Install Visual Studio's Desktop development with C++ tools and the Windows SDK, then run the following in the appropriate Developer Command Prompt:
 
 ~~~bat
-git clone --recurse-submodules https://github.com/Aeka0/h2-mod-vr.git Overlord
+git clone --recurse-submodules https://github.com/Aeka0/Overlord.git Overlord
 cd Overlord
 generate.bat
 msbuild build\overlord.sln /t:client /m:2 /p:Configuration=RelWithDebInfo /p:Platform=x64 /p:PreferredToolArchitecture=x64 /p:CL_MPCount=4
@@ -124,7 +124,7 @@ See the [development guide](docs/development.md) for build details, checks appro
 
 ## Reporting Issues and Contributing
 
-Search [existing issues](https://github.com/Aeka0/h2-mod-vr/issues) before submitting a report. Reports in English or Chinese are welcome. Please include:
+Search [existing issues](https://github.com/Aeka0/Overlord/issues) before submitting a report. Reports in English or Chinese are welcome. Please include:
 
 - The version or commit you are using.
 - Your headset, controllers, Windows and VR runtime versions, and selected OpenXR/OpenVR backend.

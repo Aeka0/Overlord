@@ -19,6 +19,11 @@ namespace vr::engine_stereo_backend_view
 		failed,
 	};
 
+#ifdef _MSC_VER
+#pragma warning(push)
+// Native view-slot snapshots deliberately retain 16-byte alignment.
+#pragma warning(disable: 4324)
+#endif
 	struct transaction
 	{
 		bool active{};
@@ -38,6 +43,9 @@ namespace vr::engine_stereo_backend_view
 			return active;
 		}
 	};
+#ifdef _MSC_VER
+#pragma warning(pop)
+#endif
 
 	struct status
 	{

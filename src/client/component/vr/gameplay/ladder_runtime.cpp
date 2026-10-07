@@ -398,15 +398,15 @@ namespace vr::gameplay::ladders
             // weapon-model path. No rendered world pose feeds the pull solver.
             grips={parts.bar_grips,parts.basis,input.reference_generation};}
         if(p.reference!=input.reference_generation || clock::now()-p.at>150ms)return;
-        const auto held=p.held&visible&bound;
+        const auto held_mask=p.held&visible&bound;
         std::array<anchor,2> contacts{};
-        for(unsigned h=0;h<2;++h)if(held&(1u<<h))
+        for(unsigned h=0;h<2;++h)if(held_mask&(1u<<h))
         {
             contacts[h]=bar_grip::on_bar(parts.bar_grips[h],p.contacts[h].point,p.contacts[h].normal,h);
             contacts[h].position=sub(contacts[h].position,offset);
         }
-        if(!bar_grip::constrain(r,solved,contacts,held,shoulders,axes))return;
-        for(unsigned h=0;h<2;++h)if(held&(1u<<h))
+        if(!bar_grip::constrain(r,solved,contacts,held_mask,shoulders,axes))return;
+        for(unsigned h=0;h<2;++h)if(held_mask&(1u<<h))
             empty_hand::apply(r,parts.library,native_hand_schema::definition,hand(h),{true,empty_hand::gesture::fist,bar_grip::wrap},solved);
     }
     std::string status()

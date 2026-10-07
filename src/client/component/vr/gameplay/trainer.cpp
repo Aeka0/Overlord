@@ -34,8 +34,8 @@ namespace vr::gameplay::trainer
 			if (!tutorial_begin) return;
 			for (const auto& [name,pos]:file->second)
 				if (pos>tutorial_begin && (!tutorial_end || pos<tutorial_end)) tutorial_end=pos;
-			const auto hint=scripting::get_token_single(0xced3);
-			for (const auto& [name,pos]:file->second) if (name==hint) hint_begin=pos;
+			const auto hint_token=scripting::get_token_single(0xced3);
+			for (const auto& [name,pos]:file->second) if (name==hint_token) hint_begin=pos;
 			for (const auto& [name,pos]:file->second)
 				if (pos>hint_begin && (!hint_end || pos<hint_end)) hint_end=pos;
 			if(!hint_begin || !hint_end || !*game::levelEntityId)return;
