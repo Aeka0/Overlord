@@ -28,6 +28,7 @@ These files are in the [VR infrastructure directory](../src/client/component/vr/
 | [engine_scene_completion.hpp](../src/client/component/vr/engine_scene_completion.hpp) | Waiting for H2 CPU scene inputs and checking identity |
 | [engine_stereo_owner_pass.cpp](../src/client/component/vr/engine_stereo_owner_pass.cpp) | Per-eye transactions, model state, dynamic uploads, and resource scopes |
 | [engine_stereo_eye_resources.cpp](../src/client/component/vr/engine_stereo_eye_resources.cpp) | Per-eye resource routing, history isolation, and binding restoration at scope boundaries |
+| [native_post_aa.cpp](../src/client/component/vr/native_post_aa.cpp) | Native FXAA/SMAA execution before eye copies, with independent temporal and Filmic histories |
 | [native_render_session.cpp](../src/client/component/vr/native_render_session.cpp) | Native eye targets and the pair ownership ring |
 | [gameplay/README.md](../src/client/component/vr/gameplay/README.md) | The downstream boundary from input snapshots to gameplay |
 
@@ -118,6 +119,33 @@ disabled VR and terminal shutdown cannot restart the session. No runtime/GPU wor
 or runtime lock is added to the resize callback, and no recenter is requested.
 
 Historical experiments with a private compositor device, cross-device copying, and shared fences must not be reused as if they were the current design. The same-device, non-shared checks are interface contracts and must not be relaxed merely to admit a candidate texture.
+
+## Native post-process antialiasing
+
+The selected `r_postAA` mode runs after each eye's native PostFX transform and
+before the eye is copied for submission. FXAA, SMAA 1x, SMAA T2x and both Filmic
+SMAA modes use the game's original materials. The raw HDR source is preserved
+for the natural desktop tail; the VR output does not depend on that later tail.
+
+SMAA T2x and Filmic image histories are isolated for each output eye and for an
+active auxiliary optical view. They remain isolated through the final AA pass,
+and history is committed only with a complete pair. Mode changes, resource
+changes, discontinuous frames and camera resets discard incompatible history.
+Only the two native AA ring-index reads use a contiguous VR view phase; other
+native rendering still observes the original engine frame counter. This keeps
+T2x and Filmic histories usable when native rendering produces more frames
+than the headset consumes. Long interruptions restart the history.
+The AA input retains native RGBA8 color and alpha; Filmic initialization copies
+the current eye's image into its RGBA8 history without another gamma conversion. Unused AA
+histories are not allocated; changing AA modes preserves unrelated SSR images.
+SMAA temporarily reuses the scene depth buffer for edge detection. The adapter
+preserves and restores that depth before VR optics and other depth-tested
+composition, so the original scene occlusion remains available.
+
+`vr_status` includes `native_post_aa`, reporting the mode and successful pass
+count for each view, history initialization, complete pairs and failures.
+These counters confirm execution; visual quality and motion artifacts still
+require headset acceptance. Native SSAA remains a separate scene-size setting.
 
 ## Desktop spectator projection
 

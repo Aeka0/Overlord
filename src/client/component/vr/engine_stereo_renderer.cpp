@@ -30,6 +30,7 @@
 #include "native_render_session.hpp"
 #include "native_stereo_source.hpp"
 #include "native_fullscreen_blur.hpp"
+#include "native_post_aa.hpp"
 
 #include <utils/hook.hpp>
 #include <utils/hook_validation.hpp>
@@ -1728,10 +1729,13 @@ namespace vr::engine_stereo_renderer
 			return reinterpret_cast<std::uint32_t(*)(void*)>(postfx_destination_function)(record);
 		}
 
-		bool render_native_display(void* const record, const native_display_contract::route route)
+		bool render_native_display(void* const record, const native_display_contract::route route,
+			const native_post_aa::view_identity& view)
 		{
 			if (!record || native_display_record || !route) return false;
 			native_display_route = route;
+			if (!native_post_aa::select_display_target(record, route, native_display_route.destination))
+				return false;
 			native_display_record = record;
 			native_display_routes = 0;
 			const auto scope = gsl::finally([]() noexcept
@@ -1744,7 +1748,8 @@ namespace vr::engine_stereo_renderer
 			// viewport; both ping-pong targets match vidConfig.scene.
 			reinterpret_cast<backend_record_classifier_fn>(backend_record_classifier_function)(
 				record, nullptr, true);
-			return native_display_routes == 1 && native_fullscreen_blur::apply(record,route);
+			return native_display_routes == 1 && native_post_aa::apply(record, route, view) &&
+				native_fullscreen_blur::apply(record,route);
 		}
 
 		void backend_record_classifier_probe_stub(void* const record,

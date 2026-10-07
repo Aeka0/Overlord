@@ -6,6 +6,7 @@
 #include <array>
 #include <cstddef>
 #include <cstdint>
+#include "native_post_aa_contract.hpp"
 
 namespace vr::engine_stereo_eye_resources
 {
@@ -49,7 +50,10 @@ namespace vr::engine_stereo_eye_resources
 	// Both output eyes need persistent histories: the natural H2 path also runs
 	// between admitted VR pairs and must never overwrite either eye's history.
 	inline constexpr std::uint32_t isolated_target_id = 91;
-	inline constexpr std::size_t isolated_target_count = 1;
+	// Slot 0 is mandatory SSR history. Optional slots 1..6 are native AA
+	// histories, admitted only for the active mode; scratch targets stay shared
+	// because the native owner executes each view sequentially.
+	inline constexpr std::size_t isolated_target_count = 1 + native_post_aa::history_targets.size();
 	inline constexpr std::size_t shader_stage_count = 6;
 	inline constexpr std::size_t exact_read_binding_count = 5;
 	inline constexpr std::uintptr_t exact_read_draw_indexed_caller = 0x14072CF47;
@@ -164,6 +168,12 @@ namespace vr::engine_stereo_eye_resources
 	[[nodiscard]] bool end_eye(std::uint64_t pair_id, std::uint32_t eye) noexcept;
 	[[nodiscard]] bool end_pair(std::uint64_t pair_id) noexcept;
 	void cancel_pair(std::uint64_t pair_id) noexcept;
+	// Borrowed on the active owner thread only, for initializing one eye's
+	// history without ever exposing or overwriting the natural desktop image.
+	[[nodiscard]] ID3D11RenderTargetView* isolated_color_view(std::uint64_t pair_id,
+		std::uint32_t eye, std::uint32_t target_id) noexcept;
+	[[nodiscard]] std::uint64_t active_resource_revision(std::uint64_t pair_id,
+		std::uint32_t eye) noexcept;
 
 	// The exact-read observer is armed only for an explicitly selected production
 	// experiment. It reads PS slot 13 at the proven H2 DrawIndexed caller and never

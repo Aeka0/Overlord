@@ -4,6 +4,7 @@
 #include "component/vr/engine_stereo_pointer_cache.hpp"
 #include "component/vr/engine_stereo_output_merger.hpp"
 #include "component/vr/engine_stereo_resource_ops.hpp"
+#include "native_post_aa_boundary_tests.hpp"
 
 #include <array>
 #include <iostream>
@@ -54,6 +55,7 @@ namespace
 
 int main()
 {
+	if (!native_post_aa_frame_tests()) return fail("AA frame reader changed native registers, flags or stack");
 	vr::stereo_pointer_index<1> mappings;
 	if (mappings.find(0) || mappings.find(0x1000)) return fail("empty view index");
 	mappings.insert(0x1000, 0);
@@ -700,6 +702,102 @@ int main()
 			return fail("auxiliary cache survived exact generation invalidation");
 		previous_scope = history;
 	}
+	// AA's six optional ring images use the same routing and restoration as
+	// SSR. Verify persistence for both eyes and the auxiliary view, without
+	// touching the natural desktop histories or allocating them when disabled.
+	context->ClearState();
+	if (!vr::engine_stereo_output_merger::install(context.Get(), 5) ||
+		!vr::engine_stereo_resource_ops::install(context.Get(), 5) ||
+		!vr::engine_stereo_eye_resources::install(context.Get(), 5))
+		return fail("AA history generation installation");
+	auto aa_bindings = bindings;
+	std::array<Microsoft::WRL::ComPtr<ID3D11Texture2D>, 6> aa_originals;
+	std::array<Microsoft::WRL::ComPtr<ID3D11RenderTargetView>, 6> aa_views;
+	for (std::size_t i = 0; i < aa_originals.size(); ++i)
+	{
+		if (FAILED(device->CreateTexture2D(&description, nullptr, &aa_originals[i])) ||
+			FAILED(device->CreateRenderTargetView(aa_originals[i].Get(), nullptr, &aa_views[i])))
+			return fail("AA history test resources");
+		context->ClearRenderTargetView(aa_views[i].Get(), black);
+		aa_bindings[i + 1] = {vr::native_post_aa::history_targets[i],
+			vr::engine_stereo_eye_resources::role::color, aa_views[i].Get()};
+	}
+	const float aa_colors[][4]{{0.25f,0.5f,0.75f,0.125f}, {0.75f,0.25f,0.5f,0.5f}, {0.5f,0.75f,0.25f,0.75f}};
+	const std::uint32_t pixels[]{0x20BF8040u, 0x808040BFu, 0xBF40BF80u};
+	// Actual native LDR input: typeless texture, UNORM RTV/SRV. History
+	// remains typed UNORM, so initialization must preserve RGBA across the
+	// compatible storage-family copy rather than reject the input descriptor.
+	auto input_desc = description;
+	input_desc.Format = DXGI_FORMAT_R8G8B8A8_TYPELESS;
+	D3D11_RENDER_TARGET_VIEW_DESC input_rtv_desc{};
+	input_rtv_desc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
+	input_rtv_desc.ViewDimension = D3D11_RTV_DIMENSION_TEXTURE2D;
+	D3D11_SHADER_RESOURCE_VIEW_DESC input_srv_desc{};
+	input_srv_desc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
+	input_srv_desc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2D;
+	input_srv_desc.Texture2D.MipLevels = 1;
+	Microsoft::WRL::ComPtr<ID3D11Texture2D> aa_input;
+	Microsoft::WRL::ComPtr<ID3D11RenderTargetView> aa_input_view;
+	Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> aa_input_source;
+	if (FAILED(device->CreateTexture2D(&input_desc, nullptr, &aa_input)) ||
+		FAILED(device->CreateRenderTargetView(aa_input.Get(), &input_rtv_desc, &aa_input_view)) ||
+		FAILED(device->CreateShaderResourceView(aa_input.Get(), &input_srv_desc, &aa_input_source)))
+		return fail("native typeless LDR fixture");
+	if (!vr::native_post_aa::accepts_ldr(input_desc, input_rtv_desc, input_srv_desc, 16, 16) ||
+		!vr::native_post_aa::accepts_ldr(description, input_rtv_desc, input_srv_desc, 16, 16))
+		return fail("native typed/typeless LDR descriptor admission");
+	auto srgb = input_srv_desc;
+	srgb.Format = DXGI_FORMAT_R8G8B8A8_UNORM_SRGB;
+	if (vr::native_post_aa::accepts_ldr(input_desc, input_rtv_desc, srgb, 16, 16) ||
+		vr::native_post_aa::accepts_ldr(input_desc, input_rtv_desc, input_srv_desc, 8, 16))
+		return fail("incompatible LDR encoding/extent accepted");
+	for (std::uint64_t pair_id : {100u, 101u})
+	{
+		if (!vr::engine_stereo_eye_resources::begin_pair(pair_id, device.Get(), context.Get(), 5, aa_bindings))
+			return fail("AA history pair admission");
+		for (const auto eye : {0u, 2u, 1u})
+		{
+			if (!(eye == 2 ? vr::engine_stereo_eye_resources::begin_auxiliary(pair_id, pair_id == 100) :
+				vr::engine_stereo_eye_resources::begin_eye(pair_id, eye)))
+				return fail("AA history view admission");
+			for (std::size_t i = 0; i < aa_originals.size(); ++i)
+			{
+				auto* isolated = vr::engine_stereo_eye_resources::isolated_color_view(pair_id, eye,
+					vr::native_post_aa::history_targets[i]);
+				Microsoft::WRL::ComPtr<ID3D11Texture2D> texture;
+				if (!isolated || FAILED(resource_of(isolated).As(&texture)) || texture == aa_originals[i])
+					return fail("AA history was not isolated");
+				std::uint32_t pixel{};
+				if (pair_id == 101 && (!read_first_pixel(device.Get(), context.Get(), texture.Get(), pixel) || pixel != pixels[eye]))
+					return fail("AA history borrowed another eye or lost the previous pair");
+				context->ClearRenderTargetView(aa_input_view.Get(), aa_colors[eye]);
+				context->CopyResource(texture.Get(), aa_input.Get());
+			}
+			if (!(eye == 2 ? vr::engine_stereo_eye_resources::end_auxiliary(pair_id) :
+				vr::engine_stereo_eye_resources::end_eye(pair_id, eye)))
+				return fail("AA history view restoration");
+		}
+		if (!vr::engine_stereo_eye_resources::end_pair(pair_id)) return fail("AA history pair retirement");
+	}
+	for (const auto& texture : aa_originals)
+	{
+		std::uint32_t pixel{};
+		if (!read_first_pixel(device.Get(), context.Get(), texture.Get(), pixel) || pixel != 0xFF000000u)
+			return fail("AA replay changed the natural desktop history");
+	}
+	const auto ssr_identity = vr::engine_stereo_eye_resources::get_status().targets[0].left_resource;
+	if (!vr::engine_stereo_eye_resources::begin_pair(102, device.Get(), context.Get(), 5, bindings))
+		return fail("AA disable resource transition");
+	const auto disabled = vr::engine_stereo_eye_resources::get_status();
+	if (disabled.targets[0].left_resource != ssr_identity)
+		return fail("AA mode change discarded unrelated SSR history");
+	for (std::size_t i = 1; i < disabled.targets.size(); ++i)
+		if (disabled.targets[i].left_resource || disabled.targets[i].right_resource)
+			return fail("disabled AA retained unused history allocations");
+	vr::engine_stereo_eye_resources::cancel_pair(102);
+	vr::engine_stereo_eye_resources::invalidate_device(context.Get(), 5);
+	if (!native_post_aa_depth_tests(device.Get(),context.Get()))
+		return fail("native SMAA depth scratch escaped into subsequent VR optics");
 	std::cout << "vr-d3d11-eye-resource-isolation-probe: PASS\n";
 	return 0;
 }

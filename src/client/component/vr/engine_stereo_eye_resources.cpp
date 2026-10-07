@@ -1055,6 +1055,7 @@ namespace vr::engine_stereo_eye_resources
 		[[nodiscard]] bool append_owner_view_mapping(const std::uint32_t index) noexcept
 		{
 			auto& target = resources.targets[index];
+			if (!target.original) return true;
 			if (target.target_role == role::color)
 			{
 				Microsoft::WRL::ComPtr<ID3D11RenderTargetView> original;
@@ -1076,6 +1077,7 @@ namespace vr::engine_stereo_eye_resources
 			const std::array<D3D11_TEXTURE2D_DESC, isolated_target_count>& descriptions) noexcept
 		{
 			persistent_state replacement{};
+			std::array<bool, isolated_target_count> retained{};
 			replacement.context = reinterpret_cast<std::uintptr_t>(context);
 			replacement.generation = generation;
 			replacement.owner_thread = GetCurrentThreadId();
@@ -1083,6 +1085,19 @@ namespace vr::engine_stereo_eye_resources
 			for (std::size_t index{}; index < bindings.size(); ++index)
 			{
 				auto& target = replacement.targets[index];
+				if (!originals[index]) continue;
+				const auto& previous = resources.targets[index];
+				if (resources.ready && resources.device.Get() == device &&
+					resources.context == reinterpret_cast<std::uintptr_t>(context) && resources.generation == generation &&
+					previous.target_id == bindings[index].target_id && previous.original == originals[index] &&
+					std::memcmp(&previous.description, &descriptions[index], sizeof(D3D11_TEXTURE2D_DESC)) == 0)
+				{
+					// Changing AA modes must not throw away unrelated SSR history.
+					target = previous;
+					target.owner_view = bindings[index].owner_view;
+					retained[index] = true;
+					continue;
+				}
 				target.target_id = bindings[index].target_id;
 				target.target_role = bindings[index].target_role;
 				target.owner_view = bindings[index].owner_view;
@@ -1104,6 +1119,7 @@ namespace vr::engine_stereo_eye_resources
 
 			for (std::size_t index{}; index < replacement.targets.size(); ++index)
 			{
+				if (!replacement.targets[index].original || retained[index]) continue;
 				for (unsigned eye=0;eye<2;++eye)
 				{
 					context->CopyResource(replacement.targets[index].eyes[eye].Get(), replacement.targets[index].original.Get());
@@ -1348,7 +1364,13 @@ namespace vr::engine_stereo_eye_resources
 		std::array<D3D11_TEXTURE2D_DESC, isolated_target_count> descriptions{};
 		for (std::size_t index{}; index < bindings.size(); ++index)
 		{
-			if (bindings[index].target_id != isolated_target_id ||
+			// Missing optional histories are inactive slots, not native target 0.
+			// A partially specified binding is still rejected.
+			if (index != 0 && bindings[index].target_id == 0 && !bindings[index].owner_view)
+				continue;
+			const auto expected_id = index == 0 ? isolated_target_id :
+				native_post_aa::history_targets[index - 1];
+			if (bindings[index].target_id != expected_id ||
 				bindings[index].target_role != role::color ||
 				!source_role_matches(bindings[index]) ||
 				!extract_texture(bindings[index].owner_view, originals[index]))
@@ -1433,12 +1455,36 @@ namespace vr::engine_stereo_eye_resources
 			// Grow only the auxiliary mapping. Existing HMD images, views and
 			// histories keep their identities when the first scope is raised.
 			for(auto& target:resources.targets)
-				if(!target.eyes[auxiliary_scene::view_index] &&
+				if(target.original && !target.eyes[auxiliary_scene::view_index] &&
 					FAILED(resources.device->CreateTexture2D(&target.description,nullptr,
 						target.eyes[auxiliary_scene::view_index].GetAddressOf()))) return false;
 			return extend_auxiliary_views(resources.render_targets) && extend_auxiliary_views(resources.depth_stencils) &&
 				extend_auxiliary_views(resources.shader_resources) && extend_auxiliary_views(resources.unordered_access);
 		}
+	}
+
+	std::uint64_t active_resource_revision(const std::uint64_t pair_id,
+		const std::uint32_t eye) noexcept
+	{
+		return owns_pair_on_current_thread() && pair.pair_id == pair_id &&
+			pair.current_eye == eye && eye < auxiliary_scene::view_count && !pair.failed ?
+			resource_rebuilds.load(std::memory_order_relaxed) : 0;
+	}
+
+	ID3D11RenderTargetView* isolated_color_view(const std::uint64_t pair_id,
+		const std::uint32_t eye, const std::uint32_t target_id) noexcept
+	{
+		if (!active_resource_revision(pair_id, eye)) return nullptr;
+		for (const auto& entry : resources.targets)
+		{
+			if (entry.target_id != target_id || !entry.original || entry.target_role != role::color)
+				continue;
+			Microsoft::WRL::ComPtr<ID3D11RenderTargetView> original;
+			if (FAILED(entry.owner_view.As(&original))) return nullptr;
+			auto* result = rewrite_render_target(reinterpret_cast<ID3D11DeviceContext*>(pair.context), original.Get());
+			return !pair.failed && result != original.Get() ? result : nullptr;
+		}
+		return nullptr;
 	}
 
 	bool begin_auxiliary(const std::uint64_t pair_id, const bool reset_history) noexcept
@@ -1453,6 +1499,7 @@ namespace vr::engine_stereo_eye_resources
 			// Clear every mip; SSR can read a different level from the writer.
 			for (auto& target : resources.targets)
 			{
+				if (!target.original) continue;
 				if (target.description.MipLevels > target.auxiliary_clear_views.size())
 				{publish_failure(failure::resource_contract);return false;}
 				for (unsigned mip = 0; mip < target.description.MipLevels; ++mip)

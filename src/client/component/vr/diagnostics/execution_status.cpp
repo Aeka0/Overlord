@@ -7,6 +7,7 @@
 #include "../engine_stereo_execution.hpp"
 #include "../engine_stereo_output_merger.hpp"
 #include "../engine_stereo_owner_pass.hpp"
+#include "../native_post_aa.hpp"
 
 #include <algorithm>
 #include <iomanip>
@@ -228,6 +229,7 @@ namespace vr::diagnostics::detail
 			<< " format=" << owner_pass_status.display_format
 			<< " bind=0x" << std::hex << owner_pass_status.display_bind_flags << std::dec
 			<< " last_error=" << owner_pass_status.display_transform_error << '\n';
+		output << native_post_aa::status_text();
 		output << "  backend_owner_last_failure: reason="
 			<< engine_stereo_owner_pass::to_string(owner_pass_status.last_failure);
 		output << " production=" << (owner_pass_status.failure_in_production ? "yes" : "no");

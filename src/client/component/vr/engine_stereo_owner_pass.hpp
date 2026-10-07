@@ -8,6 +8,7 @@
 #include "engine_stereo_dynamic_upload.hpp"
 #include "engine_stereo_tessellation_view.hpp"
 #include "native_display_contract.hpp"
+#include "native_post_aa_contract.hpp"
 
 #include <array>
 #include <cstddef>
@@ -426,7 +427,8 @@ namespace vr::engine_stereo_owner_pass
 	// Display callback runs only for production, under the H2 GPU mutex, with
 	// this eye's record. False rejects the pair; raw HDR is never substituted.
 	[[nodiscard]] bool end_view(transaction& active, std::uint32_t eye,
-		bool (*display_transform)(void* record, native_display_contract::route route)) noexcept;
+		bool (*display_transform)(void* record, native_display_contract::route route,
+			const native_post_aa::view_identity& view)) noexcept;
 	void end(transaction& active) noexcept;
 
 	void on_present_pre(const d3d11::present_event& event) noexcept;

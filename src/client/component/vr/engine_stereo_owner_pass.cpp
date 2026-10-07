@@ -5,6 +5,7 @@
 #include "engine_scene_resolution.hpp"
 #include "diagnostics.hpp"
 #include "region_capture.hpp"
+#include "native_post_aa.hpp"
 #include "engine_scene_job_capture.hpp"
 #include "engine_scene_completion.hpp"
 
@@ -1283,12 +1284,14 @@ namespace vr::engine_stereo_owner_pass
 					sizeof(owner_view));
 				Microsoft::WRL::ComPtr<ID3D11Device> device;
 				active.context->GetDevice(device.GetAddressOf());
-				const std::array<engine_stereo_eye_resources::source_binding,
+				std::array<engine_stereo_eye_resources::source_binding,
 					engine_stereo_eye_resources::isolated_target_count> bindings{{
 					{engine_stereo_eye_resources::isolated_target_id,
 						engine_stereo_eye_resources::role::color, owner_view},
 				}};
-				if (!owner_view || !device || !engine_stereo_eye_resources::begin_pair(
+				if (!owner_view || !device ||
+					!native_post_aa::append_history_bindings(active.records.left.data(), bindings) ||
+					!engine_stereo_eye_resources::begin_pair(
 					active.records.pair_id, device.Get(), active.context.Get(),
 					active.device_generation, bindings))
 				{
@@ -1524,7 +1527,8 @@ namespace vr::engine_stereo_owner_pass
 			fail_transaction(active, failure::eye_resource);
 	}
 	bool end_view(transaction& active, const std::uint32_t eye,
-		bool (*const display_transform)(void*, native_display_contract::route)) noexcept
+		bool (*const display_transform)(void*, native_display_contract::route,
+			const native_post_aa::view_identity&)) noexcept
 	{
 		const auto restore_thermal=gsl::finally([&]() noexcept
 		{if(eye==0 && GetCurrentThreadId()==active.owner_thread_id)active.thermal_world_lease.restore();});
@@ -1546,15 +1550,20 @@ namespace vr::engine_stereo_owner_pass
 			engine_stereo_effect_timeline::end_eye(active.records.pair_id, eye, record);
 			active.effect_timeline_eye_active = false;
 		}
-		if (active.eye_resource_eye_active)
+		const auto close_eye_resources = [&]() noexcept
 		{
+			if (!active.eye_resource_eye_active) return true;
 			h2_gpu_context_lock context_lock;
 			const auto ended = context_lock && (eye==auxiliary_scene::view_index ?
 				engine_stereo_eye_resources::end_auxiliary(active.records.pair_id) :
 				engine_stereo_eye_resources::end_eye(active.records.pair_id, eye));
 			active.eye_resource_eye_active = false;
 			if (!ended) fail_transaction(active, failure::eye_resource);
-		}
+			return ended;
+		};
+		// Keep both SSR and AA histories isolated through the final display
+		// passes. Every early exit still restores native bindings on this owner.
+		const auto eye_resources_exit = gsl::finally([&] { (void)close_eye_resources(); });
 		if (active.ssr_consumer_probe_pair_active && eye < 2)
 		{
 			engine_stereo_ssr_consumer_probe::end_eye(active.records.pair_id, eye);
@@ -1783,7 +1792,10 @@ namespace vr::engine_stereo_owner_pass
 				display_description.Width != description.Width ||
 				display_description.Height != description.Height ? "extent" : nullptr;
 			if (!display_error && (!display_transform ||
-				!display_transform(const_cast<std::uint8_t*>(record), route)))
+				!display_transform(const_cast<std::uint8_t*>(record), route,
+					{active.records.pair_id, active.device_generation, eye,
+						active.temporal_history.seeded ||
+						(eye == auxiliary_scene::view_index && active.auxiliary_reset)})))
 				display_error = "destination_route";
 			if (display_error)
 			{
@@ -1793,6 +1805,7 @@ namespace vr::engine_stereo_owner_pass
 				return false;
 			}
 			display_transform_completions.fetch_add(1, std::memory_order_relaxed);
+			if (!close_eye_resources()) return false;
 			const auto native_copy_started_ns = timing_now_ns();
 			eye_composition::event composition{active.claim.views,
 				active.records.pair_id, active.device_generation, eye,
@@ -2072,6 +2085,7 @@ namespace vr::engine_stereo_owner_pass
 				publish_model_list_census(active);
 				production_completions.fetch_add(1, std::memory_order_relaxed);
 			}
+			native_post_aa::finish_pair(active.records.pair_id, !active.failed);
 			engine_stereo_binding::release(active.claim);
 			if (active_transaction == &active) active_transaction = nullptr;
 			production_active.store(false, std::memory_order_release);
@@ -2259,6 +2273,7 @@ namespace vr::engine_stereo_owner_pass
 	void invalidate_device(ID3D11DeviceContext* const context,
 		const std::uint64_t generation) noexcept
 	{
+		native_post_aa::invalidate_device(context, generation);
 		engine_stereo_material_buffer_probe::cancel(context, generation);
 		engine_stereo_particle_buffer_probe::cancel(context, generation);
 		engine_stereo_gpu_census::cancel();
