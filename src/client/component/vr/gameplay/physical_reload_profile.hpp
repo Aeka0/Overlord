@@ -16,7 +16,7 @@ namespace vr::gameplay::weapons
 		part_mesh_partition mesh;
 		charging_handle_bolt motion; // Existing source bone supplies only the bind frame, not the final bolt pose.
 	};
-	struct magazine_latch_profile {hands::vec position,direction;};
+	struct magazine_latch_profile {hands::vec position,direction;bool transfers_impulse{};};
 	struct magazine_contact_profile
 	{
 		// Native model units. Grip contact is wrist-local; the box/latch are

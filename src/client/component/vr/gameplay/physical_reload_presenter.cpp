@@ -14,6 +14,7 @@
 #include "component/vr/gameplay/hands/pose_mirror.hpp"
 #include "knife_magazine_pose.hpp"
 #include "magazine_grip_selection.hpp"
+#include "magazine_release_motion.hpp"
 #include "weapon_render_pose.hpp"
 #include "reload_well_debug.hpp"
 #include "hk_slap_debug.hpp"
@@ -231,7 +232,7 @@ namespace vr::gameplay::weapons::physical_reload
 						place->motion.start=event.world;place->motion.born=event.at;place->motion.units=event.units_per_meter;
 						place->owner=state.owner.id();
 						if(event.kind==mechanics::effect::magazine_out)
-						{place->motion.rail=magazine_exit_translation(*state.definition,event.units_per_meter);place->motion.rail_seconds=state.definition->presentation.magazine_exit_seconds;}
+							place->motion=magazine_release_flight(*state.definition,event.world,event.units_per_meter,event.at,event.impulse);
 						else if(event.kind==mechanics::effect::live_eject)place->motion.velocity=cartridge_exit_velocity(event.world,event.units_per_meter);
 					}
 					last_event = n;
@@ -272,7 +273,7 @@ namespace vr::gameplay::weapons::physical_reload
 				{ drop.active = false; continue; }
 				const auto age = std::chrono::duration<float>(now-drop.event.at).count();
 				if (age < 0 || age > 1.2f) { drop.active = false; continue; }
-				if (drop.event.kind == mechanics::effect::magazine_out)
+				if (drop.motion.rail_seconds>0)
 				{
 					// Stay on this gun's rail until the whole magazine clears the mouth.
 					// Only then freeze its release pose/velocity and apply world gravity.

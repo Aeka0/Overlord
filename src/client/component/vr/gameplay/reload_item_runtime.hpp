@@ -1,6 +1,7 @@
 #pragma once
 #include "reload_item.hpp"
 #include "hand_interaction/frame.hpp"
+#include <optional>
 
 namespace vr::gameplay::hands {struct interaction_rig;}
 namespace vr::gameplay::weapons {struct reload_profile;struct cylinder_profile;}
@@ -10,7 +11,7 @@ namespace vr::gameplay::reload_items
 	bool can_release(const weapons::reload_profile*)noexcept;
 	bool can_release(const weapons::cylinder_profile*)noexcept;
 	key reserve(weapons::weapon_identity,const weapons::reload_profile*,int rounds,const anchor& world,
-		float units,std::uint64_t reference,clock::time_point at,bool ejected)noexcept;
+		float units,std::uint64_t reference,clock::time_point at,bool ejected,const std::optional<motion::release_impulse>& impulse={})noexcept;
 	key reserve(weapons::weapon_identity,const weapons::cylinder_profile*,int rounds,const anchor& world,
 		float units,std::uint64_t reference,clock::time_point at)noexcept;
 	void complete_release(key,bool committed)noexcept;

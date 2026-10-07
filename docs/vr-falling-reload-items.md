@@ -15,12 +15,19 @@ independent acquisitions: interception requires an actually free hand.
 
 ## Motion and contact
 
-Simulation and presentation share `reload_item::flight`. Button/latch ejections
-follow the existing authored magazine rail before detaching into gravity. A
+Simulation and presentation share `reload_item::flight`. Ordinary controller-button
+ejections follow the authored magazine rail before detaching into gravity.
+Accepted spare-magazine strikes release immediately from the attached pose; a
 released held item begins free fall from its current hand pose. As with the
 previous cosmetic drops, the airborne window lasts at most 1.2 seconds. Native
 world tracing ends it on a solid impact; ground pickup/resting item persistence
 is outside this change.
+
+Opted-in latch/paddle strikes immediately add a bounded impact vector and rotation
+about the magazine body centre. A struck physical release button starts directly
+under gravity without impact velocity or spin. Simulation and final
+rendering consume the same immutable release motion, including cosmetic overflow;
+see [latch release motion](vr-magazine-latch-contact.md#release-motion).
 
 The capture shape uses the actual immutable magazine body or loader body bounds,
 with 65 mm hand-contact slack. A bounded relative-motion box sweep catches fast

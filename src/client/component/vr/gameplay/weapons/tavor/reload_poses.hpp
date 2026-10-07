@@ -37,7 +37,7 @@ inline constexpr std::array<joint_pose, 18> magazine_fingers{{
 }};
 inline const auto& action_fingers=handle_pose_fingers_0;
 
-inline constexpr magazine_latch_profile forward_latch{{-4.55079417f,0,.82216103f},{-1,0,0}};
+inline constexpr magazine_latch_profile forward_latch{{-4.55079417f,0,.82216103f},{-1,0,0},true};
 inline constexpr magazine_contact_profile contacts{{4.43713816f, 1.15941152f, 1.23088570f},{-8.27343516f, -0.53969096f, -4.64310763f},{-3.68069396f, 0.53969096f, 2.87743736f},magazine_latch,strike_regions,&forward_latch};
 inline constexpr float action_stroke_m=0.11374228f;
 }

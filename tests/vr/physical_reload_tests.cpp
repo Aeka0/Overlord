@@ -43,6 +43,7 @@ using vr::hand;
 #include "tavor_latch_tests.hpp"
 #include "weapon_sound_slice_tests.hpp"
 #include "reload_item_tests.hpp"
+#include "magazine_release_motion_tests.hpp"
 #include "supply_exchange_tests.hpp"
 #include "handle_refinement_tests.hpp"
 #include "weapon_polish_tests.hpp"
@@ -97,6 +98,7 @@ struct fixture
 	int attempts{}, commits{}, spent{};
 	int audible{}, silent{};
 	m::effect last_effect{};
+	std::optional<p::magazine_strike> committed_strike;
 	fixture(const w::reload_profile* definition = nullptr)
 	{
 		if (definition)
@@ -125,6 +127,7 @@ struct fixture
 		native = tx.after; spent += tx.rounds_spent; ++commits;
 		if (tx.silent) ++silent; else ++audible;
 		last_effect = tx.feedback;
+		committed_strike=control.release_strike();
 		return true;
 	}
 	void step(bool advance = true)
@@ -182,6 +185,7 @@ int main()
 	magazine_orientation_tests::run(check);
 	tavor_latch_tests::run(check);
 	reload_item_tests::run<fixture>(check);
+	magazine_release_motion_tests::run<fixture>(check);
 	supply_exchange_tests::run<fixture>(check);
 	handle_refinement_tests::run<fixture>(check);
 	left_handle_tests::run<fixture>(check);

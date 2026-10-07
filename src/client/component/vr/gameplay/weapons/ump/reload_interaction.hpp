@@ -20,6 +20,7 @@ namespace vr::gameplay::weapons::ump
 	    .latch_min_travel = physical_reload::defaults::magazine_latch_min_travel_m,
 	    .latch_direction = {1, 0, 0},
 	    .spare_strike = true,
+	    .latch_impulse = true,
 	};
 	inline constexpr physical_reload::handle_catch manual_catch{};
 	// Native rear stroke; the shared catch handles lift, roll and palm impact.

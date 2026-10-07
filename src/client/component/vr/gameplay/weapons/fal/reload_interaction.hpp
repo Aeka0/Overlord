@@ -17,6 +17,7 @@ namespace vr::gameplay::weapons::fal
 	    .latch_min_speed = physical_reload::defaults::magazine_latch_min_speed_mps,
 	    .latch_min_travel = physical_reload::defaults::magazine_latch_min_travel_m,
 	    .latch_direction = {1, 0, 0},
+	    .latch_impulse = true,
 	};
 	// Native first_pullout j_bolt handle stroke: 143.65 mm, non-reciprocating.
 	// The internal bolt surface shares this bone; its reviewed mesh partition

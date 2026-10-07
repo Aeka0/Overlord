@@ -19,6 +19,7 @@
 #include "physical_reload_contact_sample.hpp"
 #include "reload_item_runtime.hpp"
 #include "reload_item_compatibility.hpp"
+#include "magazine_release_motion.hpp"
 #include "component/command.hpp"
 #include "component/console.hpp"
 #include "component/scheduler.hpp"
@@ -92,13 +93,17 @@ namespace vr::gameplay::weapons::physical_reload
 		}
 		bool commit(instance& value, const mechanics::transaction& tx, bool direct_load=false)
 		{
+			std::optional<motion::release_impulse> impulse;
+			if(tx.feedback==mechanics::effect::magazine_out && value.gesture.release_strike())
+				impulse=magazine_release_impulse(*value.view.definition,*value.gesture.release_strike(),
+					value.last_scene.attached_world,value.last_scene.units_per_meter);
 			reload_items::key released;
 			if(tx.item_released)
 			{
 				const auto& s=value.last_scene;
 				released=reload_items::reserve(value.view.owner.id(),value.view.definition,tx.rounds_to_item,
 					tx.feedback==mechanics::effect::magazine_out?s.attached_world:s.held_world,s.units_per_meter,
-					s.input.reference_generation,clock::now(),tx.feedback==mechanics::effect::magazine_out);
+					s.input.reference_generation,clock::now(),tx.feedback==mechanics::effect::magazine_out,impulse);
 				if(!released)return false;
 			}
 			if (!native_ammunition::compare_commit_owned(server_ps,value.view.owner.id(),tx.before,tx.after))
@@ -120,7 +125,7 @@ namespace vr::gameplay::weapons::physical_reload
 				 tx.feedback == mechanics::effect::live_eject ? value.last_scene.ejection_world :
 				 direct_load || tx.feedback == mechanics::effect::magazine_out ? value.last_scene.attached_world : value.last_scene.held_world,
 				 value.last_scene.units_per_meter,value.last_scene.attached_world,
-				 tx.feedback==mechanics::effect::magazine_out ? value.view.ammo.magazine_rounds : value.view.ammo.held_rounds,tx.item_released};
+				 tx.feedback==mechanics::effect::magazine_out ? value.view.ammo.magazine_rounds : value.view.ammo.held_rounds,tx.item_released,impulse};
 			if (!tx.silent) emit_feedback(value, tx.feedback);
 			return true;
 		}

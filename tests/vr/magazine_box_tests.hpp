@@ -57,7 +57,9 @@ namespace magazine_box_tests
 			auto b=a;b.frame.rotation={0,.5735764364f,0,.8191520443f};
 			check(p::closest_box(a,0).distance>tuning.latch_rearm_radius && p::closest_box(b,0).distance>tuning.latch_radius,"rotational sweep begins separated and ends outside contact");
 			p::magazine_latch_contact detector;(void)detector.update(tuning,a,epoch,.6f);
-			check(detector.update(tuning,b,epoch+30ms,.6f),"rotating end plate retains swept volume contact and material-point direction");
+			p::magazine_strike strike;
+			check(detector.update(tuning,b,epoch+30ms,.6f,&strike) && strike.velocity[0]>0,
+				"rotating end plate retains swept contact and material-point velocity despite a stationary body origin");
 		}
 		{
 			// A point in the enclosing axis-aligned bounds is not necessarily in

@@ -20,7 +20,8 @@ namespace vr::gameplay::weapons::physical_reload
 		        .latch_min_speed = defaults::magazine_latch_min_speed_mps,
 		        .latch_min_travel = defaults::magazine_latch_min_travel_m,
 		        .latch_direction = {1, 0, 0},
-		        .spare_strike = true};
+		        .spare_strike = true,
+		        .latch_impulse = true};
 	}
 
 	inline bool valid(const magazine_manipulation& p) noexcept
@@ -66,6 +67,11 @@ namespace vr::gameplay::weapons::physical_reload
 		}
 		return true;
 	}
+	struct magazine_strike
+	{
+		vec velocity{}; // Winning material point, gun-local metres/second.
+		bool second_latch{};
+	};
 	// A stroke is consumed on contact even if the native compare fails. Only a
 	// fresh separated approach can try again. This also handles spawn-in-contact,
 	// tracking jumps, very slow overlaps and frame-rate-independent swept impacts.
@@ -75,8 +81,9 @@ namespace vr::gameplay::weapons::physical_reload
 		using clock=std::chrono::steady_clock;
 		void reset() noexcept { *this={}; }
 		bool update(const magazine_manipulation& p,const box_motion& current,
-			clock::time_point at,float max_step) noexcept
+			clock::time_point at,float max_step,magazine_strike* strike=nullptr) noexcept
 		{
+			if(strike)*strike={};
 			if(!valid(p) || !valid(current) || !std::isfinite(max_step) || max_step<=0){reset();return false;}
 			const float dt=std::chrono::duration<float>(at-at_).count();
 			const box_sweep sweep(previous_,current);
@@ -92,8 +99,12 @@ namespace vr::gameplay::weapons::physical_reload
 				// Follow the same material point through all poses; changing closest
 				// corners cannot manufacture speed or accumulated approach travel.
 				const auto before=box_point(previous_.frame,local),now=box_point(current.frame,local),start=box_point(start_,local);
-				hit|=hands::dot(hands::sub(now,before),p.latch_direction)>=p.latch_min_speed*dt &&
-					hands::dot(hands::sub(now,start),p.latch_direction)>=p.latch_min_travel && hands::dot(before,p.latch_direction)<0;
+				if(!hit && hands::dot(hands::sub(now,before),p.latch_direction)>=p.latch_min_speed*dt &&
+					hands::dot(hands::sub(now,start),p.latch_direction)>=p.latch_min_travel && hands::dot(before,p.latch_direction)<0)
+				{
+					hit=true;
+					if(strike)strike->velocity=hands::scale(hands::sub(now,before),1/dt);
+				}
 			}
 			if(entered)armed_=false;
 			else if(separated && !armed_){armed_=true;start_=current.frame;}
@@ -111,12 +122,18 @@ namespace vr::gameplay::weapons::physical_reload
 	public:
 		void reset() noexcept {first_.reset();second_.reset();}
 		bool update(const magazine_manipulation& p,const magazine_contact& c,
-			magazine_latch_contact::clock::time_point at,float max_step) noexcept
+			magazine_latch_contact::clock::time_point at,float max_step,magazine_strike* strike=nullptr) noexcept
 		{
+			if(strike)*strike={};
 			if(!valid(c) || !c.strike){reset();return false;}
-			bool hit=first_.update(p,*c.strike,at,max_step);
+			bool hit=first_.update(p,*c.strike,at,max_step,strike);
 			if(c.second_strike)
-			{auto policy=p;policy.latch_direction=c.second_strike->direction;hit=second_.update(policy,c.second_strike->motion,at,max_step) || hit;}
+			{
+				auto policy=p;policy.latch_direction=c.second_strike->direction;magazine_strike second;
+				const bool other=second_.update(policy,c.second_strike->motion,at,max_step,&second);
+				if(other && !hit && strike){*strike=second;strike->second_latch=true;}
+				hit=hit || other;
+			}
 			else second_.reset();
 			if(hit)reset();
 			return hit;

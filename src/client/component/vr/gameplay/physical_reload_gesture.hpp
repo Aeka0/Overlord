@@ -146,6 +146,8 @@ namespace vr::gameplay::weapons::physical_reload
 		const geometry& examined() const noexcept { return examined_; }
 		const slap_trace& slap_diagnostics() const noexcept { return slap_trace_; }
 		mechanics::effect feedback_effect() const noexcept { return feedback_; }
+		// Available only inside the synchronous knock transaction callback.
+		const std::optional<magazine_strike>& release_strike()const noexcept{return release_strike_;}
 		void seat_external(const geometry& g,const controller_input::frame& input,const hold& owner,clock::time_point now)noexcept
 		{
 			resume_input(g,input,owner,now);
@@ -445,9 +447,12 @@ namespace vr::gameplay::weapons::physical_reload
 				}
 				if (p.manual_magazine && p.manual_magazine->spare_strike && s.magazine_inserted)
 				{
-					if (latch_contact_.update(*p.manual_magazine,g.magazine,input.sampled_at,p.max_contact_step))
+					magazine_strike strike;
+					if (latch_contact_.update(*p.manual_magazine,g.magazine,input.sampled_at,p.max_contact_step,&strike))
 					{
+						release_strike_=strike;
 						const bool knocked=apply(mechanics::operation::knock_magazine,offhand);
+						release_strike_.reset();
 						decision_=knocked ? "spare magazine released latch" : "latch transaction rejected";
 						well_contact_=false; previous_tip_=g.magazine_top_in_well;
 						if (knocked){require_withdrawal_=true;insert_after_=now+std::chrono::milliseconds(300);}
@@ -659,6 +664,7 @@ namespace vr::gameplay::weapons::physical_reload
 		std::uint8_t magazine_pose_{};
 		bool knife_slide_grasp_{}; // Likewise, returning the knife cannot reselect the held slide style.
 		magazine_latch_contacts latch_contact_{};
+		std::optional<magazine_strike> release_strike_;
 		handle_slap slap_{};
 		receiver_paddle_slap receiver_slap_{};
 		slap_trace slap_trace_{};

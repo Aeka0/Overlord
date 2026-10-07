@@ -42,6 +42,8 @@ namespace vr::gameplay::weapons::physical_reload
 		// to the two authored grasps. Different finger points/box sizes do not
 		// provide comparable distances. Outside overlaps, contact alone suffices.
 		bool prefer_grasp_facing{};
+		// A struck paddle can impart motion; a release button only unlocks the feed.
+		bool latch_impulse{};
 	};
 
 	// Immutable interaction configuration. Distances are metres; cosine values

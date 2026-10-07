@@ -5,6 +5,7 @@
 #include "hand_interaction/frame.hpp"
 #include "hands/contact.hpp"
 #include "quick_reload.hpp"
+#include "falling_trajectory.hpp"
 
 namespace vr::gameplay::weapons::physical_reload
 {
@@ -51,6 +52,7 @@ namespace vr::gameplay::weapons::physical_reload
 			hands::anchor attached_world{}; // parent pose at commit for weapon-local seating
 			int magazine_rounds{}; // Visual drop snapshot, not an ammunition authority.
 			bool recoverable{}; // Independent item owns the payload and its rendering.
+			std::optional<motion::release_impulse> impulse; // Accepted strike; zero impulse still releases immediately.
 		};
 		bool active{}, fault{}, slide_held{}, magazine_seated{};
 		quick_reload::dwell quick_load{};

@@ -7,6 +7,7 @@
 #include "physical_reload_presenter.hpp"
 #include "falling_rail_presentation.hpp"
 #include "magazine_grip_selection.hpp"
+#include "magazine_release_motion.hpp"
 #include "magazine_well_contact.hpp"
 #include "equipment_runtime.hpp"
 #include "knife_profile.hpp"
@@ -219,12 +220,12 @@ namespace vr::gameplay::reload_items
 	{return server() && running() && owned.room() && p && bool(pr::magazine_assets::get(p,0).model);}
 	bool can_release(const w::cylinder_profile* p)noexcept
 	{return server() && running() && owned.room() && p && bool(w::cylinder::loader_visual(p,0));}
-	key reserve(w::weapon_identity origin,const w::reload_profile* p,int rounds,const anchor& world,float units,std::uint64_t ref,clock::time_point at,bool ejected)noexcept
+	key reserve(w::weapon_identity origin,const w::reload_profile* p,int rounds,const anchor& world,float units,std::uint64_t ref,clock::time_point at,bool ejected,const std::optional<motion::release_impulse>& impulse)noexcept
 	{
 		if(!can_release(p) || ref!=reference)return {};
 		const auto ammo_key=w::native_ammunition::reserve_identity(player,origin);if(!ammo_key)return {};
 		flight motion;motion.start=world;motion.units=units;motion.born=at;
-		if(ejected){motion.rail=w::magazine_exit_translation(*p,units);motion.rail_seconds=p->presentation.magazine_exit_seconds;motion.advance(at);}
+		if(ejected)motion=w::magazine_release_flight(*p,world,units,at,impulse);
 		const auto id=owned.reserve(kind::magazine,origin,rounds,p->ammunition.magazine_capacity,ref,motion);
 		if(id){sources[id.slot]={};sources[id.slot].magazine=p;sources[id.slot].reserve_key=ammo_key;}return id;
 	}

@@ -17,6 +17,7 @@ namespace vr::gameplay::weapons::famas
 	    .latch_min_travel = physical_reload::defaults::magazine_latch_min_travel_m,
 	    .latch_direction = {-1, 0, 0},
 	    .spare_strike = true,
+	    .latch_impulse = true,
 	};
 	// Native reload/fire moves j_bolt 82.55 mm. The retained empty pose is an
 	// authored presentation of the requested follower lock, not empty_additive.

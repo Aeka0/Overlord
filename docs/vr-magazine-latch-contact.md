@@ -55,6 +55,32 @@ contact consumption, native write failure and the 299/300 ms insertion boundary.
 Offline source checks verify every body vertex is inside its compiled collider.
 Headset acceptance remains a separate check of reach and physical feel.
 
+## Release motion
+
+Successful paddle/latch strikes immediately impart directional velocity and tumble
+to the old magazine. AK47, M14/M21, Dragunov, FAL, M200, MP5K, UMP45, FAMAS and
+Tavor's forward paddle opt in, including their registered variants. AUG, FN2000
+and Tavor's rear release button immediately fall under gravity when struck with
+a spare, without impact velocity or spin. Ordinary controller-button releases
+retain their authored rail-and-gravity drop.
+
+The accepted sweep supplies the velocity of its winning material point, including
+lateral and rotational motion. The shared response transfers 80% of that vector,
+capped at 3 m/s in total, rather than per axis. The lever from the magazine body enclosure's centre
+to the struck hardware determines the tumble axis, capped at 6 rad/s. This is a
+bounded release response, not a general rigid-body simulation. Tuning is shared
+in `magazine_release_motion.hpp`; release hardware opts in independently.
+
+Every accepted strike bypasses the authored exit rail and starts free flight at
+the attached magazine's exact pose. No exit offset, delay or extra rail velocity
+is added. Rotation is about the body enclosure's centre, and gravity acts from
+the release time on the same analytic trajectory used by simulation, catches and
+final rendering. A later moving gun cannot pull the item along. The same release
+constructor and immutable snapshot also supply cosmetic overflow drops. Failed native
+transactions, consumed approaches, ordinary hand release and later button presses
+cannot reuse a previous strike. Headset acceptance of strength and tumble remains
+separate from automated motion and transaction checks.
+
 ## Tavor's two releases
 
 Tavor has separate rear-button and forward-paddle contacts. The rear button is
