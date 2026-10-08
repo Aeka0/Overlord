@@ -10,7 +10,13 @@ Reposting is welcome; please include a link to this GitHub Repo.
 
 Overlord is a VR mod for *Call of Duty: Modern Warfare 2 Campaign Remastered*. It adds native stereoscopic rendering, 6DOF head and hand tracking, physical weapon handling, and VR interactions for equipment, environments, and story sequences to the original campaign. The adaptations build on the game's existing weapon, ammunition, animation, and mission logic, preserving the original story presentation wherever possible.
 
-> This is currently a Beta release. You are likely to encounter adaptation issues in some scenes or story scripts during play. Reports of problems and suggestions for improving the experience are welcome. Custom mods made for the non-VR client are not expected to work with Overlord. Large code changes and refactoring may still take place, so developing mods at this stage is not recommended. Version updates may also break game saves and progress.
+### **Overlord is maintained by one person and is still in Beta, with no stable release yet. The project is undergoing intensive development. Many features have only been tested on the author's own machine, substantial compatibility and adaptation work remains, and stability is expected to be poor.**
+
+### **Please keep expectations low and treat the current version as a test rather than a mature product. Please also avoid comparing it with projects that have benefited from a long period of refinement. Crashes and missing visuals have already been reported on many machines, and these problems are still being investigated and fixed.**
+
+### **If you want a version that you can install and start playing with relatively little trouble, please wait for the stable release. If you would like to help improve stability, you are welcome to download, test, and report problems through [Issues](https://github.com/Aeka0/Overlord/issues). Thank you for your interest and support.**
+
+### **You may still encounter adaptation issues in some scenes or story scripts during play. Custom mods made for the non-VR client are not expected to work with Overlord. Large code changes and refactoring may still take place, so developing mods at this stage is not recommended. Version updates may also break game saves and progress.**
 
 ## Known issues:
 
