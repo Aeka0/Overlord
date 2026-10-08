@@ -3,6 +3,7 @@
 #include "component/vr/engine_stereo_draw_indexed.hpp"
 #include "component/vr/native_hud_blend.hpp"
 
+#include <atomic>
 #include <cstdlib>
 #include <cstring>
 #include <iostream>
@@ -32,11 +33,15 @@ namespace
 		// Neither trampoline copy may recursively notify the observer.
 		original(context, count, start, base);
 	}
-	void emit_dynamic_batch(ID3D11DeviceContext* const context,
+	// Replay comparison requires identical native call sites in optimized builds.
+	std::atomic_uint emitted_batches{};
+	__declspec(noinline) void emit_dynamic_batch(ID3D11DeviceContext* const context,
 		const UINT start_index)
 	{
 		context->DrawIndexed(6, start_index, 0);
 		context->DrawIndexed(54, start_index + 6, 0);
+		// Keep the second draw from becoming a tail call into its caller.
+		emitted_batches.fetch_add(1, std::memory_order_relaxed);
 	}
 
 	[[noreturn]] void fail(const char* const message)
@@ -297,6 +302,8 @@ int main()
 	{
 		fail("invalid dynamic-batch counter did not close");
 	}
+	if (emitted_batches.load(std::memory_order_relaxed) != 4)
+		fail("dynamic batch helper did not complete all four batches");
 	const auto invalid = vr::engine_stereo_draw_indexed::compare_replay(
 		natural_batch, invalid_batch);
 	if (!invalid.trace_complete || !invalid.shape_matches ||
@@ -369,6 +376,22 @@ int main()
 		if (!vr::engine_stereo_draw_indexed::install(replacement_context.Get(), 2) ||
 			vr::engine_stereo_draw_indexed::get_hook_status().retained_targets != switched.retained_targets)
 			fail("return to a retained entry replaced/duplicated its trampoline");
+		// Returning to the original entry must resume HUD copying, not merely
+		// preserve a successful install status. Retired contexts remain hooked,
+		// but must never contribute UI to the current device.
+		copy_calls = 0;
+		vr::engine_stereo_draw_indexed::set_draw_copy_observer(copy_draw);
+		context->DrawIndexed(3, 2, -1);
+		if (copy_calls != 0)
+			fail("retired context contributed HUD copies to the current device");
+		replacement_context->DrawIndexed(3, 2, -1);
+		if (copy_calls != 1)
+			fail("return to a retained entry did not resume HUD copying");
+		copy_calls = 0;
+		replacement_context->DrawIndexed(3, 2, -1);
+		vr::engine_stereo_draw_indexed::set_draw_copy_observer(nullptr);
+		if (copy_calls != 1)
+			fail("nested draw guard suppressed a subsequent native HUD draw");
 	}
 	vr::engine_stereo_draw_indexed::invalidate_device(context.Get(), 1);
 	if (vr::engine_stereo_draw_indexed::install(context.Get(), 1) ||

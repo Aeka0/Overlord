@@ -39,6 +39,9 @@ jobs:
           cache: npm
           cache-dependency-path: src/launcher-ui/package-lock.json
 
+      - name: Validate controller bindings
+        run: python -m unittest discover -s tests/vr -p 'test_*binding.py'
+
       - name: Generate projects
         run: tools/premake5.exe vs2022 --with-vr-tests
 
@@ -55,6 +58,12 @@ jobs:
         if: matrix.configuration == 'Debug'
         working-directory: src/launcher-ui
         run: npm test
+
+      - name: Build HUD draw regression probe
+        run: msbuild build/vr-d3d11-draw-indexed-probe.vcxproj /m:2 /v:minimal /p:Configuration=${{ matrix.configuration }} /p:Platform=x64 /p:PreferredToolArchitecture=x64 /p:CL_MPCount=4
+
+      - name: Run HUD draw regression probe
+        run: build/bin/x64/${{ matrix.configuration }}/vr-tests/draw-indexed/vr-d3d11-draw-indexed-probe.exe
 
       - name: Package client overlay
         run: python tools/package_client.py --configuration ${{ matrix.configuration }}

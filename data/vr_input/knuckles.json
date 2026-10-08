@@ -1,6 +1,6 @@
 {
   "name": "H2 VR knuckles",
-  "description": "Left stick moves and clicks to sprint; right stick turns and clicks to jump; independent hand poses.",
+  "description": "Left thumbstick moves/clicks to sprint; right thumbstick turns/clicks to jump. Left A pauses or holds to recenter; right A shows weapon HUD. Grip pressure holds; trigger pull fires; B releases weapon parts.",
   "controller_type": "knuckles",
   "bindings": {
     "/actions/gameplay": {
@@ -37,32 +37,56 @@
         },
         {
           "path": "/user/hand/left/input/a", "mode": "button",
-          "inputs": { "click": { "output": "/actions/gameplay/in/left_primary" } }
+          "inputs": { "click": { "output": "/actions/gameplay/in/menu_recenter" } }
         },
         {
           "path": "/user/hand/right/input/a", "mode": "button",
           "inputs": { "click": { "output": "/actions/gameplay/in/right_primary" } }
         },
         {
-          "path": "/user/hand/left/input/grip", "mode": "grab",
-          "inputs": { "grab": { "output": "/actions/gameplay/in/left_squeeze" } }
+          "path": "/user/hand/left/input/grip", "mode": "button",
+          "inputs": { "click": { "output": "/actions/gameplay/in/left_squeeze" } },
+          "parameters": {
+            "force_input": "force",
+            "click_activate_threshold": "0.15",
+            "click_deactivate_threshold": "0.05",
+            "haptic_amplitude": "0"
+          }
         },
         {
-          "path": "/user/hand/right/input/grip", "mode": "grab",
-          "inputs": { "grab": { "output": "/actions/gameplay/in/right_squeeze" } }
+          "path": "/user/hand/right/input/grip", "mode": "button",
+          "inputs": { "click": { "output": "/actions/gameplay/in/right_squeeze" } },
+          "parameters": {
+            "force_input": "force",
+            "click_activate_threshold": "0.15",
+            "click_deactivate_threshold": "0.05",
+            "haptic_amplitude": "0"
+          }
         },
         {
           "path": "/user/hand/left/input/trigger",
-          "mode": "trigger",
-          "inputs": { "click": { "output": "/actions/gameplay/in/left_trigger" } }
+          "mode": "button",
+          "inputs": { "click": { "output": "/actions/gameplay/in/left_trigger" } },
+          "parameters": {
+            "force_input": "value",
+            "click_activate_threshold": "0.01",
+            "click_deactivate_threshold": "0.005",
+            "haptic_amplitude": "0"
+          }
         },
         {
           "path": "/user/hand/right/input/trigger",
-          "mode": "trigger",
-          "inputs": { "click": { "output": "/actions/gameplay/in/right_trigger" } }
+          "mode": "button",
+          "inputs": { "click": { "output": "/actions/gameplay/in/right_trigger" } },
+          "parameters": {
+            "force_input": "value",
+            "click_activate_threshold": "0.01",
+            "click_deactivate_threshold": "0.005",
+            "haptic_amplitude": "0"
+          }
         },
         {
-          "path": "/user/hand/left/input/joystick",
+          "path": "/user/hand/left/input/thumbstick",
           "mode": "joystick",
           "inputs": {
             "position": {
@@ -74,7 +98,7 @@
           }
         },
         {
-          "path": "/user/hand/right/input/joystick",
+          "path": "/user/hand/right/input/thumbstick",
           "mode": "joystick",
           "inputs": {
             "position": {
@@ -84,6 +108,16 @@
               "output": "/actions/gameplay/in/jump"
             }
           }
+        },
+        {
+          "path": "/user/hand/left/input/trigger", "mode": "button",
+          "parameters": { "haptic_amplitude": "0" },
+          "inputs": { "touch": { "output": "/actions/gameplay/in/left_trigger_touch" } }
+        },
+        {
+          "path": "/user/hand/right/input/trigger", "mode": "button",
+          "parameters": { "haptic_amplitude": "0" },
+          "inputs": { "touch": { "output": "/actions/gameplay/in/right_trigger_touch" } }
         }
       ]
     }
