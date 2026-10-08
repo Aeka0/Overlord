@@ -28,6 +28,7 @@
 #include "engine_stereo_ssr_consumer_probe.hpp"
 #include "engine_view_probe.hpp"
 #include "head_pose_bridge.hpp"
+#include "gameplay/hands/status.hpp"
 #include "native_render_session.hpp"
 #include "vr_runtime.hpp"
 
@@ -856,6 +857,7 @@ namespace vr::diagnostics
 		output << " last_xr_result=" << runtime_status.last_xr_result;
 		output << " (" << available(runtime_status.last_xr_result_name) << ")\n";
 		output << "  last_error=" << available(runtime_status.last_error) << '\n';
+		output << gameplay::hands::status();
 		output << "  native_renderer: ready=" << yes_no(runtime_status.native_renderer_ready);
 		output << " failures=" << runtime_status.native_renderer_failure_count;
 		output << " error=" << available(runtime_status.native_renderer_error) << '\n';
@@ -912,7 +914,7 @@ namespace vr::diagnostics
 			const auto engine_probe = format_engine_probe_text(
 				engine_stereo_probe::get_status());
 			return utils::io::write_file_atomic(
-				"minidumps/overlord-status-latest.txt", status + engine_probe);
+				status_snapshot_path, status + engine_probe);
 		}
 		catch (...)
 		{
@@ -926,16 +928,18 @@ namespace vr::diagnostics
 		{
 			std::string status;
 			std::string engine_probe;
+			bool saved{};
 			{
 				const std::lock_guard lock(status_snapshot_mutex);
 				status = format_status_text(dvar_enabled);
 				engine_probe = format_engine_probe_text(
 					engine_stereo_probe::get_status());
-				(void)utils::io::write_file_atomic(
-					"minidumps/overlord-status-latest.txt", status + engine_probe);
+				saved = utils::io::write_file_atomic(status_snapshot_path, status + engine_probe);
 			}
 			console::print_text(console::con_type_info, status);
 			console::print_text(console::con_type_info, engine_probe);
+			if (saved) console::info("[VR] Complete report saved to %s. Share this file.\n",status_snapshot_path);
+			else console::error("[VR] Report save FAILED; an older file may remain. Share this console output.\n");
 		}
 		catch (...)
 		{

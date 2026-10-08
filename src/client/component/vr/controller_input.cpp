@@ -87,10 +87,11 @@ namespace vr::controller_input
 		stabilization::set_gameplay(active);
 	}
 
-	void invalidate(input_reason reason, input_backend backend, std::int64_t code) noexcept
+	void invalidate(input_reason reason, input_backend backend, std::int64_t code, std::uint64_t initialization) noexcept
 	{
 		frame value;
 		value.sampled_at=clock::now();value.source.backend=backend;value.source.gate={reason,code};
+		value.source.initialization=initialization;
 		publish(value);
 	}
 	input_history_snapshot get_input_history() noexcept

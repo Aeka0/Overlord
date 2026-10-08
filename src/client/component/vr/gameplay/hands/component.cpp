@@ -1,4 +1,5 @@
 #include <std_include.hpp>
+#include "status.hpp"
 #include "../../h2/entrypoints.hpp"
 #include "component/vr/gameplay/hands/rig_builder.hpp"
 #include "component/vr/gameplay/weapon_pose_library.hpp"
@@ -1967,12 +1968,13 @@ namespace vr::gameplay::hands
 			reason = "independent hands applied";
 		}
 
-		void print_status()
+		std::string format_status()
 		{
 			const auto input = controller_input::latest();
 			std::ostringstream text;
 			{
-				const std::lock_guard lock(mutex);
+				const std::unique_lock lock(mutex,std::try_to_lock);
+				if (!lock.owns_lock()) return "[VR hands] snapshot=busy; solver evidence unavailable at report time\n";
 				text << "[VR hands] installed=" << installed
 				     << " enabled=" << (enabled && enabled->current.enabled) << " calls=" << calls
 				     << " applied=" << applications << " skipped=" << skipped
@@ -2049,12 +2051,22 @@ namespace vr::gameplay::hands
 			text << weapons::viewmodel_visibility::status();
 			text << empty_native::status();
 			text << scripted_arms::status();
-			const auto formatted = text.str();
+			return text.str();
+		}
+
+		void print_status()
+		{
+			const auto formatted = format_status();
 			console::info("%s", formatted.c_str());
 			if (!utils::io::write_file_atomic("minidumps/overlord-hands-latest.txt", formatted))
 				console::warn("[VR hands] Could not persist hand status snapshot\n");
 		}
 	} // namespace
+
+	std::string status()
+	{
+		return format_status();
+	}
 
 	class component final : public component_interface
 	{

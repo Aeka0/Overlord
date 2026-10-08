@@ -32,6 +32,14 @@ existing controller publication lock in `../controller_input.cpp`; the formatter
 does not query a runtime or reset observations. Keep action availability,
 runtime focus, recorded loss conditions and native gameplay acceptance distinct.
 
+`steamvr_input_status.hpp` formats immutable setup/binding snapshots and a bounded
+runtime-event history collected by `../steamvr_input_diagnostics.cpp` on the
+OpenVR owner. The first failure survives later focus changes and event eviction.
+The coordinator also reuses `gameplay/hands/status.hpp` for solver and native
+presentation evidence; busy hand producers are reported without waiting for
+their locks. Both status commands save the complete report, and the input
+command ends with the compact overview for screenshot-only reports.
+
 The status file lock still covers the entire format-and-replace transaction.
 Do not parallelize report sections or move formatting outside that lock: doing
 so could mix stream state, reorder observations, or allow an older snapshot to

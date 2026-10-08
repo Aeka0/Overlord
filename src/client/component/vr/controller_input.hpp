@@ -108,7 +108,8 @@ namespace vr::controller_input
 
 	void publish(const frame& value) noexcept;
 	void invalidate(input_reason reason = input_reason::runtime_reset,
-		input_backend backend = input_backend::unknown, std::int64_t code = 0) noexcept;
+		input_backend backend = input_backend::unknown, std::int64_t code = 0,
+		std::uint64_t initialization = 0) noexcept;
 	void set_gameplay_active(bool active) noexcept;
 	[[nodiscard]] frame latest() noexcept;
 }

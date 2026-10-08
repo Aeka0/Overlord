@@ -73,10 +73,12 @@ namespace vr::controller_input
 	{
 		input_reason reason{input_reason::not_sampled};
 		std::int64_t code{}; // Backend API result; interpreted together with backend and reason.
+		std::uint64_t handle{}; // Queried OpenVR action/set, zero when not applicable.
 	};
 	struct input_observation
 	{
 		input_backend backend{};
+		std::uint64_t initialization{}; // Producer initialization attempt, not the recenter generation.
 		bool runtime_focus{}; // Availability before action synchronization, separate from frame.focused.
 		bool runtime_focus_known{}; // False when a lifecycle/tracking failure prevented the query.
 		input_condition gate{};

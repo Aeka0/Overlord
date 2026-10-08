@@ -276,7 +276,8 @@ namespace vr::gameplay::weapons::viewmodel_visibility
 	}
 	std::string status()
 	{
-		const std::lock_guard lock(variants_mutex);
+		const std::unique_lock lock(variants_mutex,std::try_to_lock);
+		if(!lock.owns_lock())return "part_visibility snapshot=busy\n";
 		return std::format("part_visibility=surface/rigid_groups/skinned_groups hooks={}/{}/{} variants={}/{} skin_variants={}/{} filtered={} rejected={}\n",
 			hidden_ready.load(),rigid_ready.load(),skin_ready.load(),variants.size(),variants.capacity,skin_variant_count,skin_variants.size(),filtered.load(),rejected.load());
 	}

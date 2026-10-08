@@ -780,6 +780,7 @@ namespace vr::openvr
 
 		void publish_status_locked() noexcept
 		{
+			status_.openvr_input_diagnostics = input_actions_.diagnostics();
 			status_.frame_phase = frame_phase_name(frame_phase_);
 			status_.present_handoff_pending =
 				frame_phase_ == frame_phase::submitted_waiting_present;
@@ -1516,7 +1517,7 @@ namespace vr::openvr
 			status_.application_registered = status_.application_registration_error.empty();
 			// Valve requires manifest registration before the first PollNextEvent.
 			// Input failure is reported separately; it must not destroy GPU ownership.
-			status_.controller_input_ready = input_actions_.initialize();
+			status_.controller_input_ready = input_actions_.initialize(system_);
 			status_.controller_input_error = input_actions_.error();
 			status_.runtime_name = tracked_string(system_, Prop_TrackingSystemName_String);
 			if (status_.runtime_name.empty()) status_.runtime_name = "SteamVR";
@@ -1855,6 +1856,7 @@ namespace vr::openvr
 			VREvent_t event{};
 			while (system_->PollNextEvent(&event, sizeof(event)))
 			{
+				input_actions_.observe_event(event);
 				if (event.eventType == VREvent_Quit)
 				{
 					diagnostics::record_trace(diagnostics::trace_event::runtime_event,

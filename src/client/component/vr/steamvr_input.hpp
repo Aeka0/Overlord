@@ -4,6 +4,7 @@
 #include <array>
 #include <string>
 #include "controller_input.hpp"
+#include "steamvr_input_diagnostics.hpp"
 
 namespace vr::steamvr_input
 {
@@ -11,11 +12,13 @@ namespace vr::steamvr_input
 	class actions
 	{
 	  public:
-		bool initialize();
+		bool initialize(IVRSystem* system);
 		void sample(bool focused,
 		            controller_input::input_reason unavailable_reason =
 		                controller_input::input_reason::input_unavailable) noexcept;
 		void reset() noexcept;
+		void observe_event(const VREvent_t& event) noexcept;
+		[[nodiscard]] const diagnostic_snapshot& diagnostics() const noexcept { return diagnostics_; }
 		[[nodiscard]] const std::string& error() const noexcept
 		{
 			return error_;
@@ -23,6 +26,23 @@ namespace vr::steamvr_input
 
 	  private:
 		IVRInput* input_{};
+		IVRSystem* system_{}; // Borrowed from the same runtime owner.
+		struct action_setup
+		{
+			const char* name{};
+			const char* type{};
+			VRActionHandle_t handle{};
+			int code{-1};
+		};
+		std::array<action_setup, 22> setup_actions_{};
+		std::size_t setup_action_count_{};
+		int manifest_code_{-1}, set_code_{-1};
+		std::string manifest_path_;
+		diagnostic_snapshot diagnostics_;
+		unsigned probe_count_{};
+		bool probe_pending_{}, sample_failed_{};
+		void capture_setup() noexcept;
+		void capture_probe(bool input_failed = false) noexcept;
 		VRActionSetHandle_t set_{};
 		VRActionHandle_t move_{};
 		VRActionHandle_t turn_{};

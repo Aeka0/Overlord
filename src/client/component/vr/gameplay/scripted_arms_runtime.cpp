@@ -245,7 +245,8 @@ namespace vr::gameplay::scripted_arms
     }
     std::string status()
     {
-        const std::lock_guard lock(mutex);
+        const std::unique_lock lock(mutex,std::try_to_lock);
+        if(!lock.owns_lock())return "scripted_arms snapshot=busy\n";
         return std::format("scripted_arms={} entity={} profile={} valid={} evaluations={} applications={} rejections={} tag_only_queries={} stretch_limit=1 tracked={} blend_left={} blend_right={}\n",
             reason,bound.key.entity,int(bound.key.profile),bound.valid,evaluations,applications,rejections,tag_only_queries,tracked,weights[0],weights[1]);
     }

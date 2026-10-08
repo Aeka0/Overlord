@@ -55,17 +55,62 @@ Common topic-specific commands are listed below with their registered spelling a
 | HUD / narrative | `vr_weaponHud_status`, `vr_narrative_status` | [Weapon HUD](vr-weapon-hud.md), [narrative UI](vr-narrative-ui.md) |
 | Terrain | `vr_tessellation_status` | [Shared tessellation](vr-shared-tessellation-and-head-pitch.md) |
 
-These commands primarily provide snapshots. The shared file path above is documented here only for `vr_status`; do not assume other commands generate equivalent files. `vr_reinit` and `vr_recenter` change state, so preserve the original symptom evidence before running them.
+Both `vr_status` and `vr_input_status` save the complete report to the shared file path above and explicitly report whether saving succeeded. Other topic commands primarily print snapshots. `vr_reinit` and `vr_recenter` change state, so preserve the original symptom evidence before running them.
 
 ### Controller input: one report after the problem
 
-For an input problem, ask the player to close the VR dashboard, return to the
-game, release the controller buttons and sticks, then try moving each hand,
-moving a stick, and pressing a trigger. Run `vr_status` once and share
-`minidumps/overlord-status-latest.txt`. The player does not need to compare
-several logs or interpret individual counters. Do this before restarting the
+For an input problem, ask the player to run either `vr_input_status` or
+`vr_status` once and share `minidumps/overlord-status-latest.txt`. Both commands
+save the complete runtime report, including device and input evidence. No
+precise sequence of dashboard, controller or logging operations is required.
+The player does not need to compare logs or interpret counters. Do this before restarting the
 game; input history is retained across runtime reinitialization within the
 process, but a new process starts a new history.
+
+The first recorded input API failure also schedules one automatic save to the
+same report path from the existing background scheduler, after a one-second
+settling interval. This works without a console command or debug probes enabled.
+It does not write on every frame or every focus change. A failed automatic save
+is reported explicitly; either manual command can retry. A later manual report
+replaces the file with current state and the retained process history.
+
+The same report includes the existing hand solver, model/rig, empty-hand,
+scripted-arm and viewmodel visibility status. A busy solver is marked as busy
+instead of blocking report collection. This makes valid controller poses with
+rejected or suppressed arm presentation distinguishable without asking for a
+second specialized command. The input command repeats a compact summary at the
+bottom so screenshots still include the key evidence and the saved report path.
+
+The summary counts actual action channels rather than treating successful
+focus/action synchronization as working controllers. Each hand's grip and aim
+availability is reported separately. First and latest API failures retain the
+backend, symbolic OpenVR input error, queried handle, initialization attempt,
+sequence, reference, focus and gameplay context. Per-channel first/latest direct
+action rejections survive later dashboard focus loss, runtime reinitialization,
+and eviction from the recent transition ring. Recovery and API-failure sample
+counts distinguish an ongoing failure from a recovered incident.
+
+OpenVR additionally retains the first/latest setup, first/latest binding probe,
+first failed probe, first binding/manifest load-failure event and eight recent
+device/input events. Setup reports the installed manifest path, bounded JSON
+inspection, declared action types, default binding file availability and exact
+handle lookup results. Runtime probes record the registered application and
+action manifest, headset/controller models, drivers, controller types, input
+profiles and binding sources. Unavailable metadata is explicit; serial numbers
+are not collected. These observations do not change input admission or repair
+bindings automatically.
+
+Observed runtime events carry their raw application/path handles; their
+application attribution is explicitly unverified. A load-failure event alone
+must not be attributed to this game without corroborating setup/query evidence.
+
+File inspection happens at initialization only, with a 1 MiB per-file limit,
+32-level JSON nesting limit and at most 16 local default binding files. Runtime
+probes are coalesced on initialization, a new API failure or relevant runtime
+events, with at most four probes per initialization and the final slot reserved
+for an input API failure. Skipped probes, collection
+failures and discarded events are reported. Frame history uses fixed storage;
+reporting reads cached evidence without calling SteamVR or reading input files.
 
 Both `vr_input_status` and the saved report include a bounded `input_history`
 section. Each hand pose and major action reports `ever_valid`, `valid_samples`,

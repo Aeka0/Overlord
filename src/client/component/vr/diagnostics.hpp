@@ -138,6 +138,7 @@ namespace vr::diagnostics
 	[[nodiscard]] gpu_interop_watchdog_status get_gpu_interop_watchdog_status() noexcept;
 
 	void print_status(bool dvar_enabled);
+	inline constexpr const char* status_snapshot_path = "minidumps/overlord-status-latest.txt";
 	[[nodiscard]] bool write_status_snapshot(bool dvar_enabled) noexcept;
 	bool write_soft_freeze_report(const d3d11::graphics_status& graphics,
 		std::chrono::milliseconds age);

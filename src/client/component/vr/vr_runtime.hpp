@@ -7,6 +7,7 @@
 
 #include "component/d3d11.hpp"
 #include "frame_capture.hpp"
+#include "steamvr_input_diagnostics.hpp"
 
 namespace vr
 {
@@ -193,6 +194,7 @@ namespace vr
 		std::array<std::string, 2> controller_reference_ids;
 		std::string controller_pose_reference_error;
 		std::string controller_input_error;
+		steamvr_input::diagnostic_snapshot openvr_input_diagnostics;
 		std::string runtime_manifest;
 		std::string runtime_library;
 		std::string system_name;

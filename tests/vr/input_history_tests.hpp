@@ -52,8 +52,8 @@ void input_history_tests(const Check& check)
 	f.source.backend=input_backend::openxr;f.sampled_at=failed.sampled_at+10ms;history.observe(f);
 	s=history.snapshot();
 	check(s.channels[focus].valid && s.channels[focus].losses==1 && s.channels[focus].last_loss.code==17 &&
-		s.channels[focus].last_loss_backend==input_backend::openvr && s.last_api_error.code==17 &&
-		s.last_api_error_backend==input_backend::openvr && s.invalidations==1,
+		s.channels[focus].last_loss_backend==input_backend::openvr && s.last_api_failure.condition.code==17 &&
+		s.last_api_failure.backend==input_backend::openvr && s.invalidations==1,
 		"reinitialization and backend recovery cannot erase the original loss or API error");
 	check(lost.channels[focus].last_loss_runtime_focus && lost.channels[focus].last_loss_runtime_focus_known &&
 		lost.channels[focus].last_loss_gameplay_active &&
@@ -82,4 +82,45 @@ void input_history_tests(const Check& check)
 	report.str("");report.clear();vr::diagnostics::append_input_history(report,unobserved.snapshot(),f.sampled_at);
 	check(report.str().find("sample_age_ms=-1")!=std::string::npos &&
 		report.str().find("No controller action samples")!=std::string::npos,"reporting before any sample is explicit and safe");
+
+	// Reproduce the user report: UpdateActionState succeeds, every action handle
+	// fails, then the dashboard masks current queries and evicts recent history.
+	input_history invalid_handles;
+	frame broken{};
+	broken.sequence=1;broken.sampled_at=clock::time_point{2s};broken.reference_generation=2;
+	broken.source.backend=input_backend::openvr;broken.source.initialization=7;
+	broken.source.runtime_focus=broken.source.runtime_focus_known=broken.focused=true;
+	broken.source.gate={input_reason::none};
+	for(std::size_t i=1;i<input_channel_count;++i)
+		broken.source.channels[i]={input_reason::action_query_failed,3,100+i};
+	invalid_handles.set_gameplay_active(true);
+	invalid_handles.observe(broken);
+	broken.sampled_at+=10ms;++broken.sequence;invalid_handles.observe(broken);
+	report.str("");report.clear();vr::diagnostics::append_input_history(report,invalid_handles.snapshot(),broken.sampled_at);
+	check(report.str().find("never been available")!=std::string::npos &&
+		report.str().find("name=InvalidHandle")!=std::string::npos,
+		"successful synchronization cannot claim that failed controller actions worked");
+	for(unsigned i=0;i<20;++i)
+	{
+		broken.focused=broken.source.runtime_focus=false;
+		broken.source.gate={i%2?input_reason::input_unavailable:input_reason::runtime_reset};
+		broken.sampled_at+=10ms;++broken.sequence;invalid_handles.observe(broken);
+	}
+	const auto retained=invalid_handles.snapshot();
+	check(retained.transitions_discarded>0 && retained.first_api_failure.condition.handle==101 &&
+		retained.first_api_failure.initialization==7 && retained.first_api_failure.gameplay_active &&
+		retained.channels[left].last_action_rejection.condition.code==3 &&
+		retained.channels[left].api_failure_samples==2,
+		"first API context and each hand's query failure survive dashboard churn and ring eviction");
+	broken.source.backend=input_backend::openxr;broken.source.initialization=8;
+	broken.focused=true;broken.source.gate={input_reason::none};
+	broken.grip[0].valid=broken.aim[0].valid=true;
+	broken.sampled_at+=10ms;++broken.sequence;invalid_handles.observe(broken);
+	s=invalid_handles.snapshot();
+	check(s.channels[left].valid_samples==1 && !s.channels[right].valid_samples &&
+		s.first_api_failure.backend==input_backend::openvr,
+		"one recovered hand cannot fabricate a healthy other hand or erase the first backend error");
+	check(history.snapshot().channels[left].recoveries==2 &&
+		std::string(vr::diagnostics::input_error_name(input_backend::openvr,{input_reason::tracking_failed,3}))=="not_applicable",
+		"recoveries are counted and compositor errors are not decoded as input errors");
 }

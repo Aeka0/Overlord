@@ -3,6 +3,7 @@
 #include "status_sections.hpp"
 #include "format_helpers.hpp"
 #include "input_status.hpp"
+#include "steamvr_input_status.hpp"
 #include "../controller_input.hpp"
 #include "../desktop_mirror.hpp"
 #include "../engine_scene_resolution.hpp"
@@ -95,6 +96,7 @@ namespace vr::diagnostics::detail
 			<< " aim_valid=" << controls.aim[0].valid << ',' << controls.aim[1].valid;
 		output << " system_name=" << available(runtime_status.system_name) << '\n';
 		append_input_history(output,controller_input::get_input_history(),controller_input::clock::now());
+		append_steamvr_input(output,runtime_status.openvr_input_diagnostics,controller_input::clock::now());
 		output << "  last_runtime_name=" << available(runtime_status.last_runtime_name);
 		output << " last_system_name=" << available(runtime_status.last_system_name) << '\n';
 		output << "  session_state=" << runtime_status.session_state;

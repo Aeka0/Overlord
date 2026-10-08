@@ -13,6 +13,9 @@
 #include "designator_events.hpp"
 #include "../controller_input.hpp"
 #include "../diagnostics/input_status.hpp"
+#include "../diagnostics/steamvr_input_status.hpp"
+#include "../diagnostics.hpp"
+#include "../vr_runtime.hpp"
 #include "../engine_stereo_owner_pass.hpp"
 #include "../settings.hpp"
 #include "component/command.hpp"
@@ -481,6 +484,19 @@ namespace vr::controllers
 			diagnostics::append_input_history(history_report,controller_input::get_input_history(),
 				controller_input::clock::now(),"[VR input] ");
 			console::print_text(console::con_type_info,history_report.str());
+			std::ostringstream setup_report;
+			diagnostics::append_steamvr_input(setup_report,runtime::get().get_status().openvr_input_diagnostics,
+				controller_input::clock::now());
+			console::print_text(console::con_type_info,setup_report.str());
+			// Keep the decisive facts at the bottom for reports that only contain a screenshot.
+			std::ostringstream overview;
+			diagnostics::append_input_overview(overview,controller_input::get_input_history(),
+				controller_input::clock::now(),"[VR input summary] ");
+			console::print_text(console::con_type_info,overview.str());
+			const auto* vr_enabled = game::Dvar_FindVar("vr_enable");
+			if (diagnostics::write_status_snapshot(vr_enabled && vr_enabled->current.enabled))
+				console::info("[VR input] Complete report saved to %s. Share this file.\n",diagnostics::status_snapshot_path);
+			else console::error("[VR input] Report save FAILED; an older file may remain. Share this console output.\n");
 		}
 	} // namespace
 
@@ -492,6 +508,21 @@ namespace vr::controllers
 			// Menus can stop the simulation/command consumers while tracking keeps
 			// publishing. Publish that context discontinuity on the native main loop.
 			scheduler::loop([] {controller_input::set_gameplay_active(alive.load() && normal_gameplay());},scheduler::pipeline::main);
+			// Preserve evidence even when the player never runs a console command.
+			// One background attempt per process; allow setup/probe publication to
+			// settle first. No renderer-thread disk I/O or runtime API calls here.
+			scheduler::loop([] {
+				static bool attempted{};
+				if (attempted || !alive.load()) return;
+				const auto history = controller_input::get_input_history();
+				const auto now = controller_input::clock::now();
+				if (!history.first_api_failure.seen || now < history.first_api_failure.at ||
+				    now-history.first_api_failure.at < std::chrono::seconds(1)) return;
+				attempted = true;
+				if (diagnostics::write_status_snapshot(runtime::get().requested_enabled()))
+					console::info("[VR input] Input API failure report saved automatically to %s.\n",diagnostics::status_snapshot_path);
+				else console::error("[VR input] Automatic report save FAILED; run vr_input_status to retry.\n");
+			},scheduler::pipeline::async,std::chrono::seconds(1));
 			enabled = dvars::register_bool("vr_controllers", true, game::DVAR_FLAG_SAVED,
 										   "Enable SteamVR controller locomotion");
 			auto_ads = dvars::register_bool("vr_autoAds", true, game::DVAR_FLAG_SAVED,

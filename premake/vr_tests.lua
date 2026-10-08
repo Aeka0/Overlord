@@ -15,6 +15,7 @@ return function()
 		"./src/client/component/vr/controller_haptics.cpp",
 		"./src/client/component/vr/controller_haptics.hpp",
 		"./src/client/component/vr/steamvr_input.cpp",
+		"./src/client/component/vr/steamvr_input_diagnostics.cpp",
 		"./src/client/component/vr/steamvr_input.hpp",
 		"./src/client/component/vr/openxr_dispatch.cpp",
 		"./src/client/component/vr/openxr_dispatch.hpp",
@@ -151,6 +152,7 @@ return function()
 	test_executable("vr-controller-input-tests", "controller-input")
 		files {"./tests/vr/controller_input_tests.cpp"}
 		includedirs {"./src/client"}
+		json.import()
 
 	test_executable("vr-spatial-panel-tests", "spatial-panel")
 		links {"vr-weapon-catalog"}

@@ -15,6 +15,7 @@ namespace vr
 #include "openvr_test_interfaces.hpp"
 #include "test_support.hpp"
 #include "native_menu_test_boundary.hpp"
+#include "component/vr/diagnostics/steamvr_input_status.hpp"
 #include <thread>
 
 namespace vr::openvr
@@ -482,6 +483,26 @@ int main(const int argc, const char* const argv[])
 {
 	try
 	{
+		// No VR_Init or live device calls: exercise the production bounded event
+		// collector and its retained first failure across teardown and churn.
+		steamvr_input::actions input_events;
+		VREvent_t input_event{};
+		input_event.eventType=VREvent_Input_ActionManifestLoadFailed;
+		input_event.data.actionManifest.pathManifestPath=1234;
+		input_events.observe_event(input_event);
+		for(unsigned i=0;i<20;++i)
+		{
+			input_event.eventType=VREvent_Input_BindingsUpdated;
+			input_events.observe_event(input_event);
+		}
+		input_events.reset();
+		const auto evidence=input_events.diagnostics();
+		require(evidence.event_count==8 && evidence.events_discarded==13 &&
+			evidence.first_load_failure.details[3]==1234,"input event churn/reset erased the original manifest failure");
+		std::ostringstream input_report;
+		diagnostics::append_steamvr_input(input_report,evidence,controller_input::clock::now());
+		require(input_report.str().find("ActionManifestLoadFailed")!=std::string::npos,
+			"input report cannot identify the retained manifest failure");
 		const auto graphics = create_warp(200);
 		if (argc == 2 && std::string_view(argv[1]) == "--shutdown")
 		{

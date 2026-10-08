@@ -4,6 +4,16 @@
 
 namespace vr::controller_input
 {
+	struct input_failure
+	{
+		bool seen{}, runtime_focus{}, runtime_focus_known{}, gameplay_active{};
+		clock::time_point at{};
+		input_backend backend{};
+		input_channel channel{input_channel::focus};
+		input_condition condition{};
+		std::uint64_t sequence{}, reference{}, initialization{};
+	};
+
 	struct channel_history
 	{
 		bool valid{};
@@ -14,6 +24,9 @@ namespace vr::controller_input
 		std::uint64_t last_loss_sequence{}, last_loss_reference{};
 		bool last_loss_runtime_focus{}, last_loss_runtime_focus_known{}, last_loss_gameplay_active{};
 		bool rejected{};
+		std::uint64_t recoveries{}, api_failure_samples{};
+		// Direct action rejections survive dashboard focus loss and ring eviction.
+		input_failure first_action_rejection{}, last_action_rejection{};
 	};
 	struct input_transition
 	{
@@ -21,6 +34,7 @@ namespace vr::controller_input
 		input_backend backend{};
 		input_condition gate{};
 		std::uint64_t sequence{}, reference{};
+		std::uint64_t initialization{};
 		std::uint16_t valid_mask{}, loss_mask{};
 		bool runtime_focus{}, runtime_focus_known{}, gameplay_active{};
 		std::array<input_condition, input_channel_count> channels{};
@@ -31,12 +45,10 @@ namespace vr::controller_input
 		input_backend backend{};
 		bool runtime_focus{}, runtime_focus_known{}, gameplay_active{}, observed{};
 		std::uint64_t samples{}, invalidations{}, sequence{}, reference_generation{};
-		std::uint64_t last_sample_sequence{}, last_sample_reference{};
-		clock::time_point started_at{}, sampled_at{}, last_sample_at{}, last_api_error_at{};
-		input_condition gate{}, last_api_error{};
-		input_backend last_api_error_backend{};
-		input_channel last_api_error_channel{input_channel::focus};
-		bool api_error_seen{};
+		std::uint64_t last_sample_sequence{}, last_sample_reference{}, initialization{};
+		clock::time_point started_at{}, sampled_at{}, last_sample_at{};
+		input_condition gate{};
+		input_failure first_api_failure{}, last_api_failure{};
 		std::array<channel_history, input_channel_count> channels{};
 		std::array<input_transition, input_transition_capacity> transitions{};
 		std::size_t transition_count{}, transition_next{};
@@ -63,7 +75,9 @@ namespace vr::controller_input
 		{
 			const bool first = !state_.observed;
 			bool transitioned = first || (input.source.backend != input_backend::unknown &&
-			                              input.source.backend != state_.backend);
+			                              input.source.backend != state_.backend) ||
+			                    input.source.initialization != state_.initialization;
+			state_.initialization = input.source.initialization;
 			if (first)
 				state_.started_at = input.sampled_at;
 			state_.observed = true;
@@ -99,7 +113,7 @@ namespace vr::controller_input
 					loss_mask |= channel_bit(channel);
 				if (!error_recorded)
 					error_recorded =
-					    remember_api_error(state_.channels[i].current, channel, input.sampled_at);
+					    remember_api_error(state_.channels[i].current, channel, input);
 			}
 			if (transitioned)
 				append_transition(input, valid_mask, loss_mask);
@@ -175,7 +189,8 @@ namespace vr::controller_input
 			const auto condition = rejection_for(input, channel, sample.valid);
 			const bool changed =
 			    first || history.valid != sample.valid || history.current.reason != condition.reason ||
-			    history.current.code != condition.code || input.sampled_at < history.current_since;
+			    history.current.code != condition.code || history.current.handle != condition.handle ||
+			    input.sampled_at < history.current_since;
 			const bool lost = history.valid && !sample.valid;
 			if (changed)
 			{
@@ -202,26 +217,36 @@ namespace vr::controller_input
 			}
 			if (sample.valid)
 			{
+				if (!history.valid && history.valid_samples) ++history.recoveries;
 				++history.valid_samples;
 				history.last_valid_at = input.sampled_at;
 				if (sample.engaged)
 					++history.activity_samples;
 			}
+			if (input.sequence && is_api_failure(condition.reason)) ++history.api_failure_samples;
+			if (input.sequence && !sample.valid && channel != input_channel::focus &&
+			    input.source.gate.reason == input_reason::none)
+			{
+				auto failure = failure_at(condition, channel, input);
+				if (!history.first_action_rejection.seen) history.first_action_rejection = failure;
+				history.last_action_rejection = failure;
+			}
 			history.valid = sample.valid;
 			history.current = condition;
 			return {changed, lost};
 		}
-		bool remember_api_error(input_condition condition,
-		                        input_channel channel,
-		                        clock::time_point at) noexcept
+		input_failure failure_at(input_condition condition, input_channel channel, const frame& input) const noexcept
+		{
+			return {true, input.source.runtime_focus, input.source.runtime_focus_known, state_.gameplay_active,
+			        input.sampled_at, state_.backend, channel, condition, input.sequence,
+			        input.reference_generation, input.source.initialization};
+		}
+		bool remember_api_error(input_condition condition, input_channel channel, const frame& input) noexcept
 		{
 			if (!condition.code || !is_api_failure(condition.reason))
 				return false;
-			state_.api_error_seen = true;
-			state_.last_api_error = condition;
-			state_.last_api_error_at = at;
-			state_.last_api_error_backend = state_.backend;
-			state_.last_api_error_channel = channel;
+			state_.last_api_failure = failure_at(condition, channel, input);
+			if (!state_.first_api_failure.seen) state_.first_api_failure = state_.last_api_failure;
 			return true;
 		}
 		void append_transition(const frame& input, std::uint16_t valid_mask, std::uint16_t loss_mask) noexcept
@@ -232,6 +257,7 @@ namespace vr::controller_input
 			event.gate = input.source.gate;
 			event.sequence = input.sequence;
 			event.reference = input.reference_generation;
+			event.initialization = input.source.initialization;
 			event.runtime_focus = input.source.runtime_focus;
 			event.runtime_focus_known = input.source.runtime_focus_known;
 			event.gameplay_active = state_.gameplay_active;
