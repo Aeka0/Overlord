@@ -13,13 +13,12 @@
 #include <openxr/openxr_platform.h>
 
 #include "mock_control.hpp"
-#include <mutex>
 
 struct XrInstance_T
 {
 	std::uint64_t id{};
 };
-struct XrAction_T { XrActionSet owner{}; std::string name; XrActionType type{}; bool bound{}; std::vector<XrPath> sources; };
+struct XrAction_T { XrActionSet owner{}; std::string name; XrActionType type{}; bool bound{}; };
 struct XrActionSet_T { XrInstance owner{}; std::vector<XrAction> actions; };
 
 struct XrSession_T
@@ -952,7 +951,7 @@ XrResult XRAPI_CALL mockCreateActionSet(XrInstance instance,const XrActionSetCre
 XrResult XRAPI_CALL mockCreateAction(XrActionSet set,const XrActionCreateInfo* info,XrAction* output)
 {
 	if(!set||!info||!output||!info->actionName[0])return XR_ERROR_VALIDATION_FAILURE;
-	const std::lock_guard lock(g_mutex);*output=new XrAction_T{set,info->actionName,info->actionType,false,{}};
+	const std::lock_guard lock(g_mutex);*output=new XrAction_T{set,info->actionName,info->actionType,false};
 	set->actions.push_back(*output);++g_statistics.actions_created;return XR_SUCCESS;
 }
 XrResult XRAPI_CALL mockDestroyActionSet(XrActionSet set)
@@ -971,41 +970,9 @@ XrResult XRAPI_CALL mockSuggestInteractionProfileBindings(XrInstance,const XrInt
 	for(unsigned i=0;i<info->countSuggestedBindings;++i)
 	{
 		const auto& b=info->suggestedBindings[i];if(!b.action||!g_paths.contains(b.binding))return XR_ERROR_PATH_INVALID;
-		if(g_paths[info->interactionProfile]=="/interaction_profiles/oculus/touch_controller")
-		{
-			b.action->bound=true;
-			b.action->sources.push_back(b.binding);
-		}
+		if(g_paths[info->interactionProfile]=="/interaction_profiles/oculus/touch_controller")b.action->bound=true;
 	}
 	++g_statistics.binding_profiles;return XR_SUCCESS;
-}
-XrResult XRAPI_CALL mockEnumerateBoundSourcesForAction(XrSession session,
-	const XrBoundSourcesForActionEnumerateInfo* info, uint32_t capacity, uint32_t* count, XrPath* sources)
-{
-	if (!session || !info || !info->action || !count) return XR_ERROR_VALIDATION_FAILURE;
-	const std::lock_guard lock(g_mutex);
-	*count = static_cast<uint32_t>(info->action->sources.size());
-	if (!capacity) return XR_SUCCESS;
-	if (capacity < *count) return XR_ERROR_SIZE_INSUFFICIENT;
-	if (!sources) return XR_ERROR_VALIDATION_FAILURE;
-	std::copy(info->action->sources.begin(), info->action->sources.end(), sources);
-	return XR_SUCCESS;
-}
-XrResult XRAPI_CALL mockGetInputSourceLocalizedName(XrSession session,
-	const XrInputSourceLocalizedNameGetInfo* info, uint32_t capacity, uint32_t* count, char* output)
-{
-	if (!session || !info || !count) return XR_ERROR_VALIDATION_FAILURE;
-	const std::lock_guard lock(g_mutex);
-	if (g_scenario == scenario::binding_names_failure) return XR_ERROR_RUNTIME_FAILURE;
-	const auto path = g_paths.find(info->sourcePath);
-	if (path == g_paths.end()) return XR_ERROR_PATH_INVALID;
-	const auto& name = path->second;
-	*count = static_cast<uint32_t>(name.size() + 1);
-	if (!capacity) return XR_SUCCESS;
-	if (capacity < *count) return XR_ERROR_SIZE_INSUFFICIENT;
-	if (!output) return XR_ERROR_VALIDATION_FAILURE;
-	std::memcpy(output, name.c_str(), *count);
-	return XR_SUCCESS;
 }
 XrResult XRAPI_CALL mockAttachSessionActionSets(XrSession session,const XrSessionActionSetsAttachInfo* info)
 {
@@ -1095,9 +1062,6 @@ extern "C" __declspec(dllexport) XrResult XRAPI_CALL xrGetInstanceProcAddr(
 	*function = nullptr;
 	{
 		const std::lock_guard lock(g_mutex);
-		if (g_scenario == scenario::binding_names_unavailable &&
-			(std::strcmp(name, "xrEnumerateBoundSourcesForAction") == 0 ||
-			 std::strcmp(name, "xrGetInputSourceLocalizedName") == 0)) return XR_ERROR_FUNCTION_UNSUPPORTED;
 		if (g_scenario == scenario::destroy_instance_proc_null &&
 			std::strcmp(name, "xrDestroyInstance") == 0)
 		{
@@ -1138,8 +1102,6 @@ extern "C" __declspec(dllexport) XrResult XRAPI_CALL xrGetInstanceProcAddr(
 	H2V_MOCK_PROC("xrLocateViews", mockLocateViews)
 	H2V_MOCK_PROC("xrEndFrame", mockEndFrame)
 	H2V_MOCK_PROC("xrStringToPath", mockStringToPath)
-	H2V_MOCK_PROC("xrEnumerateBoundSourcesForAction", mockEnumerateBoundSourcesForAction)
-	H2V_MOCK_PROC("xrGetInputSourceLocalizedName", mockGetInputSourceLocalizedName)
 	H2V_MOCK_PROC("xrCreateActionSet", mockCreateActionSet)
 	H2V_MOCK_PROC("xrDestroyActionSet", mockDestroyActionSet)
 	H2V_MOCK_PROC("xrCreateAction", mockCreateAction)

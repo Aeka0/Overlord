@@ -3,7 +3,7 @@
 
 namespace game_text
 {
-	inline constexpr unsigned invalid_parameters=8;
+	inline constexpr unsigned invalid_parameters=4;
 	// <em> annotates authored controls/locations, never an already-formatted
 	// native argument. Only balanced, non-nested emphasis is accepted.
 	constexpr unsigned template_parameters(std::u8string_view pattern) noexcept
@@ -20,7 +20,6 @@ namespace game_text
 			const auto name=pattern.substr(i+1,end-i-1);
 			if(name==u8"button")result|=1;
 			else if(name==u8"item")result|=2;
-			else if(name==u8"axis")result|=4;
 			else return invalid_parameters;
 			i=end;
 		}

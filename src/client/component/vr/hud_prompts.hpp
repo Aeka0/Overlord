@@ -1,7 +1,6 @@
 #pragma once
 #include "component/game_text.hpp"
 #include <optional>
-#include "prompt_bindings.hpp"
 
 // All VR action instructions pass through this registry and formatter. Native
 // bridges supply identity, never translated/rendered text. Gameplay supplies a
@@ -10,7 +9,7 @@ namespace vr::hud_prompts
 {
 	using game_text::key;
 	enum class source { script_hud, lui, world };
-	enum class control { none, trigger, right_trigger, right_stick_down, grip, menu, secondary, turn, turn_down, turn_up, jump, sprint };
+	enum class control { none, trigger, right_stick_down, grip };
 	enum class feature : unsigned
 	{
 		none=0, signal_flare=1, carry=2, world=4, special=8,
@@ -30,7 +29,7 @@ namespace vr::hud_prompts
 		definition{key::mine_prone,control::right_stick_down},
 		definition{key::vehicle_duck,control::right_stick_down},
 		definition{key::signal_flare,control::none},
-		definition{key::cinematic_skip,control::trigger},
+		definition{key::cinematic_skip,control::none},
 		definition{key::nightvision_on,control::none},
 		definition{key::nightvision_off,control::none},
 		definition{key::breach_place,control::grip},
@@ -46,16 +45,16 @@ namespace vr::hud_prompts
 		definition{key::notebook_open,control::none},
 		definition{key::notebook_boost,control::none},
 		definition{key::notebook_control,control::none},
-		definition{key::fixed_sniper_zoom,control::turn},
+		definition{key::fixed_sniper_zoom,control::none},
 		definition{key::fixed_sniper_aim,control::none},
-		definition{key::fixed_sniper_controls,control::secondary},
+		definition{key::fixed_sniper_controls,control::none},
 		definition{key::heartbeat_fold,control::none},
 		definition{key::snowmobile_board,control::none},
 		definition{key::vehicle_drive,control::none},
-		definition{key::vehicle_reload,control::secondary},
+		definition{key::vehicle_reload,control::none},
 		definition{key::museum_warning,control::grip},
-		definition{key::trainer_fire,control::trigger},
-		definition{key::trainer_hip_fire,control::trigger},
+		definition{key::trainer_fire,control::none},
+		definition{key::trainer_hip_fire,control::none},
 		definition{key::trainer_ads,control::none},
 		definition{key::trainer_stop_ads,control::none},
 		definition{key::trainer_next_target,control::none},
@@ -63,19 +62,18 @@ namespace vr::hud_prompts
 		definition{key::trainer_primary,control::none},
 		definition{key::trainer_reload,control::none},
 		definition{key::trainer_knife,control::none},
-		definition{key::trainer_crouch,control::turn_down},
-		definition{key::trainer_stand,control::turn_up},
-		definition{key::trainer_prone,control::turn_down},
-		definition{key::trainer_jump,control::jump},
-		definition{key::trainer_mantle,control::jump},
-		definition{key::trainer_sprint,control::sprint},
+		definition{key::trainer_crouch,control::none},
+		definition{key::trainer_stand,control::none},
+		definition{key::trainer_prone,control::none},
+		definition{key::trainer_jump,control::none},
+		definition{key::trainer_mantle,control::none},
+		definition{key::trainer_sprint,control::none},
 		definition{key::trainer_frag,control::none},
 		definition{key::trainer_flash,control::none},
-		definition{key::trainer_menu,control::menu},
+		definition{key::trainer_menu,control::none},
 		definition{key::m203_reload,control::none},
 		definition{key::c4_draw,control::none},
 		definition{key::c4_detonate,control::none},
-		definition{key::launcher_aim,control::right_trigger},
 
 	};
 	constexpr const definition* describe(key id) noexcept
@@ -212,10 +210,6 @@ namespace vr::hud_prompts
 		native_rule{source::script_hud,"TRAINER_HINT_FRAG",key::trainer_frag,"trainer",feature::carry},
 		native_rule{source::script_hud,"TRAINER_HINT_FLASH",key::trainer_flash,"trainer",feature::carry},
 		native_rule{source::script_hud,"SCRIPT_LEARN_GRENADE_LAUNCHER",key::m203_reload,"roadkill",feature::m203},
-		native_rule{source::script_hud,"INVASION_ADS_WITH_STINGER",key::launcher_aim,"invasion",feature::carry},
-		native_rule{source::script_hud,"INVASION_TOGGLE_ADS_WITH_STINGER",key::launcher_aim,"invasion",feature::carry},
-		native_rule{source::lui,"INVASION_ADS_WITH_STINGER",key::launcher_aim,"invasion",feature::carry},
-		native_rule{source::lui,"INVASION_TOGGLE_ADS_WITH_STINGER",key::launcher_aim,"invasion",feature::carry},
 		native_rule{source::lui,"PLATFORM_HOLD_TO_SKIP",key::cinematic_skip,{}},
 		native_rule{source::lui,"PLATFORM_HOLD_TO_SKIP_KEYBOARD",key::cinematic_skip,{}},
 	};
@@ -237,93 +231,29 @@ namespace vr::hud_prompts
 	struct arguments {int hand{-1};bool shared{};std::string_view item;};
 	struct message {game_text::locale language;game_text::runs parts;};
 	enum class style { plain, native_colors };
-	inline std::string bound_control(const prompt_bindings::snapshot* bindings,
-		prompt_bindings::action first, prompt_bindings::action second, key fallback,
-		game_text::locale language)
-	{
-		std::string result;
-		for (const auto action : {first, second})
-			prompt_bindings::append(result, prompt_bindings::label(bindings, action));
-		if (!result.empty()) return result;
-		const auto known = [&](prompt_bindings::action action) {
-			const auto i = static_cast<std::size_t>(action);
-			return bindings && i < prompt_bindings::action_count && bindings->known[i];
-		};
-		if (known(first) && (second == prompt_bindings::action::count || known(second)))
-			fallback = key::button_unbound;
-		const auto value = game_text::translation(fallback, language);
-		return value ? std::string(*value) : std::string{};
-	}
-
-	inline std::optional<message> compose(key id,game_text::locale requested,arguments args={},
-		const prompt_bindings::snapshot* bindings=nullptr)
+	inline std::optional<message> compose(key id,game_text::locale requested,arguments args={})
 	{
 		const auto* entry=describe(id);
 		if(!entry || args.item.size()>game_text::max_text_bytes || args.item.find('\0')!=args.item.npos)return {};
 		key button=key::count;
-		using action = prompt_bindings::action;
-		action first = action::count, second = action::count;
-		std::string_view direction;
 		switch(entry->operation)
 		{
 		case control::none:break;
-		case control::trigger:
-			button=key::button_trigger;
-			first=args.hand==1?action::right_trigger:action::left_trigger;
-			if(args.hand!=0 && args.hand!=1)second=action::right_trigger;
-			break;
-		case control::right_trigger:button=key::button_trigger;first=action::right_trigger;break;
-		case control::menu:
-			button=key::button_menu;
-			first=action::menu_recenter;
-			if(prompt_bindings::label(bindings,first).empty())
-			{
-				if(!prompt_bindings::label(bindings,action::menu_toggle).empty())first=action::menu_toggle;
-				else second=action::menu_toggle;
-			}
-			break;
-		case control::secondary:
-			button=key::button_secondary;
-			first=args.hand==1?action::right_secondary:action::left_secondary;
-			if(args.hand!=0 && args.hand!=1)second=action::right_secondary;
-			break;
-		case control::turn:button=key::button_turn;first=action::turn;break;
-		case control::turn_down:button=key::button_turn;first=action::turn;direction=" ↓";break;
-		case control::turn_up:button=key::button_turn;first=action::turn;direction=" ↑";break;
-		case control::jump:button=key::button_jump;first=action::jump;break;
-		case control::sprint:button=key::button_sprint;first=action::sprint;break;
-		case control::right_stick_down:
-			button=key::right_stick_down;
-			if(!prompt_bindings::label(bindings,action::turn).empty()){first=action::turn;direction=" ↓";}
-			break;
+		case control::trigger:button=key::button_trigger;break;
+		case control::right_stick_down:button=key::right_stick_down;break;
 		case control::grip:
 			if(!args.shared && args.hand!=0 && args.hand!=1)return {};
-			button=game_text::grip_key(args.hand,args.shared);
-			first=!args.shared && args.hand==1?action::right_grip:action::left_grip;
-			if(args.shared)second=action::right_grip;
-			break;
+			button=game_text::grip_key(args.hand,args.shared);break;
 		}
 		// Exact locale only. Absence declines the override so the original game
 		// producer retains the complete current-language text and native bindings.
 		const auto sentence=game_text::translation(id,requested);if(!sentence)return {};
-		std::string operation;
-		if(button!=key::count)
-		{
-			operation=bound_control(bindings,first,second,button,requested);
-			if(operation.empty())return {};
-			operation+=direction;
-		}
-		std::string axis;
-		if(game_text::parameters(id)&4)
-		{
-			axis=bound_control(bindings,action::move,action::count,key::button_move,requested);
-			if(axis.empty())return {};
-			if(id==key::trainer_sprint)axis+=" ↑";
-		}
+		const auto operation=button==key::count?std::optional<std::string_view>{std::string_view{}}:game_text::translation(button,requested);
+		if(!operation)return {};
 		const bool generic_item=args.item.empty() && (game_text::parameters(id)&2);
 		const auto item=generic_item?game_text::translation(key::item_weapon,requested):std::optional<std::string_view>{args.item};
 		if(!item)return {};
-		auto parts=game_text::interpolate(*sentence,{{"button",operation,true},{"item",*item},{"axis",axis,true}});
+		auto parts=game_text::interpolate(*sentence,{{"button",*operation,true},{"item",*item}});
 		if(parts.empty())return {};
 		return message{requested,std::move(parts)};
 	}
@@ -352,17 +282,15 @@ namespace vr::hud_prompts
 		}
 		return result;
 	}
-	inline std::optional<std::string> replace(source producer,std::string_view name,const context& state,game_text::locale language,
-		const prompt_bindings::snapshot* bindings=nullptr)
+	inline std::optional<std::string> replace(source producer,std::string_view name,const context& state,game_text::locale language)
 	{
 		const auto id=resolve(producer,name,state);if(!id)return {};
-		const auto value=compose(*id,language,{-1,true,{}},bindings);if(!value)return {};
+		const auto value=compose(*id,language,{-1,true,{}});if(!value)return {};
 		auto result=text(*value,style::native_colors);if(result.empty())return {};
 		return result;
 	}
 	// Runtime entry snapshots game language/context only for recognized keys.
 	// No cache, script VM access, deferred jobs or renderer/gameplay callbacks.
-	std::optional<message> compose_current(key,game_text::locale,arguments args={});
 	std::optional<std::string> replace(source,std::string_view native_key);
 	std::optional<key> world_message(unsigned hint);
 	bool native_cursor_required();

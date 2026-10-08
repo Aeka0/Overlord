@@ -65,21 +65,6 @@ jobs:
       - name: Run HUD draw regression probe
         run: build/bin/x64/${{ matrix.configuration }}/vr-tests/draw-indexed/vr-d3d11-draw-indexed-probe.exe
 
-      - name: Build controller prompt tests
-        run: msbuild build/vr-spatial-panel-tests.vcxproj /m:2 /v:minimal /p:Configuration=${{ matrix.configuration }} /p:Platform=x64 /p:PreferredToolArchitecture=x64 /p:CL_MPCount=4
-
-      - name: Run controller prompt tests
-        run: build/bin/x64/${{ matrix.configuration }}/vr-tests/spatial-panel/vr-spatial-panel-tests.exe
-
-      - name: Build OpenXR mock loader
-        run: msbuild build/vr-mock-openxr-loader.vcxproj /m:2 /v:minimal /p:Configuration=${{ matrix.configuration }} /p:Platform=x64 /p:PreferredToolArchitecture=x64 /p:CL_MPCount=4
-
-      - name: Build OpenXR input smoke test
-        run: msbuild build/vr-runtime-mock-smoke.vcxproj /m:2 /v:minimal /p:Configuration=${{ matrix.configuration }} /p:Platform=x64 /p:PreferredToolArchitecture=x64 /p:CL_MPCount=4
-
-      - name: Run OpenXR input smoke test
-        run: build/bin/x64/${{ matrix.configuration }}/vr-tests/mock/vr-runtime-mock-smoke.exe
-
       - name: Package client overlay
         run: python tools/package_client.py --configuration ${{ matrix.configuration }}
 

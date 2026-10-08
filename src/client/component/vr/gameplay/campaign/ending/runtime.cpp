@@ -1077,7 +1077,7 @@ namespace vr::gameplay::ending
 			                  []
 			                  {
 				                  constexpr auto key = game_text::key::ending_knife_pull;
-				                  const auto message = hud_prompts::compose_current(
+				                  const auto message = hud_prompts::compose(
 				                      key, game_text::effective_locale(key, game_text::current()));
 				                  const auto text =
 				                      message ? hud_prompts::text(*message, hud_prompts::style::native_colors)

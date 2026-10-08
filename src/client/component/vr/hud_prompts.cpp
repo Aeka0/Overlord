@@ -91,25 +91,10 @@ namespace vr::hud_prompts
 			return result;
 		}
 	}
-	std::optional<message> compose_current(key id,game_text::locale language,arguments args)
-	{
-		const auto input=controller_input::latest();
-		const auto now=controller_input::clock::now();
-		const bool fresh=input.focused && now>=input.sampled_at && now-input.sampled_at<=std::chrono::milliseconds(150);
-		if(args.hand==-1 && (id==key::trainer_fire || id==key::trainer_hip_fire || id==key::vehicle_reload))
-		{
-			const auto held=gameplay::weapons::carry::current_hold();
-			if(vr::valid_hand(held.rear))args.hand=static_cast<int>(held.rear);
-		}
-		return compose(id,language,args,fresh?input.prompt_bindings.get():nullptr);
-	}
 	std::optional<std::string> replace(source producer,std::string_view name)
 	{
 		const auto* rule=identify(producer,name);if(!rule)return {};
-		const auto id=resolve(producer,name,snapshot(*rule));if(!id)return {};
-		const auto value=compose_current(*id,game_text::current(),{-1,true,{}});if(!value)return {};
-		auto result=text(*value,style::native_colors);if(result.empty())return {};
-		return result;
+		return replace(producer,name,snapshot(*rule),game_text::current());
 	}
 	std::optional<key> world_message(unsigned hint)
 	{
@@ -123,6 +108,6 @@ namespace vr::hud_prompts
 		unsigned hint{};
 		if(!utils::native_memory::read_bytes(&hint,reinterpret_cast<const void*>(0x141C12978),sizeof(hint)))return true;
 		const auto id=world_message(hint);
-		return id && !compose_current(*id,language,{-1,true,{}});
+		return id && !compose(*id,language,{-1,true,{}});
 	}
 }

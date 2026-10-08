@@ -18,8 +18,6 @@ namespace vr::tests::mock
 		swapchain_image_failure,
 		wait_timeout,
 		destroy_instance_proc_null,
-		binding_names_unavailable,
-		binding_names_failure,
 	};
 
 	enum class failure_point : std::uint32_t

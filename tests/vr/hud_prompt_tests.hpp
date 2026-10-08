@@ -5,71 +5,6 @@ template<class Check>void hud_prompt_tests(Check& check)
 {
 	using namespace vr::hud_prompts;using game_text::locale;
 	const auto en=locale::english,zh=locale::simplified_chinese;
-	using action = vr::prompt_bindings::action;
-	const auto index = [](action value) { return static_cast<std::size_t>(value); };
-	vr::prompt_bindings::snapshot bindings;
-	bindings.known.fill(true);
-	bindings.labels[index(action::menu_recenter)]="Left A";
-	bindings.labels[index(action::right_trigger)]="Right Trigger";
-	bindings.labels[index(action::left_trigger)]="Left Trigger";
-	bindings.labels[index(action::left_grip)]="Left Grip pressure";
-	bindings.labels[index(action::right_grip)]="Right Grip pressure";
-	bindings.labels[index(action::right_secondary)]="Right B";
-	bindings.labels[index(action::move)]="Left Thumbstick";
-	bindings.labels[index(action::turn)]="Right Thumbstick";
-	bindings.labels[index(action::jump)]="Right Thumbstick Click";
-	bindings.labels[index(action::sprint)]="Left Thumbstick Click";
-	const auto menu=compose(key::trainer_menu,en,{},&bindings);
-	check(menu && text(*menu).find("Left A")!=std::string::npos && text(*menu).find("X on") == std::string::npos,
-		"Index tutorial uses its actual menu binding instead of Touch X");
-	bindings.labels[index(action::menu_recenter)]="Left X";
-	const auto touch_menu=compose(key::trainer_menu,en,{},&bindings);
-	check(touch_menu && text(*touch_menu).find("Left X")!=std::string::npos,
-		"Touch tutorial uses the same runtime binding route");
-	bindings.labels[index(action::menu_recenter)].clear();
-	bindings.labels[index(action::menu_toggle)]="Left Application Menu";
-	bindings.labels[index(action::turn)]="Right Trackpad";
-	const auto vive_menu=compose(key::trainer_menu,en,{},&bindings);
-	const auto vive_stance=compose(key::trainer_crouch,en,{},&bindings);
-	check(vive_menu && text(*vive_menu).find("Application Menu")!=std::string::npos &&
-		vive_stance && text(*vive_stance).find("Trackpad")!=std::string::npos,
-		"Vive prompts use menu and trackpad bindings instead of invented face buttons or sticks");
-	bindings.labels[index(action::menu_toggle)]="Right Trackpad Click";
-	const auto rebound=compose(key::trainer_menu,en,{},&bindings);
-	check(rebound && text(*rebound).find("Right Trackpad Click")!=std::string::npos,
-		"custom bindings change the label without a controller-type table");
-	const auto fire=compose(key::trainer_fire,en,{1,false,{}},&bindings);
-	const auto pickup_binding=compose(key::interaction_pickup,en,{0,false,"AK"},&bindings);
-	check(fire && text(*fire).find("Right Trigger")!=std::string::npos && text(*fire).find("Left Trigger")==std::string::npos &&
-		pickup_binding && text(*pickup_binding).find("Left Grip pressure")!=std::string::npos,
-		"weapon and world instructions select the actual participating hand");
-	const auto jump=compose(key::trainer_jump,en,{},&bindings);
-	const auto sprint=compose(key::trainer_sprint,en,{},&bindings);
-	check(jump && text(*jump).find("Right Thumbstick Click")!=std::string::npos &&
-		sprint && text(*sprint).find("Left Thumbstick")!=std::string::npos && text(*sprint).find("Click")!=std::string::npos,
-		"axis and click actions are composed separately");
-	bindings.labels[index(action::right_secondary)].clear();
-	const auto unbound=compose(key::vehicle_reload,en,{1,false,{}},&bindings);
-	check(unbound && text(*unbound).find("Unbound VR action")!=std::string::npos && text(*unbound).find("B/Y")==std::string::npos,
-		"an unbound action cannot invent a physical face button");
-	for(const auto unsafe:{std::string(257,'x'),std::string("Left A^3"),std::string("A\nB"),std::string("<em>A</em>"),std::string("A\0B",3)})
-	{
-		check(!vr::prompt_bindings::valid_label(unsafe),"runtime labels reject overflow, embedded NUL and text-control injection");
-		bindings.labels[index(action::menu_toggle)]=unsafe;
-		const auto safe=compose(key::trainer_menu,en,{},&bindings);
-		check(safe && text(*safe).find(unsafe)==std::string::npos,"invalid metadata cannot reach prompt rendering");
-	}
-	const auto stinger=replace(source::script_hud,"INVASION_ADS_WITH_STINGER",{true,"invasion",feature::carry},en,&bindings);
-	check(stinger && stinger->find("circular tube sight")!=std::string::npos && stinger->find("Right Trigger")!=std::string::npos &&
-		!replace(source::script_hud,"INVASION_ADS_WITH_STINGER",{false,"invasion",feature::carry},en,&bindings),
-		"Stinger keyboard hint becomes its physical sight and native lock workflow only in active VR");
-	for(const auto& entry:definitions)
-	{
-		const auto value=compose(entry.message,en,{0,false,"weapon"},&bindings);
-		check(value && text(*value).find("B/Y")==std::string::npos && text(*value).find("Enter")==std::string::npos,
-			"registered VR instructions contain no Touch-only face labels or keyboard skip alternative");
-	}
-
 	const auto boarding = compose(key::snowmobile_board, zh);
 	check(boarding && text(*boarding) == game_text::utf8(u8"雪地摩托停稳后，靠近即可自动上车"),
 		"snowmobile boarding explains the story stop and proximity without a hand or button argument");
@@ -103,7 +38,7 @@ template<class Check>void hud_prompt_tests(Check& check)
 	check(!resolve(source::script_hud,game_text::text(key::mine_prone,zh),estate),"translated template is not accepted as native identity");
 	check(!identify(source::lui,std::string(100000,'x')) &&
 		!identify(source::lui,std::string_view("PLATFORM_HOLD_TO_SKIP\0junk",25)),"oversized or embedded-NUL source keys fail before formatting");
-	check(replace(source::lui,"@PLATFORM_HOLD_TO_SKIP_KEYBOARD",{true,{}},en)=="Hold ^3Trigger^7 to skip",
+	check(replace(source::lui,"@PLATFORM_HOLD_TO_SKIP_KEYBOARD",{true,{}},en)=="Hold ^3Trigger^7 or ^3Enter^7 to skip",
 		"LUI normalization and generated HUD composition use the same registry");
 	check(!replace(source::lui,"PLATFORM_HOLD_TO_SKIP",{false,{}},en) &&
 		!replace(source::lui,"MENU_SP_OFFENSIVE_SKIP_NOW",{true,{}},en),"native menu fallthrough preserves flat gameplay and other skip warnings");
@@ -191,8 +126,8 @@ template<class Check>void hud_prompt_tests(Check& check)
 	const auto frag=replace(source::script_hud,"TRAINER_HINT_FRAG",trainer,zh);
 	check(frag&&frag->starts_with(game_text::utf8(u8"先将步枪收纳至^3背后^7\n从^3胸前^7")),"grenade instruction first frees hands by stowing the rifle on its own line");
 	const auto pause=replace(source::script_hud,"TRAINER_HINT_INVERT_CONTROL_PC",trainer,zh);
-	check(pause&&pause->find("ESC")==std::string::npos&&pause->find(game_text::utf8(u8"菜单按键"))!=std::string::npos,
-		"trainer menu falls back to a neutral action label when runtime bindings are unavailable");
+	check(pause&&pause->find("ESC")==std::string::npos&&pause->find(game_text::utf8(u8"左手柄 X 键"))!=std::string::npos,
+		"trainer menu instruction names the actual left-controller pause key");
 	check(replace(source::script_hud,"TRAINER_HINT_SIDEARM_SWAP",trainer,en).has_value() &&
 		!replace(source::script_hud,"TRAINER_HINT_SIDEARM_SWAP",{true,"trainer"},zh) &&
 		!replace(source::script_hud,"TRAINER_HINT_SIDEARM_SWAP",{true,"estate",feature::carry},zh),

@@ -399,10 +399,9 @@ namespace openxr_adaptation_tests
 		                       statistics.spaces_created == statistics.spaces_destroyed,
 		                   "native path leaked action or space ownership during shutdown");
 	}
-	template <class Loader> void focused_input(Loader& loader, const d3d11::device_snapshot& graphics,
-		vr::tests::mock::scenario scenario = vr::tests::mock::scenario::happy)
+	template <class Loader> void focused_input(Loader& loader, const d3d11::device_snapshot& graphics)
 	{
-		configure(loader, graphics, scenario);
+		configure(loader, graphics, vr::tests::mock::scenario::happy);
 		vr::openxr::runtime_backend runtime;
 		runtime.set_desired_enabled(true);
 		runtime.set_scene_mode(vr::scene_mode::synthetic);
@@ -426,18 +425,6 @@ namespace openxr_adaptation_tests
 		                       first.primary[1].down && first.runtime_grip[0].valid &&
 		                       first.runtime_aim[1].valid,
 		                   "OpenXR input did not preserve hand, menu or pose semantics");
-		using binding_action = vr::prompt_bindings::action;
-		const auto trigger_label = vr::prompt_bindings::label(first.prompt_bindings.get(), binding_action::right_trigger);
-		if (scenario == vr::tests::mock::scenario::happy)
-			vr::tests::require(trigger_label == "/user/hand/right/input/trigger/value",
-				"OpenXR binding labels did not reach the copied input frame");
-		else
-		{
-			vr::tests::require(trigger_label.empty(), "failed metadata query retained a binding label");
-			vr::tests::require(!first.prompt_bindings ||
-				!first.prompt_bindings->known[static_cast<size_t>(binding_action::right_trigger)],
-				"metadata failure incorrectly reported a bound trigger as unbound");
-		}
 		vr::controller_haptics::request(1,
 		                                {.seconds = .02f,
 		                                 .frequency = 120,
