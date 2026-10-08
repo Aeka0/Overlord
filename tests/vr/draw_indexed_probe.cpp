@@ -11,12 +11,22 @@
 namespace
 {
 	unsigned copy_calls{};
+	bool reenter_copy{};
+	unsigned forwarded_calls{};
+	vr::engine_stereo_draw_indexed::draw_original forwarding_draw{};
+	__declspec(noinline) void __stdcall alternate_draw(ID3D11DeviceContext* context,
+		UINT count, UINT start, INT base)
+	{
+		++forwarded_calls;
+		forwarding_draw(context, count, start, base);
+	}
 	void copy_draw(ID3D11DeviceContext* context, UINT count, UINT start, INT base,
 		vr::engine_stereo_draw_indexed::draw_original original) noexcept
 	{
 		// A copy goes through the supplied trampoline, not the hooked vtable.
 		// The transaction below must still see exactly one native draw.
 		if (++copy_calls > 1 || !original) std::abort();
+		if (reenter_copy) context->DrawIndexed(count, start, base);
 		original(context, count, start, base);
 		// A native fade may feed both the scene canvas and nearer title ink.
 		// Neither trampoline copy may recursively notify the observer.
@@ -317,6 +327,61 @@ int main()
 		fail("terminal DrawIndexed identity changed after device replacement");
 	}
 
+	const auto live_before = vr::engine_stereo_draw_indexed::get_hook_status();
+	if (!live_before.installed || live_before.context != reinterpret_cast<std::uintptr_t>(replacement_context.Get()) ||
+		live_before.generation != 2)
+		fail("continuous hook owner did not follow the replacement device");
+	{
+		// Give this real WARP context a private copy of its base interface vtable.
+		// Slot 12 forwards into the retained native entry, reproducing an API mode
+		// switch even on drivers which keep the same entry for all context modes.
+		auto** const table_pointer = reinterpret_cast<void***>(replacement_context.Get());
+		auto* const native_table = *table_pointer;
+		std::array<void*, 115> alternate_table{}; // ID3D11DeviceContext base ABI.
+		std::copy_n(native_table, alternate_table.size(), alternate_table.begin());
+		forwarding_draw = reinterpret_cast<vr::engine_stereo_draw_indexed::draw_original>(native_table[12]);
+		alternate_table[12] = reinterpret_cast<void*>(alternate_draw);
+		*table_pointer = alternate_table.data();
+		const auto restore = gsl::finally([&] { *table_pointer = native_table; });
+		alternate_table[12] = nullptr;
+		if (vr::engine_stereo_draw_indexed::install(replacement_context.Get(), 2) ||
+			vr::engine_stereo_draw_indexed::install(replacement_context.Get(), 2) ||
+			vr::engine_stereo_draw_indexed::get_hook_status().installed ||
+			vr::engine_stereo_draw_indexed::get_hook_status().failures != live_before.failures + 1)
+			fail("invalid entry was admitted or retried at every UI boundary");
+		alternate_table[12] = reinterpret_cast<void*>(alternate_draw);
+		if (!vr::engine_stereo_draw_indexed::install(replacement_context.Get(), 2))
+			fail("changed DrawIndexed entry was rejected after terminal evidence");
+		copy_calls = forwarded_calls = 0;
+		reenter_copy = true;
+		vr::engine_stereo_draw_indexed::set_draw_copy_observer(copy_draw);
+		replacement_context->DrawIndexed(3, 2, -1);
+		vr::engine_stereo_draw_indexed::set_draw_copy_observer(nullptr);
+		reenter_copy = false;
+		const auto switched = vr::engine_stereo_draw_indexed::get_hook_status();
+		if (copy_calls != 1 || forwarded_calls != 4 || !switched.installed ||
+			switched.target != reinterpret_cast<std::uintptr_t>(alternate_draw) ||
+			switched.retained_targets != live_before.retained_targets + 1 ||
+			switched.target_changes != live_before.target_changes + 1 ||
+			switched.nested_draws <= live_before.nested_draws)
+			fail("entry forwarding or observer re-entry lost native draws/duplicated capture");
+		*table_pointer = native_table;
+		if (!vr::engine_stereo_draw_indexed::install(replacement_context.Get(), 2) ||
+			vr::engine_stereo_draw_indexed::get_hook_status().retained_targets != switched.retained_targets)
+			fail("return to a retained entry replaced/duplicated its trampoline");
+	}
+	vr::engine_stereo_draw_indexed::invalidate_device(context.Get(), 1);
+	if (vr::engine_stereo_draw_indexed::install(context.Get(), 1) ||
+		!vr::engine_stereo_draw_indexed::get_hook_status().installed)
+		fail("late retired-device callback displaced the current hook owner");
+	vr::engine_stereo_draw_indexed::invalidate_device(replacement_context.Get(), 2);
+	if (vr::engine_stereo_draw_indexed::get_hook_status().installed ||
+		vr::engine_stereo_draw_indexed::install(replacement_context.Get(), 2))
+		fail("invalidated device was re-admitted by a late frame callback");
+	if (!same_status(status, vr::engine_stereo_draw_indexed::get_status()) ||
+		!vr::engine_stereo_draw_indexed::read_report(*immutable_report) ||
+		std::memcmp(report.get(), immutable_report.get(), sizeof(*report)) != 0)
+		fail("live entry reconciliation changed the frozen evidence report");
 	std::cout << "vr-d3d11-draw-indexed-probe: PASS\n";
 	return 0;
 }

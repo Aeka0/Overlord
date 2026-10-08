@@ -123,6 +123,8 @@ namespace utils::hook
 		void disable();
 
 		void create(void* place, void* target);
+		// Prepare a trampoline before publishing state used by the enabled hook.
+		void create_disabled(void* place, void* target);
 		void create(size_t place, void* target);
 		[[nodiscard]] bool clear() noexcept;
 

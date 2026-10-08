@@ -21,7 +21,23 @@ namespace vr::engine_stereo_draw_indexed
 		constexpr std::uint64_t fnv_prime = 1099511628211ull;
 		using draw_fn = void(__stdcall*)(ID3D11DeviceContext*, UINT, UINT, INT);
 
-		utils::hook::detour draw_hook;
+		// Context modes can use different DrawIndexed entries, including entries
+		// which call each other. Never replace/free a trampoline used by a draw.
+		constexpr std::size_t maximum_hook_targets = 16;
+		struct hook_entry
+		{
+			utils::hook::detour hook;
+			std::uintptr_t target{};
+			std::atomic<draw_fn> original{};
+		};
+		std::array<hook_entry, maximum_hook_targets> draw_hooks;
+		std::atomic_bool live_installed{};
+		std::atomic_uintptr_t live_target{}, live_context{};
+		std::atomic_uint64_t live_generation{}, live_failures{}, target_changes{};
+		std::atomic_uint64_t retained_targets{}, nested_draws{};
+		std::uintptr_t rejected_target{}, rejected_context{};
+		std::uint64_t rejected_generation{};
+		std::uint64_t retired_generation{};
 		std::mutex hook_mutex;
 		std::mutex report_mutex;
 		std::atomic_bool hook_installed{};
@@ -246,12 +262,23 @@ namespace vr::engine_stereo_draw_indexed
 			hash_bytes(active.draw_shape_hash, &index_count, sizeof(index_count));
 		}
 
+		template<std::size_t Index>
 		void __stdcall draw_stub(ID3D11DeviceContext* const context,
 			const UINT index_count, const UINT start_index_location,
 			const INT base_vertex_location)
 		{
-			const auto original = reinterpret_cast<draw_fn>(draw_hook.get_original());
+			const auto original = draw_hooks[Index].original.load(std::memory_order_acquire);
 			if (original == nullptr) return;
+			if (inside_draw)
+			{
+				// Preserve nested native draws and target forwarding, but do not
+				// count/capture the same draw or its HUD replay a second time.
+				nested_draws.fetch_add(1, std::memory_order_relaxed);
+				original(context, index_count, start_index_location, base_vertex_location);
+				return;
+			}
+			inside_draw = true;
+			const auto exit = gsl::finally([] { inside_draw = false; });
 			region_capture::draw_indexed(index_count);
 			const auto caller = reinterpret_cast<std::uintptr_t>(_ReturnAddress());
 			engine_stereo_execution::invocation_scope execution_scope{};
@@ -264,13 +291,12 @@ namespace vr::engine_stereo_draw_indexed
 			}
 			original(context, index_count, start_index_location, base_vertex_location);
 			engine_stereo_execution::end_draw_indexed(execution_scope);
-			if (const auto copy = copy_observer.load(std::memory_order_acquire))
-				copy(context, index_count, start_index_location, base_vertex_location, original);
-			if (inside_draw)
+			if (live_installed.load(std::memory_order_acquire) &&
+				reinterpret_cast<std::uintptr_t>(context) == live_context.load(std::memory_order_acquire))
 			{
-				return;
+				if (const auto copy = copy_observer.load(std::memory_order_acquire))
+					copy(context, index_count, start_index_location, base_vertex_location, original);
 			}
-			inside_draw = true;
 			if (active_transaction != nullptr &&
 				static_cast<bool>(*active_transaction))
 			{
@@ -284,8 +310,14 @@ namespace vr::engine_stereo_draw_indexed
 				observe_replay(*active_replay, context, index_count,
 					start_index_location, base_vertex_location, caller);
 			}
-			inside_draw = false;
 		}
+
+		template<std::size_t... Indices>
+		constexpr auto make_draw_stubs(std::index_sequence<Indices...>) noexcept
+		{
+			return std::array<draw_fn, sizeof...(Indices)>{draw_stub<Indices>...};
+		}
+		constexpr auto draw_stubs = make_draw_stubs(std::make_index_sequence<maximum_hook_targets>{});
 	}
 
 	void set_draw_observer(const draw_observer observer) noexcept
@@ -301,86 +333,138 @@ namespace vr::engine_stereo_draw_indexed
 	bool install(ID3D11DeviceContext* const context,
 		const std::uint64_t device_generation) noexcept
 	{
-		if (context == nullptr || device_generation == 0)
-		{
-			const std::lock_guard lock(hook_mutex);
-			if (!is_terminal(current_state.load(std::memory_order_acquire)))
-			{
-				hook_failures.fetch_add(1, std::memory_order_relaxed);
-			}
+		// Installation belongs to native frame/UI boundaries, never a draw callback.
+		if (inside_draw) return false;
+		const auto context_address = reinterpret_cast<std::uintptr_t>(context);
+		const auto* const vtable = context ? *reinterpret_cast<void***>(context) : nullptr;
+		void* const target = vtable ? vtable[draw_indexed_vtable_slot] : nullptr;
+		const auto target_address = reinterpret_cast<std::uintptr_t>(target);
+		const auto state = current_state.load(std::memory_order_acquire);
+		if (live_installed.load(std::memory_order_acquire) &&
+			live_target.load(std::memory_order_acquire) == target_address &&
+			live_context.load(std::memory_order_acquire) == context_address &&
+			live_generation.load(std::memory_order_acquire) == device_generation &&
+			(is_terminal(state) || state == gate_state::active ||
+				(expected_context.load(std::memory_order_acquire) == context_address &&
+					expected_generation.load(std::memory_order_acquire) == device_generation)))
+			return true;
+
+		const std::lock_guard lock(hook_mutex);
+		// A late callback from a retired device must not displace the current owner.
+		if (device_generation != 0 && (device_generation <= retired_generation ||
+			device_generation < live_generation.load(std::memory_order_acquire)))
 			return false;
+		if (rejected_target == target_address && rejected_context == context_address &&
+			rejected_generation == device_generation && rejected_generation != 0)
+			return false;
+		live_installed.store(false, std::memory_order_release);
+		if (context && device_generation != 0)
+		{
+			live_context.store(context_address, std::memory_order_release);
+			live_generation.store(device_generation, std::memory_order_release);
 		}
 		try
 		{
-			auto* const vtable = *reinterpret_cast<void***>(context);
-			if (vtable == nullptr) throw std::runtime_error("D3D11 context vtable is null");
-			void* const target = vtable[draw_indexed_vtable_slot];
-			if (!utils::hook_validation::validate_executable_target(target))
-			{
-				throw std::runtime_error("D3D11 DrawIndexed target is not executable");
-			}
+			if (!context || device_generation == 0 ||
+				!utils::hook_validation::validate_executable_target(target))
+				throw std::runtime_error("D3D11 DrawIndexed context/target is invalid");
 
-			const std::lock_guard lock(hook_mutex);
-			const auto existing = hook_target.load(std::memory_order_acquire);
-			if (existing != 0 && existing != reinterpret_cast<std::uintptr_t>(target))
+			auto entry = std::find_if(draw_hooks.begin(), draw_hooks.end(),
+				[&](const auto& value) { return value.target == target_address; });
+			if (entry == draw_hooks.end())
 			{
-				throw std::runtime_error("D3D11 DrawIndexed target changed across devices");
+				entry = std::find_if(draw_hooks.begin(), draw_hooks.end(),
+					[](const auto& value) { return value.target == 0; });
+				if (entry == draw_hooks.end())
+					throw std::runtime_error("D3D11 DrawIndexed retained-target capacity exceeded");
+				const auto index = static_cast<std::size_t>(entry - draw_hooks.begin());
+				entry->hook.create_disabled(target, draw_stubs[index]);
+				entry->original.store(reinterpret_cast<draw_fn>(entry->hook.get_original()),
+					std::memory_order_release);
+				// Claim the slot before enabling it. An enable failure leaves a stable
+				// disabled entry for a later device generation, never a reused trampoline.
+				entry->target = target_address;
+				retained_targets.fetch_add(1, std::memory_order_relaxed);
 			}
-			const auto state = current_state.load(std::memory_order_acquire);
-			if (is_terminal(state))
+			if (!entry->hook.is_enabled()) entry->hook.enable();
+
+			const auto previous = live_target.load(std::memory_order_acquire);
+			const auto evidence_state = current_state.load(std::memory_order_acquire);
+			// A concurrent context mode switch requires another boundary check.
+			// Do not admit evidence or copies for an entry we have not covered.
+			if ((*reinterpret_cast<void***>(context))[draw_indexed_vtable_slot] != target)
 			{
-				return existing == reinterpret_cast<std::uintptr_t>(target) &&
-					hook_installed.load(std::memory_order_acquire);
+				if (evidence_state == gate_state::active)
+					device_invalidated_during_transaction.store(true, std::memory_order_release);
+				else if (!is_terminal(evidence_state))
+					hook_installed.store(false, std::memory_order_release);
+				return false;
 			}
-			if (state == gate_state::active)
+			if (evidence_state == gate_state::active)
 			{
-				const auto same_device = expected_context.load(std::memory_order_acquire) ==
-					reinterpret_cast<std::uintptr_t>(context) &&
-					expected_generation.load(std::memory_order_acquire) == device_generation;
-				if (!same_device)
-				{
-					device_invalidated_during_transaction.store(true,
-						std::memory_order_release);
-				}
-				return same_device && hook_installed.load(std::memory_order_acquire);
+				if (hook_target.load(std::memory_order_acquire) != target_address ||
+					expected_context.load(std::memory_order_acquire) != context_address ||
+					expected_generation.load(std::memory_order_acquire) != device_generation)
+					device_invalidated_during_transaction.store(true, std::memory_order_release);
 			}
-			if (!draw_hook.is_enabled())
+			else if (!is_terminal(evidence_state))
 			{
-				if (draw_hook.get_original() == nullptr) draw_hook.create(target, draw_stub);
-				else draw_hook.enable();
+				hook_target.store(target_address, std::memory_order_release);
+				expected_context.store(context_address, std::memory_order_release);
+				expected_generation.store(device_generation, std::memory_order_release);
+				hook_installed.store(true, std::memory_order_release);
 			}
-			hook_target.store(reinterpret_cast<std::uintptr_t>(target),
-				std::memory_order_release);
-			expected_context.store(reinterpret_cast<std::uintptr_t>(context),
-				std::memory_order_release);
-			expected_generation.store(device_generation, std::memory_order_release);
-			hook_installed.store(true, std::memory_order_release);
+			if (previous != 0 && previous != target_address)
+				target_changes.fetch_add(1, std::memory_order_relaxed);
+			live_target.store(target_address, std::memory_order_release);
+			live_installed.store(true, std::memory_order_release);
+			rejected_generation = 0;
 			return true;
 		}
 		catch (...)
 		{
-			const std::lock_guard lock(hook_mutex);
+			rejected_target = target_address;
+			rejected_context = context_address;
+			rejected_generation = device_generation;
+			live_installed.store(false, std::memory_order_release);
+			live_failures.fetch_add(1, std::memory_order_relaxed);
 			if (!is_terminal(current_state.load(std::memory_order_acquire)))
 			{
 				hook_failures.fetch_add(1, std::memory_order_relaxed);
-				hook_installed.store(draw_hook.is_enabled(), std::memory_order_release);
+				hook_installed.store(false, std::memory_order_release);
+				if (current_state.load(std::memory_order_acquire) == gate_state::active)
+					device_invalidated_during_transaction.store(true, std::memory_order_release);
 			}
 			return false;
 		}
+	}
+
+	hook_status get_hook_status() noexcept
+	{
+		const std::lock_guard lock(hook_mutex);
+		return {live_installed.load(), live_target.load(), live_context.load(),
+			live_generation.load(), live_failures.load(), target_changes.load(),
+			retained_targets.load(), nested_draws.load()};
 	}
 
 	void invalidate_device(ID3D11DeviceContext* const context,
 		const std::uint64_t device_generation) noexcept
 	{
 		const std::lock_guard hook_lock(hook_mutex);
+		const auto address = reinterpret_cast<std::uintptr_t>(context);
+		if (live_generation.load(std::memory_order_acquire) == device_generation &&
+			live_context.load(std::memory_order_acquire) == address)
+		{
+			live_installed.store(false, std::memory_order_release);
+			live_context.store(0, std::memory_order_release);
+			retired_generation = std::max(retired_generation, device_generation);
+			// Keep the generation watermark and all trampolines for late calls.
+		}
 		const auto state = current_state.load(std::memory_order_acquire);
 		if (is_terminal(state)) return;
 		if (expected_generation.load(std::memory_order_acquire) != device_generation ||
-			expected_context.load(std::memory_order_acquire) !=
-				reinterpret_cast<std::uintptr_t>(context))
-		{
+			expected_context.load(std::memory_order_acquire) != address)
 			return;
-		}
 		if (state == gate_state::active)
 		{
 			device_invalidated_during_transaction.store(true, std::memory_order_release);

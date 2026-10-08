@@ -220,6 +220,8 @@ namespace vr::native_hud_capture
 				const auto remote_epoch=remote_epoch_for_capture();
 				if(!plan && !remote_epoch)return;
 				const auto graphics=d3d11::get_device_snapshot();if(!graphics)return;
+				// Frontend UI bypasses the per-view dispatcher; reconcile before its draws.
+				if(!engine_stereo_draw_indexed::install(graphics.context.Get(),graphics.generation))return;
 				if(gpu.generation!=graphics.generation){gpu={};gpu.generation=graphics.generation;}
 				global_remote={};prepare_remote(global_remote,1,nullptr);global_remote_epoch=remote_epoch;
 				for(auto& layer:global_remote)layer.graphics=graphics;
@@ -1280,6 +1282,9 @@ namespace vr::native_hud_capture
 			if (selected) ++anchors;
 			s.graphics = d3d11::get_device_snapshot();
 			if (!s.graphics) { native(); return; }
+			// A runtime/context mode switch may have changed the entry since device creation.
+			if (!engine_stereo_draw_indexed::install(s.graphics.context.Get(),s.graphics.generation))
+			{ native(); return; }
 			if (gpu.generation != s.graphics.generation) { gpu = {}; gpu.generation = s.graphics.generation; }
 			release_retired_subtractive(gpu.narrative_slots);
 			for (unsigned i=0;i<weapon_scopes.size();++i)

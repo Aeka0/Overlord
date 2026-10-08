@@ -164,6 +164,11 @@ namespace vr
 				return;
 			}
 
+			// Keep continuous observation alive independently of the one-shot evidence.
+			// The unchanged-entry path only reads the vtable and atomic owner identity.
+			if (event.graphics)
+				(void)engine_stereo_draw_indexed::install(event.graphics.context.Get(),
+					event.graphics.generation);
 			engine_stereo_owner_pass::on_present_pre(event);
 			engine_stereo_execution::on_present_pre(event.frame_index,
 				event.graphics.generation, GetCurrentThreadId());

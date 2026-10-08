@@ -159,10 +159,25 @@ namespace vr::engine_stereo_draw_indexed
 		std::uint64_t natural_index_count{};
 	};
 
+	// Call at native render/UI boundaries to reconcile the context's current entry.
+	// Retained entries keep their own trampolines until process shutdown.
 	[[nodiscard]] bool install(ID3D11DeviceContext* context,
 		std::uint64_t device_generation) noexcept;
-	// One process-wide DrawIndexed detour owns the API boundary. Feature modules
-	// attach a pass-through observer instead of installing or linking another hook.
+
+	struct hook_status
+	{
+		bool installed{};
+		std::uintptr_t target{};
+		std::uintptr_t context{};
+		std::uint64_t generation{};
+		std::uint64_t failures{};
+		std::uint64_t target_changes{};
+		std::uint64_t retained_targets{};
+		std::uint64_t nested_draws{};
+	};
+	[[nodiscard]] hook_status get_hook_status() noexcept;
+	// One process-wide owner manages the observed API entries. Feature modules
+	// attach observers instead of installing or linking another hook.
 	void set_draw_observer(draw_observer observer) noexcept;
 	// Optional presentation copy after the original draw. The callback must restore
 	// all modified context state and use the supplied trampoline, never re-enter DrawIndexed.

@@ -71,6 +71,12 @@ namespace vr::diagnostics::detail
 		output << " thread_mismatch=" << draw_indexed_status.thread_mismatches;
 		output << " invalid_arguments=" << draw_indexed_status.invalid_arguments;
 		output << " overflow=" << draw_indexed_status.overflows << '\n';
+		const auto live_draw = engine_stereo_draw_indexed::get_hook_status();
+		output << "  draw_indexed_live: hook=" << (live_draw.installed ? "yes" : "no")
+			<< " target=0x" << std::hex << live_draw.target << " context=0x" << live_draw.context << std::dec
+			<< " generation=" << live_draw.generation << " failures=" << live_draw.failures
+			<< " target_changes=" << live_draw.target_changes << " retained=" << live_draw.retained_targets
+			<< " nested=" << live_draw.nested_draws << '\n';
 		output << "  backend_execution_census: state="
 			<< engine_stereo_execution::to_string(execution_status.state);
 		output << " error=" << engine_stereo_execution::to_string(execution_status.error);

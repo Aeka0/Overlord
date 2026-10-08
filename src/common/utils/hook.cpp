@@ -140,6 +140,20 @@ namespace utils::hook
 
 	void detour::create(void* place, void* target)
 	{
+		this->create_disabled(place, target);
+		try
+		{
+			this->enable();
+		}
+		catch (...)
+		{
+			(void)this->clear();
+			throw;
+		}
+	}
+
+	void detour::create_disabled(void* place, void* target)
+	{
 		if (!this->clear())
 		{
 			throw std::runtime_error(string::va("Unable to remove existing hook before creating hook at %p", place));
@@ -154,16 +168,6 @@ namespace utils::hook
 			this->enabled_ = false;
 			throw std::runtime_error(string::va("Unable to create hook at location %p (MinHook=%d)",
 				place, static_cast<int>(create_result)));
-		}
-
-		try
-		{
-			this->enable();
-		}
-		catch (...)
-		{
-			(void)this->clear();
-			throw;
 		}
 	}
 
