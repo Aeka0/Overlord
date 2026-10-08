@@ -1,5 +1,5 @@
 import { CircleX, TriangleAlert } from "lucide-react";
-import { useLayoutEffect, useRef } from "react";
+import { LauncherDialog } from "./LauncherDialog";
 import type { Translate } from "../i18n";
 import type { PreflightReport } from "../preflight";
 import type { Notice } from "../useSettings";
@@ -25,23 +25,12 @@ export function LaunchDialog({
   onLaunch: () => void;
   onClose: () => void;
 }) {
-  const ref = useRef<HTMLDialogElement>(null);
-  useLayoutEffect(() => {
-    const dialog = ref.current!;
-    dialog.showModal();
-    return () => dialog.close();
-  }, []);
   return (
-    <dialog
-      ref={ref}
-      className="preflight-dialog"
-      aria-labelledby="preflight-title"
-      aria-describedby="preflight-description"
-      aria-busy={busy || undefined}
-      onCancel={(event) => {
-        event.preventDefault();
-        if (!busy) onClose();
-      }}
+    <LauncherDialog
+      titleId="preflight-title"
+      descriptionId="preflight-description"
+      busy={busy}
+      onClose={onClose}
     >
       <div className="preflight-heading">
         <h1 id="preflight-title" className="display-heading">
@@ -151,6 +140,6 @@ export function LaunchDialog({
           )}
         </div>
       </div>
-    </dialog>
+    </LauncherDialog>
   );
 }

@@ -91,7 +91,7 @@ namespace vr::gameplay::equipment::special::notebook
 			anchor base=stowed_root(body);float angle{};
 			if(s.state.held())
 			{
-				const auto* inward=game::Dvar_FindVar("vr_handOffsetInward");const auto* back=game::Dvar_FindVar("vr_handOffsetBack");const auto* up=game::Dvar_FindVar("vr_handOffsetUp");
+				const auto* inward=game::Dvar_FindVar(vr::settings::active_hand_alignment()[0].name);const auto* back=game::Dvar_FindVar(vr::settings::active_hand_alignment()[1].name);const auto* up=game::Dvar_FindVar(vr::settings::active_hand_alignment()[2].name);
 				if(!s.ready || !inward || !back || !up || !vr::valid_hand(s.state.holder))return;
 				const position_offsets offsets{inward->current.value,back->current.value,up->current.value};std::array<anchor,2> wrists{};
 				const auto h=unsigned(s.state.holder);if(!tracked_wrist(input,body,{},int(h),offsets,wrists[h]))return;

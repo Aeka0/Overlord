@@ -16,7 +16,7 @@
 #include "native_stereo_source.hpp"
 #include "present_transaction.hpp"
 #include "pose_filter.hpp"
-#include "touch_controller_reference.hpp"
+#include "legacy_controller_pose.hpp"
 #include "engine_scene_resolution.hpp"
 #include "movie_presentation.hpp"
 #include "presentation_options.hpp"
@@ -927,7 +927,7 @@ namespace vr::openxr
 				(void)teardown_preserving_error();
 				return false;
 			}
-			apply_controller_reference(std::move(controller_reference));
+			apply_controller_reference(std::move(controller_reference), startup.pose_pipeline);
 			// A new LOCAL space cannot reuse a reference from an older session.
 			head_pose_bridge::request_recenter();
 			status_.controller_input_ready = true;
@@ -1296,19 +1296,19 @@ namespace vr::openxr
 			status_.state = runtime_state::running;
 			return true;
 		}
-		void apply_controller_reference(controller_pose_reference::configuration reference)
+		void apply_controller_reference(controller_pose_reference::configuration reference,
+			controller_pose_pipeline::mode mode)
 		{
-			if (!reference.expected_runtime.empty() && reference.expected_runtime != status_.runtime_name)
-				reference = {};
-			if (status_.runtime_name == "VirtualDesktopXR")
-				reference = controller_pose_reference::touch_legacy_reference();
+			reference = mode == controller_pose_pipeline::mode::legacy
+				? legacy_controller_pose::select(std::move(reference), status_.runtime_name)
+				: controller_pose_reference::configuration{};
 			// SteamVR metadata was copied before loading OpenXR. No OpenVR SDK connection
 			// overlaps this instance/session or the Present-owned frame loop.
 			status_.controller_pose_reference = reference.name;
 			status_.controller_pose_reference_error = reference.error;
 			for (unsigned hand = 0; hand < reference.hands.size(); ++hand)
 				status_.controller_reference_ids[hand] = reference.hands[hand].reference_id;
-			inputs_.set_grip_reference(std::move(reference));
+			inputs_.set_grip_reference(std::move(reference), mode);
 		}
 
 		bool try_arm_native()

@@ -48,7 +48,8 @@ namespace vr
 				return openxr::choose_startup(selected, true, {}, {}, "skipped for explicit runtime");
 			if (const auto error = steamvr::diagnose_ipc_environment(); !error.empty())
 				return openxr::choose_startup(selected, explicit_runtime, {}, {}, error);
-			const auto metadata = steamvr::query_openxr_metadata(steamvr_selected);
+			const auto metadata = steamvr::query_openxr_metadata(steamvr_selected,
+				controller_pose_pipeline::selected() == controller_pose_pipeline::mode::legacy);
 			const auto installed = !explicit_runtime && !steamvr_selected && metadata.connected_steam_link()
 			    ? steamvr::locate_installed_runtime() : steamvr::runtime_location{};
 			return openxr::choose_startup(selected, explicit_runtime, metadata, installed);

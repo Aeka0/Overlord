@@ -43,7 +43,7 @@ namespace vr::steamvr
 		}
 	}
 
-	openxr_metadata query_openxr_metadata(bool steamvr_selected)
+	openxr_metadata query_openxr_metadata(bool steamvr_selected, bool include_legacy_reference)
 	{
 		openxr_metadata metadata;
 		auto& reference = metadata.reference;
@@ -72,7 +72,7 @@ namespace vr::steamvr
 		metadata.remote_client_id_error = static_cast<std::int32_t>(property_error);
 		if (property_error == TrackedProp_Success)
 			metadata.remote_client_id = remote_client;
-		if (!steamvr_selected && !metadata.connected_steam_link())
+		if (!include_legacy_reference || (!steamvr_selected && !metadata.connected_steam_link()))
 			return metadata;
 		auto* models = VRRenderModels();
 		if (!models)

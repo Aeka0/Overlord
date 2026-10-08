@@ -43,7 +43,7 @@ redistribution rights and tested on a clean game installation.
 
 For a local candidate from an uncommitted working tree, use
 `--staging-directory release`; the candidate goes into `release/<version-name>/`
-(currently `release/Beta 3/`). Add `--base-data <installed-cdata-directory>` to
+(currently `release/Beta 4/`). Add `--base-data <installed-cdata-directory>` to
 include the explicitly selected base H2-Mod fastfiles. The packager admits only
 zone names present in `data/zone_source`, checks the official-language resource
 set, and uses the current repository's scripts and sound patches. It does not
@@ -52,6 +52,23 @@ the configuration, version, resource list and whether base data was included.
 Local staging includes the selected build's PDB for private deployment and crash
 analysis. The ordinary archive mode omits PDBs and still requires a clean,
 committed candidate.
+Local staging marks `acceptance_status=candidate`, `runtime_acceptance=pending`
+and `delivery_ready=false`. Packaging and deployment for testing do not promote
+that status to an accepted delivery.
+
+## Runtime acceptance and delivery gate
+
+Follow [Release validation](release-validation.md) before declaring a candidate
+deliverable. The exact staged Release executable must start in a fresh process,
+load a campaign level into playable gameplay, and pass the affected runtime
+path. Reproduce a repaired loading failure with the same level and startup path.
+Record desktop and HMD results separately for the supported scope.
+
+Build, static-audit, launcher and archive success are prerequisite evidence.
+Runtime acceptance must still be recorded against the actual staged artifact.
+Known unresolved crashes, failed loading or missing game output block delivery.
+Keep incomplete candidates available for local retesting without calling them
+an accepted release.
 
 VR builds do not use the inherited upstream updater or SSH deployment workflow.
 Legacy MOTD, featured panels and Wordle are temporarily disabled at both native
@@ -64,7 +81,8 @@ using tools/build_openxr_loader.py; the batch entry point delegates to that same
 ## Tag and publish
 
 Set the display name, four-part Windows file version and prerelease flag in
-`version.json`, then tag the validated source used for published binaries.
+`version.json`, complete the delivery gate, then tag the validated source used
+for published binaries.
 Premake generates the EXE and runtime version from that file; the launcher uses
 the same value for every language. Git metadata remains diagnostic provenance,
 with an explicit `unknown` value in snapshots without history. The displayed

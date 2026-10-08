@@ -54,8 +54,10 @@ namespace vr::controller_input
 	// never poll the runtime or retain references into a mutable runtime buffer.
 	struct frame
 	{
+		controller_pose_pipeline::mode pose_pipeline{controller_pose_pipeline::mode::legacy};
 		std::uint64_t sequence{};
 		std::uint64_t reference_generation{};
+		std::uint64_t pose_reference_generation{}; // Binding/model changes are not physical motion.
 		clock::time_point sampled_at{};
 		bool focused{};
 		bool move_active{};
@@ -98,7 +100,8 @@ namespace vr::controller_input
 	};
 	inline bool producer_discontinuity(const frame& before,const frame& after) noexcept
 	{
-		if(after.sequence<before.sequence || after.reference_generation!=before.reference_generation ||
+		if(after.pose_pipeline!=before.pose_pipeline || after.pose_reference_generation!=before.pose_reference_generation ||
+			after.sequence<before.sequence || after.reference_generation!=before.reference_generation ||
 			after.focused!=before.focused || after.orientation_settling!=before.orientation_settling ||
 			after.sampled_at<before.sampled_at || (before.sequence && after.sampled_at-before.sampled_at>std::chrono::milliseconds(150)))return true;
 		for(unsigned h=0;h<2;++h)

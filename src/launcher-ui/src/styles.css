@@ -296,6 +296,55 @@ input[aria-invalid="true"] {
 .number-control input {
   width: 96px;
 }
+.setting-control:has(.calibration-row) {
+  flex: 1;
+  min-width: 0;
+  max-width: 420px;
+}
+.setting-row:has(.calibration-row) {
+  flex-wrap: wrap;
+}
+.setting-row:has(.calibration-row) .setting-copy {
+  flex-basis: 100%;
+}
+.setting-row:has(.calibration-row) .setting-control {
+  max-width: none;
+}
+.calibration-command {
+  display: block;
+  margin-top: 4px;
+  overflow-wrap: anywhere;
+}
+.calibration-command code {
+  font-size: 12px;
+  color: var(--text);
+}
+.calibration-row {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+  width: 100%;
+}
+.calibration-axis {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+.calibration-axis > label {
+  flex: 1;
+  display: block;
+  margin-bottom: 6px;
+  overflow-wrap: anywhere;
+  font-size: 13px;
+  color: var(--muted);
+}
+.calibration-axis .number-control {
+  gap: 4px;
+}
+.calibration-axis input {
+  width: 100%;
+  min-width: 0;
+}
 .unit {
   font-size: 13px;
   color: var(--muted);
@@ -726,6 +775,10 @@ mark {
   .setting-row:has(input[type="number"]) .setting-copy,
   .setting-row:has(select) .setting-copy {
     flex-basis: 100%;
+  }
+  .setting-control:has(.calibration-row) {
+    max-width: none;
+    width: 100%;
   }
 }
 @media (max-width: 620px) {

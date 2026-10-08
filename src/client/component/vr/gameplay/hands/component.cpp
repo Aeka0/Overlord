@@ -2088,28 +2088,16 @@ namespace vr::gameplay::hands
 			    game::DVAR_FLAG_SAVED,
 			    "Independent controller-driven hands, including empty-hand presentation");
 			command::add("vr_hands_status", print_status);
-			constexpr position_offsets hand_defaults;
-			hand_inward = dvars::register_float(
-			    "vr_handOffsetInward",
-			    hand_defaults.inward_meters,
-			    -max_position_offset_meters,
-			    max_position_offset_meters,
-			    game::DVAR_FLAG_SAVED,
-			    "Hand alignment in meters; moves wrist and rotation center inward, mirrored per hand");
-			hand_back =
-			    dvars::register_float("vr_handOffsetBack",
-			                          hand_defaults.back_meters,
-			                          -max_position_offset_meters,
-			                          max_position_offset_meters,
-			                          game::DVAR_FLAG_SAVED,
-			                          "Hand alignment in meters; moves wrist and rotation center backward");
-			hand_up =
-			    dvars::register_float("vr_handOffsetUp",
-			                          hand_defaults.up_meters,
-			                          -max_position_offset_meters,
-			                          max_position_offset_meters,
-			                          game::DVAR_FLAG_SAVED,
-			                          "Hand alignment in meters; moves wrist and rotation center upward");
+			const auto& alignment = settings::active_hand_alignment();
+			const std::array outputs{&hand_inward, &hand_back, &hand_up};
+			for (const auto& fields : {settings::hand_alignment, settings::standard_hand_alignment})
+				for (unsigned i = 0; i < outputs.size(); ++i)
+				{
+					auto* value = dvars::register_float(fields[i].name, fields[i].default_value,
+						fields[i].min, fields[i].max, game::DVAR_FLAG_SAVED,
+						"Hand alignment in meters in the selected grip coordinates");
+					if (fields[i].name == alignment[i].name) *outputs[i] = value;
+				}
 			shoulder_half_width =
 			    dvars::register_float("vr_shoulderHalfWidth",
 			                          0.18f,

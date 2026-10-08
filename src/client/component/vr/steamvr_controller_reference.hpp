@@ -22,5 +22,5 @@ namespace vr::steamvr
 	// Steam Link HMD is connected, static controller metadata. It closes before
 	// loading OpenXR. No poses,
 	// compositor calls, bindings, GPU resources or SDK handles are retained.
-	openxr_metadata query_openxr_metadata(bool steamvr_selected);
+	openxr_metadata query_openxr_metadata(bool steamvr_selected, bool include_legacy_reference = true);
 }

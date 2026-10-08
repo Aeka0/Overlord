@@ -10,6 +10,7 @@ namespace vr::steamvr_input
 	bool actions::initialize(IVRSystem* system)
 	{
 		reset();
+		pose_pipeline_ = controller_pose_pipeline::selected();
 		system_ = system;
 		++diagnostics_.initializations;
 		setup_actions_ = {};
@@ -105,6 +106,7 @@ namespace vr::steamvr_input
 	{
 		using namespace controller_input;
 		controller_input::frame frame{};
+		frame.pose_pipeline = pose_pipeline_;
 		frame.sequence = ++sequence_;
 		frame.sampled_at = controller_input::clock::now();
 		frame.reference_generation = head_pose_bridge::get_status().recenter_count;
@@ -199,7 +201,7 @@ namespace vr::steamvr_input
 		for (size_t hand = 0; hand < 2; ++hand)
 			frame.secondary[hand] = digital(secondary_[hand], secondary_state_[hand]);
 		const auto pose =
-		    [&](const VRActionHandle_t handle, controller_input::hand_pose& output, input_channel channel)
+		    [&](const VRActionHandle_t handle, controller_input::hand_pose& output, input_channel channel, unsigned hand, bool aim)
 		{
 			InputPoseActionData_t value{};
 			const auto result = input_->GetPoseActionDataForNextFrame(
@@ -221,16 +223,25 @@ namespace vr::steamvr_input
 					output.tracking.orientation[row][col] = matrix[row][col];
 			}
 			output.valid = true;
+			if (pose_pipeline_ == controller_pose_pipeline::mode::standard &&
+				(!system_ || !pose_adapter_.normalize(*system_, *input_, VRRenderModels(), handle,
+					value.activeOrigin, hand, aim, frame.sampled_at, output)))
+			{
+				output.valid = false;
+				condition = {input_reason::pose_reference_unavailable, 0, handle};
+			}
 		};
 		for (unsigned hand = 0; hand < 2; ++hand)
 		{
-			pose(grip_[hand], frame.grip[hand], hand_channel(input_channel::left_grip, hand));
-			pose(aim_[hand], frame.aim[hand], hand_channel(input_channel::left_aim, hand));
+			pose(grip_[hand], frame.grip[hand], hand_channel(input_channel::left_grip, hand), hand, false);
+			pose(aim_[hand], frame.aim[hand], hand_channel(input_channel::left_aim, hand), hand, true);
 		}
 		const auto failed = std::any_of(frame.source.channels.begin(), frame.source.channels.end(),
 		    [](const input_condition& condition) { return is_api_failure(condition.reason); });
 		if (failed && !sample_failed_) probe_pending_ = true;
 		sample_failed_ = failed;
+		if (pose_pipeline_ == controller_pose_pipeline::mode::standard)
+			frame.pose_reference_generation = pose_adapter_.generation();
 		controller_input::publish(frame);
 		if (probe_pending_) capture_probe(failed);
 		const auto pulses = controller_haptics::consume(frame);
@@ -276,6 +287,7 @@ namespace vr::steamvr_input
 		for (auto& state : trigger_touch_state_)
 			(void)state.sample(false, false, now);
 		grip_ = aim_ = {};
+		pose_adapter_.reset();
 		haptic_ = {};
 		controller_haptics::bindings({});
 		controller_haptics::clear();

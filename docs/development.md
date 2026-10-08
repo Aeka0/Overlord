@@ -22,11 +22,16 @@ msbuild build\overlord.sln /m /v:minimal /p:Configuration=Debug /p:Platform=x64
 
 `generate.bat --with-vr-tests` also initializes submodules and generates the solution. Regenerate after adding source files or test targets, or changing Premake. Do not maintain generated `.vcxproj` files directly.
 
-The `launcher-resources` dependency prepares the pinned WebView2 SDK from NuGet,
-runs `npm ci` when the launcher lockfile changes, and builds the frontend. Its
+The client's pre-build step prepares the pinned WebView2 SDK from NuGet,
+runs `npm ci` when the launcher lockfile changes, and builds the frontend. It
+runs for both solution builds and direct `client.vcxproj` builds, and a failed
+preparation stops the client build. Its
 generated resource manifest embeds HTML, JavaScript, CSS and fonts in the EXE.
 Different configurations share a serialized resource preparation step.
 No web server or Node.js installation is required on the player's machine.
+`tools/verify_launcher.py` also compares the embedded field names with the
+current source schema and checks that calibration presets address visible
+controls, so a functional but stale page cannot pass the renderer check.
 
 Launcher frontend development lives in `src/launcher-ui`. Run `npm run dev`
 there when a development server is needed, then open the Debug client with
@@ -109,11 +114,19 @@ dialog and restores the embedded OpenXR loader there, without starting the game.
 This check does not establish in-game or HMD acceptance.
 
 Run the client artifact audit against the configuration selected for release.
-It checks emitted feature entry points and writable weapon-carry publication
-storage using the matching PDB and PE section table. The v142 Release build
-keeps the carry runtime outside LTCG because that optimization placed its
-mutable model frame in read-only storage while retaining writes to it. The
-remaining translation units retain link-time optimization.
+It checks emitted feature entry points and writable publication storage for the
+weapon-carry model frame, backend-target report and output-merger report using
+the matching PDB and PE section table. v142 WPO/LTCG placed these mutable buffers
+in read-only storage while retaining writes to them. `writable_state.hpp` pins
+the affected objects to the explicitly readable/writable, non-executable
+`.vrstate` section using the compiler's
+[allocation attribute](https://learn.microsoft.com/en-us/cpp/cpp/allocate).
+Release retains link-time optimization, including the carry runtime. Ordinary
+constants remain read-only; no runtime page-protection changes are needed.
+Artifact checks are prerequisites for the
+[Release delivery gate](release-validation.md). Acceptance must be demonstrated
+with the exact staged Release binary loading a level and running the affected
+path; successful builds or checks alone leave it a candidate for retest.
 
 For native executable versions, source inventories and H2/H1 adapter boundaries,
 see [native bindings and version adaptation](native-bindings.md). These checks

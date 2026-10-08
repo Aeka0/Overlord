@@ -7,6 +7,8 @@
 #include "component/vr/native_menu.hpp"
 #include "component/vr/native_render_session.hpp"
 #include "component/vr/native_stereo_source.hpp"
+#include "component/vr/gameplay/hands/position_offset.hpp"
+#include "component/vr/touch_controller_reference.hpp"
 
 namespace vr::tests
 {
@@ -18,7 +20,44 @@ namespace vr::tests
 
 namespace openxr_adaptation_tests
 {
+	inline void standard_wrist_equivalence()
+	{
+		using namespace vr;
+		using namespace gameplay::hands;
+		head_pose_bridge::spatial_frame body;
+		body.reference.orientation = body.world_yaw_axis = pose_filter::identity;
+		body.reference.position_meters = {0, 1.65f, 0};
+		body.units_per_meter = 100;
+		const auto reference = controller_pose_reference::touch_legacy_reference();
+		for (unsigned hand = 0; hand < 2; ++hand)
+		for (unsigned preset = 0; preset < settings::alignment_presets.size(); ++preset)
+		for (const controller_calibration::angles rotation : {controller_calibration::angles{},
+		    {70, 0, 0}, {-45, 35, 25}, {0, 0, 90}})
+		{
+			const pose_filter::pose device{{hand ? .3f : -.3f, 1.1f, -.5f}, controller_calibration::rotation(rotation)};
+			const auto standard = pose_filter::compose(device, pose_filter::inverse(reference.hands[hand].grip_from_calibration));
+			const auto aim = pose_filter::compose(device, {{0, .015f, -.08f}, controller_calibration::rotation({-12, 0, 0})});
+			controller_input::frame old_input, new_input;
+			old_input.grip[hand] = old_input.runtime_grip[hand] = {true, {device.position, device.orientation}};
+			new_input.grip[hand] = new_input.runtime_grip[hand] = {true, {standard.position, standard.orientation}};
+			old_input.aim[hand] = old_input.runtime_aim[hand] = new_input.aim[hand] = new_input.runtime_aim[hand] =
+			    {true, {aim.position, aim.orientation}};
+			new_input.wrist_pivot_meters = controller_calibration::defaults_for(controller_pose_pipeline::mode::standard).pivot;
+			const auto& old_values = settings::alignment_presets[preset].values;
+			const auto& new_values = settings::standard_alignment_presets[preset].values;
+			anchor old_target, new_target;
+			tests::require(tracked_wrist(old_input, body, {}, int(hand), {old_values[0], old_values[1], old_values[2]}, old_target) &&
+			    tracked_wrist(new_input, body, {}, int(hand), {new_values[0], new_values[1], new_values[2]}, new_target),
+			    "wrist coordinate equivalence fixture could not produce targets");
+			tests::require(length(sub(old_target.position, new_target.position)) < .0001f,
+			    "standard grip calibration moved the final gameplay wrist relative to the legacy preset");
+		}
+	}
 	inline vr::controller_pose_reference::configuration grip_fixture;
+	inline vr::openxr::startup_configuration legacy_startup()
+	{
+		return {.pose_pipeline = vr::controller_pose_pipeline::mode::legacy};
+	}
 	inline unsigned grip_fixture_calls{};
 	inline vr::tests::mock::get_statistics_fn grip_statistics{};
 	inline vr::openxr::startup_configuration query_grip_fixture()
@@ -30,7 +69,49 @@ namespace openxr_adaptation_tests
 			grip_statistics(&stats);
 			vr::tests::require(stats.instances_created == 0, "metadata query overlapped an OpenXR instance");
 		}
-		return {.controller_reference = grip_fixture};
+		return {.controller_reference = grip_fixture, .pose_pipeline = vr::controller_pose_pipeline::mode::legacy};
+	}
+	inline vr::openxr::startup_configuration standard_startup()
+	{
+		auto reference = grip_fixture;
+		reference.target = vr::controller_pose_reference::basis::calibration_frame;
+		reference.error = "deliberately unavailable legacy metadata";
+		reference.hands = {};
+		return {.controller_reference = std::move(reference),
+			.pose_pipeline = vr::controller_pose_pipeline::mode::standard};
+	}
+	template <class Loader>
+	void standard_grip_input(Loader& loader, const d3d11::device_snapshot& graphics)
+	{
+		using namespace vr;
+		for (const char* provider : {"SteamVR/OpenXR", "VirtualDesktopXR", "unrelated-runtime"})
+		{
+			configure(loader, graphics, tests::mock::scenario::happy);
+			loader.set_runtime_name(provider);
+			openxr::runtime_backend runtime{standard_startup};
+			runtime.set_desired_enabled(true);
+			runtime.set_scene_mode(scene_mode::synthetic);
+			tests::require(runtime.initialize(graphics), "standard pipeline required legacy metadata");
+			loader.queue_session_state(XR_SESSION_STATE_READY);
+			loader.queue_session_state(XR_SESSION_STATE_FOCUSED);
+			// A different active profile must not inherit a Touch-only admission gate.
+			loader.set_interaction_profile(1, "/interaction_profiles/valve/index_controller");
+			runtime.on_present(graphics, 1);
+			const auto input = controller_input::latest();
+			tests::require(input.pose_pipeline == controller_pose_pipeline::mode::standard &&
+				input.runtime_grip[0].valid && input.runtime_grip[1].valid &&
+				input.runtime_grip[0].tracking.position_meters[2] == -.3f &&
+				input.runtime_grip[0].tracking.orientation[1][1] == 1 &&
+				input.runtime_aim[1].tracking.position_meters[2] == -.3f,
+				"standard pipeline changed SDK coordinates or inherited a legacy profile restriction");
+			tests::require(runtime.get_status().controller_pose_reference == "openxr_grip" &&
+				runtime.get_status().controller_reference_ids[0].empty() &&
+				runtime.get_status().controller_pose_reference_error.empty(),
+				"standard pipeline published legacy calibration metadata");
+			tests::require(std::abs(input.wrist_pivot_meters[1] - settings::standard_wrist_pivots[1].default_value) < 1e-6f,
+				"standard input consumed legacy wrist calibration");
+			runtime.shutdown();
+		}
 	}
 	inline void wrist_reference_trajectory()
 	{
@@ -215,7 +296,7 @@ namespace openxr_adaptation_tests
 		using namespace vr;
 		configure(loader, graphics, tests::mock::scenario::happy);
 		loader.set_runtime_name("VirtualDesktopXR");
-		openxr::runtime_backend runtime;
+		openxr::runtime_backend runtime{legacy_startup};
 		runtime.set_desired_enabled(true);
 		runtime.set_scene_mode(scene_mode::synthetic);
 		tests::require(runtime.initialize(graphics) &&

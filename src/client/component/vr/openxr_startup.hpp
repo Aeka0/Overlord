@@ -12,6 +12,7 @@ namespace vr::openxr
 	struct startup_configuration
 	{
 		controller_pose_reference::configuration controller_reference;
+		controller_pose_pipeline::mode pose_pipeline{controller_pose_pipeline::selected()};
 		std::filesystem::path preferred_runtime;
 		std::string preference_source;
 		std::string selection_diagnostic;

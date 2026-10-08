@@ -24,6 +24,7 @@ namespace vr::controller_input
 		action_inactive,
 		controller_disconnected,
 		pose_invalid,
+		pose_reference_unavailable,
 		hmd_disconnected,
 		hmd_pose_invalid,
 		tracking_failed,
@@ -131,6 +132,7 @@ namespace vr::controller_input
 			VR_INPUT_REASON(action_inactive);
 			VR_INPUT_REASON(controller_disconnected);
 			VR_INPUT_REASON(pose_invalid);
+			VR_INPUT_REASON(pose_reference_unavailable);
 			VR_INPUT_REASON(hmd_disconnected);
 			VR_INPUT_REASON(hmd_pose_invalid);
 			VR_INPUT_REASON(tracking_failed);

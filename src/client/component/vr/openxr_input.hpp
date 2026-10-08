@@ -22,6 +22,7 @@ namespace vr::openxr
 		std::array<hand_actions, 2> hands_;
 		controller_input::digital_sampler sprint_state_, jump_state_, menu_state_, recenter_state_;
 		std::uint64_t sequence_{};
+		controller_pose_pipeline::mode pose_pipeline_{controller_pose_pipeline::mode::legacy};
 		controller_pose_reference::configuration grip_reference_;
 		XrInstance instance_{};
 		bool profile_refresh_pending_{true};
@@ -29,7 +30,8 @@ namespace vr::openxr
 		bool refresh_profiles(const dispatch_table&, XrSession, XrResult&, std::string&);
 
 	  public:
-		void set_grip_reference(controller_pose_reference::configuration reference);
+		void set_grip_reference(controller_pose_reference::configuration reference,
+			controller_pose_pipeline::mode mode = controller_pose_pipeline::mode::legacy);
 		void profile_changed() noexcept;
 		const controller_pose_reference::configuration& grip_reference() const noexcept
 		{

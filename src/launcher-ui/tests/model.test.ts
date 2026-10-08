@@ -5,6 +5,7 @@ import {
   collect,
   makeDraft,
   fields,
+  categories,
   SettingError,
   type SettingsState,
 } from "../src/model";
@@ -112,13 +113,28 @@ test("every migrated field has translations in every existing locale", () => {
         field.group,
         field.description,
         field.unit,
+        field.row,
+        field.row && `${field.row}Hint`,
       ].filter(Boolean))
         assert.ok(Object.hasOwn(catalog, key!), `${language}: ${key}`);
+  for (const [language, catalog] of Object.entries(catalogs))
+    for (const category of categories)
+      assert.ok(Object.hasOwn(catalog, `settings.${category}`), `${language}: ${category}`);
   for (const language of Object.keys(catalogs))
     assert.deepEqual(
       Object.keys(shellTranslations[language]),
       Object.keys(shellTranslations.en),
     );
+});
+
+test("startup declaration is translated and retains the version and report details", () => {
+  const keys = ["notice.title", "notice.maintenance", "notice.expectations", "notice.feedback", "notice.issues", "notice.close"];
+  for (const [language, catalog] of Object.entries(catalogs)) {
+    for (const key of keys) assert.ok(catalog[key]?.length, `${language}: ${key}`);
+    assert.ok(catalog["notice.maintenance"].includes("{version}"), language);
+    assert.ok(catalog["notice.feedback"].includes("vr_status") && catalog["notice.feedback"].includes("minidump"), language);
+  }
+  assert.ok(catalogs["zh-CN"]["notice.maintenance"].endsWith("版本更迭也可能破坏游戏存档和进度。"));
 });
 
 test("launch preflight messages exist in all supported languages", () => {

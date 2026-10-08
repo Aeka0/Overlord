@@ -277,9 +277,9 @@ namespace vr::gameplay::ladders
             reference=f->input.reference_generation;continuity=f->input.continuity_generation;sequence=f->input.sequence;last_time=time;
             std::array<free_climb::hand,2> input{};
             position_offsets offsets;
-            if(const auto* x=game::Dvar_FindVar("vr_handOffsetInward"))offsets.inward_meters=x->current.value;
-            if(const auto* x=game::Dvar_FindVar("vr_handOffsetBack"))offsets.back_meters=x->current.value;
-            if(const auto* x=game::Dvar_FindVar("vr_handOffsetUp"))offsets.up_meters=x->current.value;
+			if(const auto* x=game::Dvar_FindVar(vr::settings::active_hand_alignment()[0].name))offsets.inward_meters=x->current.value;
+			if(const auto* x=game::Dvar_FindVar(vr::settings::active_hand_alignment()[1].name))offsets.back_meters=x->current.value;
+			if(const auto* x=game::Dvar_FindVar(vr::settings::active_hand_alignment()[2].name))offsets.up_meters=x->current.value;
             bool valid=true;
             std::array<anchor,2> current_wrists{};
             for(unsigned h=0;h<2;++h)if(held[h])

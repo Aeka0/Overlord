@@ -174,7 +174,7 @@ namespace vr::gameplay::scripted_arms
         if(!view){reject("render origin unavailable");return;}
         vec offset{};std::memcpy(offset.data(),view+0x58,sizeof(offset));
         position_offsets offsets;
-        offsets={setting("vr_handOffsetInward",offsets.inward_meters),setting("vr_handOffsetBack",offsets.back_meters),setting("vr_handOffsetUp",offsets.up_meters)};
+		offsets={setting(vr::settings::active_hand_alignment()[0].name,offsets.inward_meters),setting(vr::settings::active_hand_alignment()[1].name,offsets.back_meters),setting(vr::settings::active_hand_alignment()[2].name,offsets.up_meters)};
         std::array<anchor,2> targets{};std::array<vec,2> shoulders{};
         for(unsigned h=0;h<2;++h)
         {

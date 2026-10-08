@@ -9,6 +9,7 @@ using vr::hand;
 #include "component/vr/gameplay/weapon_feedback.hpp"
 #include "component/vr/gameplay/weapons/m9/feedback.hpp"
 #include "controller_orientation_tests.hpp"
+#include "controller_pose_pipeline_tests.hpp"
 #include "input_history_tests.hpp"
 #include "input_manifest_tests.hpp"
 #include "slow_simulation_input_tests.hpp"
@@ -33,6 +34,7 @@ int main()
 	};
 	const auto now = clock::now();
 	controller_orientation_tests(check);
+	controller_pose_pipeline_tests::run(check);
 	input_history_tests(check);
 	input_manifest_tests(check);
 	controller_stance_tests(check);

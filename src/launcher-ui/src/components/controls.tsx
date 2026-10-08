@@ -62,6 +62,7 @@ export function FieldControl({
   disabled,
   invalid,
   description,
+  compact,
   onChange,
   onBlur,
 }: {
@@ -72,6 +73,7 @@ export function FieldControl({
   disabled?: boolean;
   invalid?: boolean;
   description?: string;
+  compact?: boolean;
   onChange: (key: string, value: string | boolean, numeric: boolean) => void;
   onBlur?: (key: string) => void;
 }) {
@@ -80,22 +82,9 @@ export function FieldControl({
   const hintId = `hint-${field.name}`;
   const limits =
     state.limits[field.name] && displayLimit(state.limits[field.name]);
-  return (
-    <SettingRow
-      title={<label htmlFor={field.name}>{label}</label>}
-      description={
-        <span id={hintId}>
-          {description
-            ? t(description)
-            : field.description
-              ? t(field.description)
-              : limits
-                ? `${limits.min} – ${limits.max}`
-                : ""}
-        </span>
-      }
-    >
-      {field.type === "toggle" ? (
+  const hint = description ? t(description) : field.description ? t(field.description) :
+    limits ? `${limits.min} – ${limits.max}` : "";
+  const control = field.type === "toggle" ? (
         <Switch
           id={field.name}
           checked={Boolean(draft[field.name])}
@@ -139,7 +128,19 @@ export function FieldControl({
           />
           {field.unit && <span className="unit">{t(field.unit)}</span>}
         </div>
-      )}
+      );
+  return compact ? (
+    <div className="calibration-axis">
+      <label htmlFor={field.name}>{label}</label>
+      <span id={hintId} className="sr-only">{hint}</span>
+      {control}
+    </div>
+  ) : (
+    <SettingRow
+      title={<label htmlFor={field.name}>{label}</label>}
+      description={<span id={hintId}>{hint}</span>}
+    >
+      {control}
     </SettingRow>
   );
 }

@@ -9,11 +9,22 @@ namespace vr::controller_calibration
 	inline constexpr angles defaults{settings::hand_pitch.default_value,settings::hand_yaw.default_value,settings::hand_roll.default_value};
 	inline constexpr angles default_pivot{settings::wrist_inward.default_value,settings::wrist_back.default_value,settings::wrist_up.default_value};
 	struct configuration {angles orientation=defaults,pivot=default_pivot;};
-	using settings_provider=configuration(*)() noexcept;
+	using settings_provider=configuration(*)(controller_pose_pipeline::mode) noexcept;
 	// Native settings are optional: standalone runtimes retain shared defaults
 	// without importing game dvars or component registration.
 	void set_settings_provider(settings_provider provider) noexcept;
-	configuration read_settings() noexcept;
+	inline configuration defaults_for(controller_pose_pipeline::mode mode) noexcept
+	{
+		configuration result;
+		if (mode == controller_pose_pipeline::mode::standard)
+			for (unsigned i = 0; i < 3; ++i)
+			{
+				result.orientation[i] = settings::standard_hand_alignment[i + 3].default_value;
+				result.pivot[i] = settings::standard_wrist_pivots[i].default_value;
+			}
+		return result;
+	}
+	configuration read_settings(controller_pose_pipeline::mode mode) noexcept;
 	inline bool valid(angles value) noexcept
 	{
 		for (unsigned i=0;i<3;++i)

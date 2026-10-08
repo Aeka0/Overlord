@@ -176,6 +176,7 @@ namespace vr::steamvr_input
 			break;
 		default: return;
 		}
+		pose_adapter_.reset();
 		input_event record{controller_input::clock::now(), diagnostics_.initializations, event.eventType, event.trackedDeviceIndex};
 		if (event.eventType == VREvent_Input_BindingLoadFailed || event.eventType == VREvent_Input_BindingLoadSuccessful)
 		{

@@ -16,6 +16,7 @@ import {
   collect,
   fields,
   makeDraft,
+  visible,
   type Field,
   type SettingsState,
   type Values,
@@ -25,6 +26,7 @@ import { WindowControls } from "./components/WindowControls";
 import { HomePage } from "./components/HomePage";
 import { MotionSurface } from "./components/MotionSurface";
 import { LaunchDialog } from "./components/LaunchDialog";
+import { StartupNotice } from "./components/StartupNotice";
 import type { PreflightReport, LaunchResult } from "./preflight";
 import { useSettings, type Notice } from "./useSettings";
 import { useGameLanguages } from "./useGameLanguages";
@@ -35,6 +37,7 @@ import {
   inspectLauncherMotion,
   inspectLauncherSelect,
   inspectLaunchDialog,
+  inspectStartupNotice,
 } from "./layoutProbe";
 import "./styles.css";
 import "./select.css";
@@ -171,7 +174,8 @@ function Launcher({ data }: { data: Bootstrap }) {
   const [page, setPage] = useState(
     data.renderProbe && data.renderProbePage !== "home" ? "settings" : "play",
   );
-  const [category, setCategory] = useState("basics");
+  const [category, setCategory] = useState(data.renderProbe && data.renderProbePage !== "home" ? "calibration" : "basics");
+  const [startupNotice, setStartupNotice] = useState(true);
   const [helpState, setHelpState] = useState(initialHelpState);
   const [guide, setGuide] = useState(
     data.settings.onboarding.gameAvailable &&
@@ -194,7 +198,7 @@ function Launcher({ data }: { data: Bootstrap }) {
         ? { key: "language.loadError", error: true }
         : null,
   );
-  const disabled = launching || checking || !!preflight;
+  const disabled = launching || checking || !!preflight || startupNotice;
   useEffect(() => {
     if (!data.renderProbe) return;
     void Promise.all([
@@ -202,6 +206,7 @@ function Launcher({ data }: { data: Bootstrap }) {
       document.fonts.load('18px "HModMixGothic-Regular"', "OVERLORD"),
     ])
       .then(async (fonts) => {
+        const declaration = inspectStartupNotice(data.version);
         const motion = await inspectLauncherMotion();
         const selects = inspectLauncherSelect();
         const layout =
@@ -211,6 +216,7 @@ function Launcher({ data }: { data: Bootstrap }) {
         const preflight = await inspectLaunchDialog();
         return bridge!.request("renderer.ready", {
           ok:
+            declaration.ok &&
             layout.ok &&
             motion.ok &&
             selects.ok &&
@@ -222,12 +228,17 @@ function Launcher({ data }: { data: Bootstrap }) {
             ),
           fonts: fonts.map((group) => group.map((font) => font.family)),
           settings: fields.length,
+          settingNames: fields.map((field) => field.name),
+          presetFields: Object.keys(data.settings.controllerPresets[0]?.values || {}),
+          controlNames: Array.from(document.querySelectorAll<HTMLElement>('[id^="vr_"]'), (control) => control.id),
           controls: document.querySelectorAll('[id^="vr_"]').length,
           language: preferences.language,
           layout,
           motion,
           selects,
           preflight,
+          declaration,
+          version: data.version,
         });
       })
       .catch((error) =>
@@ -285,7 +296,9 @@ function Launcher({ data }: { data: Bootstrap }) {
         if (!success) controller.revert(key, value, previous, revision);
       });
   }
+  const poseModePending = controller.draft.vr_controllerPoseMode !== controller.state.values.vr_controllerPoseMode;
   function selectPreset(id: string) {
+    if (poseModePending) return;
     const preset = controller.state.controllerPresets.find(
       (preset) => preset.id === id,
     );
@@ -329,13 +342,15 @@ function Launcher({ data }: { data: Bootstrap }) {
     >
       <select
         aria-label={t("settings.preset")}
-        disabled={disabled}
+        disabled={disabled || poseModePending}
         value={selectedPreset}
         onChange={(event) => selectPreset(event.currentTarget.value)}
       >
         {controller.state.controllerPresets.map((preset) => (
           <option key={preset.id} value={preset.id}>
-            {preset.id === "none"
+            {preset.id === "standard_default"
+              ? t("choice.standardControllerBaseline")
+              : preset.id === "none"
               ? t(guide ? "oobe.otherDevice" : "choice.none")
               : preset.id === "meta_quest_3"
                 ? t("choice.quest3")
@@ -346,7 +361,7 @@ function Launcher({ data }: { data: Bootstrap }) {
       </select>
     </SettingRow>
   );
-  function control(field: Field, onboarding = false) {
+  function control(field: Field, onboarding = false, compact = false) {
     return (
       <FieldControl
         key={field.name}
@@ -357,12 +372,39 @@ function Launcher({ data }: { data: Bootstrap }) {
         disabled={disabled}
         invalid={controller.notice?.setting === field.name}
         description={onboarding ? guideDescriptions[field.name] : undefined}
+        compact={compact}
         onChange={change}
         onBlur={(key) => {
           void controller.flushField(key);
         }}
       />
     );
+  }
+  function groupControls(groupFields: Field[]) {
+    const seen = new Set<string>();
+    return groupFields.flatMap((field) => {
+      if (!field.row) return [control(field)];
+      if (seen.has(field.row)) return [];
+      seen.add(field.row);
+      const row = groupFields.filter((other) => other.row === field.row && visible(other, controller.draft));
+      if (!row.length) return [];
+      return [
+        <SettingRow key={field.row} title={t(field.row)} description={
+          <span className="calibration-description">
+            {t(`${field.row}Hint`)}
+            {row.map((axis) => (
+              <span className="calibration-command" key={axis.name}>
+                <code>seta {axis.name} &lt;{t("calibration.value")}&gt;</code>
+              </span>
+            ))}
+          </span>
+        }>
+          <div className="calibration-row">
+            {row.map((axis) => control(axis, false, true))}
+          </div>
+        </SettingRow>,
+      ];
+    });
   }
   async function openGuide() {
     if (!controller.prepareGuide()) return;
@@ -734,15 +776,13 @@ function Launcher({ data }: { data: Bootstrap }) {
                 <div className="setting-group" key={group}>
                   <h2>{t(group)}</h2>
                   <div className="panel">
-                    {category === "basics" &&
+                    {category === "calibration" &&
                       group === "settings.alignment" &&
                       presetControl}
-                    {fields
-                      .filter(
+                    {groupControls(fields.filter(
                         (field) =>
                           field.category === category && field.group === group,
-                      )
-                      .map((field) => control(field))}
+                      ))}
                   </div>
                 </div>
               ))}
@@ -858,6 +898,15 @@ function Launcher({ data }: { data: Bootstrap }) {
           </MotionSurface>
         )}
       </main>
+      {startupNotice && (
+        <StartupNotice
+          version={data.version}
+          t={t}
+          onClose={() => setStartupNotice(false)}
+          onIssues={() => void bridge!.request("links.open", { id: "issues" }).catch((error) =>
+            setNotice({ key: errorKey(error), error: true }))}
+        />
+      )}
       {preflight && (
         <LaunchDialog
           report={preflight}

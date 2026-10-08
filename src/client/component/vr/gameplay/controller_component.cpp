@@ -440,6 +440,7 @@ namespace vr::controllers
 			const auto head = head_pose_bridge::get_status();
 			console::info("[VR input] hand_angle_pitch=%.2f yaw=%.2f roll=%.2f settling=%d runtime_aim_preserved=1\n",
 				input.orientation_degrees[0],input.orientation_degrees[1],input.orientation_degrees[2],input.orientation_settling);
+			console::info("[VR input] pose_pipeline=%s\n", controller_pose_pipeline::name(input.pose_pipeline));
 			console::info("[VR input] wrist_pivot_inward/back/up_m=%.4f/%.4f/%.4f alignment=translated_wrist_frame\n",
 				input.wrist_pivot_meters[0],input.wrist_pivot_meters[1],input.wrist_pivot_meters[2]);
 			console::info("[VR input] game_view=hmd pitch_yaw_commands=%llu history_misses=%llu "

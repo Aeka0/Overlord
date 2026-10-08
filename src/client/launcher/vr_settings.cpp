@@ -46,7 +46,7 @@ namespace launcher_vr_settings
 					{"step", setting_number(field.step)}, {"displayScale", setting_number(field.display_scale)}};
 			return json{{"ok", true}, {"values", values}, {"defaults", defaults()}, {"limits", limits},
 				{"onboarding", {{"gameAvailable", game_data::is_game_directory_available()}, {"hasVRConfig", has_vr_config}}},
-				{"controllerPresets",controller_presets()},
+				{"controllerPresets",controller_presets(values.at(vr::settings::controller_pose_mode.name) == "standard") },
 				{"choices",choice_catalog()},
 				{"build", {{"configuration", build_config::name}, {"optimized", build_config::optimized}}}}.dump();
 		}
@@ -81,6 +81,9 @@ namespace launcher_vr_settings
 			GetEnvironmentVariableA("H2V_VR_BACKEND", nullptr, 0) != 0);
 		if (backend && !SetEnvironmentVariableA("H2V_VR_BACKEND", backend->c_str()))
 			throw std::runtime_error("Could not apply the selected VR backend before game startup.");
+		vr::controller_pose_pipeline::initialize(
+			values.at(vr::settings::controller_pose_mode.name) == "legacy"
+				? vr::controller_pose_pipeline::mode::legacy : vr::controller_pose_pipeline::mode::standard);
 		vr::debug_options::initialize(debug_selection(values));
 	}
 
