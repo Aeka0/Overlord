@@ -86,7 +86,15 @@ python tests/vr/aim_assist_adapter_tests.py
 node tests/vr/launcher_settings_ui_tests.js
 python tests/vr/client_feature_parity_tests.py build/bin/x64/RelWithDebInfo/overlord.exe
 python tests/vr/client_feature_parity_tests.py build/bin/x64/Debug/overlord-debug.exe
+python tests/vr/client_feature_parity_tests.py build/bin/x64/Release/overlord.exe
 ```
+
+Run the client artifact audit against the configuration selected for release.
+It checks emitted feature entry points and writable weapon-carry publication
+storage using the matching PDB and PE section table. The v142 Release build
+keeps the carry runtime outside LTCG because that optimization placed its
+mutable model frame in read-only storage while retaining writes to it. The
+remaining translation units retain link-time optimization.
 
 For native executable versions, source inventories and H2/H1 adapter boundaries,
 see [native bindings and version adaptation](native-bindings.md). These checks

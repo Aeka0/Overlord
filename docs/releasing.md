@@ -20,7 +20,11 @@ releases or deploy to a server.
 ## Build and package
 
 Build RelWithDebInfo for normal gameplay and Debug for diagnosis. See
-[development.md](development.md). After building, create an overlay with:
+[development.md](development.md). Before packaging, run
+`tests/vr/client_feature_parity_tests.py` against the selected build's EXE/PDB
+pair, including when selecting Release. Missing feature entry points or
+read-only mutable storage must block the candidate. After building and auditing,
+create an overlay with:
 
 ~~~bat
 python tools\package_client.py --configuration RelWithDebInfo

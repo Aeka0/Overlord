@@ -108,10 +108,9 @@ filter {}
 
 filter "configurations:Release"
 	optimize "Size"
-	buildoptions {"/GL"}
-	linkoptions {"/IGNORE:4702", "/LTCG"}
+	linkoptions {"/IGNORE:4702"}
 	defines {"NDEBUG"}
-	flags {"FatalCompileWarnings"}
+	flags {"FatalCompileWarnings", "LinkTimeOptimization"}
 filter {}
 
 filter "configurations:Debug"
@@ -163,6 +162,14 @@ for _, source in ipairs({"weapon_registry", "weapon_mechanics_profiles"}) do
 	filter ("files:src/client/component/vr/gameplay/" .. source .. ".cpp")
 	flags {"NoPCH"}
 end
+filter {}
+
+-- MSVC v142 LTCG places the mutable carry model frame in .rdata while retaining
+-- its reset/publication writes. Compile this TU normally; keep Release's size
+-- optimization and the rest of the client's LTCG. A /GL PCH cannot be reused.
+filter {"configurations:Release", "files:src/client/component/vr/gameplay/weapon_carry_runtime.cpp"}
+	flags {"NoPCH"}
+	buildoptions {"/GL-"}
 filter {}
 
 linkoptions {"/IGNORE:4254", "/DYNAMICBASE:NO", "/SAFESEH:NO", "/LARGEADDRESSAWARE", "/LAST:.main", "/PDBCompress"}
