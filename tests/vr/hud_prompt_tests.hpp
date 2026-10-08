@@ -5,6 +5,26 @@ template<class Check>void hud_prompt_tests(Check& check)
 {
 	using namespace vr::hud_prompts;using game_text::locale;
 	const auto en=locale::english,zh=locale::simplified_chinese;
+	for(const auto language:{locale::english,locale::simplified_chinese,locale::french})
+	{
+		for(const auto id:{key::trainer_menu,key::fixed_sniper_controls,key::vehicle_reload})
+		{
+			const auto touch=compose(id,language);
+			const auto index=compose(id,language,{},true);
+			check(touch && index && text(*touch)!=text(*index),"only the three Index face-button instructions have variants");
+		}
+	}
+	const auto menu_index=compose(key::trainer_menu,en,{},true);
+	check(menu_index && text(*menu_index)=="Press A on the left controller to open the menu and set vertical look inversion",
+		"Index menu preserves the Touch sentence and substitutes only A for X");
+	for(const auto& entry:definitions)
+	{
+		if(entry.message==key::trainer_menu || entry.message==key::fixed_sniper_controls || entry.message==key::vehicle_reload)continue;
+		const auto touch=compose(entry.message,en,{0,false,"weapon"});
+		const auto index=compose(entry.message,en,{0,false,"weapon"},true);
+		check(touch && index && text(*touch)==text(*index),"all other Index instructions preserve original text including skip");
+	}
+
 	const auto boarding = compose(key::snowmobile_board, zh);
 	check(boarding && text(*boarding) == game_text::utf8(u8"雪地摩托停稳后，靠近即可自动上车"),
 		"snowmobile boarding explains the story stop and proximity without a hand or button argument");

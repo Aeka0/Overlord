@@ -69,5 +69,8 @@ namespace game_text::locales
 		{key::trainer_menu,u8"按<em>左手柄 X 鍵</em>打開菜單，設置垂直視角反轉"},
 		{key::trainer_flash,u8"從<em>胸前</em>取出閃光彈，用另一只手拔出<em>拉環</em>，再松開<em>握持鍵</em>投出"},
 		{key::m203_reload,u8"發射后，按住<em>握持鍵</em>抓住<em>槍管</em>，<em>向前推</em>打開膛室\n在<em>腰間</em>按住<em>握持鍵和扳機鍵</em>取出榴彈，保持<em>扳機鍵</em>按住裝入<em>膛室</em>\n再用<em>握持鍵</em>抓住<em>槍管</em>，<em>向后拉</em>關閉膛室"},
+		{key::knuckles_trainer_menu,u8"按<em>左手柄 A 鍵</em>打開菜單，設置垂直視角反轉"},
+		{key::knuckles_fixed_sniper_controls,u8"<em>左搖桿</em>調整瞄準方向；按 <em>B 鍵</em>離開狙擊位"},
+		{key::knuckles_vehicle_reload,u8"按<em>持槍手 B 鍵</em>卸下彈匣；另一只手在<em>胸前</em>按住<em>扳機鍵</em>取出新彈匣，再插入<em>武器</em>"},
 	});
 }

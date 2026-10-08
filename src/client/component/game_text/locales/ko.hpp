@@ -69,5 +69,8 @@ namespace game_text::locales
 		{key::trainer_flash,u8"<em>가슴</em>에서 섬광탄을 꺼내 다른 손으로 <em>안전핀</em>을 뽑고 <em>그립</em>을 놓아 투척"},
 		{key::trainer_menu,u8"<em>왼쪽 컨트롤러 X</em>를 눌러 메뉴를 열고 수직 시점 반전 설정"},
 		{key::m203_reload,u8"발사 후 <em>그립</em>으로 <em>총열</em>을 잡고 <em>앞으로 밀어</em> 약실 열기\n<em>허리</em>에서 <em>그립과 트리거</em>를 눌러 유탄을 꺼내고 <em>트리거</em>를 누른 채 <em>약실</em>에 삽입\n다시 <em>그립</em>으로 <em>총열</em>을 잡고 <em>뒤로 당겨</em> 약실 닫기"},
+		{key::knuckles_trainer_menu,u8"<em>왼쪽 컨트롤러 A</em>를 눌러 메뉴를 열고 수직 시점 반전 설정"},
+		{key::knuckles_fixed_sniper_controls,u8"<em>왼쪽 스틱</em>으로 조준 방향 조정. <em>B</em>를 눌러 저격 위치에서 나가기"},
+		{key::knuckles_vehicle_reload,u8"<em>총을 든 손의 B</em>로 탄창 분리. 다른 손으로 <em>가슴</em>에서 <em>트리거</em>를 눌러 새 탄창을 꺼내 <em>무기</em>에 삽입"},
 	});
 }

@@ -69,5 +69,8 @@ namespace game_text::locales
 		{key::trainer_flash,u8"Pegue uma granada de luz no <em>peito</em>, tire o <em>pino</em> com a outra mão e solte <em>Grip</em> para lançar"},
 		{key::trainer_menu,u8"Pressione <em>X no controle esquerdo</em> para abrir o menu e ajustar a inversão vertical"},
 		{key::m203_reload,u8"Após atirar, pegue o <em>cano</em> com <em>Grip</em> e <em>empurre para frente</em> para abrir\nSegure <em>Grip e gatilho</em> na <em>cintura</em> para pegar uma granada; mantenha o <em>gatilho</em> e insira na <em>câmara</em>\nPegue o <em>cano</em> novamente com <em>Grip</em> e <em>puxe para trás</em> para fechar"},
+		{key::knuckles_trainer_menu,u8"Pressione <em>A no controle esquerdo</em> para abrir o menu e ajustar a inversão vertical"},
+		{key::knuckles_fixed_sniper_controls,u8"Use o <em>analógico esquerdo</em> para mirar; pressione <em>B</em> para sair da posição"},
+		{key::knuckles_vehicle_reload,u8"Pressione <em>B da mão da arma</em> para ejetar; segure o <em>gatilho</em> com a outra mão no <em>peito</em> para pegar um carregador novo e inseri-lo na <em>arma</em>"},
 	});
 }

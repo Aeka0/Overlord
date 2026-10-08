@@ -193,6 +193,7 @@ namespace vr::steamvr_input
 		diagnostics_.event_next = (diagnostics_.event_next + 1) % diagnostics_.events.size();
 		if (diagnostics_.event_count < diagnostics_.events.size()) ++diagnostics_.event_count;
 		else ++diagnostics_.events_discarded;
+		controller_type_pending_=true;
 		probe_pending_ = true; // Coalesced and capped; event handling performs no extra API calls.
 	}
 }

@@ -25,6 +25,8 @@ namespace vr::openxr
 		controller_pose_reference::configuration grip_reference_;
 		XrInstance instance_{};
 		bool profile_refresh_pending_{true};
+		bool prompt_profile_pending_{true};
+		void refresh_prompt_profile(const dispatch_table&,XrSession) noexcept;
 		std::array<bool, 2> profile_matches_{};
 		bool refresh_profiles(const dispatch_table&, XrSession, XrResult&, std::string&);
 

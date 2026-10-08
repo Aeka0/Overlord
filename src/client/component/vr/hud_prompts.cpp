@@ -1,5 +1,6 @@
 #include <std_include.hpp>
 #include "hud_prompts.hpp"
+#include "hud_controller.hpp"
 #include "gameplay/signal_flare_mission.hpp"
 #include "gameplay/weapon_carry_runtime.hpp"
 #include "gameplay/native_use.hpp"
@@ -94,7 +95,10 @@ namespace vr::hud_prompts
 	std::optional<std::string> replace(source producer,std::string_view name)
 	{
 		const auto* rule=identify(producer,name);if(!rule)return {};
-		return replace(producer,name,snapshot(*rule),game_text::current());
+		const bool controller_text=rule->message==key::trainer_menu ||
+			rule->message==key::fixed_sniper_controls || rule->message==key::vehicle_reload;
+		const bool knuckles=controller_text && hud_controller::knuckles(controller_input::latest().source.backend);
+		return replace(producer,name,snapshot(*rule),game_text::current(),knuckles);
 	}
 	std::optional<key> world_message(unsigned hint)
 	{

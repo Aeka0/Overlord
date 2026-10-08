@@ -69,5 +69,8 @@ namespace game_text::locales
 		{key::trainer_flash,u8"Prenez une grenade flash sur la <em>poitrine</em>, retirez la <em>goupille</em> de l’autre main, puis relâchez la <em>prise</em> pour lancer"},
 		{key::trainer_menu,u8"Appuyez sur <em>X du contrôleur gauche</em> pour ouvrir le menu et inverser la vue verticale"},
 		{key::m203_reload,u8"Après le tir, saisissez le <em>canon</em> avec la <em>prise</em> et <em>poussez vers l’avant</em> pour ouvrir\nMaintenez <em>prise et gâchette</em> à la <em>taille</em> pour prendre une grenade ; gardez la <em>gâchette</em> enfoncée et insérez-la dans la <em>chambre</em>\nReprenez le <em>canon</em> avec la <em>prise</em> et <em>tirez vers l’arrière</em> pour fermer"},
+		{key::knuckles_trainer_menu,u8"Appuyez sur <em>A du contrôleur gauche</em> pour ouvrir le menu et inverser la vue verticale"},
+		{key::knuckles_fixed_sniper_controls,u8"Visez avec le <em>stick gauche</em> ; appuyez sur <em>B</em> pour quitter le poste"},
+		{key::knuckles_vehicle_reload,u8"Appuyez sur <em>B de la main armée</em> pour éjecter le chargeur ; maintenez la <em>gâchette</em> de l’autre main à la <em>poitrine</em> pour en prendre un neuf et l’insérer dans l’<em>arme</em>"},
 	});
 }

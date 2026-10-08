@@ -13,6 +13,7 @@
 #include <openxr/openxr_platform.h>
 
 #include "mock_control.hpp"
+#include <mutex>
 
 struct XrInstance_T
 {

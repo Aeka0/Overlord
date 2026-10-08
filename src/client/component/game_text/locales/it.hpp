@@ -69,5 +69,8 @@ namespace game_text::locales
 		{key::trainer_flash,u8"Prendi una granata accecante dal <em>petto</em>, estrai la <em>anello di sicurezza</em> con l’altra mano e rilascia la <em>presa</em> per lanciarla"},
 		{key::trainer_menu,u8"Premi <em>X sul controller sinistro</em> per aprire il menu e impostare l’inversione verticale"},
 		{key::m203_reload,u8"Dopo il tiro afferra la <em>canna</em> con la <em>presa</em> e <em>spingi in avanti</em> per aprire\nTieni premuti <em>presa e grilletto</em> alla <em>vita</em> per prendere una granata; mantieni il <em>grilletto</em> e inseriscila nella <em>camera</em>\nAfferra di nuovo la <em>canna</em> con la <em>presa</em> e <em>tira indietro</em> per chiudere"},
+		{key::knuckles_trainer_menu,u8"Premi <em>A sul controller sinistro</em> per aprire il menu e impostare l’inversione verticale"},
+		{key::knuckles_fixed_sniper_controls,u8"Usa lo <em>stick sinistro</em> per mirare; premi <em>B</em> per lasciare la postazione"},
+		{key::knuckles_vehicle_reload,u8"Premi <em>B della mano armata</em> per espellere il caricatore; con l’altra mano tieni premuto il <em>grilletto</em> al <em>petto</em> per prenderne uno nuovo e inserirlo nell’<em>arma</em>"},
 	});
 }

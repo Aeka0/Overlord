@@ -69,5 +69,8 @@ namespace game_text::locales
 		{key::trainer_flash,u8"Saca una cegadora del <em>pecho</em>, quita la <em>anilla</em> con la otra mano y suelta <em>agarre</em> para lanzarla"},
 		{key::trainer_menu,u8"Pulsa <em>X en el mando izquierdo</em> para abrir el menú y configurar la inversión vertical"},
 		{key::m203_reload,u8"Tras disparar, sujeta el <em>cañón</em> con <em>agarre</em> y <em>empuja adelante</em> para abrir\nMantén <em>agarre y gatillo</em> en la <em>cintura</em> para sacar una granada; mantén <em>gatillo</em> e insértala en la <em>recámara</em>\nSujeta otra vez el <em>cañón</em> con <em>agarre</em> y <em>tira atrás</em> para cerrar"},
+		{key::knuckles_trainer_menu,u8"Pulsa <em>A en el mando izquierdo</em> para abrir el menú y configurar la inversión vertical"},
+		{key::knuckles_fixed_sniper_controls,u8"Usa el <em>stick izquierdo</em> para apuntar; pulsa <em>B</em> para dejar el puesto"},
+		{key::knuckles_vehicle_reload,u8"Pulsa <em>B de la mano del arma</em> para expulsar el cargador; mantén <em>gatillo</em> con la otra mano en el <em>pecho</em> para sacar otro e insertarlo en el <em>arma</em>"},
 	});
 }

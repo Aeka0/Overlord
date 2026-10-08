@@ -621,6 +621,7 @@ int main()
 		openxr_adaptation_tests::focused_startup_height(loader,graphics);
 		openxr_adaptation_tests::virtualdesktop_grip_reference(loader,graphics);
 		openxr_adaptation_tests::focused_input(loader,graphics);
+		openxr_adaptation_tests::knuckles_prompt_identity(loader,graphics);
 		openxr_adaptation_tests::native_pair(loader,graphics);
 		openxr_adaptation_tests::native_pair(loader,graphics,vr::tests::mock::scenario::parallel_views);
 		openxr_adaptation_tests::native_pair(loader,graphics,vr::tests::mock::scenario::scaled_view_quaternions);

@@ -41,6 +41,8 @@ namespace vr::steamvr_input
 		diagnostic_snapshot diagnostics_;
 		unsigned probe_count_{};
 		bool probe_pending_{}, sample_failed_{};
+		bool controller_type_pending_{true};
+		void refresh_controller_type() noexcept;
 		void capture_setup() noexcept;
 		void capture_probe(bool input_failed = false) noexcept;
 		VRActionSetHandle_t set_{};

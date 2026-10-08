@@ -1,3 +1,4 @@
+#include "component/vr/hud_controller.hpp"
 #pragma once
 #include "component/vr/input_history.hpp"
 #include "component/vr/controller_haptics.hpp"
@@ -398,6 +399,28 @@ namespace openxr_adaptation_tests
 		                       statistics.actions_created == statistics.actions_destroyed &&
 		                       statistics.spaces_created == statistics.spaces_destroyed,
 		                   "native path leaked action or space ownership during shutdown");
+	}
+	template <class Loader> void knuckles_prompt_identity(Loader& loader, const d3d11::device_snapshot& graphics)
+	{
+		configure(loader,graphics,vr::tests::mock::scenario::happy);
+		vr::openxr::runtime_backend runtime;
+		runtime.set_desired_enabled(true);
+		runtime.set_scene_mode(vr::scene_mode::synthetic);
+		vr::tests::require(runtime.initialize(graphics),"prompt identity initialization failed");
+		loader.queue_session_state(XR_SESSION_STATE_READY);
+		loader.queue_session_state(XR_SESSION_STATE_FOCUSED);
+		runtime.on_present(graphics,1);
+		using vr::controller_input::input_backend;
+		vr::tests::require(!vr::hud_controller::knuckles(input_backend::openxr),"Touch must retain original instructions");
+		loader.set_interaction_profile(0,"/interaction_profiles/valve/index_controller");
+		loader.set_interaction_profile(1,"/interaction_profiles/valve/index_controller");
+		runtime.on_present(graphics,2);
+		vr::tests::require(vr::hud_controller::knuckles(input_backend::openxr),"Index pair must select Knuckles-only instructions");
+		loader.set_interaction_profile(1,"/interaction_profiles/oculus/touch_controller");
+		runtime.on_present(graphics,3);
+		vr::tests::require(!vr::hud_controller::knuckles(input_backend::openxr),"mixed pair must restore original instructions");
+		runtime.shutdown();
+		vr::tests::require(!vr::hud_controller::knuckles(input_backend::openxr),"shutdown must clear controller identity");
 	}
 	template <class Loader> void focused_input(Loader& loader, const d3d11::device_snapshot& graphics)
 	{

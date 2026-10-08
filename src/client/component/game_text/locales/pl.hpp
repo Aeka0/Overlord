@@ -69,5 +69,8 @@ namespace game_text::locales
 		{key::trainer_flash,u8"Weź granat błyskowy z <em>klatki piersiowej</em>, drugą ręką wyciągnij <em>zawleczkę</em> i zwolnij <em>chwyt</em>, aby rzucić"},
 		{key::trainer_menu,u8"Naciśnij <em>X na lewym kontrolerze</em>, aby otworzyć menu i ustawić odwrócenie pionowego widoku"},
 		{key::m203_reload,u8"Po strzale złap <em>lufę</em> przyciskiem <em>chwytu</em> i <em>pchnij do przodu</em>, aby otworzyć\nPrzytrzymaj <em>chwyt i spust</em> przy <em>pasie</em>, aby wyjąć granat; trzymaj <em>spust</em> i włóż go do <em>komory</em>\nPonownie złap <em>lufę</em> przyciskiem <em>chwytu</em> i <em>pociągnij do tyłu</em>, aby zamknąć"},
+		{key::knuckles_trainer_menu,u8"Naciśnij <em>A na lewym kontrolerze</em>, aby otworzyć menu i ustawić odwrócenie pionowego widoku"},
+		{key::knuckles_fixed_sniper_controls,u8"Celuj <em>lewym drążkiem</em>; naciśnij <em>B</em>, aby opuścić stanowisko"},
+		{key::knuckles_vehicle_reload,u8"Naciśnij <em>B ręki z bronią</em>, aby wyrzucić magazynek; drugą ręką przytrzymaj <em>spust</em> przy <em>klatce piersiowej</em>, weź nowy i włóż do <em>broni</em>"},
 	});
 }

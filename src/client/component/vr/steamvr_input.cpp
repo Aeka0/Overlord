@@ -1,6 +1,7 @@
 #include <std_include.hpp>
 #include "steamvr_input.hpp"
 #include "controller_input.hpp"
+#include "hud_controller.hpp"
 #include "controller_haptics.hpp"
 #include <filesystem>
 #include <gsl/gsl>
@@ -101,9 +102,30 @@ namespace vr::steamvr_input
 		return true;
 	}
 
+	void actions::refresh_controller_type() noexcept
+	{
+		controller_type_pending_=false;
+		bool knuckles=system_!=nullptr;
+		for(const auto role:{TrackedControllerRole_LeftHand,TrackedControllerRole_RightHand})
+		{
+			if(!system_)break;
+			const auto device=system_->GetTrackedDeviceIndexForControllerRole(role);
+			if(device==k_unTrackedDeviceIndexInvalid || !system_->IsTrackedDeviceConnected(device))
+			{knuckles=false;continue;}
+			std::array<char,128> type{};
+			ETrackedPropertyError error{};
+			const auto bytes=system_->GetStringTrackedDeviceProperty(device,Prop_ControllerType_String,
+				type.data(),static_cast<uint32_t>(type.size()),&error);
+			knuckles=knuckles && error==TrackedProp_Success && bytes>0 && bytes<=type.size() &&
+				type[bytes-1]==0 && std::string_view(type.data(),bytes-1)=="knuckles";
+		}
+		hud_controller::set_knuckles(controller_input::input_backend::openvr,knuckles);
+	}
+
 	void actions::sample(const bool focused, const controller_input::input_reason unavailable_reason) noexcept
 	{
 		using namespace controller_input;
+		if(controller_type_pending_)refresh_controller_type();
 		controller_input::frame frame{};
 		frame.sequence = ++sequence_;
 		frame.sampled_at = controller_input::clock::now();
@@ -247,6 +269,8 @@ namespace vr::steamvr_input
 
 	void actions::reset() noexcept
 	{
+		hud_controller::set_knuckles(controller_input::input_backend::openvr,false);
+		controller_type_pending_=true;
 		++diagnostics_.resets;
 		probe_pending_ = false;
 		sample_failed_ = false;
