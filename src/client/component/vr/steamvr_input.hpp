@@ -25,6 +25,7 @@ namespace vr::steamvr_input
 		}
 
 	  private:
+		void refresh_prompt_bindings() noexcept;
 		IVRInput* input_{};
 		IVRSystem* system_{}; // Borrowed from the same runtime owner.
 		struct action_setup
@@ -68,6 +69,8 @@ namespace vr::steamvr_input
 		std::array<VRActionHandle_t, 2> aim_{};
 		std::array<VRActionHandle_t, 2> haptic_{};
 		std::uint64_t sequence_{};
+		std::shared_ptr<const prompt_bindings::snapshot> prompt_bindings_;
+		controller_input::clock::time_point prompt_bindings_at_{};
 		std::string error_;
 		std::int64_t initialization_code_{};
 	};

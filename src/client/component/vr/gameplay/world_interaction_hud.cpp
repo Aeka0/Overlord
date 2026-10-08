@@ -118,7 +118,7 @@ namespace vr::gameplay::interaction
 				struct measured_run {std::string ink;float leading{},advance{};};
 				std::vector<measured_run> measured;
 					const auto measure=[&] {
-						auto composed=hud_prompts::compose(message,language,{h,shared,item});
+						auto composed=hud_prompts::compose_current(message,language,{h,shared,item});
 						if(!composed)return 0.f;
 						runs=std::move(composed->parts);
 						measured.clear();measured.resize(runs.size());

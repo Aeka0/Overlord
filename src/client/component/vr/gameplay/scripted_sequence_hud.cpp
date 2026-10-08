@@ -26,7 +26,7 @@ namespace vr::gameplay::sequences
 			const auto language=game_text::current();
 			// If this locale lacks the complete VR instruction, retain the native
 			// script hint and its original reminder timing on the narrative canvas.
-			const auto message=hud_prompts::compose(*key,language);if(!message)return;
+			const auto message=hud_prompts::compose_current(*key,language);if(!message)return;
 			const auto text=hud_prompts::text(*message,hud_prompts::style::native_colors);
 			if (text.empty()) return;
 			const auto* placement=game::ScrPlace_GetViewPlacement();if(!placement)return;

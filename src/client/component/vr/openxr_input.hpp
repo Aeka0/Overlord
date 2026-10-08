@@ -22,8 +22,13 @@ namespace vr::openxr
 		std::array<hand_actions, 2> hands_;
 		controller_input::digital_sampler sprint_state_, jump_state_, menu_state_, recenter_state_;
 		std::uint64_t sequence_{};
+		std::shared_ptr<const prompt_bindings::snapshot> prompt_bindings_;
+		controller_input::clock::time_point prompt_bindings_at_{};
 		controller_pose_reference::configuration grip_reference_;
 		XrInstance instance_{};
+		PFN_xrEnumerateBoundSourcesForAction enumerate_sources_{};
+		PFN_xrGetInputSourceLocalizedName source_name_{};
+		void refresh_prompt_bindings(XrSession session) noexcept;
 		bool profile_refresh_pending_{true};
 		std::array<bool, 2> profile_matches_{};
 		bool refresh_profiles(const dispatch_table&, XrSession, XrResult&, std::string&);

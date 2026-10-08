@@ -49,6 +49,20 @@ namespace vr::openxr
 	                               std::string& error)
 	{
 		instance_ = instance;
+		enumerate_sources_ = nullptr;
+		source_name_ = nullptr;
+		// Optional presentation queries. A loader without them still provides input.
+		if (xr.get_instance_proc_addr)
+		{
+			PFN_xrVoidFunction function{};
+			if (XR_SUCCEEDED(xr.get_instance_proc_addr(instance, "xrEnumerateBoundSourcesForAction", &function)))
+				enumerate_sources_ = reinterpret_cast<PFN_xrEnumerateBoundSourcesForAction>(function);
+			function = nullptr;
+			if (XR_SUCCEEDED(xr.get_instance_proc_addr(instance, "xrGetInputSourceLocalizedName", &function)))
+				source_name_ = reinterpret_cast<PFN_xrGetInputSourceLocalizedName>(function);
+		}
+		prompt_bindings_.reset();
+		prompt_bindings_at_ = {};
 		profile_refresh_pending_ = true;
 		XrActionSetCreateInfo info{XR_TYPE_ACTION_SET_CREATE_INFO};
 		strcpy_s(info.actionSetName, "gameplay");
@@ -180,6 +194,51 @@ namespace vr::openxr
 		return true;
 	}
 
+	void input_actions::refresh_prompt_bindings(XrSession session) noexcept
+	{
+		const auto now = controller_input::clock::now();
+		if (!enumerate_sources_ || !source_name_ || now - prompt_bindings_at_ < std::chrono::seconds(1)) return;
+		prompt_bindings_at_ = now;
+		try
+		{
+			auto labels = std::make_shared<prompt_bindings::snapshot>();
+			const std::array handles{hands_[0].trigger, hands_[1].trigger, hands_[0].squeeze, hands_[1].squeeze,
+				hands_[0].secondary, hands_[1].secondary, recenter_, menu_, move_, turn_, jump_, sprint_};
+			static_assert(handles.size() == prompt_bindings::action_count);
+			for (std::size_t i = 0; i < handles.size(); ++i)
+			{
+				if (handles[i] == XR_NULL_HANDLE) continue;
+				const XrBoundSourcesForActionEnumerateInfo info{XR_TYPE_BOUND_SOURCES_FOR_ACTION_ENUMERATE_INFO,
+					nullptr, handles[i]};
+				std::array<XrPath, 16> sources{};
+				uint32_t count{};
+				if (XR_FAILED(enumerate_sources_(session, &info, static_cast<uint32_t>(sources.size()), &count,
+					sources.data())) || count > sources.size()) continue;
+				labels->known[i] = true;
+				for (uint32_t source = 0; source < count; ++source)
+				{
+					const XrInputSourceLocalizedNameGetInfo name_info{XR_TYPE_INPUT_SOURCE_LOCALIZED_NAME_GET_INFO,
+						nullptr, sources[source], XR_INPUT_SOURCE_LOCALIZED_NAME_USER_PATH_BIT |
+						XR_INPUT_SOURCE_LOCALIZED_NAME_COMPONENT_BIT};
+					std::array<char, prompt_bindings::max_label_bytes + 1> name{};
+					uint32_t bytes{};
+					if (XR_FAILED(source_name_(session, &name_info, static_cast<uint32_t>(name.size()), &bytes,
+						name.data())) || bytes > name.size())
+					{
+						labels->known[i] = false;
+						continue;
+					}
+					const auto length = strnlen(name.data(), name.size());
+					if (length < name.size() && prompt_bindings::valid_label({name.data(), length}))
+						prompt_bindings::append(labels->labels[i], {name.data(), length});
+					else labels->known[i] = false;
+				}
+			}
+			prompt_bindings_ = std::move(labels);
+		}
+		catch (...) { prompt_bindings_.reset(); }
+	}
+
 	void input_actions::set_grip_reference(controller_pose_reference::configuration reference)
 	{
 		invalidate();
@@ -190,6 +249,8 @@ namespace vr::openxr
 
 	void input_actions::profile_changed() noexcept
 	{
+		prompt_bindings_.reset();
+		prompt_bindings_at_ = {};
 		invalidate();
 		profile_matches_.fill(false);
 		profile_refresh_pending_ = true;
@@ -376,6 +437,8 @@ namespace vr::openxr
 				    input_reason::calibration_invalid};
 			pose(hand.aim, hand.aim_space, frame.aim[h], hand_channel(input_channel::left_aim, h));
 		}
+		if (frame.focused) refresh_prompt_bindings(session);
+		frame.prompt_bindings = frame.focused ? prompt_bindings_ : nullptr;
 		controller_input::publish(frame);
 		controller_haptics::bindings({frame.grip[0].valid, frame.grip[1].valid});
 		const auto pulses = controller_haptics::consume(frame);
@@ -437,6 +500,9 @@ namespace vr::openxr
 			hand.trigger = hand.squeeze = hand.touch = hand.primary = hand.secondary = hand.grip = hand.aim =
 			    hand.haptic = XR_NULL_HANDLE;
 		move_ = turn_ = sprint_ = jump_ = menu_ = recenter_ = XR_NULL_HANDLE;
+		prompt_bindings_.reset();
+		enumerate_sources_ = nullptr;
+		source_name_ = nullptr;
 		instance_ = XR_NULL_HANDLE;
 		profile_refresh_pending_ = true;
 		profile_matches_.fill(false);

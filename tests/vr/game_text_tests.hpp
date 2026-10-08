@@ -56,13 +56,13 @@ template<class Check> void game_text_tests(Check check)
 		for(const auto language : {en,zh,locale::traditional_chinese,locale::french,locale::german,
 			locale::spanish,locale::russian,locale::japanese,locale::korean,locale::italian,
 			locale::polish,locale::portuguese,locale::arabic,locale::spanish_latin_america})
-			check(has_translation(id,language) && !format(id,language,{{"button","[BUTTON]",true},{"item","[ITEM]"}}).empty(),
+			check(has_translation(id,language) && !format(id,language,{{"button","[BUTTON]",true},{"item","[ITEM]"},{"axis","[AXIS]",true}}).empty(),
 				"Every official game locale covers and formats every existing semantic key");
 		check(!simplified_chinese[i].empty(),"Chinese authoring catalog covers every semantic key");
-		const auto a=format(id,en,{{"button","[BUTTON]",true},{"item","[ITEM]"}});
-		const auto b=format(id,zh,{{"button","[BUTTON]",true},{"item","[ITEM]"}});
+		const auto a=format(id,en,{{"button","[BUTTON]",true},{"item","[ITEM]"},{"axis","[AXIS]",true}});
+		const auto b=format(id,zh,{{"button","[BUTTON]",true},{"item","[ITEM]"},{"axis","[AXIS]",true}});
 		check(!b.empty() && (english[i].empty() ? a.empty() : !a.empty()),"Chinese-only keys do not manufacture English translations");
-		for(const auto token:{"[BUTTON]","[ITEM]"})
+		for(const auto token:{"[BUTTON]","[ITEM]","[AXIS]"})
 			check(english[i].empty() || (a.find(token)!=std::string::npos)==(b.find(token)!=std::string::npos),"translations retain the same argument contract");
 	}
 	check(text(grip_key(0,false),en)=="Left Grip" && text(grip_key(1,false),en)=="Right Grip" &&

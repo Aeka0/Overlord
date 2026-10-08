@@ -14,7 +14,7 @@ namespace game_text
 		button_trigger, button_grip_left, button_grip_right, button_grip_either,
 		item_weapon, interaction_use, interaction_pickup, rappel_brake, story_melee, right_stick_down, mine_prone, c4_draw, c4_detonate,
 		recording_preview, interaction_resupply, weapon_needs_chamber, vehicle_duck, weapon_quick_loading, cinematic_skip, signal_flare,
-		nightvision_on, nightvision_off, breach_place, dsm_connect, dsm_recover, claymore_place, rappel_attach, gulag_attach, designator_draw, designator_target, briefcase_pickup, notebook_pickup, notebook_open, notebook_boost, notebook_control, fixed_sniper_zoom, fixed_sniper_aim, fixed_sniper_controls, heartbeat_fold, snowmobile_board, vehicle_drive, vehicle_reload, museum_warning, trainer_fire, trainer_hip_fire, trainer_ads, trainer_stop_ads, trainer_next_target, trainer_sidearm, trainer_primary, trainer_reload, trainer_knife, trainer_crouch, trainer_stand, trainer_prone, trainer_jump, trainer_mantle, trainer_sprint, trainer_frag, trainer_flash, trainer_menu, m203_reload, weapon_magazine_empty, weapon_no_ammo, ending_knife_pull, count
+		nightvision_on, nightvision_off, breach_place, dsm_connect, dsm_recover, claymore_place, rappel_attach, gulag_attach, designator_draw, designator_target, briefcase_pickup, notebook_pickup, notebook_open, notebook_boost, notebook_control, fixed_sniper_zoom, fixed_sniper_aim, fixed_sniper_controls, heartbeat_fold, snowmobile_board, vehicle_drive, vehicle_reload, museum_warning, trainer_fire, trainer_hip_fire, trainer_ads, trainer_stop_ads, trainer_next_target, trainer_sidearm, trainer_primary, trainer_reload, trainer_knife, trainer_crouch, trainer_stand, trainer_prone, trainer_jump, trainer_mantle, trainer_sprint, trainer_frag, trainer_flash, trainer_menu, m203_reload, weapon_magazine_empty, weapon_no_ammo, ending_knife_pull, button_menu, button_secondary, button_move, button_turn, button_jump, button_sprint, button_unbound, launcher_aim, count
 	};
 	inline constexpr std::size_t key_count=static_cast<std::size_t>(key::count);
 	using catalog=std::array<std::u8string_view,key_count>;
@@ -26,6 +26,20 @@ namespace game_text
 	{
 		switch(id)
 		{
+		case key::fixed_sniper_controls:
+		case key::trainer_sprint:return 5; // button + axis
+		case key::trainer_menu:
+		case key::vehicle_reload:
+		case key::trainer_fire:
+		case key::trainer_hip_fire:
+		case key::cinematic_skip:
+		case key::trainer_crouch:
+		case key::trainer_stand:
+		case key::trainer_prone:
+		case key::trainer_jump:
+		case key::trainer_mantle:
+		case key::fixed_sniper_zoom:
+		case key::launcher_aim:
 		case key::interaction_use:
 		case key::rappel_brake:
 		case key::story_melee:

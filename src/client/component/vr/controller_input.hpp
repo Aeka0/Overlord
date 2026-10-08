@@ -3,6 +3,7 @@
 #include "head_pose_bridge.hpp"
 #include "settings.hpp"
 #include "input_observation.hpp"
+#include "prompt_bindings.hpp"
 #include <array>
 #include <chrono>
 #include <cstdint>
@@ -58,6 +59,7 @@ namespace vr::controller_input
 		std::uint64_t reference_generation{};
 		clock::time_point sampled_at{};
 		bool focused{};
+		std::shared_ptr<const prompt_bindings::snapshot> prompt_bindings;
 		bool move_active{};
 		bool turn_active{};
 		digital_action sprint{};

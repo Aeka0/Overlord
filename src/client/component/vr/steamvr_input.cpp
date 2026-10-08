@@ -101,6 +101,45 @@ namespace vr::steamvr_input
 		return true;
 	}
 
+	void actions::refresh_prompt_bindings() noexcept
+	{
+		const auto now = controller_input::clock::now();
+		if (!input_ || now - prompt_bindings_at_ < std::chrono::seconds(1)) return;
+		prompt_bindings_at_ = now;
+		try
+		{
+			auto labels = std::make_shared<prompt_bindings::snapshot>();
+			const std::array handles{trigger_[0], trigger_[1], squeeze_[0], squeeze_[1],
+				secondary_[0], secondary_[1], menu_recenter_, menu_toggle_, move_, turn_, jump_, sprint_};
+			static_assert(handles.size() == prompt_bindings::action_count);
+			for (std::size_t i = 0; i < handles.size(); ++i)
+			{
+				if (!handles[i]) continue;
+				std::array<VRInputValueHandle_t, k_unMaxActionOriginCount> origins{};
+				if (input_->GetActionOrigins(set_, handles[i], origins.data(),
+					static_cast<uint32_t>(origins.size())) != VRInputError_None) continue;
+				labels->known[i] = true;
+				for (const auto origin : origins)
+				{
+					if (origin == k_ulInvalidInputValueHandle) continue;
+					std::array<char, prompt_bindings::max_label_bytes + 1> name{};
+					if (input_->GetOriginLocalizedName(origin, name.data(), static_cast<uint32_t>(name.size()),
+						VRInputString_Hand | VRInputString_InputSource) != VRInputError_None)
+					{
+						labels->known[i] = false;
+						continue;
+					}
+					const auto length = strnlen(name.data(), name.size());
+					if (length < name.size() && prompt_bindings::valid_label({name.data(), length}))
+						prompt_bindings::append(labels->labels[i], {name.data(), length});
+					else labels->known[i] = false;
+				}
+			}
+			prompt_bindings_ = std::move(labels);
+		}
+		catch (...) { prompt_bindings_.reset(); } // Metadata failure must not disable input.
+	}
+
 	void actions::sample(const bool focused, const controller_input::input_reason unavailable_reason) noexcept
 	{
 		using namespace controller_input;
@@ -182,6 +221,8 @@ namespace vr::steamvr_input
 				        : input_condition{available ? input_reason::none : input_reason::action_inactive};
 			return state.sample(available, value.bState, frame.sampled_at);
 		};
+		refresh_prompt_bindings();
+		frame.prompt_bindings = prompt_bindings_;
 		frame.sprint = digital(sprint_, sprint_state_, input_channel::sprint);
 		frame.jump = digital(jump_, jump_state_, input_channel::jump);
 		frame.menu_toggle = digital(menu_toggle_, menu_toggle_state_);
@@ -247,6 +288,8 @@ namespace vr::steamvr_input
 
 	void actions::reset() noexcept
 	{
+		prompt_bindings_.reset();
+		prompt_bindings_at_ = {};
 		++diagnostics_.resets;
 		probe_pending_ = false;
 		sample_failed_ = false;
