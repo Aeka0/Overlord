@@ -46,7 +46,7 @@ namespace vr::gameplay::weapons::m82
 		{"j_ring_le_2", {-0.00085453f, -0.00302139f, 0.33430589f, 0.94245940f}},
 		{"j_ring_ri_2", {-0.00494406f, 0.02096649f, 0.44456885f, 0.89548562f}},
 	}};
-	inline constexpr std::array<part_pose, 11> equip_rest{{
+	inline constexpr std::array<part_pose, 13> equip_rest{{
 		{"j_bolt", {{8.89491284f, -1.09101402f, 4.41733195f}, {0.00000000f, 0.00000000f, 0.00000000f, 1.00000000f}}},
 		{"j_handle", {{15.45411057f, 0.00000000f, 5.81832983f}, {0.25592611f, 0.00000000f, 0.00000000f, 0.96669635f}}},
 		{"j_magrelease",
@@ -61,5 +61,13 @@ namespace vr::gameplay::weapons::m82
 		{"tag_bullet", {{0.00000000f, 0.00000000f, 0.96692701f}, {0.00000000f, 0.00000000f, 0.00000000f, 1.00000000f}}},
 		{"tag_bullet_single",
 		 {{0.00000000f, 0.61004603f, 0.52423787f}, {0.00000000f, 0.00000000f, 0.00000000f, 1.00000000f}}},
+		// Attachment-local idle rotations replace the folded model bind; do not
+		// multiply the bind rotation into them a second time. No bipod is required.
+		{"j_pod_left",
+		 {{0.00000000f, 0.883169999f, -0.026841162f}, {0.20285736f, -0.60796169f, -0.16449543f, 0.74978178f}},
+		 hands::part_pose_mode::fixed_attachment},
+		{"j_pod_right",
+		 {{0.00000000f, -0.881410959f, -0.033859014f}, {-0.20218467f, -0.61107075f, 0.16534891f, 0.74724403f}},
+		 hands::part_pose_mode::fixed_attachment},
 	}};
 } // namespace vr::gameplay::weapons::m82

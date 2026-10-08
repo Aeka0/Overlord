@@ -5,7 +5,15 @@
 namespace vr::gameplay::hands
 {
 	struct joint_pose {std::string_view name;quat rotation;};
-	struct part_pose {std::string_view name;anchor local;};
+	enum class part_pose_mode { equip_only, fixed_attachment };
+	struct part_pose
+	{
+		std::string_view name;
+		anchor local;
+		// Fixed attachment parts are optional in the admitted assembly and
+		// retain their authored local pose during ordinary held presentation too.
+		part_pose_mode mode{part_pose_mode::equip_only};
+	};
 	struct pose_schema
 	{
 		std::string_view id{};

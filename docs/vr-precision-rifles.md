@@ -46,6 +46,11 @@ behavior; it has not been verified in a fresh native session.
 ## Poses and moving parts
 
 Each receiver uses its own native idle wrists/fingers and magazine grasp.
+M82's optional bipod uses the exported idle rotations for both legs throughout
+held presentation and equip/rest assembly. They replace the folded attachment
+bind rotations, preserving the original downward deployment and lateral spread
+without applying the bind rotation twice. Other receiver parts keep their native
+fire/reload motion. In-game and headset appearance remain pending verification.
 M14/M21 share both AK edge-grasp styles, positioned at the M14's external
 charging tab. Left wrists sit 3 mm closer to the receiver; independently fitted
 right hooks wrap the tab with the palm outside the receiver. M82 uses the shared

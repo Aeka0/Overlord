@@ -57,6 +57,11 @@ namespace vr::gameplay::weapons::m82
 		const auto bound = bind_attachment_set(attachments, models, receiver, rig, bones);
 		if (!bound.valid)
 			return {nullptr, "precision rifle attachment topology rejected"};
+		for(const auto& model:models)
+			if(model.name=="attach_h2_m82_bipod_vm" &&
+				(bones[model.begin+1].name!="j_pod_left" || bones[model.begin+2].name!="j_pod_right" ||
+				 rig.parent[model.begin+1]!=model.begin || rig.parent[model.begin+2]!=model.begin))
+				return {nullptr, "M82 bipod leg topology rejected"};
 		auto hidden = precision_attachments::physical_scope_mask(models, rig, bones);
 		return {&assemblies[skin], "precision rifle and physical scope matched", hidden, bound.muzzle};
 	}

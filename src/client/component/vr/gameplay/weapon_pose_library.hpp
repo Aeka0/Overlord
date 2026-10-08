@@ -15,7 +15,7 @@ namespace vr::gameplay::hands
 	// interaction publication is needed to assemble a receiver on first use.
 	template<class Pose>
 	inline bool apply_weapon_rest(const rig& r,const pose_library& library,const Pose& profile,
-		std::span<bone> pose) noexcept
+		std::span<bone> pose,bool equip_parts=true) noexcept
 	{
 		if(!library.valid || r.count<=0 || r.count>256 || pose.size()<static_cast<size_t>(r.count))return false;
 		std::array<bone,256> before{};std::copy_n(pose.begin(),r.count,before.begin());
@@ -25,7 +25,11 @@ namespace vr::gameplay::hands
 			const auto parent=r.parent[i];if(parent<0 || parent>=i)return false;
 			const auto inverse=conjugate(normalize(before[parent].rotation));
 			anchor local{rotate(inverse,sub(before[i].position,before[parent].position)),normalize(multiply(inverse,normalize(before[i].rotation)))};
-			if(library.part[i]>=0)local=profile.equip_rest[library.part[i]].local;
+			if(library.part[i]>=0)
+			{
+				const auto& part=profile.equip_rest[library.part[i]];
+				if(equip_parts || part.mode==part_pose_mode::fixed_attachment)local=part.local;
+			}
 			pose[i].position=add(pose[parent].position,rotate(pose[parent].rotation,local.position));
 			pose[i].rotation=normalize(multiply(pose[parent].rotation,local.rotation));
 		}
@@ -65,7 +69,7 @@ namespace vr::gameplay::hands
 				pose[i].rotation = normalize(multiply(pose[parent].rotation, local.rotation));
 			}
 		}
-		if(suppress_equip)return apply_weapon_rest(r,library,profile,pose);
+		if(suppress_equip || library.fixed_parts)return apply_weapon_rest(r,library,profile,pose,suppress_equip);
 		return true;
 	}
 }

@@ -213,7 +213,59 @@ namespace precision_profile_tests
 		check(native_reload_profile("barrett", 10, &m82::physical) == &m82::physical &&
 		          !native_reload_profile("m82_bipod_stand_thermal", 10, &m82::physical),
 		    "M82 binds playable Barrett, never the scripted turret");
+		{
+			const auto& profile=m82::assemblies[0];
+			const std::array<const assembly_attachment*,1> items{&m82::attachments[1]};
+			fixture bipod(profile,items);
+			const auto library=bind_weapon_poses(bipod.r,{bipod.bones.data(),size_t(bipod.r.count)},profile);
+			check(bipod.resolve().value==&profile && library.valid && library.fixed_parts,
+				"M82 deployed bipod poses bind only after attachment admission");
+			const int root=bipod.models.back().begin,bolt=69;
+			for(bool equip:{false,true}) for(const auto rotation:{quat{0,0,0,1},from_to({1,0,0},{0,0,1})})
+			{
+				std::array<bone,256> pose{};
+				for(int i=0;i<bipod.r.count;++i)pose[i]={{0,0,0,1},{0,0,0},1};
+				pose[68].rotation=rotation;pose[68].position={12,7,3};
+				pose[root].rotation=rotation;pose[root].position={18,7,3};
+				pose[bolt].rotation=rotation;pose[bolt].position={5,6,7};
+				// Native additive composition leaves each leg more than halfway
+				// splayed. Both fixed poses must use the exported idle quaternion.
+				for(int side=0;side<2;++side)
+				{
+					const auto& rest=profile.equip_rest[11+side];
+					const quat bind{side ? -.26116943f : .26116943f,0,0,.965271f};
+					pose[root+1+side].rotation=normalize(multiply(rotation,multiply(bind,rest.local.rotation)));
+					pose[root+1+side].position=add(pose[root].position,rotate(rotation,rest.local.position));
+				}
+				const auto before_bolt=pose[bolt];
+				check(apply_poses(bipod.r,library,profile,{}, {0,0},equip,{pose.data(),size_t(bipod.r.count)}),
+					"M82 bipod correction runs in held idle and equip presentation");
+				for(int side=0;side<2;++side)
+				{
+					const auto& leg=pose[root+1+side];
+					const auto local=normalize(multiply(conjugate(pose[root].rotation),leg.rotation));
+					// Actual exported leg axis in bone-local space; independent of
+					// the pose table. Deployment points down with native lateral spread.
+					const vec axis=side ? vec{-.97283737f,.00852109f,-.23133275f}
+						: vec{-.97131213f,-.00842713f,-.23765887f};
+					const auto down=rotate(local,unit(axis));
+					check(std::abs(down[0])<.04f && down[2]<-.86f,
+						"M82 legs deploy downward in gun space even when the gun rotates");
+					check(length(sub(leg.position,add(pose[root].position,rotate(pose[root].rotation,
+						profile.equip_rest[11+side].local.position))))<.0001f,
+						"M82 fixed legs retain their original attachment hinges");
+				}
+				if(!equip)check(length(sub(pose[bolt].position,before_bolt.position))<.0001f,
+					"fixed bipod presentation preserves native bolt travel");
+			}
+			bipod.bones[root+1].name="unreviewed_leg";
+			check(!bipod.resolve().value,"M82 rejects a renamed bipod leg");
+			bipod.bones[root+1].name="j_pod_left";bipod.r.parent[root+2]=root+1;
+			check(!bipod.resolve().value,"M82 rejects a chained bipod hinge");
+		}
 		fixture m82(m82::assemblies[0], {});
+		check(!bind_weapon_poses(m82.r,{m82.bones.data(),size_t(m82.r.count)},m82::assemblies[0]).fixed_parts,
+			"bare M82 assembly remains valid without optional bipod poses");
 		m82.r.parent[68 + 21] = 68 + 11;
 		check(!physical_reload::bind_parts(
 		          m82.r, {m82.bones.data(), size_t(m82.r.count)}, vr::gameplay::weapons::m82::physical)

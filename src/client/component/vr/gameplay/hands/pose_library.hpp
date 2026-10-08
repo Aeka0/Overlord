@@ -31,6 +31,7 @@ namespace vr::gameplay::hands
 		std::array<int,256> opposite{};
 		std::array<quat,256> mirror_basis{};
 		bool valid{};
+		bool fixed_parts{};
 		std::array<quat,2> neutral_wrists{{{0,0,0,1},{0,0,0,1}}};
 	};
 	inline pose_library bind_poses(const rig& r, std::span<const bone_definition> bones,
@@ -116,13 +117,14 @@ namespace vr::gameplay::hands
 						return out;
 					part_seen[j] = true;
 					out.part[i] = static_cast<int>(j);
+					out.fixed_parts |= profile.equip_rest[j].mode == part_pose_mode::fixed_attachment;
 				}
 		}
 		bool complete=found!=0;
 		for(size_t i=0;i<profile.fingers.size();++i)complete=complete && (finger_seen[i] || optional_hand_joint(profile.fingers[i].name));
-		out.valid = complete &&
-					std::all_of(part_seen.begin(), part_seen.begin() + profile.equip_rest.size(),
-								[](bool value) { return value; });
+		for(size_t i=0;i<profile.equip_rest.size();++i)
+			complete = complete && (part_seen[i] || profile.equip_rest[i].mode == part_pose_mode::fixed_attachment);
+		out.valid = complete;
 		return out;
 	}
 }
