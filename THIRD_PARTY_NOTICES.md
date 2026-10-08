@@ -49,6 +49,22 @@ CascLib is linked statically for offline inspection of installed official game
 language packs. Its upstream checkout is unmodified; the launcher never enables
 online storage or downloads. See [CascLib](https://github.com/ladislav-zezula/CascLib).
 
+## Launcher dependencies
+
+The embedded React launcher includes React, React DOM and Lucide React from
+the versions pinned in `src/launcher-ui/package-lock.json`. Their complete
+notices are retained in `licenses/react.txt`, `licenses/react-dom.txt` and
+`licenses/lucide-react.txt` and included by the overlay packager.
+
+The Win32 host links the Microsoft WebView2 SDK loader from the NuGet version
+pinned in `tools/build_launcher.py`. The package notice is retained in
+`licenses/WebView2-SDK.txt`. Users install the Evergreen WebView2 Runtime
+separately; the overlay contains no browser runtime binary.
+
+The WOFF fonts in `src/launcher-ui/public/fonts` are unchanged copies of the
+fonts previously embedded in the launcher. Existing font provenance and
+notice requirements continue to apply.
+
 ## Valve OpenVR SDK
 
 Overlord includes the public OpenVR client shim and headers from OpenVR SDK 2.15.6.

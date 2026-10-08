@@ -9,12 +9,16 @@ public:
 	virtual ~window();
 
 	void create(const std::string& title, int width, int height,
-	            long flags = (WS_OVERLAPPEDWINDOW & ~(WS_THICKFRAME | WS_MAXIMIZEBOX)));
+	            long flags = WS_OVERLAPPEDWINDOW);
 
 	void close();
 
 	void show() const;
 	void hide() const;
+	bool is_maximized() const;
+	int resize_border() const;
+	RECT content_bounds() const;
+	void request_control(const std::string& action) const;
 
 	void set_callback(const std::function<LRESULT(window*, UINT, WPARAM, LPARAM)>& callback);
 
@@ -29,9 +33,10 @@ protected:
 private:
 	uint32_t last_dpi_ = 96;
 
-	WNDCLASSEX wc_{};
+	WNDCLASSEXW wc_{};
 	HWND handle_ = nullptr;
-	std::string classname_;
+	std::wstring classname_;
+	HBRUSH background_ = nullptr;
 	std::function<LRESULT(window*, UINT, WPARAM, LPARAM)> callback_;
 
 	static LRESULT CALLBACK static_processor(HWND hwnd, UINT message, WPARAM w_param, LPARAM l_param);

@@ -30,6 +30,10 @@ The official Plex notice and full OFL text are in licenses/IBM-Plex-OFL.txt.
 Preserve embedded notices. A license identifier alone does not recover missing
 copyright attribution for a merged font.
 
+The launcher WOFF files in `src/launcher-ui/public/fonts` retain the original
+embedded font bytes and metadata. Moving them into the React asset pipeline
+does not change the provenance requirements above.
+
 ## Other inherited assets and tools
 
 - assets/icon/Icon.ico is the supplied Overlord application icon. The executable

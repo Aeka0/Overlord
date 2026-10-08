@@ -11,7 +11,7 @@ namespace launcher_vr_settings
 {
 	namespace
 	{
-		std::string read_profile(const std::string& path)
+		std::string read_profile_file(const std::string& path)
 		{
 			if (!std::filesystem::exists(path)) return {};
 			std::ifstream file(path, std::ios::binary);
@@ -33,7 +33,7 @@ namespace launcher_vr_settings
 			game_data::initialize_players_folder();
 			const auto path = game_data::get_config_file_path();
 			// Re-read immediately before merging so unrelated profile edits survive.
-			const auto updated = update(read_profile(path));
+			const auto updated = update(read_profile_file(path));
 			if (updated.size() > max_config_bytes || !utils::io::write_file_atomic(path, updated))
 				throw std::runtime_error("Could not save VR settings. Check folder permissions and free disk space.");
 		}
@@ -56,15 +56,26 @@ namespace launcher_vr_settings
 	{
 		try
 		{
-			const auto profile = read_profile(game_data::get_config_source_path());
+			const auto profile = read_profile_file(game_data::get_config_source_path());
 			return response(read_values(profile), has_vr_configuration(profile));
 		}
 		catch (const std::exception& e) { return json{{"ok", false}, {"error", e.what()}}.dump(); }
 	}
 
+	std::string read_profile()
+	{
+		return read_profile_file(game_data::get_config_source_path());
+	}
+
+	void repair_risk_settings(const std::string& group)
+	{
+		const auto fields = risk_group(group);
+		update_profile([fields](const auto& profile) { return disable_risk_settings(profile, fields); });
+	}
+
 	void initialize_startup_options(bool from_launcher)
 	{
-		const auto values = read_values(read_profile(game_data::get_config_source_path()));
+		const auto values = read_values(read_profile_file(game_data::get_config_source_path()));
 		const auto backend = backend_environment_update(values,
 			from_launcher ? startup_source::launcher : startup_source::direct,
 			GetEnvironmentVariableA("H2V_VR_BACKEND", nullptr, 0) != 0);

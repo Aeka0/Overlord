@@ -10,6 +10,7 @@
 #include "windows.h"
 #include "version.h"
 #include "resource.hpp"
+#include "launcher/preflight_resource.hpp"
 
 /////////////////////////////////////////////////////////////////////////////
 #undef APSTUDIO_READONLY_SYMBOLS
@@ -99,23 +100,7 @@ END
 
 ID_ICON               ICON   "../../assets/icon/Icon.ico"
 
-MENU_MAIN             RCDATA "resources/main.html"
-LAUNCHER_APP          RCDATA "resources/launcher/app.js"
-LAUNCHER_I18N         RCDATA "resources/launcher/i18n.js"
-LAUNCHER_EN           RCDATA "resources/launcher/locales/en.json"
-LAUNCHER_ZH_CN        RCDATA "resources/launcher/locales/zh-CN.json"
-LAUNCHER_ZH_TW        RCDATA "resources/launcher/locales/zh-TW.json"
-LAUNCHER_RU           RCDATA "resources/launcher/locales/ru.json"
-LAUNCHER_FR           RCDATA "resources/launcher/locales/fr.json"
-LAUNCHER_DE           RCDATA "resources/launcher/locales/de.json"
-LAUNCHER_ES           RCDATA "resources/launcher/locales/es.json"
-LAUNCHER_JA           RCDATA "resources/launcher/locales/ja.json"
-LAUNCHER_KO           RCDATA "resources/launcher/locales/ko.json"
-LAUNCHER_HELP         RCDATA "resources/launcher/help.js"
-LAUNCHER_HELP_STYLE   RCDATA "resources/launcher/help.css"
-LAUNCHER_HELP_CONTENT RCDATA "resources/launcher/help-content.json"
-LAUNCHER_ONBOARDING   RCDATA "resources/launcher/onboarding.js"
-LAUNCHER_ONBOARDING_STYLE RCDATA "resources/launcher/onboarding.css"
+#include "launcher_assets.rcinc"
 
 LUI_COMMON            RCDATA "resources/ui_scripts/common.lua"
 LUI_UPDATER           RCDATA "resources/ui_scripts/updater.lua"
@@ -126,10 +111,13 @@ DVAR_LIST              RCDATA "resources/dvar_list.json"
 
 #ifdef _DEBUG
 TLS_DLL               RCDATA "../../build/bin/x64/Debug/tlsdll.dll"
+OPENXR_LOADER_RESOURCE RCDATA "../../build/bin/x64/Debug/openxr_loader.dll"
 #elif defined(H2VR_PROFILE_BUILD)
 TLS_DLL               RCDATA "../../build/bin/x64/RelWithDebInfo/tlsdll.dll"
+OPENXR_LOADER_RESOURCE RCDATA "../../build/bin/x64/RelWithDebInfo/openxr_loader.dll"
 #else
 TLS_DLL               RCDATA "../../build/bin/x64/Release/tlsdll.dll"
+OPENXR_LOADER_RESOURCE RCDATA "../../build/bin/x64/Release/openxr_loader.dll"
 #endif
 
 ICON_IMAGE            RCDATA "resources/icon.png"

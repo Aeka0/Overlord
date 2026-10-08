@@ -203,7 +203,7 @@ tokens with an empty diagnostic ring, existing enabled-probe behavior, and
 launcher navigation/language/draft/save/reset/save-before-launch behavior.
 
 Validated locally: Debug x64 client build, `vr-launcher-settings-tests`,
-`vr-engine-view-probe-smoke`, and `node tests/vr/launcher_settings_ui_tests.js`.
+`vr-engine-view-probe-smoke`, and `npm --prefix src/launcher-ui test`.
 HMD acceptance and frame-time comparisons have not been performed.
 
 For HMD acceptance, use the same build, map, resolution, refresh rate and camera

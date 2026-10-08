@@ -32,6 +32,13 @@ jobs:
       - name: Set up MSBuild
         uses: microsoft/setup-msbuild@v2
 
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+          cache-dependency-path: src/launcher-ui/package-lock.json
+
       - name: Generate projects
         run: tools/premake5.exe vs2022 --with-vr-tests
 
@@ -44,9 +51,10 @@ jobs:
       - name: Run no-loader smoke test
         run: build/bin/x64/${{ matrix.configuration }}/vr-tests/no-loader/vr-runtime-no-loader-smoke.exe
 
-      - name: Validate launcher scripts
+      - name: Validate React launcher
         if: matrix.configuration == 'Debug'
-        run: node tests/vr/launcher_settings_ui_tests.js
+        working-directory: src/launcher-ui
+        run: npm test
 
       - name: Package client overlay
         run: python tools/package_client.py --configuration ${{ matrix.configuration }}

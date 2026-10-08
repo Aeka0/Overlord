@@ -301,7 +301,7 @@ support-arm IK, free-hand isolation, and zero recoil.
 
 For configuration or launcher changes, also run
 [launcher_settings_tests.cpp](../tests/vr/launcher_settings_tests.cpp) and
-[launcher_settings_ui_tests.js](../tests/vr/launcher_settings_ui_tests.js).
+[React launcher tests](../src/launcher-ui/tests/model.test.ts).
 From the repository root in a configured Visual Studio build environment:
 
 ```bat
@@ -310,7 +310,7 @@ msbuild build\vr-weapon-grip-tests.vcxproj /m:4 /p:Configuration=Debug /p:Platfo
 build\bin\x64\Debug\vr-tests\weapon-grip\vr-weapon-grip-tests.exe
 msbuild build\vr-launcher-settings-tests.vcxproj /m:4 /p:Configuration=Debug /p:Platform=x64
 build\bin\x64\Debug\vr-tests\launcher-settings\vr-launcher-settings-tests.exe
-node tests/vr/launcher_settings_ui_tests.js
+npm --prefix src/launcher-ui test
 ```
 
 The implementation was also built with installed VS2019 BuildTools using its

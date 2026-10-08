@@ -35,7 +35,7 @@ must all be present. A Battle.net tag, empty directory, shared startup resource
 or MOD localization file alone does not establish availability. This is an
 installation check, not a full payload-integrity scan.
 
-Enumeration runs on a launcher-owned worker, outside MSHTML and outside the game
+Enumeration runs on a launcher-owned worker, outside WebView2 and outside the game
 runtime. The UI polls completion without waiting on disk and offers a refresh
 button. Saving reopens the storage and repeats admission before writing. A
 missing saved language is reported without selecting or writing a substitute.
@@ -45,8 +45,8 @@ installed pack first. Scanning never writes game settings.
 
 ## Validation
 
-Launcher UI tests cover all locale key/parameter contracts, independent settings,
-asynchronous scanning, disappearing packs, empty inventories and save failure.
+React launcher tests cover locale coverage, native unit conversion, incomplete
+numeric drafts, inverse settings and stale-document message rejection.
 The C++ launcher tests cover Windows language-tag mapping and preference parsing.
 Game-text and prompt tests format all 65 existing keys in the 14 complete
 official game catalogs, while retaining native fallthrough tests for partial

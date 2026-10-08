@@ -1,5 +1,4 @@
 #pragma once
-#include "resource.hpp"
 #include <array>
 #include <string>
 #include <string_view>
@@ -7,10 +6,9 @@
 
 namespace launcher_localization
 {
-	struct locale { const char* id; int resource; };
-	inline constexpr std::array locales{locale{"en", LAUNCHER_EN}, locale{"zh-CN", LAUNCHER_ZH_CN},
-		locale{"zh-TW", LAUNCHER_ZH_TW}, locale{"ru", LAUNCHER_RU}, locale{"fr", LAUNCHER_FR},
-		locale{"de", LAUNCHER_DE}, locale{"es", LAUNCHER_ES}, locale{"ja", LAUNCHER_JA}, locale{"ko", LAUNCHER_KO}};
+	struct locale { const char* id; };
+	inline constexpr std::array locales{locale{"en"}, locale{"zh-CN"}, locale{"zh-TW"}, locale{"ru"},
+		locale{"fr"}, locale{"de"}, locale{"es"}, locale{"ja"}, locale{"ko"}};
 	inline constexpr const char* default_locale = "en";
 	inline constexpr size_t max_preferences_bytes = 4096;
 	inline std::string match_system_locale(std::string_view name)
@@ -51,7 +49,6 @@ namespace launcher_localization
 		const auto id = value->get<std::string>();
 		return supported(id) ? id : default_locale;
 	}
-	std::string scripts();
 	std::string load();
 	std::string save(const std::string& language);
 }

@@ -33,7 +33,7 @@ namespace launcher_game_language
 			return value;
 		}
 
-		bool readable(HANDLE storage, const CASC_FIND_DATA& entry)
+		bool readable(HANDLE storage, const CASC_FIND_DATA& entry, const std::atomic<bool>& cancelled)
 		{
 			if (!entry.bFileAvailable || !entry.FileSize || !entry.dwSpanCount || entry.dwSpanCount > max_spans) return false;
 			HANDLE file{};
@@ -45,6 +45,7 @@ namespace launcher_game_language
 			// Metadata or a shared startup zone alone is not an installed language.
 			for (const auto& span : spans)
 			{
+				if (cancelled.load()) throw std::runtime_error("cancelled");
 				if (span.EndOffset <= span.StartOffset || span.EndOffset > entry.FileSize) return false;
 				for (const auto position : {span.StartOffset, span.EndOffset - 1})
 				{
@@ -56,7 +57,7 @@ namespace launcher_game_language
 			return true;
 		}
 
-		json installed(const std::filesystem::path& root)
+		json installed(const std::filesystem::path& root, const std::atomic<bool>& cancelled)
 		{
 			HANDLE storage{};
 			CASC_OPEN_STORAGE_ARGS args{};
@@ -69,6 +70,7 @@ namespace launcher_game_language
 			size_t total{};
 			for (const auto& language : languages)
 			{
+				if (cancelled.load()) throw std::runtime_error("cancelled");
 				const auto prefix = std::string(language.name) + "\\" + language.code + "_";
 				CASC_FIND_DATA entry{};
 				const auto search = CascFindFirstFile(storage, (prefix + "*").c_str(), &entry, nullptr);
@@ -82,7 +84,7 @@ namespace launcher_game_language
 					startup |= name == prefix + "code_post_gfx.ff";
 					common |= name == prefix + "common.ff";
 					audio |= name.ends_with(".pak");
-					if (!readable(storage, entry)) { complete = false; break; }
+					if (!readable(storage, entry, cancelled)) { complete = false; break; }
 				} while (CascFindNextFile(search, &entry));
 				if (complete && startup && common && audio)
 					choices.push_back({{"value", language.name}, {"label", language.label}});
@@ -90,15 +92,16 @@ namespace launcher_game_language
 			return choices;
 		}
 
-		std::string execute(const std::filesystem::path& root, const std::string& requested)
+		std::string execute(const std::filesystem::path& root, const std::string& requested, const std::atomic<bool>& cancelled)
 		{
 			json choices;
-			try { choices = installed(root); }
+			try { choices = installed(root, cancelled); }
 			catch (...) { return failure("language.gameLoadError"); }
 			if (!requested.empty() && std::none_of(choices.begin(), choices.end(), [&](const auto& c) { return c.at("value") == requested; }))
 				return failure("language.gameUnavailable");
 			try
 			{
+				if (cancelled.load()) return failure("language.gameLoadError");
 				const auto path = utils::properties::get_appdata_path() / "config.json";
 				auto config = read_preferences(path);
 				if (!requested.empty())
@@ -122,7 +125,8 @@ namespace launcher_game_language
 		try
 		{
 			const auto root = std::filesystem::current_path();
-			worker_ = std::async(std::launch::async, [root, language] { return execute(root, language); });
+			cancelled_->store(false);
+			worker_ = std::async(std::launch::async, [root, language, cancelled = cancelled_] { return execute(root, language, *cancelled); });
 			return pending;
 		}
 		catch (...) { return failure("language.gameLoadError"); }

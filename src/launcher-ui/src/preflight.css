@@ -1,0 +1,147 @@
+.preflight-dialog {
+  width: min(800px, calc(100vw - 36px));
+  max-height: calc(100dvh - 36px);
+  padding: 0;
+  border: 1px solid var(--strong);
+  border-radius: 10px;
+  background: var(--background);
+  color: var(--text);
+  overflow: hidden;
+  box-shadow: 0 24px 72px rgba(0, 0, 0, 0.5);
+}
+.preflight-dialog[open] {
+  display: flex;
+  flex-direction: column;
+  animation: preflight-enter 160ms var(--motion-ease);
+}
+.preflight-dialog::backdrop {
+  background: rgba(0, 0, 0, 0.64);
+  backdrop-filter: blur(3px);
+}
+@keyframes preflight-enter {
+  from {
+    opacity: 0;
+    transform: translateY(6px) scale(0.985);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+.preflight-heading {
+  flex-shrink: 0;
+  padding: 22px 24px 18px;
+}
+.preflight-heading h1 {
+  font-size: 22px;
+}
+.preflight-content {
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  margin: 0 24px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+}
+.preflight-table {
+  width: 100%;
+  border-collapse: collapse;
+  table-layout: fixed;
+  font-size: 14px;
+}
+.preflight-table th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background: var(--surface);
+  font-weight: 400;
+  text-align: left;
+}
+.preflight-table th,
+.preflight-table td {
+  padding: 12px;
+  border-bottom: 1px solid var(--border);
+  line-height: 1.55;
+  overflow-wrap: anywhere;
+  vertical-align: top;
+}
+.preflight-table th:first-child {
+  width: 29%;
+}
+.preflight-table th:last-child {
+  width: 90px;
+  text-align: center;
+}
+.preflight-table td:last-child {
+  text-align: center;
+}
+.preflight-table tr:last-child td {
+  border-bottom: 0;
+}
+.preflight-table .button {
+  min-width: 56px;
+  max-width: 100%;
+  padding-inline: 8px;
+}
+.preflight-problem {
+  display: flex;
+  align-items: flex-start;
+  gap: 9px;
+}
+.preflight-problem svg {
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+[data-severity="error"] .preflight-problem svg {
+  color: #ff8173;
+}
+[data-severity="warning"] .preflight-problem svg {
+  color: #f0c45e;
+}
+.preflight-status {
+  padding: 12px 24px 0;
+}
+.preflight-actions {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  flex-shrink: 0;
+  padding: 18px 24px;
+}
+.preflight-buttons {
+  display: flex;
+  gap: 8px;
+}
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+@media (max-width: 620px) {
+  .preflight-heading {
+    padding: 18px 16px 14px;
+  }
+  .preflight-content {
+    margin: 0 16px;
+  }
+  .preflight-table th,
+  .preflight-table td {
+    padding: 10px 8px;
+  }
+  .preflight-table th:last-child {
+    width: 76px;
+  }
+  .preflight-problem {
+    gap: 6px;
+  }
+  .preflight-actions {
+    padding: 16px;
+    flex-wrap: wrap;
+  }
+}

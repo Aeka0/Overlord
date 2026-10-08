@@ -181,7 +181,11 @@ includedirs {"./src/client", "./src/common", "%{prj.location}/src"}
 
 resincludedirs {"$(ProjectDir)src"}
 
-dependson {"tlsdll", "openxr-loader"}
+dependson {"tlsdll", "openxr-loader", "launcher-resources"}
+includedirs {"%{wks.location}/deps/webview2/include", "%{wks.location}/launcher-ui"}
+resincludedirs {"$(ProjectDir)launcher-ui"}
+libdirs {"%{wks.location}/deps/webview2/lib"}
+links {"WebView2LoaderStatic", "ole32", "shlwapi", "version"}
 
 -- Keep the Unicode CASC API isolated from the legacy game's ANSI PCH.
 filter "files:src/client/launcher/game_language.cpp"
@@ -229,6 +233,11 @@ links {"common"}
 resincludedirs {"$(ProjectDir)src"}
 
 group "Dependencies"
+project "launcher-resources"
+	kind "Utility"
+	files {"tools/build_launcher.py", "src/launcher-ui/package.json", "src/launcher-ui/package-lock.json"}
+	prebuildcommands {'python "%{wks.location}/../tools/build_launcher.py"'}
+
 project "openxr-loader"
 	kind "Utility"
 	files {"tools/build_openxr_loader.py", "deps/openxr/src/loader/CMakeLists.txt"}

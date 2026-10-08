@@ -1,121 +1,184 @@
 #include <std_include.hpp>
 #include "launcher.hpp"
-#include "vr_settings.hpp"
-#include "localization.hpp"
+#include "webview_window.hpp"
+#include "services.hpp"
+#include "game_language.hpp"
+#include "launch_process.hpp"
+#include "component/game_data.hpp"
 #include "product.hpp"
+#include <utils/flags.hpp>
+#include <utils/io.hpp>
 
-#include <utils/nt.hpp>
-
-launcher::launcher()
+struct launcher::impl
 {
-	this->create_main_menu();
-}
+	using json = nlohmann::json;
+	webview_window window_;
+	launcher_bridge::services services_;
+	launcher_game_language::service languages_;
+	std::string session_;
+	bool language_busy_{};
+	std::optional<bool> language_available_;
+	bool settings_loaded_{};
+	bool launched_{};
+	std::optional<int> pending_launch_;
+	std::optional<std::string> probe_path_ = utils::flags::get_flag("launcher-smoke");
+	ULONGLONG started_ = GetTickCount64();
+	bool probe_failed_{};
+	bool probe_complete_{};
 
-void launcher::create_main_menu()
-{
-	this->main_window_.register_callback("scanGameLanguages", [this](html_frame::callback_params* params)
+	impl()
 	{
-		params->result.set_string(game_language_.scan());
-	});
-	this->main_window_.register_callback("pollGameLanguages", [this](html_frame::callback_params* params)
-	{
-		params->result.set_string(game_language_.poll());
-	});
-	this->main_window_.register_callback("saveGameLanguage", [this](html_frame::callback_params* params)
-	{
-		if (params->arguments.size() != 1 || !params->arguments[0].is_string()) return;
-		params->result.set_string(game_language_.save(params->arguments[0].get_string()));
-	});
-	this->main_window_.register_callback("loadLauncherLanguage", [](html_frame::callback_params* params)
-	{
-		params->result.set_string(launcher_localization::load());
-	});
-	this->main_window_.register_callback("saveLauncherLanguage", [](html_frame::callback_params* params)
-	{
-		if (params->arguments.size() != 1 || !params->arguments[0].is_string()) return;
-		params->result.set_string(launcher_localization::save(params->arguments[0].get_string()));
-	});
-	this->main_window_.register_callback("loadVRSettings", [](html_frame::callback_params* params)
-	{
-		params->result.set_string(launcher_vr_settings::load());
-	});
-	this->main_window_.register_callback("saveVRSettings", [](html_frame::callback_params* params)
-	{
-		if (params->arguments.size() != 1 || !params->arguments[0].is_string()) return;
-		params->result.set_string(launcher_vr_settings::save(params->arguments[0].get_string()));
-	});
-	this->main_window_.register_callback("disableVRRiskSettings", [](html_frame::callback_params* params)
-	{
-		params->result.set_string(launcher_vr_settings::disable_risk_settings());
-	});
-
-	this->main_window_.register_callback("openUrl", [](html_frame::callback_params* params)
-	{
-		if (params->arguments.empty()) return;
-
-		const auto param = params->arguments[0];
-		if (!param.is_string()) return;
-
-		const auto url = param.get_string();
-		ShellExecuteA(nullptr, "open", url.data(), nullptr, nullptr, SW_SHOWNORMAL);
-	});
-
-	this->main_window_.register_callback("selectMode", [this](html_frame::callback_params* params)
-	{
-		if (params->arguments.empty()) return;
-
-		const auto param = params->arguments[0];
-		if (!param.is_number()) return;
-
-		const auto number = static_cast<mode>(param.get_number());
-		this->select_mode(number);
-	});
-
-	this->main_window_.set_callback(
-		[](window* window, const UINT message, const WPARAM w_param, const LPARAM l_param) -> LRESULT
+		window_.set_quiet_failure(probe_path_.has_value());
+		if (const auto development_uri = utils::flags::get_flag("launcher-dev-url")) window_.set_uri(*development_uri);
+		window_.set_message_handler([this](const json& message) { receive(launcher_bridge::parse(message.dump())); });
+		window_.set_callback([this](window* owner, UINT message, WPARAM w_param, LPARAM l_param)
 		{
-			if (message == WM_CLOSE)
+			if (message == WM_SIZE && !session_.empty())
+				window_.send(json{{"session", session_}, {"event", "window.state"}, {"state", {{"maximized", window_.is_maximized()}}}});
+			if (message == WM_TIMER)
 			{
-				window::close_all();
+				if (probe_path_ && !probe_complete_ && GetTickCount64() - started_ > 20000)
+				{
+					probe_failed_ = true; probe_complete_ = true;
+					utils::io::write_file_atomic(*probe_path_, R"({"ok":false,"error":"Renderer startup timed out"})");
+					PostMessageW(window_, WM_CLOSE, 0, 0);
+				}
+				for (auto response : services_.drain())
+				{
+					if (response.at("session") != session_) continue;
+					auto& result = response.at("result");
+					if (result.contains("settings")) settings_loaded_ = result.at("settings").value("ok", false);
+					if (pending_launch_ && response.at("id") == *pending_launch_)
+					{
+						pending_launch_.reset();
+						if (result.value("ok", false) && result.value("approved", false))
+						{
+							try
+							{
+								launcher_process::start_game(); launched_ = true;
+								result = {{"ok", true}, {"launched", true}};
+							}
+							catch (const std::exception& error) { result = {{"ok", false}, {"error", error.what()}}; }
+						}
+						else result.erase("approved");
+					}
+					window_.send(response);
+					if (launched_) PostMessageW(window_, WM_CLOSE, 0, 0);
+				}
+				return LRESULT{0};
 			}
-
-			return DefWindowProcA(*window, message, w_param, l_param);
+			return DefWindowProcW(*owner, message, w_param, l_param);
 		});
+		int width = 1040, height = 720;
+		if (probe_path_)
+			if (const auto size = utils::flags::get_flag("launcher-probe-size"))
+			{
+				std::istringstream input(*size); char separator{};
+				if (!(input >> width >> separator >> height) || separator != 'x' || !(input >> std::ws).eof()
+					|| width < 640 || width > 3840 || height < 480 || height > 2160) throw std::runtime_error("Invalid renderer probe size.");
+			}
+		window_.create(product::name, width, height);
+		SetTimer(window_, 1, 30, nullptr);
+		if (!probe_path_) window_.show();
+	}
 
-	this->main_window_.create(product::name, 960, 640);
-	this->main_window_.load_html(load_content(MENU_MAIN));
-	this->main_window_.show();
-}
+	json language_result(const std::string& raw)
+	{
+		auto result = json::parse(raw);
+		language_busy_ = result.value("pending", false);
+		if (!language_busy_ && result.value("ok", false))
+		{
+			const auto selected = result.at("language");
+			language_available_ = std::any_of(result.at("choices").begin(), result.at("choices").end(), [&](const auto& choice) { return choice.at("value") == selected; });
+		}
+		return result;
+	}
 
-launcher::mode launcher::run() const
+	void receive(const launcher_bridge::request& request)
+	{
+		if (request.method == "bootstrap") { session_ = request.session; settings_loaded_ = false; pending_launch_.reset(); }
+		const bool window_request = request.method == "window.state" || request.method == "window.control";
+		if (session_ != request.session && !window_request) return;
+		try
+		{
+			if (pending_launch_ && !window_request) throw std::runtime_error("launcher.busy");
+			const auto& params = request.params;
+			json result{{"ok", true}};
+			if (request.method == "renderer.ready")
+			{
+				if (!probe_path_ || probe_complete_ || game_data::is_game_directory_available()) throw std::runtime_error("Renderer probing requires a separate directory without game binaries.");
+				if (!params.contains("ok") || !params.at("ok").is_boolean()) throw std::runtime_error("Invalid renderer probe report.");
+				RECT outer{}, client{};
+				GetWindowRect(window_, &outer); GetClientRect(window_, &client);
+				const bool borderless = outer.right - outer.left == client.right && outer.bottom - outer.top == client.bottom;
+				const auto hit = SendMessageW(window_, WM_NCHITTEST, 0, MAKELPARAM(outer.left + 1, outer.top + 1));
+				auto report = params;
+				report["frame"] = {{"borderless", borderless}, {"resizeCorner", hit == HTTOPLEFT}};
+				report["ok"] = params.value("ok", false) && borderless && hit == HTTOPLEFT;
+				probe_complete_ = true;
+				probe_failed_ = !report.value("ok", false);
+				if (!utils::io::write_file_atomic(*probe_path_, report.dump(2))) probe_failed_ = true;
+				PostMessageW(window_, WM_CLOSE, 0, 0);
+			}
+			else if (request.method == "window.control")
+			{
+				if (params.size() != 1 || !params.contains("action") || !params.at("action").is_string()) throw std::runtime_error("Invalid window control.");
+				window_.request_control(params.at("action").get<std::string>());
+			}
+			else if (request.method == "window.state")
+			{
+				if (!params.empty()) throw std::runtime_error("Invalid window state request.");
+				result["maximized"] = window_.is_maximized();
+			}
+			else if (request.method == "languages.scan" || request.method == "languages.poll")
+			{
+				if (!params.empty()) throw std::runtime_error("Invalid language parameters.");
+				result = language_result(request.method == "languages.scan" ? languages_.scan() : languages_.poll());
+			}
+			else if (request.method == "languages.save")
+			{
+				if (params.size() != 1 || !params.contains("language") || !params.at("language").is_string() || language_busy_) throw std::runtime_error("language.gameScanning");
+				result = language_result(languages_.save(params.at("language").get<std::string>()));
+			}
+			else if (request.method == "links.open")
+			{
+				if (params.size() != 1 || !params.contains("id") || !params.at("id").is_string()) throw std::runtime_error("Invalid project link.");
+				const auto id = params.at("id").get<std::string>();
+				const std::string url = id == "project" ? product::repository_url : id == "releases" ? product::releases_url : "";
+				if (url.empty()) throw std::runtime_error("Unsupported project link.");
+				const std::wstring destination(url.begin(), url.end());
+				if (reinterpret_cast<INT_PTR>(ShellExecuteW(nullptr, L"open", destination.c_str(), nullptr, nullptr, SW_SHOWNORMAL)) <= 32) throw std::runtime_error("Could not open the project link.");
+			}
+			else if (request.method == "game.launch")
+			{
+				if (probe_path_) throw std::runtime_error("Game startup is unavailable in renderer probe mode.");
+				if (params.size() != 1 || !params.contains("warnings") || !params.at("warnings").is_array() || params.at("warnings").size() > 2)
+					throw std::runtime_error("Invalid startup parameters.");
+				for (const auto& id : params.at("warnings"))
+					if (!id.is_string() || (id != "shaders" && id != "shadows")) throw std::runtime_error("Invalid startup acknowledgement.");
+				if (launched_ || !services_.idle() || !settings_loaded_) throw std::runtime_error("launcher.busy");
+				if (language_busy_) throw std::runtime_error("language.gameScanning");
+				if (language_available_ == false) throw std::runtime_error("language.gameCurrentUnavailable");
+				// Keep the fresh launch gate on the ordered file worker. The UI
+				// thread only spawns after approval and cannot enqueue mutations
+				// in between; closing/reloading the window discards that approval.
+				services_.enqueue(request);
+				pending_launch_ = request.id;
+				return;
+			}
+			else { services_.enqueue(request); return; }
+			window_.send(launcher_bridge::response(request, std::move(result)));
+			if (launched_) PostMessageW(window_, WM_CLOSE, 0, 0);
+		}
+		catch (const std::exception& error) { window_.send(launcher_bridge::response(request, json{{"ok", false}, {"error", error.what()}})); }
+	}
+};
+
+launcher::launcher() : impl_(std::make_unique<impl>()) {}
+launcher::~launcher() = default;
+int launcher::run() const
 {
 	window::run();
-	return this->mode_;
-}
-
-void launcher::select_mode(const mode mode)
-{
-	this->mode_ = mode;
-	this->main_window_.close();
-}
-
-std::string launcher::load_content(const int res)
-{
-	auto content = utils::nt::load_resource(res);
-	if (res == MENU_MAIN)
-	{
-		constexpr std::string_view onboarding_marker = "<!-- LAUNCHER_ONBOARDING_STYLES -->";
-		const auto onboarding_position = content.find(onboarding_marker);
-		if (onboarding_position == std::string::npos) throw std::runtime_error("Launcher onboarding style marker missing");
-		content.replace(onboarding_position, onboarding_marker.size(), "<style>" + utils::nt::load_resource(LAUNCHER_ONBOARDING_STYLE) + "</style>");
-		constexpr std::string_view style_marker = "<!-- LAUNCHER_HELP_STYLES -->";
-		const auto style_position = content.find(style_marker);
-		if (style_position == std::string::npos) throw std::runtime_error("Launcher help style marker missing");
-		content.replace(style_position, style_marker.size(), "<style>" + utils::nt::load_resource(LAUNCHER_HELP_STYLE) + "</style>");
-		constexpr std::string_view marker = "<!-- LAUNCHER_SCRIPTS -->";
-		const auto position = content.find(marker);
-		if (position == std::string::npos) throw std::runtime_error("Launcher script marker missing");
-		content.replace(position, marker.size(), launcher_localization::scripts());
-	}
-	return content;
+	if (impl_->probe_path_ && impl_->window_.failed()) utils::io::write_file_atomic(*impl_->probe_path_, R"({"ok":false,"error":"WebView2 startup failed"})");
+	return impl_->window_.failed() || impl_->probe_failed_ ? 1 : 0;
 }

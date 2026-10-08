@@ -58,7 +58,7 @@ publish ammunition or feedback. Feedback uses the normal insertion sound at the
 weapon; no magazine is animated from the opposite hand for a quick insertion.
 
 Offline coverage: `vr-quick-reload-tests`, existing reload/mechanics/cylinder/hand
-interaction suites, launcher config tests and `launcher_settings_ui_tests.js`.
+interaction suites, launcher config tests and the React launcher tests.
 [Driver weapons](vr-vehicles.md) reuse the same dwell with an explicit third chest zone. Driver quick loading is mandatory even when this setting is disabled; it still requires magazine removal, and uses the script-owned 32-round vehicle supply without a chambering step.
 
 HMD acceptance should check both hands and waist slots, default/off persistence,

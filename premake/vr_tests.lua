@@ -103,10 +103,10 @@ return function()
 
 	test_executable("vr-launcher-settings-tests", "launcher-settings")
 		files {"./tests/vr/launcher_settings_tests.cpp", "./src/client/launcher/vr_settings_config.hpp",
-			"./src/client/component/vr/settings.hpp", "./src/client/launcher/html/html_argument.cpp"}
+			"./src/client/component/vr/settings.hpp", "./src/client/launcher/bridge_protocol.hpp"}
 		includedirs {"./tests/vr", "./src/client"}
 		gsl.import()
-		links {"oleaut32"}
+		links {"shell32"}
 		json.import()
 
 	test_executable("vr-camera-bob-tests", "camera-bob")

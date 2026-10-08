@@ -73,7 +73,7 @@ namespace launcher_vr_settings
 	}
 
 	enum class startup_source { launcher, direct };
-	// The launcher controls the upcoming game in this process. Direct starts
+	// The launcher controls the upcoming child game process. Direct starts
 	// retain an explicit command-line environment override for diagnosis.
 	inline std::optional<std::string> backend_environment_update(
 		const json& values, startup_source source, bool has_environment_override)

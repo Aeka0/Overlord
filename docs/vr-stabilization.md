@@ -77,4 +77,4 @@ this feature introduces no new external runtime asset.
 Hardware acceptance remains separate: test each switch and combinations during
 stationary aiming, fast turning, locomotion, reloads, melee, recentering, tracking
 loss, pause/ESC/F10 and device recreation. Compare the optimized client for timing.
-CPU/WARP checks and browser previews do not establish HMD comfort or MSHTML layout.
+CPU/WARP checks and browser previews do not establish HMD comfort or WebView2 layout.

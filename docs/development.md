@@ -6,7 +6,7 @@ Commands and targets come from [premake5.lua](../premake5.lua) and the [CI workf
 
 The current client targets Windows x64, Win32, and D3D11. The repository does not provide an equivalent Linux client build pipeline.
 
-Use Visual Studio 2022 with the Desktop development with C++ tools and a Windows SDK. Premake selects `C++latest`, the latest available SDK, and the static CRT, and generates symbols for Debug, RelWithDebInfo and Release. Python and CMake build the application-local OpenXR loader from the pinned SDK. Python is also used for analysis and deployment tools; Node.js is used for launcher script tests. Neither is a client runtime dependency.
+Use Visual Studio 2022 with the Desktop development with C++ tools and a Windows SDK. Premake selects `C++latest`, the latest available SDK, and the static CRT, and generates symbols for Debug, RelWithDebInfo and Release. Python and CMake build the application-local OpenXR loader from the pinned SDK. Node.js 22.12 or newer, including npm, builds the React launcher. Node.js and Python are build tools; the launcher uses the separately installed Microsoft Evergreen WebView2 Runtime.
 
 If the installed C++ toolset is Visual Studio 2019 v142, use its x64 MSBuild
 and pass `/p:PlatformToolset=v142` when building the generated solution. The
@@ -21,6 +21,17 @@ msbuild build\overlord.sln /m /v:minimal /p:Configuration=Debug /p:Platform=x64
 ```
 
 `generate.bat --with-vr-tests` also initializes submodules and generates the solution. Regenerate after adding source files or test targets, or changing Premake. Do not maintain generated `.vcxproj` files directly.
+
+The `launcher-resources` dependency prepares the pinned WebView2 SDK from NuGet,
+runs `npm ci` when the launcher lockfile changes, and builds the frontend. Its
+generated resource manifest embeds HTML, JavaScript, CSS and fonts in the EXE.
+Different configurations share a serialized resource preparation step.
+No web server or Node.js installation is required on the player's machine.
+
+Launcher frontend development lives in `src/launcher-ui`. Run `npm run dev`
+there when a development server is needed, then open the Debug client with
+`-launcher-dev-url http://127.0.0.1:5173`. The host only admits this loopback
+origin in Debug builds; optimized clients use the embedded bundle.
 
 For Release, use the same command and change the value in `Configuration=Debug` to `Release`. Release enables optimization and treats compiler warnings as errors; a passing Debug build does not establish that Release builds successfully.
 
@@ -83,11 +94,19 @@ python tests/native_bindings_tests.py
 python tools/native_bindings/cli.py check --target h2-sp --repo .
 python tests/vr/test_region_capture_analysis.py
 python tests/vr/aim_assist_adapter_tests.py
-node tests/vr/launcher_settings_ui_tests.js
+npm --prefix src/launcher-ui test
 python tests/vr/client_feature_parity_tests.py build/bin/x64/RelWithDebInfo/overlord.exe
 python tests/vr/client_feature_parity_tests.py build/bin/x64/Debug/overlord-debug.exe
 python tests/vr/client_feature_parity_tests.py build/bin/x64/Release/overlord.exe
 ```
+
+To verify the actual embedded WebView2 bridge and both original fonts without
+loading the game, run `python tools/verify_launcher.py --client
+build/bin/x64/Debug/overlord-debug.exe`. The verifier creates a separate
+installation fixture, starts a hidden launcher and keeps its JSON report under
+`output/launcher-smoke`. Its isolated fixture also exercises the startup-problem
+dialog and restores the embedded OpenXR loader there, without starting the game.
+This check does not establish in-game or HMD acceptance.
 
 Run the client artifact audit against the configuration selected for release.
 It checks emitted feature entry points and writable weapon-carry publication
@@ -120,7 +139,7 @@ all HUD composition layers, waypoint routing and independent-hand skin visibilit
 must exist in both clients. Compiler debug instrumentation and optional probes
 may differ; production functionality must not.
 
-Launcher script tests use a simulated DOM. They do not validate layout, DPI behavior, light/dark themes, or interaction rendering in the actual embedded browser. WARP graphics tests establish the resource contracts under test, not H2's native call chain or the image seen in an HMD.
+React unit tests validate data conversion and message lifetime. The native launcher smoke check validates font loading, sidebar scroll isolation, the fixed dark palette and the custom frame in the actual WebView2 renderer. It also checks animation duration and intermediate opacity/position in the production bundle, and cancellation when switching pages quickly. Launcher animations are always enabled. Use `--size 640x480` to cover the minimum window size. Native dragging, multi-monitor DPI transitions and interaction appearance still require a desktop acceptance pass. WARP graphics tests establish the resource contracts under test, not H2's native call chain or the image seen in an HMD.
 
 ## Runtime dependencies and test dependencies
 

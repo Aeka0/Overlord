@@ -3,11 +3,13 @@
 #include "launcher/risk_settings_config.hpp"
 #include "launcher/localization.hpp"
 #include "launcher/game_language_catalog.hpp"
-#include "launcher/html/html_argument.hpp"
+#include "launcher/bridge_protocol.hpp"
+#include "launcher/preflight_policy.hpp"
 #include "component/game_data.hpp"
 #include <iostream>
 #include <fstream>
 #include <limits>
+#include <shellapi.h>
 
 namespace
 {
@@ -22,19 +24,31 @@ int main(int argc, char** argv)
 	using namespace launcher_vr_settings;
 	try
 	{
-		VARIANT value;
-		VariantInit(&value);
-		const auto cleanup = gsl::finally([&] { VariantClear(&value); });
-		html_argument argument(&value);
 		const std::string chinese = "\xe7\xae\x80\xe4\xbd\x93\xe4\xb8\xad\xe6\x96\x87";
 		for (const auto& text : {std::string{}, std::string("English"), chinese, chinese + std::string("\0end", 4)})
 		{
-			argument.set_string(text);
-			require(argument.get_string() == text, "COM bridge preserves UTF-8 and embedded nulls");
+			const auto payload = nlohmann::json{{"id", 1}, {"session", "session-1"}, {"method", "settings.save"}, {"params", {{"text", text}}}}.dump();
+			require(launcher_bridge::parse(payload).params["text"] == text, "JSON bridge preserves UTF-8 and embedded nulls");
 		}
 		bool rejected = false;
-		try { argument.set_string("\xff"); } catch (const std::exception&) { rejected = true; }
+		try { launcher_bridge::parse(std::string("\xff")); } catch (const std::exception&) { rejected = true; }
 		require(rejected, "Invalid UTF-8 must not be converted into mojibake");
+		require(launcher_bridge::trusted_source("https://launcher.invalid/index.html") && !launcher_bridge::trusted_source("https://launcher.invalid.evil/index.html")
+			&& !launcher_bridge::trusted_source("file:///index.html"), "Only the exact launcher origin receives native access");
+		for (const auto& invalid : {std::string(launcher_bridge::max_message_bytes + 1, ' '),
+			std::string(20, '[') + std::string(20, ']'), std::string(R"({"id":1,"session":"session","method":"shell.execute","params":{}})"),
+			std::string(R"({"id":-1,"session":"session","method":"bootstrap","params":{}})")})
+		{
+			rejected = false; try { launcher_bridge::parse(invalid); } catch (const std::exception&) { rejected = true; }
+			require(rejected, "Oversized, nested and unsupported native requests fail closed");
+		}
+		for (const auto& argument : {std::wstring{}, std::wstring(L"directory with spaces\\"), std::wstring(L"quoted\"value"), std::wstring(L"plain")})
+		{
+			const auto command = L"program.exe " + launcher_bridge::quote_argument(argument);
+			int count{}; auto* values = CommandLineToArgvW(command.c_str(), &count);
+			const auto cleanup = gsl::finally([&] { LocalFree(values); });
+			require(values && count == 2 && argument == values[1], "Child process arguments preserve spaces, quotes and trailing slashes");
+		}
 		using launcher_localization::preference;
 		for (const auto& language : launcher_game_language::languages)
 			require(launcher_game_language::official(language.name), "Official game languages admitted by exact identity");
@@ -342,6 +356,36 @@ int main(int argc, char** argv)
 			"// Keep these settings and bindings\nseta vr_turnSpeed 123\n"
 			"seta r_preloadShadersAfterCinematic 1\nseta sm_enable 1\nbind F \"+activate\"\n";
 		const auto safe_graphics = disable_risk_settings(graphics_profile);
+		{
+			using namespace launcher_preflight;
+			auto issues = json::array();
+			append_risks(issues, safe_graphics, true);
+			require(issues.empty(), "Safe native graphics settings pass preflight");
+			const std::string unsafe = "\xef\xbb\xbfseta r_ssaaSamples 1\nseta 0x70BF1633 4\nseta r_preloadShadersFrontendAllow 1\nseta r_preloadShaders 0\nseta sm_cacheSunShadow Enabled\nseta sm_cacheSpotShadows 0\nbind F2 togglemenu\n";
+			const auto values = read_risk_settings(unsafe);
+			require(values[0] == "4", "Last hashed assignment wins alongside named assignments and BOM");
+			append_risks(issues, unsafe, true);
+			require(issues.size() == 3 && issues[0]["severity"] == "error" && issues[1]["severity"] == "warning" && issues[2]["severity"] == "warning",
+				"SSAA blocks startup while shader/shadow risk uses warning severity");
+			require(!launch_allowed(report(issues, true), json::array({"ssaa", "shaders", "shadows"})), "Acknowledgements cannot override a blocking error");
+			const auto repaired = disable_risk_settings(unsafe, risk_group("ssaa"));
+			const auto after = read_risk_settings(repaired);
+			require(after[0] == "1" && after[1] == "1" && after[3] == "Enabled" && repaired.find("bind F2 togglemenu") != std::string::npos,
+				"A row repair removes duplicate SSAA assignments without changing other risks or bindings");
+			issues = json::array(); append_risks(issues, repaired, true);
+			const auto warnings = report(issues, true);
+			require(!launch_allowed(warnings, json::array()) && !launch_allowed(warnings, json::array({"shaders"})) && launch_allowed(warnings, json::array({"shaders", "shadows"})),
+				"Every currently present warning requires acknowledgement on this launch");
+			issues = json::array(); append_risks(issues, "", false);
+			require(issues.size() == 3 && issues[0]["severity"] == "error" && issues[0]["fixable"] == false,
+				"Unknown values are explicit and game-profile repair is unavailable outside a game directory");
+			require(risk_value(0, std::string("1.0")) == risk_state::safe && risk_value(0, std::string("garbage")) == risk_state::unknown,
+				"SSAA compares native numeric meaning and malformed values cannot pass");
+			bool invalid_fix = false; try { risk_group("../config"); } catch (const std::exception&) { invalid_fix = true; }
+			require(invalid_fix, "Repair targets are a fixed allowlist rather than user-supplied paths");
+			issues = json::array(); append_risks(issues, "seta r_ssaaSamples \xff\n", true);
+			require(!issues.dump().empty(), "Malformed non-UTF-8 risk values are classified without leaking invalid text to the UI");
+		}
 		require(safe_graphics.substr(0, 3) == "\xef\xbb\xbf", "Offline repair preserves UTF-8 BOM");
 		require(safe_graphics.find("0x70BF1633") == std::string::npos && safe_graphics.find("R_SSAASAMPLES") == std::string::npos,
 			"Offline repair removes duplicate hashed and named SSAA assignments");

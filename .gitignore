@@ -170,6 +170,7 @@ user*.bat
 .tools-temp/
 output/
 __pycache__/
+node_modules/
 
 # Local source/reference checkouts
 .ref/

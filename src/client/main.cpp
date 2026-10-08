@@ -1,6 +1,7 @@
 #include <std_include.hpp>
 #include "launcher/launcher.hpp"
 #include "launcher/vr_settings.hpp"
+#include "launcher/launch_process.hpp"
 #include "component/game_data.hpp"
 #include "loader/loader.hpp"
 #include "loader/component_loader.hpp"
@@ -221,6 +222,23 @@ int main()
 	FARPROC entry_point;
 	enable_dpi_awareness();
 
+	// Keep WebView2 and the game loader in different processes. The launcher
+	// path never starts game components, graphics hooks or tracking runtimes.
+	if (detect_mode_from_arguments() == launcher::mode::none)
+	{
+		try
+		{
+			launcher_process::use_executable_directory();
+			const launcher launcher;
+			return launcher.run();
+		}
+		catch (const std::exception& error)
+		{
+			MessageBoxA(nullptr, error.what(), "Overlord", MB_ICONERROR);
+			return 1;
+		}
+	}
+
 	limit_parallel_dll_loading();
 
 	srand(uint32_t(time(nullptr)));
@@ -244,19 +262,9 @@ int main()
 			}
 
 			auto mode = detect_mode_from_arguments();
-			const bool from_launcher = mode == launcher::mode::none;
-			if (mode == launcher::mode::none)
-			{
-				const launcher launcher;
-				mode = launcher.run();
-				if (mode == launcher::mode::none)
-				{
-					return 0;
-				}
-			}
 
 			game::environment::set_mode(mode);
-			launcher_vr_settings::initialize_startup_options(from_launcher);
+			launcher_vr_settings::initialize_startup_options(utils::flags::has_flag("launcher-start"));
 
 			entry_point = load_binary(mode);
 			if (!entry_point)
