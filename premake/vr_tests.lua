@@ -151,7 +151,7 @@ return function()
 
 	test_executable("vr-controller-input-tests", "controller-input")
 		files {"./tests/vr/controller_input_tests.cpp"}
-		includedirs {"./src/client"}
+		includedirs {"./src/client", "./deps/openvr/headers"}
 		json.import()
 
 	test_executable("vr-spatial-panel-tests", "spatial-panel")

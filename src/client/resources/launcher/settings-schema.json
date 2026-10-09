@@ -87,52 +87,168 @@
     "type": "toggle"
   },
   {
-    "name": "vr_handOffsetInward",
-    "category": "basics",
+    "name": "vr_controllerPoseMode",
+    "category": "calibration",
+    "group": "settings.controllerCompatibility",
+    "label": "settings.controllerPoseMode",
+    "type": "choice",
+    "description": "settings.controllerPoseModeHint"
+  },
+  {
+    "name": "vr_standardHandOffsetInward",
+    "category": "calibration",
     "group": "settings.alignment",
     "label": "settings.inward",
     "type": "number",
-    "unit": "unit.meters"
+    "unit": "unit.meters",
+    "visibleWhen": [
+      "vr_controllerPoseMode",
+      "standard"
+    ],
+    "row": "settings.positionOffsets"
   },
   {
-    "name": "vr_handOffsetBack",
-    "category": "basics",
+    "name": "vr_handOffsetInward",
+    "category": "calibration",
+    "group": "settings.alignment",
+    "label": "settings.inward",
+    "type": "number",
+    "unit": "unit.meters",
+    "visibleWhen": [
+      "vr_controllerPoseMode",
+      "legacy"
+    ],
+    "row": "settings.positionOffsets"
+  },
+  {
+    "name": "vr_standardHandOffsetBack",
+    "category": "calibration",
     "group": "settings.alignment",
     "label": "settings.backward",
     "type": "number",
-    "unit": "unit.meters"
+    "unit": "unit.meters",
+    "visibleWhen": [
+      "vr_controllerPoseMode",
+      "standard"
+    ],
+    "row": "settings.positionOffsets"
   },
   {
-    "name": "vr_handOffsetUp",
-    "category": "basics",
+    "name": "vr_handOffsetBack",
+    "category": "calibration",
+    "group": "settings.alignment",
+    "label": "settings.backward",
+    "type": "number",
+    "unit": "unit.meters",
+    "visibleWhen": [
+      "vr_controllerPoseMode",
+      "legacy"
+    ],
+    "row": "settings.positionOffsets"
+  },
+  {
+    "name": "vr_standardHandOffsetUp",
+    "category": "calibration",
     "group": "settings.alignment",
     "label": "settings.upward",
     "type": "number",
-    "unit": "unit.meters"
+    "unit": "unit.meters",
+    "visibleWhen": [
+      "vr_controllerPoseMode",
+      "standard"
+    ],
+    "row": "settings.positionOffsets"
   },
   {
-    "name": "vr_handAnglePitch",
-    "category": "basics",
+    "name": "vr_handOffsetUp",
+    "category": "calibration",
+    "group": "settings.alignment",
+    "label": "settings.upward",
+    "type": "number",
+    "unit": "unit.meters",
+    "visibleWhen": [
+      "vr_controllerPoseMode",
+      "legacy"
+    ],
+    "row": "settings.positionOffsets"
+  },
+  {
+    "name": "vr_standardHandAnglePitch",
+    "category": "calibration",
     "group": "settings.alignment",
     "label": "settings.pitch",
     "type": "number",
-    "unit": "unit.degrees"
+    "unit": "unit.degrees",
+    "visibleWhen": [
+      "vr_controllerPoseMode",
+      "standard"
+    ],
+    "row": "settings.angleOffsets"
   },
   {
-    "name": "vr_handAngleYaw",
-    "category": "basics",
+    "name": "vr_handAnglePitch",
+    "category": "calibration",
+    "group": "settings.alignment",
+    "label": "settings.pitch",
+    "type": "number",
+    "unit": "unit.degrees",
+    "visibleWhen": [
+      "vr_controllerPoseMode",
+      "legacy"
+    ],
+    "row": "settings.angleOffsets"
+  },
+  {
+    "name": "vr_standardHandAngleYaw",
+    "category": "calibration",
     "group": "settings.alignment",
     "label": "settings.yaw",
     "type": "number",
-    "unit": "unit.degrees"
+    "unit": "unit.degrees",
+    "visibleWhen": [
+      "vr_controllerPoseMode",
+      "standard"
+    ],
+    "row": "settings.angleOffsets"
   },
   {
-    "name": "vr_handAngleRoll",
-    "category": "basics",
+    "name": "vr_handAngleYaw",
+    "category": "calibration",
+    "group": "settings.alignment",
+    "label": "settings.yaw",
+    "type": "number",
+    "unit": "unit.degrees",
+    "visibleWhen": [
+      "vr_controllerPoseMode",
+      "legacy"
+    ],
+    "row": "settings.angleOffsets"
+  },
+  {
+    "name": "vr_standardHandAngleRoll",
+    "category": "calibration",
     "group": "settings.alignment",
     "label": "settings.roll",
     "type": "number",
-    "unit": "unit.degrees"
+    "unit": "unit.degrees",
+    "visibleWhen": [
+      "vr_controllerPoseMode",
+      "standard"
+    ],
+    "row": "settings.angleOffsets"
+  },
+  {
+    "name": "vr_handAngleRoll",
+    "category": "calibration",
+    "group": "settings.alignment",
+    "label": "settings.roll",
+    "type": "number",
+    "unit": "unit.degrees",
+    "visibleWhen": [
+      "vr_controllerPoseMode",
+      "legacy"
+    ],
+    "row": "settings.angleOffsets"
   },
   {
     "name": "vr_turnMode",

@@ -281,7 +281,71 @@ composition. Fullscreen video requires the existing positive native playback
 owner; an arbitrary desktop frame cannot replace missing stereo. The menu
 uses a cylinder when supported and a quad otherwise, reported by `vr_status`.
 
-The existing wrist lever is calibrated against the OpenVR device origin. For
+### Controller pose pipelines
+
+VR Settings > Calibration > Controller pose pipeline selects `legacy` (the default,
+previous implementation) or `standard` (a manually selected trial). `vr_controllerPoseMode` is
+frozen before the game loads. Saving it affects the next game process;
+`vr_reinit` cannot change the coordinate contract while holding an object.
+This selection is independent of the OpenXR/OpenVR backend choice.
+
+The standard OpenXR path publishes SDK grip and aim directly, without querying
+SteamVR controller models or gating VDXR hands on a Touch-only reference.
+Action activity, pose validity, focus and the existing input lifecycle still
+control admission. Connection discovery for runtime selection remains separate.
+The standard OpenVR adapter converts the actual bound pose component into the
+model's static `openxr_grip` / `openxr_aim` frames. It verifies the active origin,
+physical hand, binding path and rigid transforms. Ambiguous bindings or missing
+metadata reject the affected pose with `pose_reference_unavailable`; they do
+not silently select another implementation. The cache is bounded to four poses,
+is retired on device/binding events or changed origins, and retries unavailable
+metadata at most once per second per pose. Reference changes invalidate motion
+history, preventing a binding change from becoming a throw or melee impulse.
+
+Calibration banks are independent. Standard mode uses `vr_standardHandOffset*`,
+`vr_standardHandAngle*` and advanced `vr_standardWristPivot*`; legacy mode retains
+`vr_handOffset*`, `vr_handAngle*` and `vr_wristPivot*`. The launcher exposes the
+selected bank and its presets; saving or tuning one does not rewrite the other.
+Existing custom legacy calibration is not automatically interpreted as standard
+grip calibration. Select the appropriate preset or adjust the standard bank.
+All gameplay consumers resolve the same selected calibration catalog.
+
+The standard application baselines are the existing Touch baseline/preset
+expressed once in OpenXR grip coordinates: `p_standard = inverse(T_device_grip)
+* p_legacy`, using the documented legacy transform below. Inward is mirrored
+between hands; tracking Y is Up and Z is Back. This preserves the original
+physical wrist point for that baseline without changing the published standard
+grip. These are application tuning defaults, not measured anatomy or runtime
+identity detection. Other controller shapes and personal calibration still need
+headset acceptance. `vr_status` and `vr_input_status` report `pose_pipeline`.
+
+Removal boundaries:
+
+- If the standard trial is accepted across the supported runtime/controller
+  combinations, retain standard calibration and the OpenVR boundary adapter;
+  remove `legacy_controller_pose.hpp`, `touch_controller_reference.hpp`, legacy
+  model discovery/normalization and the legacy calibration bank. Remove the
+  calibration selector and its startup plumbing after the rollback window closes.
+- If the trial is rejected, retain the legacy selector branch and its original
+  calibration, remove `steamvr_pose_adapter.hpp` and standard-only calibration,
+  then remove the selector. OpenXR selection, rendering and gameplay ownership
+  require no replacement. Saved unused settings can remain inert; there is no
+  automatic fallback or automatic deletion of either path.
+
+`settings::active_hand_alignment()` is the common gameplay boundary: retiring a
+bank reduces this function to the surviving catalog rather than adding branches
+to weapons, vehicles or campaign code. Retire the removed path's fixtures and
+settings tests together with its implementation; retain the surviving path's
+coordinate and lifecycle tests.
+
+Before retiring either implementation, compare hand alignment, aiming, rotation
+around a stationary wrist, stabilization, physical reloads, throws, climbing and
+vehicle controls. Exercise focus loss, reconnects and custom bindings. CPU/mock
+tests and deployment do not establish this headset acceptance.
+
+### Legacy controller reference and runtime selection
+
+In legacy mode, the wrist lever is calibrated against the OpenVR device origin. For
 SteamVR/OpenXR, the native host copies the selected controller model's static
 `openxr_grip` component and applies its inverse to the SDK grip pose before
 shared calibration/stabilization. No controller-specific numeric preset or
@@ -295,7 +359,8 @@ OpenXR. It runs only after the existing SteamVR server passes user/session/IPC
 preflight. It can copy the actual HMD driver and remote-client identity alongside
 the controller metadata, without compositor, pose or GPU calls. OpenVR does not
 participate in OpenXR frame pacing or submission. Standalone SDK tests inject
-copied metadata and do not query a live runtime. After replacing SteamVR
+copied metadata and do not query a live runtime. Standard mode skips controller
+model discovery in this query. In legacy mode, after replacing SteamVR
 controller hardware, run `vr_reinit` to refresh its static reference.
 
 Runtime selection is separate from the user's OpenXR/OpenVR API choice.
@@ -328,7 +393,7 @@ These describe the effective initialization choice, not a permanently installed
 environment variable. A no-HMD error includes the runtime name and reconnect/
 `vr_reinit` guidance.
 
-For `VirtualDesktopXR`, the activated Oculus Touch interaction profile selects
+In legacy mode with `VirtualDesktopXR`, the activated Oculus Touch interaction profile selects
 [the canonical legacy Touch frame](../src/client/component/vr/touch_controller_reference.hpp).
 The reference follows the identical `openxr_grip.component_local` definitions
 in SteamVR's CV1, Rift S, Quest, Quest 2, Touch Plus and Touch Pro controller
@@ -344,7 +409,7 @@ profile for each hand after action sync. Profile changes clear admission and
 refresh the copied contract; missing or unrelated profiles reject only the
 affected gameplay grip and report the reason in `vr_status`. No SteamVR
 connection or install is needed on this VDXR path, and SDK aim is preserved.
-Other OpenXR runtimes retain their own grip basis and may require a suitable
+Other OpenXR runtimes in legacy mode retain their own grip basis and may require a suitable
 reference adapter or separate physical calibration. Runtime/profile admission
 is separate from headset acceptance.
 

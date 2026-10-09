@@ -1,5 +1,25 @@
 import { flushSync } from "react-dom";
 
+export function inspectStartupNotice(version: string) {
+  const dialog = document.querySelector<HTMLDialogElement>(".startup-notice")!;
+  for (const animation of document.getAnimations()) animation.finish();
+  const bounds = dialog.getBoundingClientRect();
+  const content = dialog.querySelector<HTMLElement>(".notice-content")!;
+  const text = content.innerText;
+  const result = {
+    modal: dialog.matches(":modal"),
+    version: text.includes(version) && !!version,
+    paragraphs: content.querySelectorAll("p").length === 3,
+    diagnostics: text.includes("vr_status") && text.includes("minidump"),
+    fits: bounds.left >= 0 && bounds.top >= 0 && bounds.right <= innerWidth && bounds.bottom <= innerHeight,
+    contentFits: content.scrollWidth <= content.clientWidth + 1,
+    dismissed: false,
+  };
+  flushSync(() => dialog.querySelector<HTMLButtonElement>("[data-notice-close]")!.click());
+  result.dismissed = !document.querySelector(".startup-notice");
+  return { ...result, ok: Object.values(result).every(Boolean) };
+}
+
 // The native smoke run uses an isolated, hidden window and never loads the game.
 function focusOutlineHidden() {
   const button = document.querySelector<HTMLButtonElement>(
@@ -211,6 +231,17 @@ export function inspectLauncherLayout() {
     })(),
     dark: getComputedStyle(document.documentElement).colorScheme === "dark",
     controls: document.querySelectorAll(".window-control").length === 3,
+    calibrationRows: (() => {
+      const rows = [...document.querySelectorAll(".calibration-row")];
+      return rows.length === 2 && rows.every((row) => {
+        const inputs = [...row.querySelectorAll("input")].map((input) => input.getBoundingClientRect());
+        return inputs.length === 3 && inputs.every((bounds) =>
+          Math.abs(bounds.top - inputs[0].top) < 1 && bounds.width >= 60 &&
+          bounds.left >= viewport.left && bounds.right <= viewport.right);
+      });
+    })(),
+    pipelineFirst: content.querySelector('[id^="vr_"]')?.id === "vr_controllerPoseMode",
+    calibrationCommands: [...content.querySelectorAll(".calibration-command code")].length === 6,
     focusOutlineHidden: focusOutlineHidden(),
   };
   content.scrollTop = previousScroll;
@@ -225,6 +256,9 @@ export function inspectLauncherLayout() {
       result.resetVisible &&
       result.dark &&
       result.controls &&
+      result.calibrationRows &&
+      result.pipelineFirst &&
+      result.calibrationCommands &&
       result.focusOutlineHidden,
   };
 }

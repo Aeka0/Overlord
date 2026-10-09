@@ -803,9 +803,9 @@ namespace vr::gameplay::cliffhanger_physical
 				return d ? d->current.value : fallback;
 			};
 			position_offsets offsets;
-			offsets = {setting("vr_handOffsetInward", offsets.inward_meters),
-			           setting("vr_handOffsetBack", offsets.back_meters),
-			           setting("vr_handOffsetUp", offsets.up_meters)};
+			offsets = {setting(vr::settings::active_hand_alignment()[0].name, offsets.inward_meters),
+			           setting(vr::settings::active_hand_alignment()[1].name, offsets.back_meters),
+			           setting(vr::settings::active_hand_alignment()[2].name, offsets.up_meters)};
 			render_frame skin;
 			{
 				const std::lock_guard r(render_mutex);

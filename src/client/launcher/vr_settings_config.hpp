@@ -15,14 +15,16 @@ namespace launcher_vr_settings
 	inline constexpr std::size_t max_config_bytes = 4 * 1024 * 1024;
 	inline constexpr std::size_t max_payload_bytes = 4096;
 	inline double setting_number(float value) noexcept {return std::round(double(value)*1000000)/1000000;}
-	inline json controller_presets()
+	inline json controller_presets(bool standard = false)
 	{
 		auto result=json::array();
-		for (const auto& preset:vr::settings::alignment_presets)
+		const auto& presets = standard ? vr::settings::standard_alignment_presets : vr::settings::alignment_presets;
+		const auto& fields = standard ? vr::settings::standard_hand_alignment : vr::settings::hand_alignment;
+		for (const auto& preset:presets)
 		{
 			json values=json::object();
 			for (std::size_t i=0;i<vr::settings::hand_alignment.size();++i)
-				values[vr::settings::hand_alignment[i].name]=setting_number(preset.values[i]);
+				values[fields[i].name]=setting_number(preset.values[i]);
 			result.push_back({{"id",preset.id},{"label",preset.label},{"values",values}});
 		}
 		return result;

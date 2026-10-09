@@ -1,6 +1,7 @@
 #include <std_include.hpp>
 
 #include "engine_stereo_output_merger.hpp"
+#include "writable_state.hpp"
 
 #include "utils/hook.hpp"
 #include "utils/hook_validation.hpp"
@@ -76,7 +77,7 @@ namespace vr::engine_stereo_output_merger
 		std::atomic_bool device_invalidated_during_transaction{};
 		std::atomic_uint64_t latest_publication_sequence{};
 		std::atomic_uintptr_t latest_record{};
-		report published_report{};
+		H2V_WRITABLE_STATE report published_report{};
 		thread_local transaction* active_transaction{};
 		thread_local replay_guard* active_replay_guard{};
 		thread_local bool inside_output_merger{};

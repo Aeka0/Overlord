@@ -5,6 +5,7 @@
 #include <string>
 #include "controller_input.hpp"
 #include "steamvr_input_diagnostics.hpp"
+#include "steamvr_pose_adapter.hpp"
 
 namespace vr::steamvr_input
 {
@@ -25,6 +26,8 @@ namespace vr::steamvr_input
 		}
 
 	  private:
+		controller_pose_pipeline::mode pose_pipeline_{controller_pose_pipeline::selected()};
+		pose_adapter pose_adapter_;
 		IVRInput* input_{};
 		IVRSystem* system_{}; // Borrowed from the same runtime owner.
 		struct action_setup

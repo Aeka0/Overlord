@@ -79,7 +79,8 @@ namespace vr::diagnostics::detail
 			<< available(runtime_status.controller_reference_ids[1]);
 		output << " reference_error=" << available(runtime_status.controller_pose_reference_error);
 		const auto controls = controller_input::latest();
-		output << "\n  controllers: sequence=" << controls.sequence
+		output << "\n  controllers: pose_pipeline=" << controller_pose_pipeline::name(controls.pose_pipeline)
+			<< " sequence=" << controls.sequence
 			<< " focus=" << controls.focused << " move_active=" << controls.move_active
 			<< " turn_active=" << controls.turn_active
 			<< " sprint_active=" << controls.sprint.active << " sprint_down=" << controls.sprint.down

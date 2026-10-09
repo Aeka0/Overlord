@@ -29,10 +29,12 @@ export interface Field {
   unit?: string;
   inverted?: boolean;
   visibleWhen?: [string, string | boolean];
+  row?: string;
 }
 export const fields = fieldsJson as Field[];
 export const categories = [
   "basics",
+  "calibration",
   "gameplay",
   "cheats",
   "other",

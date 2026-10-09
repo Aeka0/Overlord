@@ -802,6 +802,10 @@ namespace vr
 				dvars::register_bool(debug_options::names[i], false,
 					game::DVAR_FLAG_SAVED, "Optional VR diagnostic; requires game restart");
 			}
+			static auto pose_modes = settings::controller_pose_mode.values;
+			dvars::register_enum(settings::controller_pose_mode.name, pose_modes.data(),
+				settings::controller_pose_mode.default_index, game::DVAR_FLAG_SAVED,
+				"Controller pose pipeline; standard or legacy rollback; requires game restart");
 			static auto runtime_backends = settings::runtime_backend.values;
 			dvars::register_enum(settings::runtime_backend.name, runtime_backends.data(),
 				settings::runtime_backend.default_index, game::DVAR_FLAG_SAVED,

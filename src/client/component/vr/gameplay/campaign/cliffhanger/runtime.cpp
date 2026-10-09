@@ -709,9 +709,9 @@ namespace vr::gameplay::equipment::special::cliffhanger
 					const auto* d = game::Dvar_FindVar(key);
 					return d ? d->current.value : fallback;
 				};
-				offsets = {setting("vr_handOffsetInward", offsets.inward_meters),
-				           setting("vr_handOffsetBack", offsets.back_meters),
-				           setting("vr_handOffsetUp", offsets.up_meters)};
+				offsets = {setting(vr::settings::active_hand_alignment()[0].name, offsets.inward_meters),
+				           setting(vr::settings::active_hand_alignment()[1].name, offsets.back_meters),
+				           setting(vr::settings::active_hand_alignment()[2].name, offsets.up_meters)};
 				for (unsigned h = 0; h < 2; ++h)
 					if (tracked_wrist(f.input, f.body, {}, h, offsets, f.wrists[h]))
 						f.valid_hands |= 1u << h;

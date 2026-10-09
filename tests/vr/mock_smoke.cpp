@@ -618,6 +618,8 @@ int main()
 			expect_strict_scene_source_rejection(loader, graphics);
 		run_happy_path(loader, graphics);
 		openxr_adaptation_tests::calibrated_grip_input(loader,graphics);
+		openxr_adaptation_tests::standard_wrist_equivalence();
+		openxr_adaptation_tests::standard_grip_input(loader,graphics);
 		openxr_adaptation_tests::focused_startup_height(loader,graphics);
 		openxr_adaptation_tests::virtualdesktop_grip_reference(loader,graphics);
 		openxr_adaptation_tests::focused_input(loader,graphics);

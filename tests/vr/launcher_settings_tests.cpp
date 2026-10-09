@@ -81,6 +81,27 @@ int main(int argc, char** argv)
 				require(catalog[field.name][i]["value"]==field.values[i] && catalog[field.name][i]["labelKey"]==field.label_keys[i], "Frontend choices preserve native ordering and localized labels");
 		const auto initial = defaults();
 		require(validate(initial), "Shared defaults must be valid");
+		require(initial[vr::settings::controller_pose_mode.name] == "legacy", "Controller pipeline defaults to Legacy");
+		require(read_values("seta vr_controllerPoseMode standard\n")[vr::settings::controller_pose_mode.name] == "standard",
+			"An explicitly saved Standard selection remains available");
+		auto rollback = initial;
+		rollback[vr::settings::controller_pose_mode.name] = "legacy";
+		rollback[vr::settings::hand_pitch.name] = -17;
+		rollback[vr::settings::standard_hand_alignment[3].name] = 12;
+		const auto saved_banks = update_config("seta vr_wristPivotUp -0.075\n", rollback);
+		require(read_values(saved_banks) == rollback && saved_banks.find("seta vr_wristPivotUp -0.075") != std::string::npos,
+			"Rollback preserves both independent calibration banks and advanced legacy pivots");
+		for (const auto& preset : controller_presets(true))
+		{
+			auto candidate = rollback;
+			candidate.update(preset["values"]);
+			require(validate(candidate) && candidate[vr::settings::hand_pitch.name] == -17,
+				"Standard presets must never overwrite legacy calibration");
+		}
+		vr::controller_pose_pipeline::initialize(vr::controller_pose_pipeline::mode::legacy);
+		vr::controller_pose_pipeline::initialize(vr::controller_pose_pipeline::mode::standard);
+		require(vr::controller_pose_pipeline::selected() == vr::controller_pose_pipeline::mode::legacy,
+			"Controller coordinate selection is frozen for the process");
 		const auto* backend_name = vr::settings::runtime_backend.name;
 		require(initial[backend_name] == "openxr", "Launcher backend defaults to OpenXR");
 		for (const auto* backend : {"openxr", "openvr"})

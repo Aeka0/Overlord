@@ -183,10 +183,11 @@ namespace vr::openxr
 		return true;
 	}
 
-	void input_actions::set_grip_reference(controller_pose_reference::configuration reference)
+	void input_actions::set_grip_reference(controller_pose_reference::configuration reference, controller_pose_pipeline::mode mode)
 	{
 		invalidate();
 		grip_reference_ = std::move(reference);
+		pose_pipeline_ = mode;
 		profile_matches_.fill(grip_reference_.required_profile.empty());
 		profile_refresh_pending_ = true;
 	}
@@ -273,6 +274,7 @@ namespace vr::openxr
 	{
 		using namespace controller_input;
 		controller_input::frame frame;
+		frame.pose_pipeline = pose_pipeline_;
 		frame.sequence = ++sequence_;
 		frame.sampled_at = controller_input::clock::now();
 		frame.reference_generation = head_pose_bridge::get_status().recenter_count;

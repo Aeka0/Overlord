@@ -1,5 +1,6 @@
 #include <std_include.hpp>
 #include "../debug_options.hpp"
+#include "../writable_state.hpp"
 #include "component/scene_model_record.hpp"
 #include "vehicles/runtime.hpp"
 #include "carry_interaction.hpp"
@@ -84,7 +85,7 @@ namespace vr::gameplay::weapons::carry
 			holster_layout layout{};
 			std::uint64_t reference{};
 		};
-		models_frame render_models{};
+		H2V_WRITABLE_STATE models_frame render_models{};
 		std::array<storage_scene, 2> render_storage{};
 		struct hand_frame
 		{
@@ -716,9 +717,9 @@ namespace vr::gameplay::weapons::carry
 				return;
 			std::array<head_pose_bridge::world_pose, 2> hands;
 			std::array<hands::anchor, 2> wrists{};
-			const auto* inward = game::Dvar_FindVar("vr_handOffsetInward");
-			const auto* back = game::Dvar_FindVar("vr_handOffsetBack");
-			const auto* up = game::Dvar_FindVar("vr_handOffsetUp");
+			const auto* inward = game::Dvar_FindVar(vr::settings::active_hand_alignment()[0].name);
+			const auto* back = game::Dvar_FindVar(vr::settings::active_hand_alignment()[1].name);
+			const auto* up = game::Dvar_FindVar(vr::settings::active_hand_alignment()[2].name);
 			if (!inward || !back || !up)
 			{
 				hand_interaction::suspend();

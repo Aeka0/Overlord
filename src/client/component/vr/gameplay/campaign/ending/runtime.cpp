@@ -215,9 +215,9 @@ namespace vr::gameplay::ending
 				const auto* d = game::Dvar_FindVar(key);
 				return d ? d->current.value : fallback;
 			};
-			offsets = {setting("vr_handOffsetInward", offsets.inward_meters),
-			           setting("vr_handOffsetBack", offsets.back_meters),
-			           setting("vr_handOffsetUp", offsets.up_meters)};
+			offsets = {setting(vr::settings::active_hand_alignment()[0].name, offsets.inward_meters),
+			           setting(vr::settings::active_hand_alignment()[1].name, offsets.back_meters),
+			           setting(vr::settings::active_hand_alignment()[2].name, offsets.up_meters)};
 			for (unsigned h = 0; h < 2; ++h)
 				hands[h].valid = tracked_wrist(input, spatial, {}, h, offsets, hands[h].wrist);
 			return true;
@@ -461,9 +461,9 @@ namespace vr::gameplay::ending
 				const auto* v = game::Dvar_FindVar(n);
 				return v ? v->current.value : d;
 			};
-			offsets = {setting("vr_handOffsetInward", offsets.inward_meters),
-			           setting("vr_handOffsetBack", offsets.back_meters),
-			           setting("vr_handOffsetUp", offsets.up_meters)};
+			offsets = {setting(vr::settings::active_hand_alignment()[0].name, offsets.inward_meters),
+			           setting(vr::settings::active_hand_alignment()[1].name, offsets.back_meters),
+			           setting(vr::settings::active_hand_alignment()[2].name, offsets.up_meters)};
 			for (unsigned h = 0; h < 2; ++h)
 			{
 				if (!raw[h].valid)

@@ -46,10 +46,14 @@ FEATURES = {
     'cover push judgement view': 'vr::gameplay::weapons::physical_reload::debug::component::post_unpack',
 }
 
-# Beta 3's v142 Release binary retained the carry reset memcpy while putting
-# this mutable aggregate in .rdata. Function presence alone cannot detect it.
+# v142 Release builds retained writes while promoting mutable publication
+# buffers into .rdata. Beta 3 failed at the carry model frame; Beta 4 exposed the
+# same failure in the output-merger report and a read-only backend-target report.
+# Function presence alone cannot detect these defects.
 MUTABLE_STORAGE = {
     'weapon carry model publication': 'vr::gameplay::weapons::carry::render_models',
+    'backend target report publication': 'vr::engine_stereo_backend_target::published_report',
+    'output merger report publication': 'vr::engine_stereo_output_merger::published_report',
 }
 
 

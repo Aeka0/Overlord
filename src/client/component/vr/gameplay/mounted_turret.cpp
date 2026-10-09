@@ -163,7 +163,7 @@ namespace vr::gameplay::mounted
 			c.tracked=0;c.units=body.units_per_meter;c.pivot=g.pivot;c.yaw_pivot=g.yaw_pivot;
 			const auto root_inverse=inverse(g.root);
 			if(g.profile==&suburban)c.tracking_frame=compose(root_inverse,{body.world_origin,from_axis(body.world_yaw_axis)});
-			const auto* inward=game::Dvar_FindVar("vr_handOffsetInward");const auto* back=game::Dvar_FindVar("vr_handOffsetBack");const auto* up=game::Dvar_FindVar("vr_handOffsetUp");
+			const auto* inward=game::Dvar_FindVar(vr::settings::active_hand_alignment()[0].name);const auto* back=game::Dvar_FindVar(vr::settings::active_hand_alignment()[1].name);const auto* up=game::Dvar_FindVar(vr::settings::active_hand_alignment()[2].name);
 			for(unsigned h=0;h<2;++h)
 			{
 				c.handles[h]=compose(root_inverse,c.calibrated?compose(g.gun,a.wrists[h]):g.buttons[h]).position;
@@ -594,7 +594,7 @@ namespace vr::gameplay::mounted
 		shoulders_config={setting("vr_shoulderHalfWidth",shoulders_config.half_width_meters),setting("vr_shoulderDown",shoulders_config.down_meters),setting("vr_shoulderBack",shoulders_config.back_meters)};
 		std::array<vec,2> shoulders;if (!make_shoulders(body,offset,shoulders_config,shoulders)) return;
 		position_offsets hand_offsets;
-		hand_offsets={setting("vr_handOffsetInward",hand_offsets.inward_meters),setting("vr_handOffsetBack",hand_offsets.back_meters),setting("vr_handOffsetUp",hand_offsets.up_meters)};
+		hand_offsets={setting(vr::settings::active_hand_alignment()[0].name,hand_offsets.inward_meters),setting(vr::settings::active_hand_alignment()[1].name,hand_offsets.back_meters),setting(vr::settings::active_hand_alignment()[2].name,hand_offsets.up_meters)};
 		std::array<anchor,2> targets;
 		for (unsigned h=0;h<2;++h)
 		{

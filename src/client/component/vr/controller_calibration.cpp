@@ -7,14 +7,15 @@ namespace vr::controller_calibration
 {
 	namespace
 	{
-		std::array<game::dvar_t*,6> controls{};
-		configuration native_settings() noexcept
+		std::array<std::array<game::dvar_t*, 6>, 2> controls{};
+		configuration native_settings(controller_pose_pipeline::mode mode) noexcept
 		{
-			configuration values;
+			auto values = defaults_for(mode);
+			const auto& bank = controls[mode == controller_pose_pipeline::mode::standard ? 0 : 1];
 			for (unsigned i=0;i<3;++i)
 			{
-				if (const auto* setting=controls[i]) values.orientation[i]=setting->current.value;
-				if (const auto* setting=controls[i+3]) values.pivot[i]=setting->current.value;
+				if (const auto* setting=bank[i]) values.orientation[i]=setting->current.value;
+				if (const auto* setting=bank[i+3]) values.pivot[i]=setting->current.value;
 			}
 			return values;
 		}
@@ -23,16 +24,19 @@ namespace vr::controller_calibration
 	{
 		void post_unpack() override
 		{
-			constexpr const char* descriptions[]{"Controller-local pitch calibration in degrees; positive tilts up",
-				"Controller-local yaw calibration in degrees; positive turns left",
-				"Controller-local roll calibration in degrees; positive rolls right side down"};
-			for (unsigned i=0;i<3;++i)
+			for (unsigned bank = 0; bank < controls.size(); ++bank)
 			{
-				const auto& s=settings::hand_angles[i];
-				controls[i]=dvars::register_float(s.name,s.default_value,s.min,s.max,game::DVAR_FLAG_SAVED,descriptions[i]);
-				const auto& p=settings::wrist_pivots[i];
-				controls[i+3]=dvars::register_float(p.name,p.default_value,p.min,p.max,game::DVAR_FLAG_SAVED,
-					"Physical grip-local wrist pivot in meters; independent of hand alignment offsets");
+				const auto& alignment = bank == 0 ? settings::standard_hand_alignment : settings::hand_alignment;
+				const auto& pivots = bank == 0 ? settings::standard_wrist_pivots : settings::wrist_pivots;
+				for (unsigned i = 0; i < 3; ++i)
+				{
+					const auto& angle = alignment[i + 3];
+					controls[bank][i] = dvars::register_float(angle.name, angle.default_value, angle.min,
+					    angle.max, game::DVAR_FLAG_SAVED, "Aim-local pitch/yaw/roll calibration in degrees");
+					const auto& pivot = pivots[i];
+					controls[bank][i + 3] = dvars::register_float(pivot.name, pivot.default_value, pivot.min,
+					    pivot.max, game::DVAR_FLAG_SAVED, "Grip-local physical wrist pivot in meters; independent of alignment");
+				}
 			}
 			set_settings_provider(native_settings);
 		}

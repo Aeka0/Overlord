@@ -46,6 +46,18 @@ def main() -> None:
         report.write_text(json.dumps(data, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
         if result.returncode or not data.get("ok") or data.get("controls", 0) < 1:
             raise RuntimeError(f"Launcher renderer probe failed: {data}")
+        if not data.get('declaration', {}).get('ok'):
+            raise RuntimeError('Startup declaration did not render or dismiss correctly')
+        expected_version = json.loads((ROOT / 'version.json').read_text(encoding='utf-8'))['name']
+        if data.get('version') != expected_version:
+            raise RuntimeError('Embedded product version differs from version.json')
+        expected = [field['name'] for field in json.loads(
+            (ROOT / 'src/client/resources/launcher/settings-schema.json').read_text(encoding='utf-8'))]
+        if data.get('settingNames') != expected:
+            raise RuntimeError('Embedded launcher schema differs from the current source; rebuild launcher assets and the client')
+        if args.page == 'settings' and (not data.get('presetFields') or
+                not set(data['presetFields']).issubset(data.get('controlNames', []))):
+            raise RuntimeError('The controller preset edits fields that are not displayed by the launcher')
         print(f"Launcher renderer passed ({args.page}, {args.size}): {data['settings']} settings, page layout, borderless frame and embedded assets")
         print(f"Report: {report}")
     finally:

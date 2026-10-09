@@ -42,6 +42,8 @@ Overlord is a VR mod for *Call of Duty: Modern Warfare 2 Campaign Remastered*. I
 
 The client uses Direct3D 11 and defaults to OpenXR, with OpenVR retained as a manually selected backup. The validated combination is Meta Quest controllers with SteamVR/OpenXR; other devices and runtimes require separate acceptance. Choose it under the launcher's VR Settings > Basics > VR backend; it applies when entering the game without restarting the launcher. See [runtime and rendering contracts](docs/vr-runtime-rendering.md) for selection and limitations.
 
+Controller poses default to Legacy. The Standard pipeline using OpenXR coordinates remains a manually selected trial and requires separate headset acceptance. Select the pipeline under VR Settings > Calibration > Controller pose pipeline, then restart the game to apply it. Each pipeline retains its own calibration. Existing custom calibration remains in the legacy bank; choose a preset or adjust the standard bank separately. The position and angle descriptions list the selected pipeline's console commands for live in-game calibration.
+
 The repository includes default input bindings for Oculus Touch (Meta Quest), Valve Index, and Vive Controller. Meta Quest controllers are the primary validated devices; the Index OpenVR binding also has limited hardware testing, described below. Other combinations may require adjustments to runtime bindings and controller alignment settings.
 
 Pirated or cracked copies of the game are not supported. Mod releases do not include the full original game assets or provide download links for the game.

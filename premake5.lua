@@ -164,14 +164,6 @@ for _, source in ipairs({"weapon_registry", "weapon_mechanics_profiles"}) do
 end
 filter {}
 
--- MSVC v142 LTCG places the mutable carry model frame in .rdata while retaining
--- its reset/publication writes. Compile this TU normally; keep Release's size
--- optimization and the rest of the client's LTCG. A /GL PCH cannot be reused.
-filter {"configurations:Release", "files:src/client/component/vr/gameplay/weapon_carry_runtime.cpp"}
-	flags {"NoPCH"}
-	buildoptions {"/GL-"}
-filter {}
-
 linkoptions {"/IGNORE:4254", "/DYNAMICBASE:NO", "/SAFESEH:NO", "/LARGEADDRESSAWARE", "/LAST:.main", "/PDBCompress"}
 
 files {"./src/client/**.rc", "./src/client/**.hpp", "./src/client/**.cpp", "./src/client/resources/**.*"}
@@ -181,7 +173,11 @@ includedirs {"./src/client", "./src/common", "%{prj.location}/src"}
 
 resincludedirs {"$(ProjectDir)src"}
 
-dependson {"tlsdll", "openxr-loader", "launcher-resources"}
+dependson {"tlsdll", "openxr-loader"}
+-- Solution-only utility dependencies are skipped by direct client.vcxproj
+-- builds. Generate the embedded UI before this project's compile/resource
+-- steps, so native settings and the packaged page always share one schema.
+prebuildcommands {'python "%{wks.location}/../tools/build_launcher.py" || exit /b 1'}
 includedirs {"%{wks.location}/deps/webview2/include", "%{wks.location}/launcher-ui"}
 resincludedirs {"$(ProjectDir)launcher-ui"}
 libdirs {"%{wks.location}/deps/webview2/lib"}
@@ -233,11 +229,6 @@ links {"common"}
 resincludedirs {"$(ProjectDir)src"}
 
 group "Dependencies"
-project "launcher-resources"
-	kind "Utility"
-	files {"tools/build_launcher.py", "src/launcher-ui/package.json", "src/launcher-ui/package-lock.json"}
-	prebuildcommands {'python "%{wks.location}/../tools/build_launcher.py"'}
-
 project "openxr-loader"
 	kind "Utility"
 	files {"tools/build_openxr_loader.py", "deps/openxr/src/loader/CMakeLists.txt"}

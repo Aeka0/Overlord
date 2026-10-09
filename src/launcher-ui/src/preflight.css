@@ -35,6 +35,20 @@
 .preflight-heading h1 {
   font-size: 22px;
 }
+.startup-notice {
+  width: min(760px, calc(100vw - 36px));
+}
+.notice-content {
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 0 24px;
+  line-height: 1.8;
+  overflow-wrap: anywhere;
+}
+.notice-content p {
+  margin: 0 0 16px;
+}
 .preflight-content {
   min-height: 0;
   overflow-y: auto;
@@ -124,6 +138,9 @@
   white-space: nowrap;
 }
 @media (max-width: 620px) {
+  .notice-content {
+    padding: 0 16px;
+  }
   .preflight-heading {
     padding: 18px 16px 14px;
   }

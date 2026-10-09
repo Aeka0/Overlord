@@ -87,6 +87,7 @@ def collect(configuration: str, base_data: Path | None = None) -> dict[str, Path
     add(ROOT / "docs/client-installation.md", "README.md")
     tree(ROOT / "licenses", "licenses", {".txt"})
     add(ROOT / "docs/releasing.md", "docs/releasing.md")
+    add(ROOT / "docs/release-validation.md", "docs/release-validation.md")
     add(ROOT / "docs/source-provenance.md", "docs/source-provenance.md")
     for name, path in LICENSE_SOURCES.items():
         add(ROOT / path, f"licenses/{name}.txt")
@@ -147,6 +148,8 @@ def stage(configuration: str, destination: Path, base_data: Path | None = None) 
     record = {"version": version["name"], "file_version": version["file_version"],
               "configuration": configuration, "base_data_included": base_data is not None,
               "symbols_included": True,
+              "acceptance_status": "candidate", "runtime_acceptance": "pending",
+              "delivery_ready": False,
               "files": sorted(files)}
     for name, source in files.items():
         target = destination / name

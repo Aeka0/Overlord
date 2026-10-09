@@ -10,10 +10,10 @@ namespace vr::controller_calibration
 {
 	namespace {std::atomic<settings_provider> provider{};}
 	void set_settings_provider(settings_provider value) noexcept {provider.store(value);}
-	configuration read_settings() noexcept
+	configuration read_settings(controller_pose_pipeline::mode mode) noexcept
 	{
 		const auto read=provider.load();
-		return read?read():configuration{};
+		return read?read(mode):defaults_for(mode);
 	}
 }
 
@@ -35,7 +35,7 @@ namespace vr::controller_input
 	void publish(const frame& value) noexcept
 	{
 		const std::lock_guard lock(mutex);
-		const auto settings=controller_calibration::read_settings();
+		const auto settings=controller_calibration::read_settings(value.pose_pipeline);
 		auto next = calibration.apply(value,settings.orientation,settings.pivot);
 		const bool discontinuity=producer_discontinuity(unfiltered,next);
 		if(discontinuity){++continuity;stabilization::invalidate();}

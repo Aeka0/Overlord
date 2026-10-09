@@ -414,11 +414,11 @@ namespace vr::gameplay::vehicles
 			state.sequence = input.sequence;
 			state.units = frame.body.units_per_meter;
 			hands::position_offsets offsets;
-			if (const auto* v = game::Dvar_FindVar("vr_handOffsetInward"))
+			if (const auto* v = game::Dvar_FindVar(vr::settings::active_hand_alignment()[0].name))
 				offsets.inward_meters = v->current.value;
-			if (const auto* v = game::Dvar_FindVar("vr_handOffsetBack"))
+			if (const auto* v = game::Dvar_FindVar(vr::settings::active_hand_alignment()[1].name))
 				offsets.back_meters = v->current.value;
-			if (const auto* v = game::Dvar_FindVar("vr_handOffsetUp"))
+			if (const auto* v = game::Dvar_FindVar(vr::settings::active_hand_alignment()[2].name))
 				offsets.up_meters = v->current.value;
 			for (unsigned h = 0; h < 2; ++h)
 				if (tracked_wrist(input, frame.body, {}, int(h), offsets, frame.wrists[h]))

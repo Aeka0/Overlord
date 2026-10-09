@@ -1,5 +1,6 @@
 #pragma once
 #include "debug_options.hpp"
+#include "controller_pose_pipeline.hpp"
 #include <array>
 #include <algorithm>
 #include <cmath>
@@ -41,8 +42,13 @@ namespace vr::settings
 		.name = "vr_runtimeBackend",
 		.values = {"openxr", "openvr"},
 		.label_keys = {"choice.openxr", "choice.openvr"}};
+	inline constexpr choice_setting controller_pose_mode{
+		.name = "vr_controllerPoseMode",
+		.values = {"standard", "legacy"},
+		.default_index = 1,
+		.label_keys = {"choice.standardControllerPose", "choice.legacyControllerPose"}};
 	inline constexpr std::array choices{
-		runtime_backend,
+		runtime_backend, controller_pose_mode,
 	    choice_setting{
 	        .name = turn_mode, .values = {"smooth", "snap"}, .label_keys = {"choice.smooth", "choice.snap"}},
 	    choice_setting{.name = recoil_penalty,
@@ -167,7 +173,33 @@ namespace vr::settings
 	inline constexpr std::array alignment_presets{
 	    alignment_preset{"none", "None", {0, 0, 0, 0, 0, 0}},
 	    alignment_preset{"meta_quest_3", "Meta Quest 3", {-.02f, .12f, -.1f, -20.f, 0, 0}}};
+	// Application calibration in OpenXR grip coordinates, independent of the
+	// retained legacy settings. Baselines are the old Touch defaults expressed
+	// in the standard frame once, not runtime/model-specific pose corrections.
+	// See docs/vr-runtime-rendering.md for provenance and removal boundaries.
+	inline constexpr std::array standard_hand_alignment{
+		number_setting{"vr_standardHandOffsetInward", -.007f, -max_hand_offset, max_hand_offset, .01f},
+		number_setting{"vr_standardHandOffsetBack", -.096073247f, -max_hand_offset, max_hand_offset, .01f},
+		number_setting{"vr_standardHandOffsetUp", -.034157186f, -max_hand_offset, max_hand_offset, .01f},
+		number_setting{"vr_standardHandAnglePitch", 0.f, -180.f, 180.f, 1.f},
+		number_setting{"vr_standardHandAngleYaw", 0.f, -180.f, 180.f, 1.f},
+		number_setting{"vr_standardHandAngleRoll", 0.f, -180.f, 180.f, 1.f}};
+	inline constexpr std::array standard_wrist_pivots{
+		number_setting{"vr_standardWristPivotInward", -.027f, -max_hand_offset, max_hand_offset, .01f},
+		number_setting{"vr_standardWristPivotBack", .016253897f, -max_hand_offset, max_hand_offset, .01f},
+		number_setting{"vr_standardWristPivotUp", .008063812f, -max_hand_offset, max_hand_offset, .01f}};
+	inline constexpr std::array standard_alignment_presets{
+		alignment_preset{"standard_default", "Standard baseline", {-.007f, -.096073247f, -.034157186f, 0, 0, 0}},
+		alignment_preset{"meta_quest_3", "Meta Quest 3", {-.027f, .051438062f, -.085542142f, -20, 0, 0}}};
+	inline const auto& active_hand_alignment() noexcept
+	{
+		return controller_pose_pipeline::selected() == controller_pose_pipeline::mode::standard
+			? standard_hand_alignment : hand_alignment;
+	}
 	inline constexpr std::array numbers{turn_speed,
+										standard_hand_alignment[0], standard_hand_alignment[1],
+										standard_hand_alignment[2], standard_hand_alignment[3],
+										standard_hand_alignment[4], standard_hand_alignment[5],
 	                                    snap_angle,
 	                                    aim_assist_strength,
 	                                    enemy_melee_damage,
