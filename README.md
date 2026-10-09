@@ -44,7 +44,7 @@ The client uses Direct3D 11 and defaults to OpenXR, with OpenVR retained as a ma
 
 Controller poses default to Legacy. The Standard pipeline using OpenXR coordinates remains a manually selected trial and requires separate headset acceptance. Select the pipeline under VR Settings > Calibration > Controller pose pipeline, then restart the game to apply it. Each pipeline retains its own calibration. Existing custom calibration remains in the legacy bank; choose a preset or adjust the standard bank separately. The position and angle descriptions list the selected pipeline's console commands for live in-game calibration.
 
-The repository includes default input bindings for Oculus Touch (Meta Quest), Valve Index, and Vive Controller. Meta Quest controllers are the primary validated devices; the Index OpenVR binding also has limited hardware testing, described below. Other combinations may require adjustments to runtime bindings and controller alignment settings.
+The repository includes default input bindings for Oculus Touch (Meta Quest), Valve Index, and Vive Controller. Meta Quest controllers are the primary validated devices; Index controllers have also been tested in OpenVR, as described below. Other combinations may require adjustments to runtime bindings and controller alignment settings.
 
 Pirated or cracked copies of the game are not supported. Mod releases do not include the full original game assets or provide download links for the game.
 
@@ -97,8 +97,8 @@ hand's secondary weapon action. Squeeze the grip to hold and relax to release.
 Firing responds to trigger travel before the mechanical click; capacitive trigger
 touch remains a separate input.
 
-These bindings were exercised with Index controllers and a Pimax Dream Air in
-OpenVR. This does not establish OpenXR or general device acceptance. An existing
+The merged Beta 4 build was tested in-game with Index controllers and a Pimax
+Dream Air in OpenVR. This does not establish OpenXR or general device acceptance. An existing
 custom SteamVR binding can override the shipped defaults; select the default
 Knuckles binding to use these mappings.
 
