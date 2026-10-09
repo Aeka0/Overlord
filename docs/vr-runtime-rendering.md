@@ -302,9 +302,12 @@ is retired on device/binding events or changed origins, and retries unavailable
 metadata at most once per second per pose. Reference changes invalidate motion
 history, preventing a binding change from becoming a throw or melee impulse.
 
-Calibration banks are independent. Standard mode uses `vr_standardHandOffset*`,
-`vr_standardHandAngle*` and advanced `vr_standardWristPivot*`; legacy mode retains
-`vr_handOffset*`, `vr_handAngle*` and `vr_wristPivot*`. The launcher exposes the
+Calibration banks are independent. Standard mode uses `vr_standardHandOffset*`
+and `vr_standardHandAngle*`; legacy mode retains `vr_handOffset*` and
+`vr_handAngle*`. Position calibration selects one rigid grip-local wrist point;
+angle calibration changes aim orientation without translating that point.
+The separate `vr_*WristPivot*` controls are retired; saved entries remain inert.
+The launcher exposes the
 selected bank and its presets; saving or tuning one does not rewrite the other.
 Existing custom legacy calibration is not automatically interpreted as standard
 grip calibration. Select the appropriate preset or adjust the standard bank.

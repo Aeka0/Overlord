@@ -77,8 +77,8 @@ namespace
 		require(filtered.position[0]<grip.position[0],"production publication actually filters the hand");
 		require(result.trigger[0].presses==1 && result.trigger[0].down && result.sequence==input.sequence,"pose filter must not change buttons or sequence");
 		require(result.runtime_grip[0].tracking.position_meters==grip.position && result.runtime_aim[0].tracking.position_meters==aim.position,"raw diagnostic witnesses preserved");
-		// The alignment translation must depend on the device's raw grip/aim
-		// relation, not on the amount of rotation lag introduced by filtering.
+		// Calibration is part of the same filtered rigid grip pose. An unfiltered
+		// diagnostic pose must not inject a second angular or translational lag.
 		for(int h=0;h<2;++h)
 		for(bool head_filter:{false,true})
 		{
@@ -87,16 +87,22 @@ namespace
 			body.head_stabilized=head_filter;body.tracking_correction=yaw(12,{.01f,0,-.02f});
 			using gameplay::hands::position_offsets;using gameplay::hands::anchor;using gameplay::hands::tracked_wrist;
 			const position_offsets alignment{.08f,-.06f,.02f};
-			const auto& p=result.wrist_pivot_meters;const position_offsets pivot{p[0],p[1],p[2]};
+			const position_offsets pivot{};
 			anchor first_aligned{},first_physical{},next_aligned{},next_physical{};
 			require(tracked_wrist(original,body,{},h,alignment,first_aligned) && tracked_wrist(original,body,{},h,pivot,first_physical) &&
 				tracked_wrist(result,body,{},h,alignment,next_aligned) && tracked_wrist(result,body,{},h,pivot,next_physical),
 				"published poses reach the shared wrist adapter with either stabilization root");
-			require(length(sub(sub(first_aligned.position,first_physical.position),sub(next_aligned.position,next_physical.position)))<.00002f,
-				"hand filtering cannot rotate the fixed alignment translation");
+			head_pose_bridge::world_pose mapped_grip;
+			require(head_pose_bridge::tracking_to_world(body,result.grip[h].tracking,mapped_grip),"filtered grip maps through the selected head root");
+			gameplay::hands::vec expected;
+			require(gameplay::hands::offset_wrist({},mapped_grip.axis,body.units_per_meter,h,alignment,expected) &&
+				length(sub(sub(next_aligned.position,next_physical.position),expected))<.00002f,
+				"calibration follows the filtered grip with no raw-pose mixing");
 			auto missing=result;missing.runtime_grip[h].valid=false;const auto retained=next_aligned;
-			require(!tracked_wrist(missing,body,{},h,alignment,next_aligned) && next_aligned.position==retained.position &&
-				next_aligned.rotation==retained.rotation,"missing raw pair rejects transactionally instead of mixing filtered and raw frames");
+			require(tracked_wrist(missing,body,{},h,alignment,next_aligned) && next_aligned.position==retained.position,
+				"visual wrist does not depend on an unused raw diagnostic witness");
+			require(!tracked_wrist(missing,body,{},h,alignment,next_aligned,true) && next_aligned.position==retained.position &&
+				next_aligned.rotation==retained.rotation,"raw mechanical wrist rejects its missing grip transactionally");
 		}
 		controller_input::publish(input);require(controller_input::latest().grip[0].tracking.position_meters==result.grip[0].tracking.position_meters,"producer duplicate does not advance hand filter");
 		controls.hand.enabled=false;++input.sequence;input.sampled_at+=std::chrono::milliseconds(11);controller_input::publish(input);

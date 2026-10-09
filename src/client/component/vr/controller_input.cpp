@@ -36,7 +36,7 @@ namespace vr::controller_input
 	{
 		const std::lock_guard lock(mutex);
 		const auto settings=controller_calibration::read_settings(value.pose_pipeline);
-		auto next = calibration.apply(value,settings.orientation,settings.pivot);
+		auto next = calibration.apply(value,settings.orientation,settings.position);
 		const bool discontinuity=producer_discontinuity(unfiltered,next);
 		if(discontinuity){++continuity;stabilization::invalidate();}
 		unfiltered=next;

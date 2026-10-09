@@ -42,7 +42,6 @@ namespace openxr_adaptation_tests
 			new_input.grip[hand] = new_input.runtime_grip[hand] = {true, {standard.position, standard.orientation}};
 			old_input.aim[hand] = old_input.runtime_aim[hand] = new_input.aim[hand] = new_input.runtime_aim[hand] =
 			    {true, {aim.position, aim.orientation}};
-			new_input.wrist_pivot_meters = controller_calibration::defaults_for(controller_pose_pipeline::mode::standard).pivot;
 			const auto& old_values = settings::alignment_presets[preset].values;
 			const auto& new_values = settings::standard_alignment_presets[preset].values;
 			anchor old_target, new_target;
@@ -108,8 +107,10 @@ namespace openxr_adaptation_tests
 				runtime.get_status().controller_reference_ids[0].empty() &&
 				runtime.get_status().controller_pose_reference_error.empty(),
 				"standard pipeline published legacy calibration metadata");
-			tests::require(std::abs(input.wrist_pivot_meters[1] - settings::standard_wrist_pivots[1].default_value) < 1e-6f,
-				"standard input consumed legacy wrist calibration");
+				tests::require(input.orientation_degrees == controller_calibration::defaults_for(controller_pose_pipeline::mode::standard).orientation,
+					"standard input consumed legacy angle calibration");
+				tests::require(input.position_offsets_meters == controller_calibration::defaults_for(controller_pose_pipeline::mode::standard).position,
+					"standard input consumed legacy position calibration");
 			runtime.shutdown();
 		}
 	}

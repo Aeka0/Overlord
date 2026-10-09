@@ -11,6 +11,7 @@
 #include "component/vr/scene_compositor.hpp"
 #include "test_support.hpp"
 #include "game_view_tests.hpp"
+#include "roomscale_origin_tests.hpp"
 #include <csetjmp>
 #include "game/structs.hpp"
 #include "component/vr/gameplay/mounted_turret_policy.hpp"
@@ -2061,6 +2062,7 @@ int main()
 		expect_invalid_camera_and_trace();
 		expect_head_pose_camera_transform();
 		expect_native_game_view();
+		expect_roomscale_turn_origin();
 		expect_controller_spatial_frame();
 		expect_optical_projection_remap();
 		expect_bridge_gate_and_views();

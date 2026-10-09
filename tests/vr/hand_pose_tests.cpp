@@ -96,19 +96,19 @@ int main()
 							vr::head_pose_bridge::world_pose aim{{999,888,777},
 								{rotate(tip_rotation,{1,0,0}),rotate(tip_rotation,{0,1,0}),rotate(tip_rotation,{0,0,1})}};
 							anchor result;
-							check(make_wrist_target(grip,aim,grip,aim,body_axis,view,units,h,physical_baseline,physical_baseline,result) && close(result.position,wrist),
+							check(make_wrist_target(grip,aim,view,units,h,physical_baseline,result) && close(result.position,wrist),
 								"physical pivot survives position/scale/rebase/rotation with distinct aim origin and basis");
 							check(close(rotate(result.rotation,{0,0,1}),aim.axis[2]), "aim rotates hand but never translates wrist");
 						}
 		vr::head_pose_bridge::world_pose valid_grip{{1,2,3},body_axis}, invalid_aim = valid_grip;
 		invalid_aim.axis[0][0] = std::numeric_limits<float>::quiet_NaN();
 		anchor untouched{{5,6,7},{0,0,0,1}};
-		check(!make_wrist_target(valid_grip,invalid_aim,valid_grip,valid_grip,body_axis,{},40,0,{},{},untouched) && untouched.position == vec{5,6,7} &&
+		check(!make_wrist_target(valid_grip,invalid_aim,{},40,0,{},untouched) && untouched.position == vec{5,6,7} &&
 			untouched.rotation == quat{0,0,0,1}, "invalid aim cannot partially publish wrist target");
-		check(!make_wrist_target(valid_grip,valid_grip,valid_grip,valid_grip,body_axis,{std::numeric_limits<float>::infinity(),0,0},40,0,{},{},untouched),
+		check(!make_wrist_target(valid_grip,valid_grip,{std::numeric_limits<float>::infinity(),0,0},40,0,{},untouched),
 			"nonfinite scene rebase rejected before target publication");
-		check(!make_wrist_target(valid_grip,valid_grip,invalid_aim,valid_grip,body_axis,{},40,0,{},{},untouched) &&
-			untouched.position==vec{5,6,7},"invalid raw grip basis cannot partially publish a wrist target");
+		check(!make_wrist_target(invalid_aim,valid_grip,{},40,0,{},untouched) &&
+			untouched.position==vec{5,6,7},"invalid grip basis cannot partially publish a wrist target");
 	}
 	rig r{};
 	r.parent.fill(-1);
@@ -199,7 +199,7 @@ int main()
 						sub(target[h].position, rotate(rotation, scale(local_meters, 40))),
 						{rotate(rotation,{1,0,0}),rotate(rotation,{0,1,0}),rotate(rotation,{0,0,1})}};
 					const auto aim = grip;
-					check(make_wrist_target(grip,aim,grip,aim,body_axis,{},40,h,physical_baseline,physical_baseline,corrected[h]) &&
+					check(make_wrist_target(grip,aim,{},40,h,physical_baseline,corrected[h]) &&
 						close(corrected[h].position, target[h].position), "moving controller origin cancels at stationary wrist");
 				}
 				check(solve(r, native, corrected, shoulders, body_axis, rear, result, limited),

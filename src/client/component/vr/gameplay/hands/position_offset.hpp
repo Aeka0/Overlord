@@ -9,8 +9,8 @@ namespace vr::gameplay::hands
 	// Rigid grip-local point-to-wrist translation. During rotation about a real
 	// wrist, the tracked controller origin MOVES; R_grip * offset cancels that
 	// motion when the offset is correct. A fixed-world translation cannot do so.
-	// Defaults: user-tuned Quest 3 values, not measured anatomy or an automatic
-	// controller profile. Other controllers may need their own numeric tuning.
+	// Defaults and presets are tuning starting points, not measured anatomy or
+	// runtime controller metadata. Other controllers may need different values.
 	inline constexpr float max_position_offset_meters = settings::max_hand_offset;
 	struct position_offsets
 	{
@@ -44,31 +44,18 @@ namespace vr::gameplay::hands
 		output = result;
 		return true;
 	}
-	// Preserve the physical grip-to-wrist lever separately from alignment.
-	// Alignment translates the whole wrist frame in the player's reference
-	// space, using the runtime's raw-grip/aim relation for its neutral basis.
-	// Only the physical lever follows wrist rotation; the cosmetic delta must
-	// not sweep an arc when the user changes Up/Back/Inward. Neither corrected
-	// aim nor HMD looking direction defines this translation. Use the raw PAIR
-	// for the device relation: filtered grip with raw aim would rotate alignment
-	// by the filter's angular lag. The physical lever still uses filtered grip.
+	// Position calibration selects one rigid point in the controller's grip
+	// frame. Head looking and aim-angle calibration cannot translate this point.
+	// A stationary anatomical wrist remains stationary when its calibrated lever
+	// matches the controller's physical motion; arbitrary cosmetic translations
+	// cannot also promise an unchanged physical rotation centre.
 	inline bool make_wrist_target(const head_pose_bridge::world_pose& grip,
-		const head_pose_bridge::world_pose& aim, const head_pose_bridge::world_pose& runtime_grip,
-		const head_pose_bridge::world_pose& runtime_aim,
-		const std::array<vec,3>& reference_axis, const vec& view_offset, float units_per_meter,
-		int hand, const position_offsets& offsets, const position_offsets& pivot, anchor& output) noexcept
+		const head_pose_bridge::world_pose& aim, const vec& view_offset, float units_per_meter,
+		int hand, const position_offsets& offsets, anchor& output) noexcept
 	{
 		anchor result;
-		vec physical{},raw_physical{},aligned{};
-		if (!valid_offset_axis(aim.axis) || !valid_offset_axis(runtime_aim.axis) || !valid_offset_axis(reference_axis) ||
-			!offset_wrist({},grip.axis,units_per_meter,hand,pivot,physical) ||
-			!offset_wrist({},runtime_grip.axis,units_per_meter,hand,pivot,raw_physical) ||
-			!offset_wrist({},runtime_grip.axis,units_per_meter,hand,offsets,aligned)) return false;
-		const auto delta=sub(aligned,raw_physical);
-		result.position=add(sub(grip.position,view_offset),physical);
-		for (unsigned i=0;i<3;++i)
-			result.position=add(result.position,scale(reference_axis[i],dot(runtime_aim.axis[i],delta)));
-		for (float x:result.position) if (!std::isfinite(x)) return false;
+		if (!valid_offset_axis(aim.axis) ||
+			!offset_wrist(sub(grip.position,view_offset),grip.axis,units_per_meter,hand,offsets,result.position)) return false;
 		result.rotation = from_axis(aim.axis);
 		output = result;
 		return true;
@@ -78,15 +65,13 @@ namespace vr::gameplay::hands
 	inline bool tracked_wrist(const controller_input::frame& input,const head_pose_bridge::spatial_frame& body,
 		const vec& view_offset,int hand,const position_offsets& offsets,anchor& output,bool raw=false) noexcept
 	{
-		if (hand<0 || hand>1 || !input.grip[hand].valid || !input.aim[hand].valid ||
-			!input.runtime_grip[hand].valid || !input.runtime_aim[hand].valid) return false;
-		head_pose_bridge::world_pose grip,aim,raw_grip,raw_aim;
-		const auto& p=input.wrist_pivot_meters;
-		return head_pose_bridge::tracking_to_world(body,(raw?input.runtime_grip[hand]:input.grip[hand]).tracking,grip) &&
-			head_pose_bridge::tracking_to_world(body,(raw?input.runtime_aim[hand]:input.aim[hand]).tracking,aim) &&
-			head_pose_bridge::tracking_to_world(body,input.runtime_grip[hand].tracking,raw_grip) &&
-			head_pose_bridge::tracking_to_world(body,input.runtime_aim[hand].tracking,raw_aim) &&
-			make_wrist_target(grip,aim,raw_grip,raw_aim,body.world_yaw_axis,view_offset,body.units_per_meter,hand,
-				offsets,{p[0],p[1],p[2]},output);
+		if (hand<0 || hand>1) return false;
+		const auto& selected_grip=raw?input.runtime_grip[hand]:input.grip[hand];
+		const auto& selected_aim=raw?input.runtime_aim[hand]:input.aim[hand];
+		if (!selected_grip.valid || !selected_aim.valid) return false;
+		head_pose_bridge::world_pose grip,aim;
+		return head_pose_bridge::tracking_to_world(body,selected_grip.tracking,grip) &&
+			head_pose_bridge::tracking_to_world(body,selected_aim.tracking,aim) &&
+			make_wrist_target(grip,aim,view_offset,body.units_per_meter,hand,offsets,output);
 	}
 }

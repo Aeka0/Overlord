@@ -353,6 +353,8 @@ namespace vr::diagnostics::detail
 		output << " max_output=" << head_status.max_output_basis_error << '\n';
 		output << "  local_position_units=" << head_status.local_position_units[0] << ',';
 		output << head_status.local_position_units[1] << ',' << head_status.local_position_units[2] << '\n';
+		output << "  roomscale_origin_offset_m=" << head_status.roomscale_offset_meters[0] << ',';
+		output << head_status.roomscale_offset_meters[1] << ',' << head_status.roomscale_offset_meters[2] << '\n';
 		for (std::size_t row{}; row < head_status.local_orientation.size(); ++row)
 		{
 			output << "  local_axis[" << row << "]=" << head_status.local_orientation[row][0] << ',';

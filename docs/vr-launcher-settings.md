@@ -297,25 +297,20 @@ unarmed walking, sprinting, crouch movement and crawling; headset tracking is
 independent. See [VR movement camera bob](vr-camera-bob.md) for native contracts
 and headset acceptance checks.
 
-Offsets translate the complete wrist frame, including its rotation center,
-instead of changing the physical controller-to-wrist lever on every adjustment.
-The physical baseline still rotates with the grip. The alignment difference is
-expressed in the recentered player reference using the runtime raw-grip/aim
-relation; it does not follow wrist rotation or HMD looking direction. Inward
-remains mirrored per hand. This preserves the former placement when runtime aim
-is aligned with the player reference, while changing other orientations so the
-alignment difference no longer sweeps an arc. Shared definitions live in
-`src/client/component/vr/settings.hpp`.
-
-Advanced saved console controls `vr_wristPivotInward`, `vr_wristPivotBack`, and
-`vr_wristPivotUp` describe the physical grip-local baseline (defaults
--0.02/0.12/0 m, range -0.5 to 0.5 m). They are separate from the launcher
-alignment controls and are preserved by launcher saves. These offsets are a
-configurable reference baseline, not an anatomical measurement or a universal
-controller profile.
-Existing saved pivot values are not overwritten by new defaults or presets;
-testing the zero-Up correction on an existing profile requires explicitly setting
-`vr_wristPivotUp 0`. Other devices can adjust it independently.
+Position offsets select one rigid point in the controller's grip frame, shared
+by rendering and physical interactions. Inward remains mirrored per hand.
+The point follows controller rotation and whole-body physical turning; head
+looking and aim-angle calibration do not translate it. Tune the offsets so a
+rotation about your physical wrist leaves the virtual wrist stationary. A value
+that only makes one neutral pose look correct can still move the wrist during
+rotation. Defaults and presets are tuning starting points, not anatomical
+measurements. Existing values are retained and may need recalibration after this
+change. Shared definitions live in `src/client/component/vr/settings.hpp`.
+
+The separate `vr_wristPivot*` and `vr_standardWristPivot*` controls are retired.
+Saved entries are preserved by launcher saves but no longer affect hand poses;
+the selected `vr_handOffset*` or `vr_standardHandOffset*` bank now defines the
+complete calibrated wrist point and its rotation centre.
 
 The three angle controls also live under **Basics > Controller alignment**.
 They rotate both hands and their held weapons about the controller's local axes:

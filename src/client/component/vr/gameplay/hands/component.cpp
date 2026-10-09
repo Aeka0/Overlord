@@ -68,9 +68,6 @@ namespace vr::gameplay::hands
 		game::dvar_t* shoulder_half_width{};
 		game::dvar_t* shoulder_down{};
 		game::dvar_t* shoulder_back{};
-		game::dvar_t* hand_inward{};
-		game::dvar_t* hand_back{};
-		game::dvar_t* hand_up{};
 		game::dvar_t* grips_enabled{};
 		bool animation_query_ready{};
 		std::atomic<bool> alive{true};
@@ -894,8 +891,7 @@ namespace vr::gameplay::hands
 				return;
 			}
 			probe.shoulder_target = shoulders;
-			probe.wrist_offsets = {
-			    hand_inward->current.value, hand_back->current.value, hand_up->current.value};
+			probe.wrist_offsets = {input.position_offsets_meters[0],input.position_offsets_meters[1],input.position_offsets_meters[2]};
 			for (int hand = 0; hand < 2; ++hand)
 			{
 				head_pose_bridge::world_pose grip{}, aim{};
@@ -2009,7 +2005,7 @@ namespace vr::gameplay::hands
 				     << probe.offsets.half_width_meters << '/' << probe.offsets.down_meters << '/'
 				     << probe.offsets.back_meters << " head=[" << probe.head_position[0] << ','
 				     << probe.head_position[1] << ',' << probe.head_position[2] << "]\n";
-				text << "wrist_offset=translated_wrist_frame inward/back/up_m="
+				text << "wrist_offset=grip_local_point inward/back/up_m="
 				     << probe.wrist_offsets.inward_meters << '/' << probe.wrist_offsets.back_meters << '/'
 				     << probe.wrist_offsets.up_meters << '\n';
 				text << "forearm_twist=final_anatomical_axial applied_hands=" << probe.forearm_twist_hands
@@ -2088,16 +2084,6 @@ namespace vr::gameplay::hands
 			    game::DVAR_FLAG_SAVED,
 			    "Independent controller-driven hands, including empty-hand presentation");
 			command::add("vr_hands_status", print_status);
-			const auto& alignment = settings::active_hand_alignment();
-			const std::array outputs{&hand_inward, &hand_back, &hand_up};
-			for (const auto& fields : {settings::hand_alignment, settings::standard_hand_alignment})
-				for (unsigned i = 0; i < outputs.size(); ++i)
-				{
-					auto* value = dvars::register_float(fields[i].name, fields[i].default_value,
-						fields[i].min, fields[i].max, game::DVAR_FLAG_SAVED,
-						"Hand alignment in meters in the selected grip coordinates");
-					if (fields[i].name == alignment[i].name) *outputs[i] = value;
-				}
 			shoulder_half_width =
 			    dvars::register_float("vr_shoulderHalfWidth",
 			                          0.18f,

@@ -164,6 +164,7 @@ user*.bat
 .agents/
 .devlog/
 .devlop/
+.feedback/
 
 # Local build/test artifacts
 .tests-temp/

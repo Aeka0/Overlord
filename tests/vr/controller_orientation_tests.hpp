@@ -59,11 +59,11 @@ template<class Check> void controller_orientation_tests(Check check)
 		calibration c;const auto bad=c.apply(raw,{invalid,0,0});check(!bad.aim[0].valid && !bad.aim[1].valid,"invalid angle values never publish an actionable pose");
 	}
 	calibration missing;raw.aim[1].valid=false;check(!missing.apply(raw,{-4,0,0}).aim[1].valid,"calibration cannot invent tracking for a missing hand");
-	calibration pivot_change;raw.aim[1].valid=true;
-	const auto base=pivot_change.apply(raw,{-20,0,0});raw.sampled_at+=1ms;
-	const angles new_pivot{.03f,.08f,-.02f};const auto adjusted=pivot_change.apply(raw,{-20,0,0},new_pivot);
-	check(adjusted.wrist_pivot_meters==new_pivot && adjusted.orientation_settling && adjusted.aim[0].valid &&
+	calibration position_change;raw.aim[1].valid=true;
+	const auto base=position_change.apply(raw,{-20,0,0});raw.sampled_at+=1ms;
+	const angles position{.03f,.08f,-.02f};const auto adjusted=position_change.apply(raw,{-20,0,0},position);
+	check(adjusted.position_offsets_meters==position && adjusted.orientation_settling && adjusted.aim[0].valid &&
 		adjusted.aim[0].tracking.orientation==base.aim[0].tracking.orientation,
-		"physical pivot settings publish coherently without changing aim angles");
-	check(!pivot_change.apply(raw,{}, {0,0,.501f}).aim[0].valid,"malformed physical pivot cannot publish an actionable hand pose");
+		"position calibration marks physical history discontinuity without changing aim angles");
+	check(!position_change.apply(raw,{}, {0,0,.501f}).aim[0].valid,"malformed position calibration cannot publish an actionable hand pose");
 }

@@ -144,17 +144,8 @@ namespace vr::settings
 		           : 0.f;
 	}
 	inline constexpr float max_hand_offset = .5f;
-	// Physical grip-to-wrist baseline, separate from presentation alignment.
-	// Advanced saved console controls; launcher edits preserve these entries.
-	inline constexpr number_setting wrist_inward{
-	    "vr_wristPivotInward", -.02f, -max_hand_offset, max_hand_offset, .01f};
-	inline constexpr number_setting wrist_back{
-	    "vr_wristPivotBack", .12f, -max_hand_offset, max_hand_offset, .01f};
-	// Zero Up matches the saved rigid-local trial that improved alignment before
-	// the pivot/alignment split. The old -5 cm default was not that trial's value.
-	// This remains a tuning baseline, not a measured anatomical calibration.
-	inline constexpr number_setting wrist_up{"vr_wristPivotUp", 0.f, -max_hand_offset, max_hand_offset, .01f};
-	inline constexpr std::array wrist_pivots{wrist_inward, wrist_back, wrist_up};
+	// One grip-local point determines both wrist placement and its rotation
+	// centre. Position and angle calibration remain independent.
 	inline constexpr number_setting hand_inward{
 	    "vr_handOffsetInward", 0.f, -max_hand_offset, max_hand_offset, .01f};
 	inline constexpr number_setting hand_back{
@@ -186,10 +177,6 @@ namespace vr::settings
 		number_setting{"vr_standardHandAnglePitch", 0.f, -180.f, 180.f, 1.f},
 		number_setting{"vr_standardHandAngleYaw", 0.f, -180.f, 180.f, 1.f},
 		number_setting{"vr_standardHandAngleRoll", 0.f, -180.f, 180.f, 1.f}};
-	inline constexpr std::array standard_wrist_pivots{
-		number_setting{"vr_standardWristPivotInward", -.027f, -max_hand_offset, max_hand_offset, .01f},
-		number_setting{"vr_standardWristPivotBack", .016253897f, -max_hand_offset, max_hand_offset, .01f},
-		number_setting{"vr_standardWristPivotUp", .008063812f, -max_hand_offset, max_hand_offset, .01f}};
 	inline constexpr std::array standard_alignment_presets{
 		alignment_preset{"standard_default", "Standard baseline", {-.007f, -.096073247f, -.034157186f, 0, 0, 0}},
 		alignment_preset{"meta_quest_3", "Meta Quest 3", {-.027f, .051438062f, -.085542142f, -20, 0, 0}}};
