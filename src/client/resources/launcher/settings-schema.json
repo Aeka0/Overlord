@@ -397,6 +397,14 @@
     "description": "settings.cheatAmmoHint"
   },
   {
+    "name": "vr_killfeedStyle",
+    "category": "other",
+    "group": "settings.weaponFeedback",
+    "label": "settings.killfeedStyle",
+    "type": "choice",
+    "description": "settings.killfeedStyleHint"
+  },
+  {
     "name": "vr_recordingMode",
     "category": "other",
     "group": "settings.recordingMode",
@@ -407,14 +415,10 @@
   {
     "name": "vr_recordingDim",
     "category": "other",
-    "group": "settings.recordingDim",
+    "group": "settings.recordingMode",
     "label": "settings.recordingDim",
     "type": "number",
-    "description": "settings.recordingDimHint",
-    "visibleWhen": [
-      "vr_recordingMode",
-      true
-    ]
+    "description": "settings.recordingDimHint"
   },
   {
     "name": "vr_hideHud",

@@ -195,7 +195,7 @@
   "settings.disableDogPounce": "犬の押し倒しを防ぐ",
   "settings.disableDogPounceHint": "初期状態は有効です。犬は噛みつきますが、プレイヤーを押さえ込みません。",
   "settings.other": "その他",
-  "settings.otherHint": "録画と HUD の表示。",
+  "settings.otherHint": "効果音、録画補助と HUD 表示。",
   "settings.hideHud": "すべての HUD を非表示",
   "settings.hideHudHint": "ゲーム HUD と 3D HUD を隠します。メニューは表示されます。",
   "settings.disableBlur": "ぼかしを無効化",
@@ -279,5 +279,11 @@
   "settings.calibrationHint": "姿勢処理方式とプリセットを選んでから位置合わせを調整します。下のコマンドは選択した方式に対応します。ゲームで使用中の方式は vr_input_status で確認できます。方式の変更にはゲームの再起動が必要です。",
   "settings.positionOffsetsHint": "位置オフセットの単位はメートルです。ゲーム中に ~ でコンソールを開き、<数値> を希望の値に置き換えてください。コンソールを閉じてゲームに戻ると変更をすぐ確認できます。",
   "settings.angleOffsetsHint": "角度オフセットの単位は度です。ゲーム中に ~ でコンソールを開き、<数値> を希望の値に置き換えてください。コンソールを閉じてゲームに戻ると変更をすぐ確認できます。",
-  "calibration.value": "数値"
+  "calibration.value": "数値",
+  "settings.weaponFeedback": "武器フィードバック",
+  "settings.killfeedStyle": "命中／キル音",
+  "settings.killfeedStyleHint": "命中とキルの効果音を選択します。既定は MW2019。再生中は戦闘音が一時的に下がり、会話と音楽は維持されます。",
+  "choice.bocw": "Black Ops Cold War",
+  "choice.mwClassic": "Modern Warfare Classic",
+  "choice.mw2019": "Modern Warfare (2019)"
 }

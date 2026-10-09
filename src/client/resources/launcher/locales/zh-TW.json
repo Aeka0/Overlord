@@ -195,7 +195,7 @@
   "settings.disableDogPounce": "禁止軍犬撲倒",
   "settings.disableDogPounceHint": "默認開啟。軍犬仍可咬傷玩家，但不會將玩家撲倒。",
   "settings.other": "其他",
-  "settings.otherHint": "錄制輔助與 HUD 顯示。",
+  "settings.otherHint": "音效回饋、錄製輔助與 HUD 顯示。",
   "settings.hideHud": "隱藏所有 HUD",
   "settings.hideHudHint": "隱藏游戲 HUD 和 3D HUD，保留菜單。",
   "settings.disableBlur": "禁用模糊",
@@ -279,5 +279,11 @@
   "settings.calibrationHint": "先選擇姿態方案和預設，再調整對齊。下方指令對應目前選擇的方案；遊戲內可用 vr_input_status 確認正在使用的方案。切換姿態方案需重新啟動遊戲。",
   "settings.positionOffsetsHint": "位置偏移以公尺為單位。遊戲中按 ~ 開啟主控台，將指令中的 <數值> 換成所需值；關閉主控台返回遊戲即可即時查看。",
   "settings.angleOffsetsHint": "角度偏移以度為單位。遊戲中按 ~ 開啟主控台，將指令中的 <數值> 換成所需值；關閉主控台返回遊戲即可即時查看。",
-  "calibration.value": "數值"
+  "calibration.value": "數值",
+  "settings.weaponFeedback": "武器回饋",
+  "settings.killfeedStyle": "命中／擊殺音效",
+  "settings.killfeedStyleHint": "選擇命中與擊殺音效，預設為 MW2019。回饋時短暫降低戰鬥音量，保留對白與音樂。",
+  "choice.bocw": "Black Ops Cold War",
+  "choice.mwClassic": "Modern Warfare Classic",
+  "choice.mw2019": "Modern Warfare (2019)"
 }

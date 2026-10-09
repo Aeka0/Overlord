@@ -742,11 +742,13 @@ namespace scripting::lua
 
 				const auto level = entity{*::game::levelEntityId};
 
+				const auto previous_hook_state = notifies::hook_enabled;
+				const auto restore_hook = gsl::finally([previous_hook_state]
+				{
+					notifies::hook_enabled = previous_hook_state;
+				});
 				notifies::hook_enabled = false;
-				const auto result = convert(s, call_script_function(level, filename, function, arguments));
-				notifies::hook_enabled = true;
-
-				return result;
+				return convert(s, call_script_function(level, filename, function, arguments));
 			};
 
 			game_type["onentitydamage"] = [](const game&, const sol::protected_function& callback)

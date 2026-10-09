@@ -195,7 +195,7 @@
   "settings.disableDogPounce": "Umwerfen durch Hunde verhindern",
   "settings.disableDogPounceHint": "Standardmäßig an. Hunde beißen weiterhin, halten den Spieler aber nicht am Boden fest.",
   "settings.other": "Sonstiges",
-  "settings.otherHint": "Aufnahme und HUD-Sichtbarkeit.",
+  "settings.otherHint": "Audiofeedback, Aufnahme und HUD-Sichtbarkeit.",
   "settings.hideHud": "Gesamtes HUD ausblenden",
   "settings.hideHudHint": "Blendet Spiel-HUD und 3D-HUD aus. Menüs bleiben sichtbar.",
   "settings.disableBlur": "Unschärfe deaktivieren",
@@ -279,5 +279,11 @@
   "settings.calibrationHint": "Wählen Sie zuerst Posenverarbeitung und Vorlage, dann passen Sie die Ausrichtung an. Die Befehle entsprechen der gewählten Verarbeitung; vr_input_status zeigt die im Spiel aktive Verarbeitung. Ein Wechsel erfordert einen Spielneustart.",
   "settings.positionOffsetsHint": "Positionsversätze werden in Metern angegeben. Öffnen Sie im Spiel mit ~ die Konsole und ersetzen Sie <Wert> durch die gewünschte Zahl. Schließen Sie die Konsole, um die Änderung sofort im Spiel zu sehen.",
   "settings.angleOffsetsHint": "Winkelversätze werden in Grad angegeben. Öffnen Sie im Spiel mit ~ die Konsole und ersetzen Sie <Wert> durch die gewünschte Zahl. Schließen Sie die Konsole, um die Änderung sofort im Spiel zu sehen.",
-  "calibration.value": "Wert"
+  "calibration.value": "Wert",
+  "settings.weaponFeedback": "Waffenfeedback",
+  "settings.killfeedStyle": "Treffer- / Abschussgeräusche",
+  "settings.killfeedStyleHint": "Treffer- und Abschussgeräusche auswählen. Standard: MW2019. Kampfgeräusche werden kurz leiser; Dialoge und Musik bleiben erhalten.",
+  "choice.bocw": "Black Ops Cold War",
+  "choice.mwClassic": "Modern Warfare Classic",
+  "choice.mw2019": "Modern Warfare (2019)"
 }

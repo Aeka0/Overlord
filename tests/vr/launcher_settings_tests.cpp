@@ -81,6 +81,22 @@ int main(int argc, char** argv)
 				require(catalog[field.name][i]["value"]==field.values[i] && catalog[field.name][i]["labelKey"]==field.label_keys[i], "Frontend choices preserve native ordering and localized labels");
 		const auto initial = defaults();
 		require(validate(initial), "Shared defaults must be valid");
+		const auto* killfeed_name = vr::settings::killfeed_style.name;
+		require(initial[killfeed_name] == "mw2019", "Hit and kill audio defaults to MW2019");
+		for (std::size_t i{}; i < vr::settings::killfeed_style.values.size() && vr::settings::killfeed_style.values[i]; ++i)
+		{
+			auto selected = initial;
+			selected[killfeed_name] = vr::settings::killfeed_style.values[i];
+			require(read_values(update_config("seta vr_recoil 1\nbind X vr_recenter\n", selected)) == selected,
+				"All feedback styles persist alongside VR settings and bindings");
+			require(read_values(std::string("seta ") + killfeed_name + " " + std::to_string(i))[killfeed_name] == selected[killfeed_name],
+				"Native feedback enum indices reload as launcher choices");
+		}
+		for (const auto& bad : {json(-1), json(4), json(true), json("invalid"), json("mw2019;quit")})
+		{
+			auto selected = initial; selected[killfeed_name] = bad;
+			require(!validate(selected), "Invalid feedback selections cannot be saved");
+		}
 		require(initial[vr::settings::ads_comfort.name] == true,
 			"Near-eye sight attraction retains the existing enabled default");
 		for (const bool enabled : {false, true})

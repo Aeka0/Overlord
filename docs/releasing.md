@@ -39,6 +39,11 @@ input bindings, artwork, loose project scripts, the Khronos OpenXR loader and
 license notices. It excludes PDBs, user settings, logs, original game files and
 raw ZoneTool assets. Retain matching PDBs privately; they can contain local source paths.
 
+The supplied `h2_killfeed_sounds.ff` is bundled with the client, alongside its
+feedback and ducking scripts. Its editable aliases, FLAC sources and ZoneTool
+manifest live under `data/zonetool/h2_killfeed_sounds` and `data/zone_source`;
+rebuild this sound-only zone with a compatible H2 ZoneTool when changing audio.
+
 The overlay requires a legally owned game and the base H2-Mod data required by
 the installation. The client build does not compile data/zone_source/ and
 data/zonetool/ into fastfiles. Do not advertise an overlay as a complete

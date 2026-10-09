@@ -210,6 +210,12 @@ return function()
 		includedirs {"./src/client", "./deps/lua"}
 		links {"lua"}
 
+	test_executable("vr-killfeed-audio-tests", "killfeed-audio")
+		files {"./tests/vr/killfeed_audio_tests.cpp", "./tests/vr/killfeed_audio_tests.lua"}
+		includedirs {"./deps/lua"}
+		links {"lua"}
+		gsc_tool.import()
+
 	test_executable("vr-region-capture-tests", "region-capture")
 		files {"./tests/vr/region_capture_tests.cpp"}
 		includedirs {"./src/client"}

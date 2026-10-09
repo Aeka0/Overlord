@@ -810,6 +810,10 @@ namespace vr
 			dvars::register_enum(settings::runtime_backend.name, runtime_backends.data(),
 				settings::runtime_backend.default_index, game::DVAR_FLAG_SAVED,
 				"VR backend for game startup; select it before entering the game");
+			static auto killfeed_styles = settings::killfeed_style.values;
+			dvars::register_enum(settings::killfeed_style.name, killfeed_styles.data(),
+				settings::killfeed_style.default_index, game::DVAR_FLAG_SAVED,
+				"Local player hit and kill feedback audio style");
 			vr_enable = dvars::register_bool("vr_enable", true, game::DVAR_FLAG_SAVED,
 				"Enable VR rendering after vr_reinit");
 			static const char* probe_modes[]{"off", "observe", nullptr};

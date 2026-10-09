@@ -158,9 +158,21 @@ turning (the third section, directly below VR backend) and visual comfort;
 weapon interaction and throwable speed; **Cheats** contains
 no recoil, health protection, native notarget and ammunition modes, all off by default;
 **Other** contains
-live stream preview and Hide all HUD; **Debug** contains optional diagnostic probes. Switching categories keeps
+hit / kill audio, live stream preview and Hide all HUD; **Debug** contains optional diagnostic probes. Switching categories keeps
 unsaved changes and the scroll position of each category. The left sidebar's Save
-button saves all categories; Reset restores the entire draft's defaults.
+button saves all categories; Reset restores the entire draft's defaults.
+
+Other's Hit / kill audio (`vr_killfeedStyle`) defaults to Modern Warfare (2019).
+Disabled, Black Ops Cold War and Modern Warfare Classic are also available.
+MW2019 replaces the hit sound with a kill or headshot-kill sound on lethal damage;
+BOCW cycles its hit variants and layers the kill sound, while Classic uses one
+sound for all hits. Only the local player's damage to living targets is considered,
+and death notifications determine kills. Feedback briefly lowers combat audio
+without changing dialogue or music. The original per-group volume levels are
+preserved. The GSC feedback script owns recovery: it holds until 150 ms after
+the last feedback and fades back over 180 ms.
+The selection is saved for the next game
+launch; Reset restores MW2019. There is no in-game settings menu for this feature.
 
 Cheats displays a recommendation to complete the campaign once before enabling
 it. Demigod/God cannot prevent scripted deaths. Infinite reserves locks carried

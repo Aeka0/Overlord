@@ -23,10 +23,15 @@ namespace vr::settings
 	struct choice_setting
 	{
 		const char* name;
-		std::array<const char*, 4> values; // Null terminated for native enum registration.
+		std::array<const char*, 5> values; // Null terminated for native enum registration.
 		int default_index{};
-		std::array<const char*, 4> label_keys{}; // Launcher localization keys, paired with values.
+		std::array<const char*, 5> label_keys{}; // Launcher localization keys, paired with values.
 	};
+	inline constexpr choice_setting killfeed_style{
+		.name = "vr_killfeedStyle",
+		.values = {"off", "bocw", "mw_classic", "mw2019"},
+		.default_index = 3,
+		.label_keys = {"choice.disabled", "choice.bocw", "choice.mwClassic", "choice.mw2019"}};
 	inline constexpr choice_setting cheat_health{
 	    .name = "vr_cheatHealth",
 	    .values = {"off", "demigod", "god"},
@@ -48,7 +53,7 @@ namespace vr::settings
 		.default_index = 1,
 		.label_keys = {"choice.standardControllerPose", "choice.legacyControllerPose"}};
 	inline constexpr std::array choices{
-		runtime_backend, controller_pose_mode,
+		runtime_backend, controller_pose_mode, killfeed_style,
 	    choice_setting{
 	        .name = turn_mode, .values = {"smooth", "snap"}, .label_keys = {"choice.smooth", "choice.snap"}},
 	    choice_setting{.name = recoil_penalty,

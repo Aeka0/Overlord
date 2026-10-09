@@ -195,7 +195,7 @@
   "settings.disableDogPounce": "개에게 쓰러짐 방지",
   "settings.disableDogPounceHint": "기본적으로 켜져 있습니다. 개는 계속 물지만 플레이어를 바닥에 눌러 제압하지 않습니다.",
   "settings.other": "기타",
-  "settings.otherHint": "녹화 및 HUD 표시입니다.",
+  "settings.otherHint": "효과음 피드백, 녹화 및 HUD 표시.",
   "settings.hideHud": "모든 HUD 숨기기",
   "settings.hideHudHint": "게임 HUD와 3D HUD를 숨깁니다. 메뉴는 계속 표시됩니다.",
   "settings.disableBlur": "흐림 효과 끄기",
@@ -279,5 +279,11 @@
   "settings.calibrationHint": "자세 처리 방식과 프리셋을 먼저 선택한 뒤 정렬을 조정하세요. 아래 명령은 선택한 방식에 해당합니다. 게임에서 사용 중인 방식은 vr_input_status로 확인할 수 있습니다. 방식 변경에는 게임 재시작이 필요합니다.",
   "settings.positionOffsetsHint": "위치 오프셋의 단위는 미터입니다. 게임에서 ~로 콘솔을 열고 <값>을 원하는 숫자로 바꾸세요. 콘솔을 닫고 게임으로 돌아오면 변경을 즉시 확인할 수 있습니다.",
   "settings.angleOffsetsHint": "각도 오프셋의 단위는 도입니다. 게임에서 ~로 콘솔을 열고 <값>을 원하는 숫자로 바꾸세요. 콘솔을 닫고 게임으로 돌아오면 변경을 즉시 확인할 수 있습니다.",
-  "calibration.value": "값"
+  "calibration.value": "값",
+  "settings.weaponFeedback": "무기 피드백",
+  "settings.killfeedStyle": "명중 / 처치 효과음",
+  "settings.killfeedStyleHint": "명중 및 처치 효과음을 선택합니다. 기본값은 MW2019입니다. 피드백 중 전투 소리가 잠시 줄어들며 대사와 음악은 유지됩니다.",
+  "choice.bocw": "Black Ops Cold War",
+  "choice.mwClassic": "Modern Warfare Classic",
+  "choice.mw2019": "Modern Warfare (2019)"
 }

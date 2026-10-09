@@ -195,7 +195,7 @@
   "settings.disableDogPounce": "Evitar derribos de perros",
   "settings.disableDogPounceHint": "Activado por defecto. Los perros aún muerden, pero no te inmovilizan en el suelo.",
   "settings.other": "Otros",
-  "settings.otherHint": "Captura y visibilidad del HUD.",
+  "settings.otherHint": "Respuesta de audio, captura y visibilidad del HUD.",
   "settings.hideHud": "Ocultar todo el HUD",
   "settings.hideHudHint": "Oculta el HUD del juego y el HUD 3D. Los menús siguen visibles.",
   "settings.disableBlur": "Desactivar desenfoque",
@@ -279,5 +279,11 @@
   "settings.calibrationHint": "Elige primero el modo de poses y un preajuste, y después ajusta la alineación. Los comandos corresponden al modo seleccionado; vr_input_status muestra el modo activo en el juego. Cambiar de modo requiere reiniciar el juego.",
   "settings.positionOffsetsHint": "Los desplazamientos de posición se expresan en metros. Pulsa ~ en el juego para abrir la consola y sustituye <valor> por el número deseado. Cierra la consola para ver el cambio inmediatamente al jugar.",
   "settings.angleOffsetsHint": "Los desplazamientos angulares se expresan en grados. Pulsa ~ en el juego para abrir la consola y sustituye <valor> por el número deseado. Cierra la consola para ver el cambio inmediatamente al jugar.",
-  "calibration.value": "valor"
+  "calibration.value": "valor",
+  "settings.weaponFeedback": "Respuesta de armas",
+  "settings.killfeedStyle": "Sonidos de impacto / baja",
+  "settings.killfeedStyleHint": "Elige los sonidos de impacto y baja. MW2019 por defecto. El audio de combate baja brevemente; los diálogos y la música se mantienen.",
+  "choice.bocw": "Black Ops Cold War",
+  "choice.mwClassic": "Modern Warfare Classic",
+  "choice.mw2019": "Modern Warfare (2019)"
 }
