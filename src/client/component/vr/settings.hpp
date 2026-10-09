@@ -104,6 +104,7 @@ namespace vr::settings
 	inline constexpr boolean_setting hide_hud{"vr_hideHud", false};
 	inline constexpr boolean_setting disable_blur{"vr_disableBlur", false};
 	inline constexpr boolean_setting disable_dog_pounce{"vr_disableDogPounce", true};
+	inline constexpr boolean_setting ads_comfort{"vr_adsComfort", true};
 	inline constexpr auto toggles = []
 	{
 		constexpr std::array gameplay{recording_mode,
@@ -115,6 +116,7 @@ namespace vr::settings
 		                              hide_hud,
 		                              disable_blur,
 		                              disable_dog_pounce,
+		                              ads_comfort,
 		                              boolean_setting{disable_lens_flare, false},
 		                              boolean_setting{camera_bob, true},
 		                              boolean_setting{recoil, true},

@@ -132,8 +132,12 @@ aliases, rather than the weapon name or available magnifier materials. Thermal
 uses the reviewed rear lens and retains its own comfort tier, with full distance
 assistance through 50 cm and a smooth fade to zero at 70 cm. Its existing spring,
 speed bound and two-hand ownership requirements also apply to the larger approach.
-`vr_scopeZoom 0` disables only lens magnification; `vr_autoAds 0` also releases
-the approach. Only the existing projected weapon can own the ADS request.
+`vr_adsComfort` defaults to `1` and controls this positional approach independently
+under launcher **Gameplay > Aiming > Near-eye sight attraction**. Setting it to `0`
+clears the approach transition and retains the unassisted weapon pose; automatic
+ADS admission and lens magnification remain available. `vr_scopeZoom 0` disables
+only lens magnification; `vr_autoAds 0` also releases the approach. Only the
+existing projected weapon can own the ADS request.
 
 The published muzzle carries its comfort translation separately. ADS corridor
 testing subtracts that translation, so the assistance cannot move its own input

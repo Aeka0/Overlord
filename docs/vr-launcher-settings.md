@@ -152,8 +152,10 @@ Visual comfort includes **Disable blur** (`vr_disableBlur`, off by default).
 spatial HUD while preserving menus. See [presentation options](vr-presentation-options.md)
 for rendering boundaries.
 
-VR Settings has five categories: **Basics** contains visual comfort and controller
-alignment; **Gameplay** contains turning, aiming and throwable speed; **Cheats** contains
+VR Settings has six categories: **Basics** contains the quick guide, VR backend,
+turning (the third section, directly below VR backend) and visual comfort;
+**Calibration** contains controller alignment; **Gameplay** contains aiming,
+weapon interaction and throwable speed; **Cheats** contains
 no recoil, health protection, native notarget and ammunition modes, all off by default;
 **Other** contains
 live stream preview and Hide all HUD; **Debug** contains optional diagnostic probes. Switching categories keeps
@@ -250,6 +252,7 @@ and regression tests.
 | Turn style | `vr_turnMode` | `smooth` | `smooth`, `snap` |
 | Smooth speed | `vr_turnSpeed` | 90 degrees/second | 15 to 360 |
 | Snap angle | `vr_snapAngle` | 30 degrees | 5 to 90 |
+| Near-eye sight attraction (Gameplay > Aiming) | `vr_adsComfort` | true | boolean |
 | VR aim assist strength | `vr_aimAssistStrength` | 0 (off) | 0 to 100 |
 | No recoil (Cheats; inverted checkbox) | `vr_recoil` | true (checkbox off) | boolean |
 | Single-hand penalty | `vr_recoilPenalty` | `long` | `all`, `long`, `off` |

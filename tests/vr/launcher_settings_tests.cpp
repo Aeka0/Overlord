@@ -81,6 +81,17 @@ int main(int argc, char** argv)
 				require(catalog[field.name][i]["value"]==field.values[i] && catalog[field.name][i]["labelKey"]==field.label_keys[i], "Frontend choices preserve native ordering and localized labels");
 		const auto initial = defaults();
 		require(validate(initial), "Shared defaults must be valid");
+		require(initial[vr::settings::ads_comfort.name] == true,
+			"Near-eye sight attraction retains the existing enabled default");
+		for (const bool enabled : {false, true})
+		{
+			auto selected = initial;
+			selected[vr::settings::ads_comfort.name] = enabled;
+			const auto saved = update_config("seta vr_autoAds 1\nseta vr_scopeZoom 1\nbind X vr_recenter\n", selected);
+			require(read_values(saved) == selected && saved.find("seta vr_autoAds 1") != std::string::npos &&
+				saved.find("seta vr_scopeZoom 1") != std::string::npos && saved.find("bind X vr_recenter") != std::string::npos,
+				"Sight attraction persists independently of automatic ADS, zoom and bindings");
+		}
 		require(initial[vr::settings::controller_pose_mode.name] == "legacy", "Controller pipeline defaults to Legacy");
 		require(read_values("seta vr_controllerPoseMode standard\n")[vr::settings::controller_pose_mode.name] == "standard",
 			"An explicitly saved Standard selection remains available");

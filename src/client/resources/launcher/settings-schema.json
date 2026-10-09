@@ -8,6 +8,35 @@
     "description": "settings.runtimeBackendHint"
   },
   {
+    "name": "vr_turnMode",
+    "category": "basics",
+    "group": "settings.turning",
+    "label": "settings.turnStyle",
+    "type": "choice"
+  },
+  {
+    "name": "vr_turnSpeed",
+    "category": "basics",
+    "group": "settings.turning",
+    "label": "settings.turnSpeed",
+    "type": "number",
+    "visibleWhen": [
+      "vr_turnMode",
+      "smooth"
+    ]
+  },
+  {
+    "name": "vr_snapAngle",
+    "category": "basics",
+    "group": "settings.turning",
+    "label": "settings.snapAngle",
+    "type": "number",
+    "visibleWhen": [
+      "vr_turnMode",
+      "snap"
+    ]
+  },
+  {
     "name": "vr_desktopStabilization",
     "category": "basics",
     "group": "settings.stabilization",
@@ -251,33 +280,12 @@
     "row": "settings.angleOffsets"
   },
   {
-    "name": "vr_turnMode",
+    "name": "vr_adsComfort",
     "category": "gameplay",
-    "group": "settings.turning",
-    "label": "settings.turnStyle",
-    "type": "choice"
-  },
-  {
-    "name": "vr_turnSpeed",
-    "category": "gameplay",
-    "group": "settings.turning",
-    "label": "settings.turnSpeed",
-    "type": "number",
-    "visibleWhen": [
-      "vr_turnMode",
-      "smooth"
-    ]
-  },
-  {
-    "name": "vr_snapAngle",
-    "category": "gameplay",
-    "group": "settings.turning",
-    "label": "settings.snapAngle",
-    "type": "number",
-    "visibleWhen": [
-      "vr_turnMode",
-      "snap"
-    ]
+    "group": "settings.aiming",
+    "label": "settings.adsComfort",
+    "type": "toggle",
+    "description": "settings.adsComfortHint"
   },
   {
     "name": "vr_aimAssistStrength",

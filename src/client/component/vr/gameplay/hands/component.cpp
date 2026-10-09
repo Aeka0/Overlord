@@ -10,6 +10,7 @@
 #include "../weapon_carry_runtime.hpp"
 #include "../weapon_carry_pose.hpp"
 #include "../../controller_input.hpp"
+#include "../../settings.hpp"
 #include "../animation_presentation.hpp"
 #include "component/command.hpp"
 #include "component/console.hpp"
@@ -69,6 +70,7 @@ namespace vr::gameplay::hands
 		game::dvar_t* shoulder_down{};
 		game::dvar_t* shoulder_back{};
 		game::dvar_t* grips_enabled{};
+		game::dvar_t* ads_comfort_enabled{};
 		bool animation_query_ready{};
 		std::atomic<bool> alive{true};
 		std::atomic_uint64_t asset_generation{1};
@@ -1334,7 +1336,8 @@ namespace vr::gameplay::hands
 					    owner,
 					    solver().binding.assembly_key,
 					    sight.optic.type,
-					    ads_control.allowed && solver().binding.active_profile->id != "javelin" && gameplay &&
+					    ads_comfort_enabled && ads_comfort_enabled->current.enabled && ads_control.allowed &&
+					        solver().binding.active_profile->id != "javelin" && gameplay &&
 					        !selection_transition && !manipulating,
 					    alignment * distance_weight,
 					    eye_geometry.clearance_meters,
@@ -2078,6 +2081,11 @@ namespace vr::gameplay::hands
 			    true,
 			    game::DVAR_FLAG_SAVED,
 			    "Authored weapon grip profiles, open free hand and equip presentation suppression");
+			ads_comfort_enabled = dvars::register_bool(
+			    settings::ads_comfort.name,
+			    settings::ads_comfort.default_value,
+			    game::DVAR_FLAG_SAVED,
+			    "Move compatible two-handed sights closer to the eye while aiming");
 			enabled = dvars::register_bool(
 			    "vr_independentHands",
 			    true,
