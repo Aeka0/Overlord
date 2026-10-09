@@ -84,6 +84,25 @@ plus source-filter readiness, injury binding, excluded requests and menu radius;
 
 ## Acceptance
 
+Checkpoint restoration also preserves VR FX definition identity. World-space
+shell graphs and followed effects use bounded presentation names derived from
+the native asset name (plus the attached-element mask for followed effects).
+The save adapter adds those descriptors to the existing native name/old-pointer
+dictionary before its worker streams are allocated. Restore reconstructs the
+same private presentation from the current native assets, including child FX;
+shared assets, native collision, physics and timing remain unchanged.
+
+Older checkpoints can contain private pointers without a dictionary entry.
+After native remapping and before particle reads, only an empty, unbound root
+tail with the observed single-reference status may enter recovery. The original
+particle reader runs first; native reference release and garbage collection then
+retire that tail. Unmapped effects still owning particles or other references
+reject the checkpoint through the native recoverable error path. No definition
+is guessed and no save file is rewritten. `vr_weapon_fx_status` reports adapter
+readiness, registered/saved/restored variants, retired empty tails and rejections.
+The native checkpoint reader, death retry and resumed FX presentation still need
+live desktop/HMD acceptance after deployment.
+
 Offline validation covers death classification, both-grip revocation without
 inventory loss, unchanged-selection resume, shared free-head/translation
 behavior, native text ownership and the stereo source contract. WARP executes

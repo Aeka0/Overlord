@@ -8,6 +8,7 @@ namespace vr::gameplay::native_followed_fx
 {
     struct handle {unsigned slot{8};std::uint64_t generation{};explicit operator bool()const noexcept{return slot<8 && generation;}};
     bool initialize() noexcept;
+    game::FxEffectDef* restore_definition(game::FxEffectDef*,unsigned attached_mask);
     // Main asset owner only. Copies immutable definition metadata; the native
     // zone keeps ownership of materials/graphs. Retired at the drained DB boundary.
     handle create(game::FxEffectDef*,std::span<const unsigned> attached_elements);

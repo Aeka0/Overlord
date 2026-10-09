@@ -1,6 +1,7 @@
 #include <std_include.hpp>
 #include "native_weapon_fx.hpp"
 #include "native_fx_world_space.hpp"
+#include "native_fx_checkpoint.hpp"
 #include "tube_profile.hpp"
 #include "component/fastfiles.hpp"
 #include "component/scheduler.hpp"
@@ -21,6 +22,7 @@ namespace vr::gameplay::weapons::native_weapon_fx
 		std::array<counters,512> counts{};
 		std::mutex mutex;
 		native_fx::world_space_cache shell_effects;
+		std::size_t published_shell_definitions{};
 		std::mutex shell_mutex;
 		std::atomic_uint64_t shell_depth_rejections{};
 		game::FxEffectDef* world_shell(game::FxEffectDef* source) noexcept
@@ -28,6 +30,13 @@ namespace vr::gameplay::weapons::native_weapon_fx
 			if(!source)return nullptr;
 			const std::lock_guard lock(shell_mutex);
 			auto* effect=shell_effects.get(source);
+			if(effect && published_shell_definitions!=shell_effects.size())
+			{
+				const auto definitions=shell_effects.checkpoint_definitions();
+				if(native_fx::checkpoint::publish({definitions.data()+published_shell_definitions,
+					shell_effects.size()-published_shell_definitions}))published_shell_definitions=shell_effects.size();
+				else effect=nullptr;
+			}
 			if(!effect)++shell_depth_rejections;
 			return effect;
 		}
@@ -70,11 +79,13 @@ namespace vr::gameplay::weapons::native_weapon_fx
 			verify(play_oriented,std::array<std::uint8_t,12>{0x48,0x89,0x5c,0x24,0x08,0x48,0x89,0x74,0x24,0x10,0x57,0x48}) &&
 			// Native model FX maps element flag 0x800 to scene depth-hack bit 1.
 			verify(0x14042EC71,std::array<std::uint8_t,19>{0x41,0x8b,0x01,0x8b,0xd1,0x83,0xca,0x01,
-				0x25,0x00,0x08,0x00,0x00,0x41,0x8b,0xc0,0x0f,0x44,0xd1});
+				0x25,0x00,0x08,0x00,0x00,0x41,0x8b,0xc0,0x0f,0x44,0xd1}) &&
+			native_fx::checkpoint::initialize();
 		if(ready)fastfiles::on_pre_unload([] {
 			// Same drained native zone boundary as native_followed_fx; queued
 			// particles must finish before their private descriptors are retired.
-			const std::lock_guard lock(shell_mutex);shell_effects.clear();
+			const std::lock_guard lock(shell_mutex);
+			native_fx::checkpoint::remove(native_fx::checkpoint::variant::world);shell_effects.clear();published_shell_definitions=0;
 		});
 		return ready;
 	}
@@ -120,9 +131,14 @@ namespace vr::gameplay::weapons::native_weapon_fx
 		if(!effect)return false;
 		emit(effect,game::CG_GetGameTime(0),pose);return true;
 	}
-	std::string status()
+		game::FxEffectDef* restore_definition(game::FxEffectDef* source) noexcept
+		{
+			return world_shell(source);
+		}
+		std::string status()
 	{
-		const std::lock_guard lock(mutex);std::ostringstream out;out << "native_fx_ready=" << ready << '\n';
+			const std::lock_guard lock(mutex);std::ostringstream out;out << "native_fx_ready=" << ready << '\n';
+			out << native_fx::checkpoint::status();
 		{const std::lock_guard shell_lock(shell_mutex);out << "world_shell_definitions=" << shell_effects.size()
 			<< " shell_depth_rejections=" << shell_depth_rejections.load() << '\n';}
 		for (std::size_t i=1;i<counts.size();++i) if (const auto& c=counts[i];c.shots || c.extractions)
