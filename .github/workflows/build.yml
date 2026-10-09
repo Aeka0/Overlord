@@ -21,7 +21,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        configuration: [RelWithDebInfo, Debug]
+        configuration: [RelWithDebInfo, Debug, Release]
     steps:
       - name: Check out source and dependencies
         uses: actions/checkout@v4
@@ -50,6 +50,12 @@ jobs:
 
       - name: Run no-loader smoke test
         run: build/bin/x64/${{ matrix.configuration }}/vr-tests/no-loader/vr-runtime-no-loader-smoke.exe
+
+      - name: Build aggregate publication qualification
+        run: msbuild build/vr-aggregate-publication-tests.vcxproj /m:2 /v:minimal /p:Configuration=${{ matrix.configuration }} /p:Platform=x64 /p:PreferredToolArchitecture=x64 /p:CL_MPCount=4
+
+      - name: Run aggregate publication qualification
+        run: build/bin/x64/${{ matrix.configuration }}/vr-tests/aggregate-publication/vr-aggregate-publication-tests.exe
 
       - name: Validate React launcher
         if: matrix.configuration == 'Debug'

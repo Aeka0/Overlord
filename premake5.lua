@@ -61,6 +61,9 @@ newoption {
 }
 
 dofile(path.join(_MAIN_SCRIPT_DIR, "tools/premake_version.lua"))
+if _ACTION and _ACTION:match("^vs") then
+	dofile(path.join(_MAIN_SCRIPT_DIR, "premake/msbuild_dependencies.lua"))()
+end
 
 dependencies.load()
 
@@ -110,7 +113,14 @@ filter "configurations:Release"
 	optimize "Size"
 	linkoptions {"/IGNORE:4702"}
 	defines {"NDEBUG"}
-	flags {"FatalCompileWarnings", "LinkTimeOptimization"}
+	flags {"FatalCompileWarnings"}
+filter {"configurations:Release", "action:vs*"}
+	-- v142 WPO miscompiles nonzero-initialized aggregate publication: it can
+	-- retain writes into .rdata or delete them entirely. Apply the policy to
+	-- every project, not individual buffers/TUs. Keep ordinary /O1 optimization.
+	-- Re-enable only after toolchain qualification and Release runtime acceptance.
+	buildoptions {"/GL-", "/bigobj"}
+	linkoptions {"/LTCG:OFF"}
 filter {}
 
 filter "configurations:Debug"

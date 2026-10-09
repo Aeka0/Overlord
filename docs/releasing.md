@@ -23,7 +23,11 @@ Build RelWithDebInfo for normal gameplay and Debug for diagnosis. See
 [development.md](development.md). Before packaging, run
 `tests/vr/client_feature_parity_tests.py` against the selected build's EXE/PDB
 pair, including when selecting Release. Missing feature entry points or
-read-only mutable storage must block the candidate. After building and auditing,
+read-only mutable storage must block the candidate. Release uses ordinary
+optimization with WPO disabled across build inputs. Build
+`vr-aggregate-publication-tests` in Release before packaging; the packager runs
+its publication/readback/reset check and audits the client EXE/PDB automatically.
+After building and auditing,
 create an overlay with:
 
 ~~~bat

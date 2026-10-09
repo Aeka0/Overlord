@@ -1,7 +1,6 @@
 #include <std_include.hpp>
 
 #include "engine_stereo_backend_target.hpp"
-#include "writable_state.hpp"
 
 #include <algorithm>
 #include <atomic>
@@ -28,7 +27,7 @@ namespace vr::engine_stereo_backend_target
 		std::atomic_uintptr_t latest_record{};
 		std::atomic_uint32_t latest_unique_targets{};
 		std::mutex report_mutex{};
-		H2V_WRITABLE_STATE report published_report{};
+		report published_report{};
 
 		struct frame_write_token
 		{

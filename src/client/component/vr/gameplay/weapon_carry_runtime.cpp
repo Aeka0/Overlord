@@ -1,6 +1,5 @@
 #include <std_include.hpp>
 #include "../debug_options.hpp"
-#include "../writable_state.hpp"
 #include "component/scene_model_record.hpp"
 #include "vehicles/runtime.hpp"
 #include "carry_interaction.hpp"
@@ -85,7 +84,7 @@ namespace vr::gameplay::weapons::carry
 			holster_layout layout{};
 			std::uint64_t reference{};
 		};
-		H2V_WRITABLE_STATE models_frame render_models{};
+		models_frame render_models{};
 		std::array<storage_scene, 2> render_storage{};
 		struct hand_frame
 		{

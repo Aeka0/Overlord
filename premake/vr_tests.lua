@@ -79,6 +79,10 @@ return function()
 	end
 
 	group "Tests"
+	test_executable("vr-aggregate-publication-tests", "aggregate-publication")
+		files {"./tests/vr/aggregate_publication_tests.cpp"}
+		flags {"NoPCH"}
+
 	project "vr-weapon-catalog"
 		kind "StaticLib"
 		language "C++"

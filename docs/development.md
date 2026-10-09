@@ -28,6 +28,9 @@ runs for both solution builds and direct `client.vcxproj` builds, and a failed
 preparation stops the client build. Its
 generated resource manifest embeds HTML, JavaScript, CSS and fonts in the EXE.
 Different configurations share a serialized resource preparation step.
+MSBuild project references also preserve non-linking resource dependencies:
+direct client builds update the embedded TLS helper and application-local
+OpenXR loader, rather than relying on solution-only build ordering.
 No web server or Node.js installation is required on the player's machine.
 `tools/verify_launcher.py` also compares the embedded field names with the
 current source schema and checks that calibration presets address visible
@@ -116,13 +119,20 @@ This check does not establish in-game or HMD acceptance.
 Run the client artifact audit against the configuration selected for release.
 It checks emitted feature entry points and writable publication storage for the
 weapon-carry model frame, backend-target report and output-merger report using
-the matching PDB and PE section table. v142 WPO/LTCG placed these mutable buffers
-in read-only storage while retaining writes to them. `writable_state.hpp` pins
-the affected objects to the explicitly readable/writable, non-executable
-`.vrstate` section using the compiler's
-[allocation attribute](https://learn.microsoft.com/en-us/cpp/cpp/allocate).
-Release retains link-time optimization, including the carry runtime. Ordinary
-constants remain read-only; no runtime page-protection changes are needed.
+the matching PDB and PE section table. v142 WPO/LTCG placed mutable buffers in
+read-only storage or deleted their writes, even when storage was explicitly
+writable. Release therefore disables WPO for every project with `/GL-` and
+`/LTCG:OFF`, retains ordinary `/O1` optimization and full symbols, and uses normal
+C++ storage rather than per-buffer section annotations.
+
+Build and run `vr-aggregate-publication-tests` in the selected configuration;
+the executable is under `vr-tests/aggregate-publication/`. It checks actual
+publication, readback and reset without exposing the global destination address
+to an opaque API that could hide the optimizer defect. Release packaging requires
+this target built for the current policy and runs it alongside the actual
+EXE/PDB artifact audit. CI covers Release, RelWithDebInfo and Debug. Re-enabling
+WPO requires qualification of the chosen compiler and fresh Release acceptance;
+a writable-section workaround or successful link is insufficient.
 Artifact checks are prerequisites for the
 [Release delivery gate](release-validation.md). Acceptance must be demonstrated
 with the exact staged Release binary loading a level and running the affected

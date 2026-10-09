@@ -49,7 +49,8 @@ FEATURES = {
 # v142 Release builds retained writes while promoting mutable publication
 # buffers into .rdata. Beta 3 failed at the carry model frame; Beta 4 exposed the
 # same failure in the output-merger report and a read-only backend-target report.
-# Function presence alone cannot detect these defects.
+# Function presence alone cannot detect these defects. Release now disables WPO
+# for all build inputs; keep these artifact checks alongside semantic readback.
 MUTABLE_STORAGE = {
     'weapon carry model publication': 'vr::gameplay::weapons::carry::render_models',
     'backend target report publication': 'vr::engine_stereo_backend_target::published_report',
