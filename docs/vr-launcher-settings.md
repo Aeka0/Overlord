@@ -173,6 +173,13 @@ branch before the player knockdown sequence begins. Dogs remain able to attack.
 These policies apply only when VR is enabled. See [enemy combat](vr-enemy-combat.md)
 for the native boundaries and acceptance checks.
 
+Gameplay > Weapon interaction includes `vr_smartAmmoSelection` (default on).
+New waist draws prioritize the primary magazine when it is absent or its loaded
+ammunition is exhausted. Otherwise they select a grenade for an empty, sufficiently
+open M203 or empty GP-25, or a shell for a partially filled underbarrel shotgun tube.
+Grip chooses the other supply; disabling the option restores the original
+modifier behavior. See [underbarrel interaction](vr-underbarrel-runtime.md).
+
 The former Ammo Drop preview is now the saved `vr_discardAmmoPenalty` toggle
 (default off). Enabling it loses all remaining rounds when a discarded magazine
 or speedloader expires or hits the world, and when live revolver rounds are

@@ -99,6 +99,7 @@ namespace vr::settings
 	inline constexpr boolean_setting quick_reload{"vr_quickReload", true};
 	inline constexpr boolean_setting chambering_guide{"vr_chamberingGuide", false};
 	inline constexpr boolean_setting physical_ladders{"vr_physicalLadders", true};
+	inline constexpr boolean_setting smart_ammo_selection{"vr_smartAmmoSelection", true};
 	inline constexpr boolean_setting discard_ammo_penalty{"vr_discardAmmoPenalty", false};
 	inline constexpr boolean_setting hide_hud{"vr_hideHud", false};
 	inline constexpr boolean_setting disable_blur{"vr_disableBlur", false};
@@ -109,6 +110,7 @@ namespace vr::settings
 		                              quick_reload,
 		                              chambering_guide,
 		                              physical_ladders,
+		                              smart_ammo_selection,
 		                              discard_ammo_penalty,
 		                              hide_hud,
 		                              disable_blur,

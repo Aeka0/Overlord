@@ -135,6 +135,8 @@
   "common.previewHint": "Aperçu uniquement. Non enregistré ni appliqué au jeu.",
   "choice.longWeapons": "Armes longues",
   "settings.ammoDrop": "Perte des munitions jetées",
+  "settings.smartAmmoSelection": "Sélection intelligente des munitions",
+  "settings.smartAmmoSelectionHint": "À la taille, privilégie le chargeur principal s’il est absent ou si les munitions chargées sont épuisées. Sinon, choisit une grenade pour le M203 vide et suffisamment ouvert ou le GP-25 vide, ou une cartouche si le tube du fusil sous canon a de la place. Maintenez Grip pour choisir l’autre munition. Activé par défaut.",
   "settings.ammoDropHint": "Perdez les cartouches restant dans les chargeurs jetés. Relâchez un chargeur tenu à la taille pour récupérer ses cartouches. Désactivé par défaut.",
   "about.stage": "{version}",
   "about.github": "Page GitHub",

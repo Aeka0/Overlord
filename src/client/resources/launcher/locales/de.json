@@ -135,6 +135,8 @@
   "common.previewHint": "Nur Vorschau. Wird weder gespeichert noch im Spiel angewendet.",
   "choice.longWeapons": "Langwaffen",
   "settings.ammoDrop": "Munitionsverlust beim Wegwerfen",
+  "settings.smartAmmoSelection": "Intelligente Munitionswahl",
+  "settings.smartAmmoSelectionHint": "An der Hüfte hat ein fehlendes Hauptmagazin oder eine leere Hauptwaffe Vorrang. Sonst wird eine Granate für den leeren, ausreichend geöffneten M203 oder leeren GP-25 gewählt, oder eine Patrone, wenn das Magazinrohr der Unterlauf-Schrotflinte Platz hat. Grip halten, um die andere Munition zu wählen. Standardmäßig an.",
   "settings.ammoDropHint": "Verliert restliche Patronen in weggeworfenen Magazinen. Gehaltene Magazine an der Hüfte loslassen, um die Munition zurückzuerhalten. Standardmäßig aus.",
   "about.stage": "{version}",
   "about.github": "GitHub-Seite",

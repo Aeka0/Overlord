@@ -101,6 +101,9 @@ namespace vr::gameplay::weapons::physical_reload
 	};
 	// Short copied snapshots only; no native calls or ammo writes on render thread.
 	presentation current(weapon_identity id) noexcept;
+	// Read-only primary-feed priority for a new waist draw. Unavailable or
+	// mismatched native/mechanical state conservatively keeps primary priority.
+	bool primary_supply_needed(weapon_identity id) noexcept;
 	inline bool takes_carry_support(const presentation& reload, const hold& owner) noexcept
 	{
 		return owner.can_fire() && valid_hand(owner.support) && reload.active && reload.definition &&

@@ -135,6 +135,8 @@
   "common.previewHint": "미리 보기 전용입니다. 저장되거나 게임에 적용되지 않습니다.",
   "choice.longWeapons": "장총",
   "settings.ammoDrop": "버린 탄약 손실",
+  "settings.smartAmmoSelection": "스마트 탄약 선택",
+  "settings.smartAmmoSelectionHint": "허리에서 탄약을 꺼낼 때 주 무기의 탄창이 없거나 장전된 탄약이 소진되면 주 탄창을 우선합니다. 그 외에는 비어 있고 충분히 열린 M203 또는 빈 GP-25에는 유탄을, 탄관에 여유가 있는 하부 산탄총에는 산탄을 선택합니다. Grip을 누르면 다른 탄약을 선택합니다. 기본적으로 켜져 있습니다.",
   "settings.ammoDropHint": "버린 탄창의 남은 탄약을 잃습니다. 탄약을 회수하려면 들고 있는 탄창을 허리에서 놓으세요. 기본적으로 꺼져 있습니다.",
   "about.stage": "{version}",
   "about.github": "GitHub 페이지",

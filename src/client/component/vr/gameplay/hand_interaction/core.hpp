@@ -78,9 +78,14 @@ namespace vr::gameplay::hand_interaction
 			 (from.destination.provider==domain::underbarrel && to.destination.provider==domain::magazine));
 	}
 	struct edges {bool press{},release{},down{},armed{};std::uint64_t event{};};
-	inline domain supply_selection(domain held,edges trigger,edges grip,bool waist)noexcept
+	inline domain supply_selection(domain held,edges trigger,edges grip,bool waist,bool smart=false)noexcept
 	{
 		if(!waist || !trigger.down || !trigger.armed || trigger.release || !grip.armed)return domain::none;
+		if(smart)
+		{
+			if(!((grip.press && grip.down && !grip.release) || (grip.release && !grip.down && !grip.press)))return domain::none;
+			return held==domain::magazine ? domain::underbarrel : held==domain::underbarrel ? domain::magazine : domain::none;
+		}
 		if(held==domain::magazine && grip.press && grip.down)return domain::underbarrel;
 		if(held==domain::underbarrel && grip.release && !grip.down)return domain::magazine;
 		return domain::none;

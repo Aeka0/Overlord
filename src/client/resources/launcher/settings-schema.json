@@ -341,6 +341,14 @@
     "description": "settings.chamberingGuideHint"
   },
   {
+    "name": "vr_smartAmmoSelection",
+    "category": "gameplay",
+    "group": "settings.weaponInteraction",
+    "label": "settings.smartAmmoSelection",
+    "type": "toggle",
+    "description": "settings.smartAmmoSelectionHint"
+  },
+  {
     "name": "vr_discardAmmoPenalty",
     "category": "gameplay",
     "group": "settings.ammoDrop",

@@ -135,6 +135,8 @@
   "common.previewHint": "Solo vista previa. No se guarda ni se aplica al juego.",
   "choice.longWeapons": "Armas largas",
   "settings.ammoDrop": "Pérdida de munición descartada",
+  "settings.smartAmmoSelection": "Selección inteligente de munición",
+  "settings.smartAmmoSelectionHint": "En la cintura, prioriza el cargador principal si falta o no queda munición cargada. Si no, elige una granada para el M203 vacío y suficientemente abierto o el GP-25 vacío, o un cartucho si el tubo de la escopeta acoplada tiene espacio. Mantén Grip para elegir la otra munición. Activado por defecto.",
   "settings.ammoDropHint": "Pierdes los cartuchos restantes en cargadores descartados. Suelta el cargador en la cintura para recuperar sus cartuchos. Desactivado por defecto.",
   "about.stage": "{version}",
   "about.github": "Página de GitHub",

@@ -548,6 +548,30 @@ namespace vr::gameplay::weapons::physical_reload
 		const auto* value = find(id);
 		return value ? value->view : presentation{};
 	}
+	bool primary_supply_needed(weapon_identity id) noexcept
+	{
+		if (!scheduler::is_executing(scheduler::pipeline::server)) return true;
+		const std::lock_guard lock(mutex);
+		const auto* ps = game::g_entities[0].client;
+		const auto observed = native_ammunition::observe_owned(ps, id);
+		if (!observed.valid) return true;
+		const auto* value = find(id);
+		if (value && value->view.active)
+		{
+			const auto& view = value->view;
+			if (view.fault || !view.definition ||
+				!view.definition->matches_native(observed.native_name.data(), observed.base_capacity) ||
+				!mechanics::valid(view.definition->ammunition, view.ammo) ||
+				mechanics::native_ammo(view.ammo).loaded != observed.ammo.loaded) return true;
+			return !view.ammo.magazine_inserted || !observed.ammo.loaded;
+		}
+		const auto* scene = scenes.find(id);
+		const auto* definition = scene ? native_reload_profile(observed.native_name.data(), observed.base_capacity, scene->definition) : nullptr;
+		if (!definition) return true;
+		const auto preview = import_native_feed(*definition, id, observed,
+			vr::h2::sp::clip_capacity(ps, id.weapon, false), generation + 1);
+		return !preview || !preview->magazine_inserted || !mechanics::native_ammo(*preview).loaded;
+	}
 	bool prepare_transfer(weapon_identity id,presentation& saved) noexcept
 	{
 		if (!scheduler::is_executing(scheduler::pipeline::server)) return false;

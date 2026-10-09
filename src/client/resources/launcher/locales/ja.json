@@ -135,6 +135,8 @@
   "common.previewHint": "プレビューのみ。保存やゲームへの適用は行いません。",
   "choice.longWeapons": "長銃",
   "settings.ammoDrop": "捨てた弾薬の消失",
+  "settings.smartAmmoSelection": "弾薬の自動選択",
+  "settings.smartAmmoSelectionHint": "腰から弾薬を取るとき、主武器のマガジンが外れているか装填済みの弾薬がない場合は主武器用を優先します。それ以外は、空で十分に開いた M203 または空の GP-25 には榴弾、弾倉に空きがあるアンダーバレルショットガンには散弾を選びます。Grip を押すと別の弾薬を選べます。初期状態は有効です。",
   "settings.ammoDropHint": "捨てたマガジンに残った弾薬を失います。手に持ったマガジンを腰で離すと弾薬を回収できます。初期状態は無効です。",
   "about.stage": "{version}",
   "about.github": "GitHub ページ",

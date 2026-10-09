@@ -199,6 +199,8 @@ int main(int argc, char** argv)
 			"Resetting visible defaults preserves the hidden football multiplier");
 		require(initial[vr::settings::quick_reload.name] == true && read_values("")[vr::settings::quick_reload.name] == true,
 			"Quick reload defaults on for new and existing profiles without the setting");
+		require(initial[vr::settings::smart_ammo_selection.name] == true && read_values("")[vr::settings::smart_ammo_selection.name] == true,
+			"Smart ammo selection defaults on for new and existing profiles without the setting");
 		require(initial[vr::settings::chambering_guide.name] == false && read_values("")[vr::settings::chambering_guide.name] == false,
 			"Chambering guide defaults off, including existing profiles without the setting");
 		for (const bool enabled : {false, true})
@@ -206,6 +208,7 @@ int main(int argc, char** argv)
 			auto selected = initial;
 			selected[vr::settings::quick_reload.name] = enabled;
 			selected[vr::settings::chambering_guide.name] = enabled;
+			selected[vr::settings::smart_ammo_selection.name] = enabled;
 			require(read_values(update_config("", selected)) == selected, "Quick reload toggle persists both values");
 		}
 		for (const auto* name : vr::debug_options::names)

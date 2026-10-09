@@ -135,6 +135,8 @@
   "common.previewHint": "僅供預覽，不會保存或應用到游戲。",
   "choice.longWeapons": "長槍",
   "settings.ammoDrop": "丟棄彈藥懲罰",
+  "settings.smartAmmoSelection": "智慧選擇彈藥",
+  "settings.smartAmmoSelectionHint": "從腰間取出彈藥時，主武器無彈匣或已裝填彈藥耗盡則優先取出主彈匣；否則，M203 彈筒為空且充分開啟、GP-25 彈筒為空時優先取出榴彈，下掛霰彈槍彈管未滿時優先取出霰彈。加握 Grip 可選擇另一種彈藥。預設開啟。",
   "settings.ammoDropHint": "開啟后，丟棄彈匣會損失其中所有余彈。手持彈匣放回腰間并松開扳機仍可回收余彈。默認關閉。",
   "about.stage": "{version}",
   "about.github": "GitHub 項目頁面",
