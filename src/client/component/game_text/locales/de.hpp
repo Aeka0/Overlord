@@ -69,5 +69,8 @@ namespace game_text::locales
 		{key::trainer_flash,u8"Blendgranate von der <em>Brust</em> nehmen, mit der anderen Hand den <em>Stift</em> ziehen und zum Werfen die <em>Greiftaste</em> loslassen"},
 		{key::trainer_menu,u8"<em>X am linken Controller</em> drücken, um das Menü zu öffnen und die vertikale Blickachse umzukehren"},
 		{key::m203_reload,u8"Nach dem Schuss den <em>Lauf</em> mit der <em>Greiftaste</em> greifen und zum Öffnen <em>nach vorne schieben</em>\n<em>Greiftaste und Abzug</em> an der <em>Hüfte</em> halten, um eine Granate zu nehmen; <em>Abzug</em> halten und in die <em>Kammer</em> einsetzen\nDen <em>Lauf</em> wieder mit der <em>Greiftaste</em> greifen und zum Schließen <em>zurückziehen</em>"},
+		{key::knuckles_trainer_menu,u8"<em>A am linken Controller</em> drücken, um das Menü zu öffnen und die vertikale Blickachse umzukehren"},
+		{key::knuckles_fixed_sniper_controls,u8"Mit dem <em>linken Stick</em> zielen; <em>B</em> drücken, um den Scharfschützenposten zu verlassen"},
+		{key::knuckles_vehicle_reload,u8"<em>B der Waffenhand</em> zum Magazinauswurf drücken; mit der anderen Hand <em>Abzug</em> an der <em>Brust</em> halten, neues Magazin nehmen und in die <em>Waffe</em> einsetzen"},
 	});
 }

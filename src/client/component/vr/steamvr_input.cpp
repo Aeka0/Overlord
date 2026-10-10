@@ -1,6 +1,7 @@
 #include <std_include.hpp>
 #include "steamvr_input.hpp"
 #include "controller_input.hpp"
+#include "hud_controller.hpp"
 #include "controller_haptics.hpp"
 #include <filesystem>
 #include <gsl/gsl>
@@ -102,6 +103,28 @@ namespace vr::steamvr_input
 		return true;
 	}
 
+	bool actions::refresh_controller_type() noexcept
+	{
+		bool queried=true;
+		bool knuckles=system_!=nullptr;
+		for(const auto role:{TrackedControllerRole_LeftHand,TrackedControllerRole_RightHand})
+		{
+			if(!system_)break;
+			const auto device=system_->GetTrackedDeviceIndexForControllerRole(role);
+			if(device==k_unTrackedDeviceIndexInvalid || !system_->IsTrackedDeviceConnected(device))
+			{knuckles=false;continue;}
+			std::array<char,128> type{};
+			ETrackedPropertyError error{};
+			const auto bytes=system_->GetStringTrackedDeviceProperty(device,Prop_ControllerType_String,
+				type.data(),static_cast<uint32_t>(type.size()),&error);
+			const bool valid=error==TrackedProp_Success && bytes>0 && bytes<=type.size() && type[bytes-1]==0;
+			queried=queried && valid;
+			knuckles=knuckles && valid && std::string_view(type.data(),bytes-1)=="knuckles";
+		}
+		hud_controller::set_knuckles(controller_input::input_backend::openvr,knuckles);
+		return queried;
+	}
+
 	void actions::sample(const bool focused, const controller_input::input_reason unavailable_reason) noexcept
 	{
 		using namespace controller_input;
@@ -109,6 +132,8 @@ namespace vr::steamvr_input
 		frame.pose_pipeline = pose_pipeline_;
 		frame.sequence = ++sequence_;
 		frame.sampled_at = controller_input::clock::now();
+		if(controller_type_retry_.ready(frame.sampled_at))
+			controller_type_retry_.record_result(refresh_controller_type(),frame.sampled_at);
 		frame.reference_generation = head_pose_bridge::get_status().recenter_count;
 		frame.source.backend = input_backend::openvr;
 		frame.source.initialization = diagnostics_.initializations;
@@ -258,6 +283,8 @@ namespace vr::steamvr_input
 
 	void actions::reset() noexcept
 	{
+		hud_controller::set_knuckles(controller_input::input_backend::openvr,false);
+		controller_type_retry_.reset();
 		++diagnostics_.resets;
 		probe_pending_ = false;
 		sample_failed_ = false;

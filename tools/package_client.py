@@ -45,19 +45,23 @@ def collect(configuration: str, base_data: Path | None = None) -> dict[str, Path
     binary = "overlord-debug" if configuration == "Debug" else "overlord"
     # Audit the actual EXE/PDB, including local staging. A build alone must not
     # let missing features or read-only publication storage reach a package.
-    checks = [[sys.executable, str(ROOT / "tests/vr/client_feature_parity_tests.py"),
-               str(build / f"{binary}.exe")]]
+    # Full Debug PDB enumeration can exceed 30 s on hosted runners. Keep the
+    # artifact audit bounded without dropping any symbol or writable-storage checks.
+    checks = [([sys.executable, str(ROOT / "tests/vr/client_feature_parity_tests.py"),
+                str(build / f"{binary}.exe")], 180)]
     if configuration == "Release":
         probe = build / "vr-tests/aggregate-publication/vr-aggregate-publication-tests.exe"
         inputs = [ROOT / "premake5.lua", ROOT / "premake/vr_tests.lua",
                   ROOT / "tests/vr/aggregate_publication_tests.cpp"]
         if not probe.is_file() or probe.stat().st_mtime < max(p.stat().st_mtime for p in inputs):
             raise ValueError("Build vr-aggregate-publication-tests in Release for the current build policy before packaging")
-        checks.append([str(probe)])
-    for command in checks:
+        checks.append(([str(probe)], 30))
+    for command, timeout in checks:
         try:
-            subprocess.run(command, cwd=ROOT, check=True, timeout=30)
-        except (subprocess.CalledProcessError, subprocess.TimeoutExpired) as error:
+            subprocess.run(command, cwd=ROOT, check=True, timeout=timeout)
+        except subprocess.TimeoutExpired as error:
+            raise ValueError(f"Client qualification timed out after {timeout}s for {configuration}: {Path(command[-1]).name}") from error
+        except subprocess.CalledProcessError as error:
             raise ValueError(f"Client qualification failed for {configuration}: {Path(command[-1]).name}") from error
     files: dict[str, Path] = {}
 

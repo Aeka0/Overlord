@@ -2,6 +2,7 @@
 #include "openxr_dispatch.hpp"
 #include "controller_input.hpp"
 #include "controller_pose_reference.hpp"
+#include "controller_profile_retry.hpp"
 
 #if H2V_OPENXR_HEADERS_AVAILABLE
 namespace vr::openxr
@@ -26,6 +27,8 @@ namespace vr::openxr
 		controller_pose_reference::configuration grip_reference_;
 		XrInstance instance_{};
 		bool profile_refresh_pending_{true};
+		controller_profile::refresh_retry prompt_profile_retry_;
+		bool refresh_prompt_profile(const dispatch_table&,XrSession) noexcept;
 		std::array<bool, 2> profile_matches_{};
 		bool refresh_profiles(const dispatch_table&, XrSession, XrResult&, std::string&);
 

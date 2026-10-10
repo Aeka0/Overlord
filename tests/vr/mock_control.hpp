@@ -31,6 +31,7 @@ namespace vr::tests::mock
 		destroy_session,
 		destroy_instance,
 		end_session,
+		get_current_interaction_profile,
 	};
 
 	struct statistics

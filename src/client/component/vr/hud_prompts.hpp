@@ -231,7 +231,7 @@ namespace vr::hud_prompts
 	struct arguments {int hand{-1};bool shared{};std::string_view item;};
 	struct message {game_text::locale language;game_text::runs parts;};
 	enum class style { plain, native_colors };
-	inline std::optional<message> compose(key id,game_text::locale requested,arguments args={})
+	inline std::optional<message> compose(key id,game_text::locale requested,arguments args={},bool knuckles=false)
 	{
 		const auto* entry=describe(id);
 		if(!entry || args.item.size()>game_text::max_text_bytes || args.item.find('\0')!=args.item.npos)return {};
@@ -247,7 +247,16 @@ namespace vr::hud_prompts
 		}
 		// Exact locale only. Absence declines the override so the original game
 		// producer retains the complete current-language text and native bindings.
-		const auto sentence=game_text::translation(id,requested);if(!sentence)return {};
+		key sentence_id=id;
+		if(knuckles)
+		{
+			if(id==key::trainer_menu)sentence_id=key::knuckles_trainer_menu;
+			else if(id==key::fixed_sniper_controls)sentence_id=key::knuckles_fixed_sniper_controls;
+			else if(id==key::vehicle_reload)sentence_id=key::knuckles_vehicle_reload;
+		}
+		auto sentence=game_text::translation(sentence_id,requested);
+		if(!sentence && sentence_id!=id)sentence=game_text::translation(id,requested);
+		if(!sentence)return {};
 		const auto operation=button==key::count?std::optional<std::string_view>{std::string_view{}}:game_text::translation(button,requested);
 		if(!operation)return {};
 		const bool generic_item=args.item.empty() && (game_text::parameters(id)&2);
@@ -282,10 +291,10 @@ namespace vr::hud_prompts
 		}
 		return result;
 	}
-	inline std::optional<std::string> replace(source producer,std::string_view name,const context& state,game_text::locale language)
+	inline std::optional<std::string> replace(source producer,std::string_view name,const context& state,game_text::locale language,bool knuckles=false)
 	{
 		const auto id=resolve(producer,name,state);if(!id)return {};
-		const auto value=compose(*id,language,{-1,true,{}});if(!value)return {};
+		const auto value=compose(*id,language,{-1,true,{}},knuckles);if(!value)return {};
 		auto result=text(*value,style::native_colors);if(result.empty())return {};
 		return result;
 	}

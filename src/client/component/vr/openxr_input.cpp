@@ -1,5 +1,6 @@
 #include <std_include.hpp>
 #include "openxr_input.hpp"
+#include "hud_controller.hpp"
 #include "controller_haptics.hpp"
 #include "pose_filter.hpp"
 #include <cmath>
@@ -49,6 +50,8 @@ namespace vr::openxr
 	                               std::string& error)
 	{
 		instance_ = instance;
+		prompt_profile_retry_.reset();
+		hud_controller::set_knuckles(controller_input::input_backend::openxr,false);
 		profile_refresh_pending_ = true;
 		XrActionSetCreateInfo info{XR_TYPE_ACTION_SET_CREATE_INFO};
 		strcpy_s(info.actionSetName, "gameplay");
@@ -191,6 +194,8 @@ namespace vr::openxr
 
 	void input_actions::profile_changed() noexcept
 	{
+		prompt_profile_retry_.reset();
+		hud_controller::set_knuckles(controller_input::input_backend::openxr,false);
 		invalidate();
 		profile_matches_.fill(false);
 		profile_refresh_pending_ = true;
@@ -240,6 +245,26 @@ namespace vr::openxr
 		return true;
 	}
 
+	bool input_actions::refresh_prompt_profile(const dispatch_table& xr,XrSession session) noexcept
+	{
+		bool queried=xr.string_to_path && xr.get_current_interaction_profile;
+		XrPath index_profile{};
+		if(queried)queried=XR_SUCCEEDED(xr.string_to_path(instance_,
+			"/interaction_profiles/valve/index_controller",&index_profile)) && index_profile!=XR_NULL_PATH;
+		bool knuckles=queried;
+		for(const auto hand:{"/user/hand/left","/user/hand/right"})
+		{
+			if(!knuckles)break;
+			XrPath user{};
+			XrInteractionProfileState profile{XR_TYPE_INTERACTION_PROFILE_STATE};
+			queried=XR_SUCCEEDED(xr.string_to_path(instance_,hand,&user)) &&
+				XR_SUCCEEDED(xr.get_current_interaction_profile(session,user,&profile));
+			knuckles=queried && profile.interactionProfile==index_profile;
+		}
+		hud_controller::set_knuckles(controller_input::input_backend::openxr,knuckles);
+		return queried;
+	}
+
 	bool input_actions::sample(const dispatch_table& xr,
 	                           XrSession session,
 	                           XrSpace base,
@@ -266,6 +291,8 @@ namespace vr::openxr
 		                                      : input_condition{input_reason::none};
 		if (XR_FAILED(result))
 			error = "xrSyncActions";
+		if(frame.focused && prompt_profile_retry_.ready(frame.sampled_at))
+			prompt_profile_retry_.record_result(refresh_prompt_profile(xr,session),frame.sampled_at);
 		if (frame.focused && !refresh_profiles(xr, session, result, error))
 		{
 			invalidate(input_reason::profile_query_failed, result);
@@ -439,6 +466,8 @@ namespace vr::openxr
 			hand.trigger = hand.squeeze = hand.touch = hand.primary = hand.secondary = hand.grip = hand.aim =
 			    hand.haptic = XR_NULL_HANDLE;
 		move_ = turn_ = sprint_ = jump_ = menu_ = recenter_ = XR_NULL_HANDLE;
+		hud_controller::set_knuckles(controller_input::input_backend::openxr,false);
+		prompt_profile_retry_.reset();
 		instance_ = XR_NULL_HANDLE;
 		profile_refresh_pending_ = true;
 		profile_matches_.fill(false);

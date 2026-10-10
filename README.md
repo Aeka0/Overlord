@@ -44,7 +44,7 @@ The client uses Direct3D 11 and defaults to OpenXR, with OpenVR retained as a ma
 
 Controller poses default to Legacy. The Standard pipeline using OpenXR coordinates remains a manually selected trial and requires separate headset acceptance. Select the pipeline under VR Settings > Calibration > Controller pose pipeline, then restart the game to apply it. Each pipeline retains its own calibration. Existing custom calibration remains in the legacy bank; choose a preset or adjust the standard bank separately. The position and angle descriptions list the selected pipeline's console commands for live in-game calibration.
 
-The repository includes default input bindings for Oculus Touch (Meta Quest), Valve Index, and Vive Controller. So far, only Meta Quest controllers have been tested on actual hardware. Other devices may require adjustments to runtime bindings and controller alignment settings.
+The repository includes default input bindings for Oculus Touch (Meta Quest), Valve Index, and Vive Controller. Meta Quest controllers are the primary validated devices; Index controllers have also been tested in OpenVR, as described below. Other combinations may require adjustments to runtime bindings and controller alignment settings.
 
 Pirated or cracked copies of the game are not supported. Mod releases do not include the full original game assets or provide download links for the game.
 
@@ -86,6 +86,21 @@ Button names vary by controller and runtime binding. The following uses the comm
 | Holster a weapon | Move the weapon to a compatible body holster and release Grip. |
 
 Magazine removal, loading, and chambering differ between weapons. For example, some weapons use a button to release the magazine, while others require you to pull it out manually. Pump-action shotguns, revolvers, and break-action weapons also have their own loading procedures. If the chamber is empty, you may still need to operate the slide, charging handle, or corresponding feed mechanism. Follow the instructions for the specific weapon in the launcher's "Help" page.
+
+### Valve Index controllers (OpenVR)
+
+The default Knuckles binding uses the physical thumbsticks for movement and
+turning. Click the left thumbstick to sprint and the right to jump; right-stick
+vertical movement uses the configured stance controls. Tap left A to pause/back,
+or hold it to recenter. Right A shows the weapon HUD, and B uses the corresponding
+hand's secondary weapon action. Squeeze the grip to hold and relax to release.
+Firing responds to trigger travel before the mechanical click; capacitive trigger
+touch remains a separate input.
+
+The merged Beta 4 build was tested in-game with Index controllers and a Pimax
+Dream Air in OpenVR. This does not establish OpenXR or general device acceptance. An existing
+custom SteamVR binding can override the shipped defaults; select the default
+Knuckles binding to use these mappings.
 
 ## Settings and Usage Tips
 

@@ -14,6 +14,25 @@ namespace vr::tests
 		}
 	}
 
+	inline DWORD process_integrity_level()
+	{
+		HANDLE token{};
+		require(OpenProcessToken(GetCurrentProcess(), TOKEN_QUERY, &token) != FALSE,
+			"cannot query test process token");
+		alignas(TOKEN_MANDATORY_LABEL) std::array<unsigned char,
+			sizeof(TOKEN_MANDATORY_LABEL) + SECURITY_MAX_SID_SIZE> buffer{};
+		DWORD size{};
+		const auto queried = GetTokenInformation(token, TokenIntegrityLevel, buffer.data(),
+			static_cast<DWORD>(buffer.size()), &size);
+		CloseHandle(token);
+		require(queried != FALSE,"cannot query test process integrity level");
+		const auto label = reinterpret_cast<const TOKEN_MANDATORY_LABEL*>(buffer.data());
+		require(IsValidSid(label->Label.Sid) != FALSE,"test process integrity SID is invalid");
+		const auto count = *GetSidSubAuthorityCount(label->Label.Sid);
+		require(count != 0,"test process integrity SID is empty");
+		return *GetSidSubAuthority(label->Label.Sid,count-1);
+	}
+
 	inline d3d11::device_snapshot create_graphics(const std::uint64_t generation)
 	{
 		constexpr D3D_FEATURE_LEVEL requested_levels[]{

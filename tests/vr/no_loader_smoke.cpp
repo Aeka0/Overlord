@@ -360,31 +360,11 @@ namespace
 		}
 	}
 
-	DWORD process_integrity_level()
-	{
-		HANDLE token{};
-		vr::tests::require(OpenProcessToken(GetCurrentProcess(), TOKEN_QUERY, &token) != FALSE,
-			"cannot query smoke-test process token");
-		const auto close_token = gsl::finally([&] { CloseHandle(token); });
-		alignas(TOKEN_MANDATORY_LABEL) std::array<unsigned char,
-			sizeof(TOKEN_MANDATORY_LABEL) + SECURITY_MAX_SID_SIZE> buffer{};
-		DWORD size{};
-		vr::tests::require(GetTokenInformation(token, TokenIntegrityLevel, buffer.data(),
-			static_cast<DWORD>(buffer.size()), &size) != FALSE,
-			"cannot query smoke-test process integrity level");
-		const auto label = reinterpret_cast<const TOKEN_MANDATORY_LABEL*>(buffer.data());
-		vr::tests::require(IsValidSid(label->Label.Sid) != FALSE,
-			"smoke-test process integrity SID is invalid");
-		const auto count = *GetSidSubAuthorityCount(label->Label.Sid);
-		vr::tests::require(count != 0, "smoke-test process integrity SID is empty");
-		return *GetSidSubAuthority(label->Label.Sid, count - 1);
-	}
-
 	void expect_process_runtime_preference()
 	{
 		// GitHub-hosted Windows runners use a high-integrity administrator token.
 		// Match the loader's contract: overrides apply only below high integrity.
-		const auto integrity = process_integrity_level();
+		const auto integrity = vr::tests::process_integrity_level();
 		const auto elevated = integrity >= SECURITY_MANDATORY_HIGH_RID;
 		constexpr wchar_t runtime_environment[] = L"XR_RUNTIME_JSON";
 		const auto existing_size = GetEnvironmentVariableW(runtime_environment, nullptr, 0);

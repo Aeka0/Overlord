@@ -69,5 +69,8 @@ namespace game_text::locales
 		{key::trainer_flash,u8"<em>胸元</em>からフラッシュバンを取り、反対の手で<em>ピン</em>を抜き、<em>グリップ</em>を離して投げる"},
 		{key::trainer_menu,u8"<em>左コントローラーの X</em> でメニューを開き、視点の上下反転を設定"},
 		{key::m203_reload,u8"発射後、<em>グリップ</em>で<em>銃身</em>をつかみ、<em>前に押して</em>薬室を開く\n<em>腰</em>で<em>グリップとトリガー</em>を押して榴弾を取り、<em>トリガー</em>を押したまま<em>薬室</em>に挿入\n再び<em>グリップ</em>で<em>銃身</em>をつかみ、<em>後ろに引いて</em>閉じる"},
+		{key::knuckles_trainer_menu,u8"<em>左コントローラーの A</em> でメニューを開き、視点の上下反転を設定"},
+		{key::knuckles_fixed_sniper_controls,u8"<em>左スティック</em>で照準方向を調整。<em>B</em> で狙撃位置から離れる"},
+		{key::knuckles_vehicle_reload,u8"<em>銃を持つ手の B</em> でマガジンを外す。反対の手を<em>胸元</em>に伸ばして<em>トリガー</em>で新品を取り、<em>武器</em>に挿入"},
 	});
 }
