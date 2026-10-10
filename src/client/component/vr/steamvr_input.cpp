@@ -103,9 +103,9 @@ namespace vr::steamvr_input
 		return true;
 	}
 
-	void actions::refresh_controller_type() noexcept
+	bool actions::refresh_controller_type() noexcept
 	{
-		controller_type_pending_=false;
+		bool queried=true;
 		bool knuckles=system_!=nullptr;
 		for(const auto role:{TrackedControllerRole_LeftHand,TrackedControllerRole_RightHand})
 		{
@@ -117,20 +117,23 @@ namespace vr::steamvr_input
 			ETrackedPropertyError error{};
 			const auto bytes=system_->GetStringTrackedDeviceProperty(device,Prop_ControllerType_String,
 				type.data(),static_cast<uint32_t>(type.size()),&error);
-			knuckles=knuckles && error==TrackedProp_Success && bytes>0 && bytes<=type.size() &&
-				type[bytes-1]==0 && std::string_view(type.data(),bytes-1)=="knuckles";
+			const bool valid=error==TrackedProp_Success && bytes>0 && bytes<=type.size() && type[bytes-1]==0;
+			queried=queried && valid;
+			knuckles=knuckles && valid && std::string_view(type.data(),bytes-1)=="knuckles";
 		}
 		hud_controller::set_knuckles(controller_input::input_backend::openvr,knuckles);
+		return queried;
 	}
 
 	void actions::sample(const bool focused, const controller_input::input_reason unavailable_reason) noexcept
 	{
 		using namespace controller_input;
-		if(controller_type_pending_)refresh_controller_type();
 		controller_input::frame frame{};
 		frame.pose_pipeline = pose_pipeline_;
 		frame.sequence = ++sequence_;
 		frame.sampled_at = controller_input::clock::now();
+		if(controller_type_retry_.ready(frame.sampled_at))
+			controller_type_retry_.record_result(refresh_controller_type(),frame.sampled_at);
 		frame.reference_generation = head_pose_bridge::get_status().recenter_count;
 		frame.source.backend = input_backend::openvr;
 		frame.source.initialization = diagnostics_.initializations;
@@ -281,7 +284,7 @@ namespace vr::steamvr_input
 	void actions::reset() noexcept
 	{
 		hud_controller::set_knuckles(controller_input::input_backend::openvr,false);
-		controller_type_pending_=true;
+		controller_type_retry_.reset();
 		++diagnostics_.resets;
 		probe_pending_ = false;
 		sample_failed_ = false;

@@ -4,6 +4,7 @@
 #include <array>
 #include <string>
 #include "controller_input.hpp"
+#include "controller_profile_retry.hpp"
 #include "steamvr_input_diagnostics.hpp"
 #include "steamvr_pose_adapter.hpp"
 
@@ -44,8 +45,8 @@ namespace vr::steamvr_input
 		diagnostic_snapshot diagnostics_;
 		unsigned probe_count_{};
 		bool probe_pending_{}, sample_failed_{};
-		bool controller_type_pending_{true};
-		void refresh_controller_type() noexcept;
+		controller_profile::refresh_retry controller_type_retry_;
+		bool refresh_controller_type() noexcept;
 		void capture_setup() noexcept;
 		void capture_probe(bool input_failed = false) noexcept;
 		VRActionSetHandle_t set_{};

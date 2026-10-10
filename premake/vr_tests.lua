@@ -168,6 +168,11 @@ return function()
 
 	test_executable("vr-spatial-panel-tests", "spatial-panel")
 		links {"vr-weapon-catalog"}
+		-- Debug retains the native snapshot fixtures and pixel buffers in main's
+		-- stack frame; the default Windows stack overflows before checks can run.
+		filter "system:windows"
+			linkoptions {"/STACK:8388608"}
+		filter {}
 		files {"./tests/vr/spatial_panel_tests.cpp", "./src/client/component/vr/spatial_panel_renderer.cpp",
 			"./src/client/component/vr/overlay_text_texture.cpp",
 			"./src/client/component/vr/native_caption_font.cpp",

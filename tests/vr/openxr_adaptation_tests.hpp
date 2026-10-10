@@ -1,5 +1,6 @@
 #include "component/vr/hud_controller.hpp"
 #pragma once
+#include "component/vr/controller_profile_retry.hpp"
 #include "component/vr/input_history.hpp"
 #include "component/vr/controller_haptics.hpp"
 #include "component/vr/native_hud_capture.hpp"
@@ -496,10 +497,14 @@ namespace openxr_adaptation_tests
 		vr::tests::require(!vr::hud_controller::knuckles(input_backend::openxr),"Touch must retain original instructions");
 		loader.set_interaction_profile(0,"/interaction_profiles/valve/index_controller");
 		loader.set_interaction_profile(1,"/interaction_profiles/valve/index_controller");
+		loader.fail_once(vr::tests::mock::failure_point::get_current_interaction_profile,XR_ERROR_RUNTIME_FAILURE);
 		runtime.on_present(graphics,2);
-		vr::tests::require(vr::hud_controller::knuckles(input_backend::openxr),"Index pair must select Knuckles-only instructions");
-		loader.set_interaction_profile(1,"/interaction_profiles/oculus/touch_controller");
+		vr::tests::require(!vr::hud_controller::knuckles(input_backend::openxr),"failed profile query must not publish an Index identity");
+		std::this_thread::sleep_for(vr::controller_profile::refresh_retry::retry_delay+std::chrono::milliseconds(50));
 		runtime.on_present(graphics,3);
+		vr::tests::require(vr::hud_controller::knuckles(input_backend::openxr),"Index identity must recover without another profile event");
+		loader.set_interaction_profile(1,"/interaction_profiles/oculus/touch_controller");
+		runtime.on_present(graphics,4);
 		vr::tests::require(!vr::hud_controller::knuckles(input_backend::openxr),"mixed pair must restore original instructions");
 		runtime.shutdown();
 		vr::tests::require(!vr::hud_controller::knuckles(input_backend::openxr),"shutdown must clear controller identity");

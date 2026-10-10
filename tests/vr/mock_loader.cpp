@@ -1036,6 +1036,8 @@ XrResult XRAPI_CALL mockGetCurrentInteractionProfile(XrSession session, XrPath u
 	if (!session || !output) return XR_ERROR_VALIDATION_FAILURE;
 	const std::lock_guard lock(g_mutex);
 	if (!g_paths.contains(user)) return XR_ERROR_PATH_INVALID;
+	XrResult result{};
+	if (consume_failure_locked(failure_point::get_current_interaction_profile,result)) return result;
 	const unsigned hand = g_paths[user] == "/user/hand/left" ? 0 : 1;
 	output->interactionProfile = XR_NULL_PATH;
 	for (const auto& pair : g_paths)

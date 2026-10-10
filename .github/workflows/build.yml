@@ -77,6 +77,18 @@ jobs:
       - name: Run Knuckles instruction tests
         run: build/bin/x64/${{ matrix.configuration }}/vr-tests/spatial-panel/vr-spatial-panel-tests.exe
 
+      - name: Build controller input regression tests
+        run: msbuild build/vr-controller-input-tests.vcxproj /m:2 /v:minimal /p:Configuration=${{ matrix.configuration }} /p:Platform=x64 /p:PreferredToolArchitecture=x64 /p:CL_MPCount=4
+
+      - name: Run controller input regression tests
+        run: build/bin/x64/${{ matrix.configuration }}/vr-tests/controller-input/vr-controller-input-tests.exe
+
+      - name: Build OpenXR input regression tests
+        run: msbuild build/vr-runtime-mock-smoke.vcxproj /m:2 /v:minimal /p:Configuration=${{ matrix.configuration }} /p:Platform=x64 /p:PreferredToolArchitecture=x64 /p:CL_MPCount=4
+
+      - name: Run OpenXR input regression tests
+        run: build/bin/x64/${{ matrix.configuration }}/vr-tests/mock/vr-runtime-mock-smoke.exe
+
       - name: Package client overlay
         run: python tools/package_client.py --configuration ${{ matrix.configuration }}
 
