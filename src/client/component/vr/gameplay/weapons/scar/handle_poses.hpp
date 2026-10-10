@@ -30,6 +30,9 @@ inline constexpr std::array<joint_pose, 18> handle_pose_fingers_0{{
 inline const part_grip_pose native_grip{"native",{{5.45681906f, 4.10871172f, 3.54379749f}, {0.94266152f, -0.25359085f, 0.20871945f, -0.05930557f}},{5.06096663f, 0.14827779f, 0.49856238f},handle_pose_fingers_0};
 inline const auto action_grips=[] {
 	auto out=hand_poses::left_handle::with_native(native_grip);
+	// The right glove reaches this left-side tab with the index hook palm-up
+	// and the pinky hook palm-down, opposite to the left-hand style order.
+	std::swap(out[0].opposite_pose,out[1].opposite_pose);
 	out[0].palm=part_palm_facing::down;out[1].palm=part_palm_facing::up;return out;
 }();
 }

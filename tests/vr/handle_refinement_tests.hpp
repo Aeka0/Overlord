@@ -33,6 +33,17 @@ namespace handle_refinement_tests
 		{
 			const auto& d=w::scar::physical;std::array<w::part_grip_pose,2> poses{};
 			for(size_t i=0;i<2;++i)poses[i]=h?vr::gameplay::hands::pose_mirror::part(d.slide_grips[i],mirror):d.slide_grips[i];
+			if(h)
+			{
+				for(size_t i=0;i<2;++i)
+				{
+					const auto controller=multiply(poses[i].wrist.rotation,conjugate(w::scar::wrists[h].rotation));
+					const float palm=rotate(controller,controller_palm_axis(h))[2];
+					check((i?palm>.17364818f:palm<-.17364818f) &&
+						w::choose_part_grip(poses,poses[i].wrist,{},d.slide_grab_low,d.slide_grab_high,units,nullptr,h,palm).pose==i,
+						"SCAR right authored hook agrees with its actual controller palm and native free-wrist basis");
+				}
+			}
 			check(w::choose_part_grip(poses,poses[1].wrist,{},d.slide_grab_low,d.slide_grab_high,units,nullptr,h,-1.f).pose==0,
 				"SCAR raw palm-down rejects the up pose even when the visual wrist matches it");
 			check(w::choose_part_grip(poses,poses[0].wrist,{},d.slide_grab_low,d.slide_grab_high,units,nullptr,h,1.f).pose==1,
