@@ -1,12 +1,12 @@
-#include "memory.hpp"
 #include "compression.hpp"
+#include <algorithm>
+#include <cstring>
 
 #include <zlib.h>
 #include <zip.h>
-
-#include <gsl/gsl>
-
-#include "io.hpp"
+#ifdef _WIN32
+#include <iowin32.h>
+#endif
 
 namespace utils::compression
 {
@@ -68,7 +68,7 @@ namespace utils::compression
 
 			do
 			{
-				const auto input_size = std::min(sizeof(dest), data.size() - offset);
+				const auto input_size = (std::min)(sizeof(dest), data.size() - offset);
 				stream.avail_in = static_cast<uInt>(input_size);
 				stream.next_in = reinterpret_cast<const Bytef*>(data.data()) + offset;
 				offset += stream.avail_in;
@@ -124,12 +124,14 @@ namespace utils::compression
 					return false;
 				}
 
-				const auto _ = gsl::finally([&zip_file]()
+				int written=ZIP_OK;
+				for(std::size_t offset{};offset<data.size()&&written==ZIP_OK;)
 				{
-					zipCloseFileInZip(zip_file);
-				});
-
-				return ZIP_OK == zipWriteInFileInZip(zip_file, data.data(), static_cast<unsigned>(data.size()));
+					const auto count=static_cast<unsigned>(std::min<std::size_t>(data.size()-offset,16*1024*1024));
+					written=zipWriteInFileInZip(zip_file,data.data()+offset,count);offset+=count;
+				}
+				const auto closed = zipCloseFileInZip(zip_file);
+				return written == ZIP_OK && closed == ZIP_OK;
 			}
 		}
 
@@ -140,30 +142,40 @@ namespace utils::compression
 
 		bool archive::write(const std::string& filename, const std::string& comment)
 		{
-			// Hack to create the directory :3
-			io::write_file(filename, {});
-			io::remove_file(filename);
+			return write_file(std::filesystem::path(filename), comment);
+		}
 
-			auto* zip_file = zipOpen64(filename.data(), 0);
+		bool archive::write_file(const std::filesystem::path& filename, const std::string& comment)
+		{
+			std::error_code error;
+			if (!filename.parent_path().empty()) std::filesystem::create_directories(filename.parent_path(), error);
+			if (error) return false;
+#ifdef _WIN32
+			// Minizip's default fopen backend loses non-ANSI user/game paths.
+			zlib_filefunc64_def file_functions{};
+			fill_win32_filefunc64W(&file_functions);
+			auto* zip_file = zipOpen2_64(filename.c_str(), APPEND_STATUS_CREATE, nullptr, &file_functions);
+#else
+			auto* zip_file = zipOpen64(filename.c_str(), APPEND_STATUS_CREATE);
+#endif
 			if (!zip_file)
 			{
 				return false;
 			}
 
-			const auto _ = gsl::finally([&zip_file, &comment]()
-			{
-				zipClose(zip_file, comment.empty() ? nullptr : comment.data());
-			});
-
+			bool written = true;
 			for (const auto& file : this->files_)
 			{
 				if (!add_file(zip_file, file.first, file.second))
 				{
-					return false;
+					written = false;
+					break;
 				}
 			}
 
-			return true;
+			// A full disk may surface only while writing the central directory.
+			const auto closed = zipClose(zip_file, comment.empty() ? nullptr : comment.data());
+			return written && closed == ZIP_OK;
 		}
 	}
 }

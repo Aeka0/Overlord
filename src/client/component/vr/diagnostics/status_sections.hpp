@@ -3,6 +3,7 @@
 #include <iosfwd>
 
 namespace d3d11 { struct graphics_status; }
+namespace d3d11 { struct device_snapshot; }
 namespace vr { struct runtime_status; }
 namespace vr::head_pose_bridge { struct status; }
 namespace vr::engine_stereo_bridge { struct status; }
@@ -29,6 +30,8 @@ namespace vr::engine_stereo_constant_buffer_probe { struct report; }
 
 namespace vr::diagnostics::detail
 {
+	void append_session_status(std::ostringstream& output, bool target_ready);
+	void append_environment_status(std::ostringstream& output, const d3d11::device_snapshot& device);
 
 	// Append to the same stream in report order. Inputs are the caller's existing
 	// snapshots: these sections do not own runtime state or resample those inputs.

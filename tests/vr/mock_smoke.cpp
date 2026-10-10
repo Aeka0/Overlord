@@ -345,7 +345,12 @@ namespace
 			"secondary frame cleanup overwrote the root XrResult");
 		vr::tests::require(status.last_error.find(operation) != std::string::npos,
 			"frame failure did not retain the failing operation");
+		vr::tests::require(status.failures.total > 0 && status.failures.first.operation == operation &&
+			status.failures.first.code == XR_ERROR_RUNTIME_FAILURE,
+			"persistent failure history must retain the initiating API before cleanup errors");
 		runtime.shutdown();
+		vr::tests::require(runtime.get_status().failures.first.operation == operation,
+			"shutdown must not erase the initiating runtime failure from diagnostics");
 	}
 
 	void expect_destroy_acquired_rejected(mock_loader_control& loader,
@@ -502,6 +507,10 @@ namespace
 		status = runtime.get_status();
 		vr::tests::require(status.submitted_frames == 4 && status.state == vr::runtime_state::running,
 			"shouldRender=false changed submitted frames or stopped the session");
+		vr::tests::require(status.frame_submission.completed == 5 && status.frame_submission.world == 4 &&
+			status.frame_submission.menu_only == 0 && status.frame_submission.empty == 1 &&
+			status.frame_submission.last_world_layers == 0 && status.frame_submission.last_menu_layers == 0,
+			"successful empty EndFrame must be diagnosed separately from world submission");
 		loader.set_should_render(TRUE);
 
 		loader.queue_session_state(XR_SESSION_STATE_STOPPING);

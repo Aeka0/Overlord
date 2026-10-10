@@ -602,11 +602,25 @@ namespace openxr_adaptation_tests
 		                       loader.statistics().projection_frames == 0 && vr::tests::menu_pointer.ready &&
 		                       vr::tests::menu_pointer.hit,
 		                   "frontend must present and hit-test native UI without a world source");
+		const auto submission = runtime.get_status().frame_submission;
+		vr::tests::require(submission.world == 0 && submission.menu_only == 1 &&
+			submission.last_world_layers == 0 && submission.last_menu_layers > 0 &&
+			std::string_view(submission.menu.state) == "ready",
+			"menu-only layers must not be diagnosed as submitted stereo world content");
 		const auto pixel = loader.statistics().last_menu_pixel;
 		vr::tests::require((pixel & 255) > 85 && (pixel & 255) < 100 && ((pixel >> 24) & 255) >= 127 &&
 		                       ((pixel >> 24) & 255) <= 128,
 		                   "encoded premultiplied UI must decode before linear composition");
 		runtime.on_present_post(shown, S_OK);
+		vr::tests::menu_images.reset();
+		vr::tests::menu_state.timestamp = GetTickCount64();
+		const auto missing = present(graphics, 3);
+		runtime.on_present(missing);
+		const auto unavailable = runtime.get_status().frame_submission;
+		vr::tests::require(unavailable.world == 0 && unavailable.menu_only == 1 && unavailable.empty > submission.empty &&
+			std::string_view(unavailable.menu.state) == "menu_images_missing" && !vr::tests::menu_pointer.ready,
+			"successful zero-layer menu frames must retain the missing publication gate");
+		runtime.on_present_post(missing, S_OK);
 		runtime.shutdown();
 	}
 	template <class Loader> void canted_native_views(Loader& loader, const d3d11::device_snapshot& graphics)

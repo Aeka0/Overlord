@@ -9,6 +9,8 @@
 #include "../native_hud_capture.hpp"
 #include "../screen_scope_layout.hpp"
 #include "../spatial_panel_renderer.hpp"
+#include "../diagnostics/screen_display.hpp"
+#include "../diagnostics/report_paths.hpp"
 #include "component/command.hpp"
 #include "component/console.hpp"
 #include "component/scripting.hpp"
@@ -24,6 +26,7 @@ namespace vr::gameplay::weapons::javelin_screen
 {
 	namespace
 	{
+		namespace probe=diagnostics::screen;
 		game::dvar_t* option{};
 		std::atomic_bool alive{true};
 		std::mutex mutex;
@@ -43,11 +46,14 @@ namespace vr::gameplay::weapons::javelin_screen
 			controller_input::clock::time_point at{};
 		};
 		selection selected;
+		const char* input_gate{"not_observed"};
 		camera_state camera;
 		std::uint64_t next_epoch{};
 		std::atomic_uint64_t planned{}, drawn{}, missing{};
 		std::atomic<const char*> reason{"inactive"};
 		bool hud_watch_ready{};
+		std::atomic_uint64_t hud_watch_calls{},hud_watch_overrides{};
+		std::atomic_uint32_t hud_watch_result{};
 		utils::hook::detour player_ads_hook;
 		std::atomic<const char*> lock_ads_call{};
 		std::atomic_uint64_t lock_ads_overrides{};
@@ -142,8 +148,11 @@ namespace vr::gameplay::weapons::javelin_screen
 		bool hud_active(int local_client)
 		{
 			const bool native = utils::hook::invoke<bool>(0x1403B9780, local_client);
+			++hud_watch_calls;
+			const auto finish=[&](bool result,bool overridden=false)
+			{hud_watch_result=(native?1u:0u)|(result?2u:0u)|(overridden?4u:0u);if(overridden)++hud_watch_overrides;return result;};
 			if (local_client != 0 || !enabled() || !carry::active())
-				return native;
+				return finish(native);
 			const auto value = current();
 			const auto owner = current_hold();
 			// This selection exists only for the admitted Javelin. Use its near-eye
@@ -151,8 +160,8 @@ namespace vr::gameplay::weapons::javelin_screen
 			// only the LUI watch read; it does not change native player-state ADS.
 			if (!value.owner.weapon || value.owner.id() != owner.id() ||
 			    value.owner.rear_revision != owner.rear_revision)
-				return native;
-			return value.control.open;
+				return finish(native);
+			return finish(value.control.open,true);
 		}
 		auxiliary_scene::request plan(const eye_composition::event& event) noexcept
 		{
@@ -161,6 +170,9 @@ namespace vr::gameplay::weapons::javelin_screen
 			pair.publication = event.views.eyes[0].publication;
 			pair.device = event.device_generation;
 			pair.epoch = event.views.weapon_display_epoch;
+			auto observed=probe::observation(event,pair.epoch,GetTickCount64());observed.stage="plan_owner";
+			observed.active=pair.epoch&&!event.views.screen_scope_epoch;
+			const auto record=gsl::finally([&]{probe::javelin_scope.record(observed);});
 			if (!pair.epoch || event.views.screen_scope_epoch)
 			{
 				plane = {};
@@ -173,6 +185,16 @@ namespace vr::gameplay::weapons::javelin_screen
 				const auto capture = native_hud_capture::latest_screen_scope();
 				const auto head = head_pose_bridge::get_status();
 				const auto now = GetTickCount64();
+				observed.owner_epoch=state.epoch;observed.reference_id=state.reference;
+				observed.owner_id=state.owner.weapon;observed.owner_generation=state.owner.instance_generation;observed.owner_revision=state.owner.rear_revision;
+				probe::hud(observed,capture.ink.get());
+				probe::check(observed.rejected,state.control.open,probe::owner);
+				probe::check(observed.rejected,state.epoch==pair.epoch,probe::epoch);
+				probe::check(observed.rejected,event.model_origins.valid,probe::origins);
+				probe::check(observed.rejected,head.enabled&&head.pose_available,probe::tracking);
+				probe::check(observed.rejected,!head.recenter_pending,probe::recenter);
+				probe::check(observed.rejected,head.recenter_count==state.reference,probe::reference);
+				probe::check(observed.rejected,std::isfinite(head.world_scale)&&head.world_scale>0,probe::world_scale);
 				if (!state.control.open || state.epoch != pair.epoch || !event.model_origins.valid ||
 				    !head.enabled || !head.pose_available || head.recenter_pending ||
 				    head.recenter_count != state.reference || !std::isfinite(head.world_scale) ||
@@ -190,6 +212,19 @@ namespace vr::gameplay::weapons::javelin_screen
 					       ink->reference_generation == state.reference && ink->generation == pair.device &&
 					       ink->timestamp <= now && now - ink->timestamp <= age;
 				};
+				observed.stage="plan_hud";
+				probe::check(observed.hud_rejected,bool(capture.ink),probe::hud_missing);
+				if(const auto& ink=capture.ink)
+				{
+					probe::check(observed.hud_rejected,ink->view&&ink->height,probe::hud_view);
+					probe::check(observed.hud_rejected,!ink->screen_scope_epoch,probe::hud_scope_epoch);
+					probe::check(observed.hud_rejected,ink->weapon_display_epoch==pair.epoch,probe::hud_display_epoch);
+					probe::check(observed.hud_rejected,ink->id()==state.owner.id(),probe::hud_weapon);
+					probe::check(observed.hud_rejected,ink->rear_revision==state.owner.rear_revision,probe::hud_revision);
+					probe::check(observed.hud_rejected,ink->reference_generation==state.reference,probe::hud_reference);
+					probe::check(observed.hud_rejected,ink->generation==pair.device,probe::hud_device);
+					probe::check(observed.hud_rejected,ink->timestamp<=now&&now-ink->timestamp<=100,probe::hud_age);
+				}
 				// Native HUD intentionally disappears during reload/ADS transitions.
 				// It must never gate the live camera. Bridge only brief loaded-state
 				// publication gaps; discard old lock ink as soon as the shot empties it.
@@ -201,6 +236,8 @@ namespace vr::gameplay::weapons::javelin_screen
 					pair.ink = retained_ink;
 				if (state.loaded && pair.ink)
 					retained_ink = pair.ink;
+				observed.hud_retained=pair.ink&&pair.ink!=capture.ink;observed.layer_mask=pair.ink?1:0;
+				observed.stage="plan_geometry";
 				spatial_panel::vec3 position{};
 				float separation{};
 				for (unsigned i = 0; i < 3; ++i)
@@ -215,7 +252,7 @@ namespace vr::gameplay::weapons::javelin_screen
 				                  position,
 				                  head.local_orientation,
 				                  fixed_sniper::head_gain()))
-					return {};
+				{observed.rejected|=probe::plane;return {};}
 				engine_stereo_bridge::eye_projection source;
 				for (unsigned eye = 0; eye < 2; ++eye)
 				{
@@ -226,16 +263,18 @@ namespace vr::gameplay::weapons::javelin_screen
 					                   canvas_width,
 					                   canvas_height,
 					                   pair.canvas[eye]))
-						return {};
+					{observed.rejected|=probe::projection;return {};}
 					if (!eye)
 						source = projection;
 				}
 				auxiliary_scene::request request;
 				const float half_y = event.views.native_tan_half[1];
+				observed.stage="plan_crop";
 				if (!screen_scope::window(source, half_y * canvas_aspect, half_y, request.window) ||
 				    !auxiliary_scene::valid_window(request.window))
 				{
 					reason = "native Javelin FOV rejected";
+					observed.rejected|=probe::window;observed.crop=request.window;
 					return {};
 				}
 				request.eye = 0;
@@ -247,12 +286,14 @@ namespace vr::gameplay::weapons::javelin_screen
 				request.valid = true;
 				// Remove source-eye IPD: scene, native HUD and lock projection share the center camera.
 				pair.request = request;
+				observed.stage="planned";observed.crop=request.window;observed.success=true;
 				++planned;
 				return request;
 			}
 			catch (...)
 			{
 				reason = "display planning rejected";
+				observed.rejected|=probe::exception;
 				return {};
 			}
 		}
@@ -261,6 +302,14 @@ namespace vr::gameplay::weapons::javelin_screen
 		             ID3D11ShaderResourceView*,
 		             ID3D11RenderTargetView* target) noexcept
 		{
+			auto observed=probe::observation(event,event.views.weapon_display_epoch,GetTickCount64());observed.stage="compose";
+			observed.active=event.views.weapon_display_epoch&&!event.views.screen_scope_epoch;
+			observed.expected_pair=pair.pair;observed.expected_publication=pair.publication;observed.expected_device=pair.device;
+			observed.owner_epoch=pair.epoch;observed.owner_id=pair.request.owner;observed.owner_generation=pair.request.generation;
+			observed.owner_revision=pair.request.revision;observed.reference_id=pair.request.reference;
+			observed.context=reinterpret_cast<std::uintptr_t>(context);probe::hud(observed,pair.ink.get());observed.layer_mask=pair.ink?1:0;
+			const auto record=gsl::finally([&]{probe::javelin_scope.record(observed);});
+			probe::check(observed.rejected,event.eye<2&&context&&target,probe::composition);
 			if (!event.views.weapon_display_epoch || event.views.screen_scope_epoch || event.eye > 1 ||
 			    !context || !target)
 				return;
@@ -273,6 +322,23 @@ namespace vr::gameplay::weapons::javelin_screen
 			try
 			{
 				const auto* request = event.auxiliary;
+				probe::check(observed.rejected,pair.pair==event.pair_id,probe::pair);
+				probe::check(observed.rejected,pair.publication==event.views.eyes[event.eye].publication,probe::publication);
+				probe::check(observed.rejected,pair.device==event.device_generation,probe::device);
+				probe::check(observed.rejected,pair.epoch==event.views.weapon_display_epoch,probe::epoch);
+				if(pair.ink)probe::check(observed.rejected,pair.ink->context==observed.context,probe::hud_context);
+				probe::check(observed.rejected,request&&request->valid,probe::auxiliary_missing);
+				probe::check(observed.rejected,event.auxiliary_image!=nullptr,probe::auxiliary_image);
+				if(request)
+				{
+					probe::check(observed.rejected,request->native_center,probe::auxiliary_mode);
+					probe::check(observed.rejected,request->owner==pair.request.owner,probe::auxiliary_owner);
+					probe::check(observed.rejected,request->generation==pair.request.generation,probe::auxiliary_generation);
+					probe::check(observed.rejected,request->revision==pair.epoch,probe::epoch);
+					probe::check(observed.rejected,request->reference==pair.request.reference,probe::auxiliary_reference);
+				}
+				observed.canvas_min_w=observed.canvas_max_w=pair.canvas[event.eye][0][3];
+				for(const auto& corner:pair.canvas[event.eye]){observed.canvas_min_w=(std::min)(observed.canvas_min_w,corner[3]);observed.canvas_max_w=(std::max)(observed.canvas_max_w,corner[3]);}
 				if (pair.pair != event.pair_id ||
 				    pair.publication != event.views.eyes[event.eye].publication ||
 				    pair.device != event.device_generation ||
@@ -295,16 +361,21 @@ namespace vr::gameplay::weapons::javelin_screen
 				                                event.height))
 				{
 					reason = "display composition rejected";
+					probe::draw_result(observed,renderer.last_scope_draw());
+					observed.rejected|=probe::composition;
 					fail();
 					return;
 				}
 				++drawn;
+				probe::draw_result(observed,renderer.last_scope_draw());
+				observed.stage="composed";observed.success=true;
 				reason = pair.ink ? "native Javelin camera and HUD on independent screen"
 				                  : "live Javelin camera; native HUD temporarily absent";
 			}
 			catch (...)
 			{
 				reason = "display composition exception";
+				observed.rejected|=probe::exception;
 				fail();
 			}
 		}
@@ -312,6 +383,22 @@ namespace vr::gameplay::weapons::javelin_screen
 	bool enabled() noexcept
 	{
 		return alive && option && option->current.enabled;
+	}
+	std::string format_status()
+	{
+		selection state;camera_state view;const char* gate{};
+		{const std::unique_lock lock(mutex,std::try_to_lock);if(!lock.owns_lock())return "[VR Javelin display] snapshot_busy=yes\n";state=selected;view=camera;gate=input_gate;}
+		const auto now=controller_input::clock::now();
+		const auto watch_result=hud_watch_result.load();
+		const auto age=[&](auto at)->std::int64_t{return at.time_since_epoch().count()&&now>=at?std::chrono::duration_cast<std::chrono::milliseconds>(now-at).count():-1;};
+		return std::format("[VR Javelin display] enabled={} hud_watch={} lock_gate={} lock_queries={} open={} armed={} loaded={} selection_age_ms={} epoch={} reference={} weapon={} instance={} grip_revision={} camera_epoch={} camera_age_ms={} aim={} planner_registered={} planned={} eyes={} missing={} reason={}\norigin={},{},{} forward={},{},{}\n",
+			enabled(),hud_watch_ready,lock_ads_call.load()!=nullptr,lock_ads_overrides.load(),state.control.open,state.control.fire_ready,state.loaded,
+			age(state.at),state.epoch,state.reference,state.owner.weapon,state.owner.instance_generation,state.owner.rear_revision,view.epoch,age(view.at),view.aim.valid,
+			auxiliary_scene::weapon_display_plan.load()!=nullptr,planned.load(),drawn.load(),missing.load(),reason.load(),
+			view.aim.position[0],view.aim.position[1],view.aim.position[2],view.aim.axis[0][0],view.aim.axis[0][1],view.aim.axis[0][2])+
+			std::format("  input_gate={} hud_watch_calls={} overrides={} last_native/returned/override={}/{}/{}\n",gate,
+				hud_watch_calls.load(),hud_watch_overrides.load(),bool(watch_result&1),bool(watch_result&2),bool(watch_result&4))+
+			probe::javelin_scope.format("Javelin display stages",GetTickCount64());
 	}
 	void input(const controller_input::frame& frame, const hold& owner, bool allowed) noexcept
 	{
@@ -324,6 +411,8 @@ namespace vr::gameplay::weapons::javelin_screen
 		// Button entry/exit is temporarily disabled for the near-eye ADS trial.
 		// static controls buttons; const auto next=buttons.consume(frame,owner,valid,now);
 		const auto next = proximity.consume(frame, owner, valid, muzzle, now);
+		input_gate=!allowed?"gameplay_gate":muzzle.profile_id!="javelin"?"not_javelin":!valid?"setting_muzzle_or_owner_not_ready":
+			next.open?"open":"near_eye_not_entered";
 		if (next.open && (!selected.control.open || selected.owner.id() != owner.id() ||
 		                  selected.reference != frame.reference_generation))
 			selected.epoch = ++next_epoch;
@@ -444,31 +533,10 @@ namespace vr::gameplay::weapons::javelin_screen
 			    "vr_javelinDisplay_status",
 			    []
 			    {
-				    const auto state = current();
-				    muzzle_frame aim;
-				    const bool valid = lock_aim(state.owner, aim);
-				    const auto report = std::format(
-				        "enabled={} hud_watch={} lock_gate={} lock_queries={} open={} armed={} epoch={} aim={} planned={} eyes={} missing={} reason={}\norigin={},{},{} forward={},{},{}\n",
-				        enabled(),
-				        hud_watch_ready,
-				        lock_ads_call.load() != nullptr,
-				        lock_ads_overrides.load(),
-				        state.control.open,
-				        state.control.fire_ready,
-				        state.epoch,
-				        valid,
-				        planned.load(),
-				        drawn.load(),
-				        missing.load(),
-				        reason.load(),
-				        aim.position[0],
-				        aim.position[1],
-				        aim.position[2],
-				        aim.axis[0][0],
-				        aim.axis[0][1],
-				        aim.axis[0][2]);
-				    console::info("[VR Javelin display] %s", report.c_str());
-				    utils::io::write_file_atomic("minidumps/overlord-javelin-display.txt", report);
+				    const auto report=format_status();console::print_text(console::con_type_info,report);
+				    const auto path=diagnostics::save_named_report("overlord-javelin-display.txt",report);
+				    if(path.empty())console::error("[VR Javelin display] Report save failed\n");
+				    else console::info("[VR Javelin display] Saved %s\n",diagnostics::report_path_text(path).c_str());
 			    });
 		}
 		void pre_destroy() override

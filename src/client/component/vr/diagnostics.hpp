@@ -138,8 +138,12 @@ namespace vr::diagnostics
 	[[nodiscard]] gpu_interop_watchdog_status get_gpu_interop_watchdog_status() noexcept;
 
 	void print_status(bool dvar_enabled);
-	inline constexpr const char* status_snapshot_path = "minidumps/overlord-status-latest.txt";
-	[[nodiscard]] bool write_status_snapshot(bool dvar_enabled) noexcept;
+	// Complete in-memory report under the same snapshot lock, without replacing
+	// an existing incident file during dependency warmup or bundle collection.
+	std::string collect_status_text(bool dvar_enabled);
+	std::string collect_core_status_text(bool dvar_enabled);
+	inline constexpr const char* status_snapshot_path = "diagnose/overlord-status-latest.txt";
+	[[nodiscard]] bool write_status_snapshot(bool dvar_enabled, std::string* saved_path = nullptr) noexcept;
 	bool write_soft_freeze_report(const d3d11::graphics_status& graphics,
 		std::chrono::milliseconds age);
 	bool write_scene_hook_stall_report(const d3d11::graphics_status& graphics,

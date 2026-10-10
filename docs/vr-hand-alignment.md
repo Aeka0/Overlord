@@ -81,3 +81,30 @@ An alignment repair requires headset acceptance against the previous baseline:
 Build and deployment success are engineering results. Without an independent
 physical reference or accepted headset observation, do not report automatic
 anatomical calibration or declare the remaining position offset fixed.
+
+## Menu-ray reference and wrist pivot
+
+The planar OpenXR menu intersects the complete `runtime_aim` ray: its SDK
+position and minus-Z direction. Agreement with its direction alone establishes
+parallel lines, not coincident lines. A weapon comparison must use the same
+input sequence, tracking reference, camera sample and committed skeletal pose.
+Record both the angular difference and the perpendicular muzzle-to-ray offset.
+
+For a model rotation `R`, native wrist point `w`, native muzzle point `m`, and
+reference ray `o + t*d`, the wrist positions that place the muzzle on that ray
+satisfy `wrist(t) = o + t*d + R*(w-m)`. The ray leaves longitudinal placement
+undetermined. Forcing coincidence can also move the wrist differently for each
+weapon, so this equation is a diagnostic constraint, not permission to replace
+the anatomical wrist anchor or the authored hand-to-weapon relation.
+
+The internal control pivot and rendered wrist joint must coincide. Separately,
+the controller-to-wrist mapping must place that joint at the physical rotation
+centre. Agreement between two consumers of the same guessed point proves only
+the first condition. The shared input stabilization origin is another part of
+this chain that must be distinguished from the raw physical tracking reference.
+
+Nominal firing geometry comes from the solved muzzle. Actual shots additionally
+pass through native spread, optional aim assistance and other existing firing
+rules. A no-firing pose capture cannot establish final ballistic acceptance.
+Keep a geometry repair in the model/hand transform chain; independently bending
+bullets toward a menu pointer would conceal a remaining visual mismatch.

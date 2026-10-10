@@ -1,6 +1,7 @@
 #include <std_include.hpp>
 #include "gameplay/fixed_sniper.hpp"
 #include "gameplay/javelin_screen.hpp"
+#include "diagnostics/screen_display.hpp"
 #include "gameplay/notebook_runtime.hpp"
 #include "remote_hud_policy.hpp"
 #include "native_hud_capture.hpp"
@@ -36,11 +37,13 @@ namespace vr::native_hud_capture
 {
 	namespace
 	{
+		namespace screen_probe=diagnostics::screen;
 		// Accepted native HUD capture is functional rendering, not a readback test.
 		// Keep the old one-shot exporter dormant, including its command and polling.
 		constexpr bool readback_diagnostics = false;
 		utils::hook::detour dispatch_hook, quad_hook, text_hook, legacy_quad_hook, rotated_quad_hook, stretch_quad_hook, lines_hook, compass_quad_hook;
 		std::atomic_bool requested{}, alive{true};
+		std::atomic_bool capture_hooks_installed{}, global_ui_hooks_installed{};
 		std::atomic_uint64_t diagnostic_deadline{};
 		std::atomic_bool diagnostic_busy{};
 		std::atomic_uint64_t dispatches{}, captures{}, copied_draws{}, rejected{};
@@ -120,6 +123,8 @@ namespace vr::native_hud_capture
 			bool is_remote{};
 			unsigned remote_stream{};
 			bool is_screen_scope{},scope_border{},is_weapon_screen{};
+			screen_probe::sample* screen_diagnostic{};
+			std::uint64_t diagnostic_rejections{};
 			unsigned scope_layer{}; // 0: final ink, 1: subtractive shadow, 2: flash below shadow.
 			unsigned atlas_x{}, atlas_y{};
 			std::array<float,2> native_viewport{};
@@ -601,6 +606,7 @@ namespace vr::native_hud_capture
 						if (!utils::native_memory::read_bytes(raw.data(),cursor,size)) return false;
 						native_hud_quad::quad quad{};
 						const auto name = material_name(raw.data(),storage);
+						if(screen_scope&&(*screen_scope)[0].screen_diagnostic)screen_probe::note_material(*(*screen_scope)[0].screen_diagnostic,name);
 						if(screen_scope && (weapon_screen ? gameplay::weapons::javelin_screen::overlay_material(name) : gameplay::fixed_sniper::overlay_material(name)))
 						{
 							const auto layer=!weapon_screen && name=="h1_hud_overlay_sniperescape_lensshadow"?1u:!weapon_screen && name=="h1_hud_overlay_sniperescape_flash"?2u:0u;
@@ -799,13 +805,13 @@ namespace vr::native_hud_capture
 				}
 			}
 			if (viewport_count != 1 || !targets[0] || !blend)
-			{ ++invalid_targets; s.failed = true; return; }
+			{ ++invalid_targets; s.diagnostic_rejections|=screen_probe::hud_target; s.failed = true; return; }
 			if (s.is_marker && (viewports[0].Width!=s.native_viewport[0] || viewports[0].Height!=s.native_viewport[1]))
 			{ ++invalid_targets; s.failed=true; return; }
 			for (size_t i = 1; i < targets.size(); ++i) if (targets[i])
-			{ ++invalid_targets; s.failed = true; return; }
+			{ ++invalid_targets; s.diagnostic_rejections|=screen_probe::hud_target; s.failed = true; return; }
 			for (auto* uav : uavs) if (uav)
-			{ ++invalid_targets; s.failed = true; return; }
+			{ ++invalid_targets; s.diagnostic_rejections|=screen_probe::hud_target; s.failed = true; return; }
 			if (depth)
 			{
 				D3D11_DEPTH_STENCIL_DESC state{};
@@ -813,10 +819,15 @@ namespace vr::native_hud_capture
 				// Null state is D3D's depth-enabled default. A merely bound, disabled
 				// DSV is harmless; real depth/stencil effects need their own route.
 				if (!depth_state || state.DepthEnable || state.StencilEnable)
-				{ ++unsupported_depth; s.failed = true; return; }
+				{ ++unsupported_depth; s.diagnostic_rejections|=screen_probe::hud_depth; s.failed = true; return; }
 			}
 			D3D11_BLEND_DESC desc{}; blend->GetDesc(&desc);
 			const auto& source = desc.RenderTarget[0];
+			if(s.screen_diagnostic&&s.scope_layer<3)
+			{
+				auto& observed=*s.screen_diagnostic;observed.blend_src[s.scope_layer]=source.SrcBlend;
+				observed.blend_dst[s.scope_layer]=source.DestBlend;observed.blend_op[s.scope_layer]=source.BlendOp;
+			}
 			D3D11_BLEND_DESC coverage_desc{};
 			last_blend_src.store(source.SrcBlend); last_blend_dst.store(source.DestBlend);
 			last_blend_op.store(source.BlendOp);
@@ -845,7 +856,7 @@ namespace vr::native_hud_capture
 				if(!gpu.opaque_alpha || !gpu.alpha_only){s.failed=true;return;}
 			}
 			if (!opaque && !(subtractive ? subtractive_coverage_blend(desc,coverage_desc) : additive ? additive_coverage_blend(desc,coverage_desc) : coverage_blend(desc, black_unlit, coverage_desc)))
-			{ ++unsupported_blend; s.failed = true; return; }
+			{ ++unsupported_blend; s.diagnostic_rejections|=screen_probe::hud_blend; s.failed = true; return; }
 			const bool attenuating=s.is_announcement && image_command;
 			if (attenuating)
 			{
@@ -1121,6 +1132,12 @@ namespace vr::native_hud_capture
 			const auto display_epoch=gameplay::weapons::javelin_screen::camera_epoch();
 			const auto display_owner=scope_owner.epoch ? gameplay::weapons::hold{} : gameplay::weapons::javelin_screen::capture_owner();
 			const bool weapon_screen=display_owner.can_fire();
+				screen_probe::sample screen_observed;screen_observed.stage="native_hud_capture";
+				screen_observed.consumer=scope_owner.epoch?"fixed_scope":"javelin";
+			screen_observed.active=scope_owner.epoch||weapon_screen;screen_observed.epoch_id=scope_owner.epoch?scope_owner.epoch:display_epoch;
+			screen_observed.owner_id=scope_owner.epoch?static_cast<std::uint64_t>(scope_owner.entity):display_owner.weapon;
+			screen_observed.owner_generation=display_owner.instance_generation;screen_observed.owner_revision=display_owner.rear_revision;
+			for(auto& layer:screen_scopes)layer.screen_diagnostic=&screen_observed;
 			for(auto& layer:screen_scopes)layer.is_weapon_screen=weapon_screen;
 			scope warnings{}; warnings.is_warning=true;
 			std::array<scope,directional_ui::waypoint_capacity> markers{};
@@ -1155,13 +1172,26 @@ namespace vr::native_hud_capture
 			const bool narrative_valid = narrative_enabled && select_narrative(commands, narrative, subtraction, progress, announcement, gameplay ? &damage : nullptr,groups,
 				scope_owner.epoch || weapon_screen ? &screen_scopes : nullptr,weapon_screen,
 				menu_plan?std::span<const native_menu::range>(menu_plan->ranges):std::span<const native_menu::range>{});
+			screen_observed.hud_producer_enabled=narrative_enabled;
+			screen_observed.hud_producer_sampled=true;
 			if(!narrative_valid || !screen_scope.scope_border)for(auto& layer:screen_scopes)layer.count=0;
 			const auto remote_done=gsl::finally([&]{for(auto& layer:remote_layers)publish_remote(layer,layer.remote_stream,remote_epoch,capture_reference,remote_valid);});
 			const auto publish_scope=gsl::finally([&] {
 				const std::lock_guard lock(publication_mutex);
-				if(narrative_valid && (scope_owner.epoch || (weapon_screen && display_epoch &&
-					gameplay::weapons::javelin_screen::camera_epoch()==display_epoch && gameplay::weapons::javelin_screen::requested(display_owner))) && screen_scope.scope_border && screen_scope.draws &&
-					std::all_of(screen_scopes.begin(),screen_scopes.end(),[](const scope& layer){return !layer.failed && (!layer.count || (layer.draws && layer.output));}))
+				const bool owner_valid=narrative_valid&&(scope_owner.epoch||(weapon_screen&&display_epoch&&
+					gameplay::weapons::javelin_screen::camera_epoch()==display_epoch&&gameplay::weapons::javelin_screen::requested(display_owner)));
+				const bool layers_valid=std::all_of(screen_scopes.begin(),screen_scopes.end(),[](const scope& layer){return !layer.failed&&(!layer.count||(layer.draws&&layer.output));});
+				screen_observed.tick=GetTickCount64();screen_observed.reference_id=capture_reference;
+				screen_observed.device_id=screen_scope.graphics.generation;
+				screen_probe::check(screen_observed.rejected,narrative_valid,screen_probe::hud_parse);
+				if(narrative_valid)screen_probe::check(screen_observed.rejected,owner_valid,screen_probe::owner);
+				screen_probe::check(screen_observed.rejected,screen_scope.scope_border,screen_probe::hud_border);
+				screen_probe::check(screen_observed.rejected,screen_scope.draws!=0,screen_probe::hud_draws);
+				screen_probe::check(screen_observed.rejected,layers_valid,screen_probe::hud_layers);
+				for(unsigned i{};i<3;++i){screen_observed.commands[i]=static_cast<std::uint32_t>(screen_scopes[i].count);
+					screen_observed.draws[i]=screen_scopes[i].draws;screen_observed.rejected|=screen_scopes[i].diagnostic_rejections;
+					if(screen_scopes[i].output)screen_observed.layer_mask|=1u<<i;}
+				if(owner_valid&&screen_scope.scope_border&&screen_scope.draws&&layers_valid)
 				{
 					for(auto& layer:screen_scopes)if(layer.output)
 					{
@@ -1174,6 +1204,10 @@ namespace vr::native_hud_capture
 					screen_scope_publication={screen_scope.output,screen_scopes[1].output,screen_scopes[2].output};
 				}
 				else screen_scope_publication={};
+				screen_observed.success=bool(screen_scope_publication.ink);screen_probe::hud(screen_observed,screen_scope_publication.ink.get());
+				if(!screen_observed.success)screen_observed.rejected|=screen_probe::hud_output;
+				if(scope_owner.epoch)screen_probe::fixed_hud.record(screen_observed);
+				else if(weapon_screen)screen_probe::javelin_hud.record(screen_observed);
 			});
 			if (!narrative_valid) { narrative.count = progress.count = announcement.count = damage.count = 0; }
 			const auto publish_damage = gsl::finally([&] {
@@ -1412,6 +1446,53 @@ namespace vr::native_hud_capture
 		const std::lock_guard lock(publication_mutex); return indicator_publication;
 	}
 	void set_requested(bool enabled) noexcept { requested.store(enabled); }
+	std::string format_status()
+	{
+		std::ostringstream out;
+		out<<"[VR menu capture] hooks="<<global_ui_hooks_installed.load()
+			<<" global_dispatches="<<global_ui_dispatches.load()<<" completed="<<global_ui_captures.load()
+			<<" failures="<<global_ui_failures.load()<<'\n';
+		out<<"[VR UAV HUD] targets_scene/global="<<remote_captures[0].load()<<'/'<<remote_captures[1].load()
+			<<" instruments_scene/global="<<remote_captures[2].load()<<'/'<<remote_captures[3].load()
+			<<" failures="<<remote_failures.load()<<" selection_overflows="<<remote_overflows.load()<<'\n';
+		out<<"[VR menu capture] matched="<<menu_matches.load()<<" draws="<<menu_draws.load()
+			<<" images="<<menu_images.load()<<" empty_passes="<<menu_empty_passes.load()<<'\n';
+		out<<"[VR HUD capture] hooks="<<capture_hooks_installed.load()<<" requested="<<requested.load()
+			<<" dispatches="<<dispatches.load()<<" captures="<<captures.load()<<" draws="<<copied_draws.load()
+			<<" rejected="<<rejected.load()<<'\n';
+		out<<"[VR HUD capture] anchors="<<anchors.load()<<" invalid_targets="<<invalid_targets.load()
+			<<" unsupported_blend="<<unsupported_blend.load()<<" unsupported_depth="<<unsupported_depth.load()
+			<<" pending="<<(diagnostic_deadline.load()!=0)<<" busy="<<diagnostic_busy.load()<<'\n';
+		out<<"[VR HUD capture] black_subtractive="<<black_subtractive_draws.load()
+			<<" last_blend="<<last_blend_src.load()<<'/'<<last_blend_dst.load()<<'/'<<last_blend_op.load()
+			<<" material=0x"<<std::hex<<last_material.load()<<" color=0x"<<last_color.load()<<std::dec<<'\n';
+		out<<"[VR narrative capture] captures="<<narrative_captures.load()<<" text_draws="<<narrative_texts.load()
+			<<" fades="<<narrative_fades.load()<<" rejected="<<narrative_rejected.load()<<'\n';
+		out<<"[VR indicator capture] captures="<<indicator_captures.load()<<" rejected="<<indicator_rejected.load()<<'\n';
+		out<<screen_probe::fixed_hud.format("fixed scope HUD capture",GetTickCount64())
+			<<screen_probe::javelin_hud.format("Javelin HUD capture",GetTickCount64());
+		// Narrative/damage layers run after the scope canvas. A retained opaque
+		// fade can cover a successfully composed scene; report its CPU metadata.
+		std::array<std::shared_ptr<const frame>,4> later_layers;
+		bool later_ready{};
+		{const std::unique_lock lock(publication_mutex,std::try_to_lock);later_ready=lock.owns_lock();
+			if(later_ready)later_layers={narrative_publication,progress_publication,announcement_publication,damage_publication};}
+		out<<"[VR later HUD layers] snapshot_busy="<<!later_ready<<'\n';
+		if(later_ready)
+		{
+			constexpr std::array names{"story","progress","announcement","damage"};
+			const auto now=GetTickCount64();
+			for(std::size_t i{};i<later_layers.size();++i)
+			{
+				const auto& layer=later_layers[i];out<<"  layer="<<names[i]<<" present="<<bool(layer);
+				if(layer)out<<" sequence="<<layer->sequence<<" age_ms="<<(layer->timestamp&&now>=layer->timestamp?static_cast<std::int64_t>(now-layer->timestamp):-1)
+					<<" generation="<<layer->generation<<" reference="<<layer->reference_generation<<" hidden="<<layer->hud_hidden
+					<<" fade_rgba="<<layer->fade[0]<<','<<layer->fade[1]<<','<<layer->fade[2]<<','<<layer->fade[3];
+				out<<'\n';
+			}
+		}
+		return out.str();
+	}
 	counters get_counters() noexcept
 	{
 		return {dispatches.load(), captures.load(), copied_draws.load(), rejected.load(),
@@ -1432,30 +1513,14 @@ namespace vr::native_hud_capture
 			constexpr std::uint8_t stretch[]{0x40,0x53,0x48,0x83,0xec,0x60,0xc7,0x44,0x24,0x50,0x06,0,0,0};
 			constexpr std::uint8_t flush[]{0x33,0xc9,0xe9,0x29,0xff,0xff,0xff};
 			constexpr std::uint8_t index_count[]{0xf7,0x25,0x65,0xc8,0x2c,0x11};
-			command::add("vr_hud_capture_status", [] {
-				console::info("[VR menu capture] global_dispatches=%llu completed=%llu failures=%llu\n",global_ui_dispatches.load(),global_ui_captures.load(),global_ui_failures.load());
-				console::info("[VR UAV HUD] targets_scene/global=%llu/%llu instruments_scene/global=%llu/%llu failures=%llu selection_overflows=%llu\n",
-					remote_captures[0].load(),remote_captures[1].load(),remote_captures[2].load(),remote_captures[3].load(),remote_failures.load(),remote_overflows.load());
-				console::info("[VR menu capture] matched=%llu draws=%llu images=%llu empty_passes=%llu\n",menu_matches.load(),menu_draws.load(),menu_images.load(),menu_empty_passes.load());
-				console::info("[VR HUD capture] requested=%d dispatches=%llu captures=%llu draws=%llu rejected=%llu\n",
-					requested.load(), dispatches.load(), captures.load(), copied_draws.load(), rejected.load());
-				console::info("[VR HUD capture] anchors=%llu invalid_targets=%llu unsupported_blend=%llu "
-					"unsupported_depth=%llu pending=%d busy=%d\n", anchors.load(), invalid_targets.load(),
-					unsupported_blend.load(), unsupported_depth.load(), diagnostic_deadline.load() != 0,
-					diagnostic_busy.load());
-				console::info("[VR HUD capture] black_subtractive=%llu last_blend=%u/%u/%u material=%llx color=%08x\n",
-					black_subtractive_draws.load(), last_blend_src.load(), last_blend_dst.load(), last_blend_op.load(),
-					last_material.load(), last_color.load());
-				console::info("[VR narrative capture] captures=%llu text_draws=%llu fades=%llu rejected=%llu\n",
-					narrative_captures.load(), narrative_texts.load(), narrative_fades.load(), narrative_rejected.load());
-				console::info("[VR indicator capture] captures=%llu rejected=%llu\n",indicator_captures.load(),indicator_rejected.load());
-			});
+			command::add("vr_hud_capture_status", [] {console::print_text(console::con_type_info,format_status());});
 			if (!verify(0x14079EAE0, dispatch) || !verify(0x14079CA50, quad) || !verify(0x14079DDC0, text) ||
 				!verify(0x1407B2B70, flush) || !verify(0x1407B2B0D, index_count))
 			{ console::error("[VR HUD] native UI signatures rejected\n"); return; }
 			dispatch_hook.create(0x14079EAE0, dispatch_stub);
 			quad_hook.create(0x14079CA50, quad_stub);
 			text_hook.create(0x14079DDC0, text_stub);
+			capture_hooks_installed=true;
 			if (verify(0x14079C830,legacy) && verify(0x1407A1060,rotated))
 			{
 				legacy_quad_hook.create(0x14079C830,legacy_quad_stub);
@@ -1493,6 +1558,7 @@ namespace vr::native_hud_capture
 				{
 					utils::hook::jump(0x14079a158,begin_relay);utils::hook::nop(0x14079a15d,3);
 					utils::hook::jump(0x14079a1d0,end_relay);utils::hook::nop(0x14079a1d5,1);
+					global_ui_hooks_installed=true;
 				}
 				else console::error("[VR menus] global UI relay allocation failed; native loop preserved\n");
 			}

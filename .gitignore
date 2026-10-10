@@ -170,6 +170,7 @@ user*.bat
 .tests-temp/
 .tools-temp/
 output/
+/diagnose/
 __pycache__/
 node_modules/
 

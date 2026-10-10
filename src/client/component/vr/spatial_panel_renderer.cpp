@@ -203,6 +203,8 @@ float4 recording_ps(Vertex v) : SV_Target {
 		{
 			Microsoft::WRL::ComPtr<ID3DBlob> vs,ps,screen_ps,ink_ps,optic_ps,recording_ps,scope_ps,mask_ps;
 			bool ready{};
+			HRESULT compile_result{};
+			const char* failed_entry{"none"};
 		};
 		const shader_bytecode& compiled_shaders() noexcept
 		{
@@ -214,8 +216,10 @@ float4 recording_ps(Vertex v) : SV_Target {
 				shader_bytecode result;
 				Microsoft::WRL::ComPtr<ID3DBlob> errors;
 				const auto compile=[&](const char* entry,const char* target,Microsoft::WRL::ComPtr<ID3DBlob>& output) {
-					return SUCCEEDED(D3DCompile(shader,sizeof(shader)-1,"spatial-panel",nullptr,nullptr,
-						entry,target,D3DCOMPILE_OPTIMIZATION_LEVEL3,0,&output,errors.ReleaseAndGetAddressOf()));
+					const auto hr=D3DCompile(shader,sizeof(shader)-1,"spatial-panel",nullptr,nullptr,
+						entry,target,D3DCOMPILE_OPTIMIZATION_LEVEL3,0,&output,errors.ReleaseAndGetAddressOf());
+					if(FAILED(hr)){result.compile_result=hr;result.failed_entry=entry;}
+					return SUCCEEDED(hr);
 				};
 				result.ready=compile("vs","vs_5_0",result.vs) && compile("ps","ps_5_0",result.ps) &&
 					compile("screen_ps","ps_5_0",result.screen_ps) && compile("ink_ps","ps_5_0",result.ink_ps) &&
@@ -233,17 +237,20 @@ float4 recording_ps(Vertex v) : SV_Target {
 		// Device objects and mutable draw state stay local to this renderer.
 		// A failed device initialization remains cached until the device changes.
 		const auto& code=compiled_shaders();
-		if (!code.ready ||
-			FAILED(device->CreateVertexShader(code.vs->GetBufferPointer(),code.vs->GetBufferSize(),nullptr,&vs_)) ||
-			FAILED(device->CreatePixelShader(code.scope_ps->GetBufferPointer(),code.scope_ps->GetBufferSize(),nullptr,&scope_ps_)) ||
-			FAILED(device->CreatePixelShader(code.mask_ps->GetBufferPointer(),code.mask_ps->GetBufferSize(),nullptr,&mask_ps_)) ||
-			FAILED(device->CreatePixelShader(code.ps->GetBufferPointer(),code.ps->GetBufferSize(),nullptr,&ps_)) ||
-			FAILED(device->CreatePixelShader(code.screen_ps->GetBufferPointer(),code.screen_ps->GetBufferSize(),nullptr,&screen_ps_)) ||
-			FAILED(device->CreatePixelShader(code.ink_ps->GetBufferPointer(),code.ink_ps->GetBufferSize(),nullptr,&ink_ps_)) ||
-			FAILED(device->CreatePixelShader(code.optic_ps->GetBufferPointer(),code.optic_ps->GetBufferSize(),nullptr,&optic_ps_)) ||
-			FAILED(device->CreatePixelShader(code.recording_ps->GetBufferPointer(),code.recording_ps->GetBufferSize(),nullptr,&recording_ps_)) ||
-			FAILED(device->CreateDeferredContext(0, &deferred_)) ||
-			!native_conversion_command_list::mark_recording_context(deferred_.Get())) return false;
+		if(!code.ready){initialization_status_={"shader_compile",code.compile_result,true,code.failed_entry};return false;}
+		const auto checked=[&](HRESULT result,const char* stage)
+		{if(FAILED(result))initialization_status_={stage,result,true};return SUCCEEDED(result);};
+		if (!checked(device->CreateVertexShader(code.vs->GetBufferPointer(),code.vs->GetBufferSize(),nullptr,&vs_),"create_vertex_shader") ||
+			!checked(device->CreatePixelShader(code.scope_ps->GetBufferPointer(),code.scope_ps->GetBufferSize(),nullptr,&scope_ps_),"create_scope_shader") ||
+			!checked(device->CreatePixelShader(code.mask_ps->GetBufferPointer(),code.mask_ps->GetBufferSize(),nullptr,&mask_ps_),"create_mask_shader") ||
+			!checked(device->CreatePixelShader(code.ps->GetBufferPointer(),code.ps->GetBufferSize(),nullptr,&ps_),"create_panel_shader") ||
+			!checked(device->CreatePixelShader(code.screen_ps->GetBufferPointer(),code.screen_ps->GetBufferSize(),nullptr,&screen_ps_),"create_screen_shader") ||
+			!checked(device->CreatePixelShader(code.ink_ps->GetBufferPointer(),code.ink_ps->GetBufferSize(),nullptr,&ink_ps_),"create_ink_shader") ||
+			!checked(device->CreatePixelShader(code.optic_ps->GetBufferPointer(),code.optic_ps->GetBufferSize(),nullptr,&optic_ps_),"create_optic_shader") ||
+			!checked(device->CreatePixelShader(code.recording_ps->GetBufferPointer(),code.recording_ps->GetBufferSize(),nullptr,&recording_ps_),"create_recording_shader") ||
+			!checked(device->CreateDeferredContext(0, &deferred_),"create_deferred_context")) return false;
+		if(!native_conversion_command_list::mark_recording_context(deferred_.Get()))
+		{initialization_status_={"recording_context_tag",0,false};return false;}
 		D3D11_BUFFER_DESC buffer{};
 		buffer.ByteWidth = sizeof(constants); buffer.Usage = D3D11_USAGE_DYNAMIC;
 		buffer.BindFlags = D3D11_BIND_CONSTANT_BUFFER; buffer.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
@@ -262,13 +269,13 @@ float4 recording_ps(Vertex v) : SV_Target {
 		auto ink_blend=blend; auto& ib=ink_blend.RenderTarget[0];
 		ib.BlendEnable=TRUE; ib.SrcBlend=ib.SrcBlendAlpha=D3D11_BLEND_ONE;
 		ib.DestBlend=ib.DestBlendAlpha=D3D11_BLEND_INV_SRC_ALPHA; ib.BlendOp=ib.BlendOpAlpha=D3D11_BLEND_OP_ADD;
-		ready_ = SUCCEEDED(device->CreateBuffer(&buffer, nullptr, &constants_)) &&
-			SUCCEEDED(device->CreateSamplerState(&sampler, &sampler_)) &&
-			SUCCEEDED(device->CreateRasterizerState(&raster, &raster_)) &&
-			SUCCEEDED(device->CreateDepthStencilState(&depth, &depth_)) &&
-			SUCCEEDED(device->CreateDepthStencilState(&scene_depth, &scene_depth_)) &&
-			SUCCEEDED(device->CreateBlendState(&blend, &blend_)) &&
-			SUCCEEDED(device->CreateBlendState(&ink_blend, &ink_blend_));
+		ready_ = checked(device->CreateBuffer(&buffer, nullptr, &constants_),"create_constant_buffer") &&
+			checked(device->CreateSamplerState(&sampler, &sampler_),"create_sampler") &&
+			checked(device->CreateRasterizerState(&raster, &raster_),"create_rasterizer") &&
+			checked(device->CreateDepthStencilState(&depth, &depth_),"create_depth_state") &&
+			checked(device->CreateDepthStencilState(&scene_depth, &scene_depth_),"create_scene_depth_state") &&
+			checked(device->CreateBlendState(&blend, &blend_),"create_blend_state") &&
+			checked(device->CreateBlendState(&ink_blend, &ink_blend_),"create_ink_blend_state");
 		return ready_;
 	}
 	bool renderer::draw_canvas(ID3D11DeviceContext* context,ID3D11ShaderResourceView* source,
@@ -544,6 +551,7 @@ float4 recording_ps(Vertex v) : SV_Target {
 	bool renderer::draw_screen_scope(ID3D11DeviceContext* context,ID3D11ShaderResourceView* scene,ID3D11ShaderResourceView* ink,
 		ID3D11RenderTargetView* target,const projected_quad& canvas,unsigned width,unsigned height,ID3D11ShaderResourceView* shadow,ID3D11ShaderResourceView* flash) noexcept
 	{
+		scope_status_={"canvas",0,false};
 		for(const auto& corner:canvas)for(float x:corner)if(!std::isfinite(x) || std::abs(x)>100)return false;
 		// Nonzero plane edges are required, including when it lies behind the eye.
 		if(canvas[0]==canvas[1] || canvas[0]==canvas[2])return false;
@@ -557,6 +565,7 @@ float4 recording_ps(Vertex v) : SV_Target {
 		ID3D11ShaderResourceView* shadow,ID3D11ShaderResourceView* flash,blur_mode blur,float eye_box_scale,const vec4& screen_fade) noexcept
 	{
 		const bool mask_only=blur!=blur_mode::none;
+		if(screen_scope)scope_status_={"inputs",0,false};
 		if (!context || !background || (!ink && !screen_scope) || !destination || !width || !height ||
 			width > 16384 || height > 16384 || context->GetType() != D3D11_DEVICE_CONTEXT_IMMEDIATE ||
 			!std::isfinite(blur_pixels) || !std::isfinite(blur_strength)) return false;
@@ -571,7 +580,9 @@ float4 recording_ps(Vertex v) : SV_Target {
 		}
 		Microsoft::WRL::ComPtr<ID3D11Device> device;
 		context->GetDevice(&device);
-		if (!ensure(device.Get())) return false;
+		if(screen_scope)scope_status_.stage="resources";
+		if (!ensure(device.Get())) {if(screen_scope)scope_status_=initialization_status_;return false;}
+		if(screen_scope)scope_status_.stage="device_ownership";
 		for (ID3D11DeviceChild* child : {static_cast<ID3D11DeviceChild*>(background),
 			static_cast<ID3D11DeviceChild*>(ink), static_cast<ID3D11DeviceChild*>(destination)})
 		{
@@ -580,6 +591,7 @@ float4 recording_ps(Vertex v) : SV_Target {
 			if (owner.Get() != device.Get()) return false;
 		}
 		Microsoft::WRL::ComPtr<ID3D11Resource> bg, fg, output;
+		if(screen_scope)scope_status_.stage="resource_alias";
 		background->GetResource(&bg); if(ink)ink->GetResource(&fg); destination->GetResource(&output);
 		if (bg.Get() == output.Get() || fg.Get() == output.Get()) return false;
 		for(auto* view:{shadow,flash})if(view)
@@ -589,7 +601,8 @@ float4 recording_ps(Vertex v) : SV_Target {
 			if(owner!=device || resource==output)return false;
 		}
 		D3D11_MAPPED_SUBRESOURCE mapped{};
-		if (FAILED(deferred_->Map(constants_.Get(), 0, D3D11_MAP_WRITE_DISCARD, 0, &mapped))) return false;
+		const auto map_result=deferred_->Map(constants_.Get(), 0, D3D11_MAP_WRITE_DISCARD, 0, &mapped);
+		if (FAILED(map_result)){if(screen_scope)scope_status_={"constant_buffer",map_result,true};return false;}
 		constants data{corners, {1.f/width, 1.f/height,
 			std::clamp(blur_pixels, 0.f, mask_only ? 24.f : 8.f),
 			std::clamp(blur_strength, 0.f, mask_only ? 4.f : 1.f)}, canvas, {}, source_window};
@@ -625,11 +638,13 @@ float4 recording_ps(Vertex v) : SV_Target {
 		deferred_->Draw(4, 0);
 		Microsoft::WRL::ComPtr<ID3D11CommandList> commands;
 		const auto result = deferred_->FinishCommandList(FALSE, &commands);
-		if (FAILED(result)) { deferred_->ClearState(); return false; }
+		if (FAILED(result)) { if(screen_scope)scope_status_={"finish_command_list",result,true};deferred_->ClearState(); return false; }
+		if(screen_scope)scope_status_={"command_list_tag",0,false};
 		if (!native_conversion_command_list::mark(commands.Get())) return false;
 		// The established owner holds H2's GPU mutex. Recording has not touched
 		// native state; Execute(TRUE) restores all of it, including shader instances.
 		context->ExecuteCommandList(commands.Get(), TRUE);
+		if(screen_scope)scope_status_={"complete",result,true};
 		return true;
 	}
 }

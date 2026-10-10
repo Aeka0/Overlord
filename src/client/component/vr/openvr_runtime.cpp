@@ -801,6 +801,8 @@ namespace vr::openvr
 			status_.last_xr_result = result;
 			status_.last_xr_result_name = result_name;
 			status_.last_error = std::format("{} failed (OpenVR={} {})", operation, result, result_name);
+			status_.failures.record(GetTickCount64(),status_.session_generation,status_.frame_context_id,result,
+				operation,status_.last_initialization_stage,status_.last_error,status_.runtime_name,status_.system_name);
 			status_.worker_last_completed_operation = operation + " (failed)";
 			status_.worker_current_operation = "idle";
 			status_.worker_last_status_update = GetTickCount64();

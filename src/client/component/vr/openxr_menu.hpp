@@ -3,6 +3,7 @@
 #include "native_menu.hpp"
 #include "native_hud_capture.hpp"
 #include "texture_blit.hpp"
+#include "composition_diagnostics.hpp"
 
 #if H2V_OPENXR_HEADERS_AVAILABLE
 namespace vr::openxr
@@ -45,6 +46,7 @@ namespace vr::openxr
 		{
 			call_result call;
 			std::string detail;
+			menu_preparation_status diagnostic;
 			explicit operator bool() const noexcept
 			{
 				return bool(call) && call.code != XR_TIMEOUT_EXPIRED;

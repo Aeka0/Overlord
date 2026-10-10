@@ -1,4 +1,5 @@
 #include <std_include.hpp>
+#include "diagnostics/screen_display.hpp"
 #include "component/vr/native_render_contract.hpp"
 
 #include "engine_stereo_owner_pass.hpp"
@@ -1204,21 +1205,36 @@ namespace vr::engine_stereo_owner_pass
 			thermal_scene::world_request world;
 			if(const auto planner=thermal_scene::plan.load())world=planner(event);
 			auxiliary_scene::request request;
+			namespace probe=diagnostics::screen;
+			auto observed=probe::observation(event,output.claim.views.screen_scope_epoch?output.claim.views.screen_scope_epoch:output.claim.views.weapon_display_epoch,GetTickCount64());
+			observed.stage=output.claim.views.screen_scope_epoch?"select_fixed_scope":output.claim.views.weapon_display_epoch?"select_weapon_display":"select_optic";
 			if(output.claim.views.screen_scope_epoch)
 			{if(const auto planner=auxiliary_scene::screen_plan.load())request=planner(event);}
 			else
 			{
 				if(const auto planner=auxiliary_scene::weapon_display_plan.load())request=planner(event);
-				if(!request.valid)if(const auto planner=auxiliary_scene::plan.load())request=planner(event);
+				if(!request.valid)if(const auto planner=auxiliary_scene::plan.load()){observed.consumer="optic_fallback";request=planner(event);}
 			}
-			if (request.valid && request.eye<2 && auxiliary_scene::valid_window(request.window) &&
-				auxiliary_scene::crop_record(request.eye==0 ? output.records.left : output.records.right,
-					request.window,output.auxiliary_record) && auxiliary_scene::apply_near(output.auxiliary_record,request.near_distance) &&
-				(!request.native_center || auxiliary_scene::center_record(output.auxiliary_record,output.claim.views.source_origin())) &&
-				auxiliary_scene::apply_thermal(output.auxiliary_record,request) &&
-				auxiliary_scene::prepare_history(output.auxiliary_record,request,output.device_generation,
-					output.records.pair_id,output.auxiliary_history,output.auxiliary_next_history,output.auxiliary_reset))
-				output.auxiliary=request;
+			observed.owner_id=request.owner;observed.owner_generation=request.generation;observed.owner_revision=request.revision;
+			observed.reference_id=request.reference;observed.crop=request.window;observed.auxiliary_valid=request.valid;
+			observed.active=observed.active||request.valid;
+			bool accepted=request.valid&&request.eye<2&&auxiliary_scene::valid_window(request.window);
+			probe::check(observed.rejected,request.valid,probe::auxiliary_missing);
+			if(request.valid)probe::check(observed.rejected,accepted,probe::window);
+			const auto step=[&](const char* name,auto operation)
+			{
+				if(!accepted)return;
+				observed.stage=name;accepted=operation();
+				if(!accepted)observed.rejected|=probe::auxiliary_record;
+			};
+			step("crop_record",[&]{return auxiliary_scene::crop_record(request.eye==0?output.records.left:output.records.right,request.window,output.auxiliary_record);});
+			step("near_plane",[&]{return auxiliary_scene::apply_near(output.auxiliary_record,request.near_distance);});
+			step("center_camera",[&]{return !request.native_center||auxiliary_scene::center_record(output.auxiliary_record,output.claim.views.source_origin());});
+			step("native_thermal",[&]{return auxiliary_scene::apply_thermal(output.auxiliary_record,request);});
+			step("auxiliary_history",[&]{return auxiliary_scene::prepare_history(output.auxiliary_record,request,output.device_generation,
+				output.records.pair_id,output.auxiliary_history,output.auxiliary_next_history,output.auxiliary_reset);});
+			if(accepted){output.auxiliary=request;observed.stage="auxiliary_admitted";observed.success=true;}
+			if(observed.active||request.valid)probe::auxiliary.record(observed);
 			// The auxiliary must be built from native thermal input BEFORE this
 			// split, including when the eye box produces no optical request.
 			const auto original=thermal_scene::read(output.records.left.data());
@@ -1817,7 +1833,14 @@ namespace vr::engine_stereo_owner_pass
 				4*native_render_contract::target_registry_stride+2*sizeof(void*)),sizeof(composition.scene_depth));
 			if (eye==auxiliary_scene::view_index)
 			{
-				if (!active.auxiliary_image.capture(active.context.Get(),display_source.Get(),nullptr,active.device_generation))
+				auto observed=diagnostics::screen::observation(composition,active.claim.views.screen_scope_epoch?active.claim.views.screen_scope_epoch:active.claim.views.weapon_display_epoch,GetTickCount64());
+				observed.stage="auxiliary_copy";observed.owner_id=active.auxiliary.owner;observed.owner_generation=active.auxiliary.generation;
+				observed.owner_revision=active.auxiliary.revision;observed.reference_id=active.auxiliary.reference;
+				observed.success=active.auxiliary_image.capture(active.context.Get(),display_source.Get(),nullptr,active.device_generation);
+				observed.auxiliary_has_image=bool(active.auxiliary_image.view);
+				if(!observed.success)observed.rejected|=diagnostics::screen::auxiliary_copy;
+				diagnostics::screen::auxiliary.record(observed);
+				if (!observed.success)
 					{fail_transaction(active,failure::copy);return false;}
 				active.auxiliary_complete=true;
 				active.auxiliary_history=active.auxiliary_next_history;

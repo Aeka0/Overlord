@@ -104,10 +104,17 @@ namespace vr::openxr
 		XrResult result{XR_SUCCESS};
 		std::string error;
 		const char* operation = "native menu validation";
-		const auto failure = [&]() -> preparation_result { return {{result, operation}, std::move(error)}; };
+		menu_preparation_status diagnostic;
+		const auto failure = [&]() -> preparation_result
+		{
+			diagnostic.state = "api_or_transfer_failure";
+			diagnostic.layers = count_;
+			return {{result, operation}, std::move(error), diagnostic};
+		};
 		count_ = 0;
 		const auto now = GetTickCount64();
 		auto current = native_menu::current();
+		diagnostic.tick = now;
 		auto images = native_menu::latest();
 		const auto mode = native_menu::current_presentation();
 		const bool fresh = current.enabled && now >= current.timestamp && now - current.timestamp <= 250;
@@ -119,6 +126,7 @@ namespace vr::openxr
 		                                               current.count,
 		                                               current.briefing,
 		                                               mode.fullscreen_video);
+		diagnostic.movie = movie;
 		if (movie_ != movie)
 		{
 			movie_ = movie;
@@ -147,9 +155,15 @@ namespace vr::openxr
 		    now - current.timestamp > 250 || (!current.frontend && !current.count) || !images ||
 		    images->owner.session != current.session)
 		{
+			diagnostic.state = !current.enabled ? "menu_state_disabled" :
+				current.count > menu_surface::maximum_menus ? "menu_count_invalid" :
+				now < current.timestamp ? "menu_timestamp_future" :
+				now-current.timestamp > 250 ? "menu_state_stale" :
+				!current.frontend && !current.count ? "no_visible_menu" :
+				!images ? "menu_images_missing" : "menu_image_session_mismatch";
 			pointer_owner_.cancel_input();
 			native_menu::clear_pointer();
-			return {};
+			return {{}, {}, diagnostic};
 		}
 		const auto input = controller_input::latest();
 		if (session_ != current.session || reference_ != input.reference_generation ||
@@ -163,8 +177,9 @@ namespace vr::openxr
 		}
 		if (!anchor_.valid)
 		{
+			diagnostic.state = "menu_anchor_invalid";
 			native_menu::clear_pointer();
-			return {};
+			return {{}, {}, diagnostic};
 		}
 		const float elapsed = last_time_ && now >= last_time_ ? float(now - last_time_) * .001f : 0;
 		last_time_ = now;
@@ -195,12 +210,14 @@ namespace vr::openxr
 			           cursor = index == menu_surface::cursor_slot && current.interactive();
 			const bool latest = image && images->owner.revision == current.revision &&
 			                    now >= image->timestamp && now - image->timestamp <= 250;
-			if ((!menu && !background && !backdrop && !cursor) || !image || !image->texture ||
-			    image->generation != graphics.generation || !image->width || !image->height ||
-			    (cursor && !latest))
-				continue;
+			if (!menu && !background && !backdrop && !cursor) continue;
+			++diagnostic.candidates;
+			if (!image) {++diagnostic.missing; continue;}
+			if (!image->texture || !image->width || !image->height) {++diagnostic.invalid; continue;}
+			if (image->generation != graphics.generation) {++diagnostic.generation_mismatch; continue;}
+			if (cursor && !latest) {++diagnostic.stale_cursor; continue;}
 			if (menu && images->owner.menus[index].id != current.menus[index].id)
-				continue;
+			{++diagnostic.owner_mismatch; continue;}
 			auto geometry = menu_surface::layout(anchor_,
 			                                     current.frontend,
 			                                     float(image->width) / image->height,
@@ -356,7 +373,9 @@ namespace vr::openxr
 				pointer.hit = images->layers[active]->canvas.source_uv(pointer.u, pointer.v);
 		}
 		native_menu::publish_pointer(pointer);
-		return {};
+		diagnostic.layers = count_;
+		diagnostic.state = count_ ? "ready" : "no_eligible_menu_images";
+		return {{}, {}, diagnostic};
 	}
 	call_result menu_layers::destroy(const dispatch_table& xr) noexcept
 	{

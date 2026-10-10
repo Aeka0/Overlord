@@ -33,13 +33,92 @@ for an agreed 30-second reproduction window, invalid-span marking and offline pr
 
 ## Status commands and saved files
 
+For a player report, use **`vr_diagnose`** while the problem is visible. The
+equivalent desktop shortcut is **Ctrl+Shift+F8** while the game or its console
+has focus. Collection takes about five seconds and opens Explorer with the
+resulting `overlord-diagnostics-*.zip` selected. Ask the player to upload that
+one file; do not ask them to copy console output, run multiple commands or
+manually compare logs. Repeated requests while collection is active are ignored.
+
+The ZIP contains two fresh complete statuses and independent bounded core
+summaries, recent bounded console history,
+runtime traces, filtered saved VR/risk settings, startup preflight results, and
+up to two recent text reports and two bounded existing minidumps. A manifest
+records unavailable, changed, oversized and historical files. Existing artifacts
+are explicitly historical, not assumed to match the new process. Per-file and
+total evidence limits are 8 MiB and 24 MiB; game assets and whole profiles are
+not included. Nothing is uploaded automatically.
+
+The default destination is the game's `diagnose` folder; an unwritable game
+folder falls back to the user's local application data or temporary directory.
+An incomplete ZIP is never presented as complete. If packaging fails, the
+already captured text remains in its unique folder. The package can establish
+submission and failure history, but cannot prove what was visible in the HMD.
+
+Startup dependency warmup no longer overwrites the latest report with an empty
+pre-Present state. A dedicated diagnostics worker checkpoints observed rendering,
+runtime/session transitions and native-renderer readiness by default. This is
+event-driven; optional continuous deep-probe persistence remains opt-in.
+
 `vr_status` prints complete VR status and attempts an atomic write to:
 
 ```text
-minidumps/overlord-status-latest.txt
+diagnose/overlord-status-latest.txt
 ```
 
 This file holds the latest snapshot and is overwritten. Copy it into the incident's evidence directory after capture. If writing fails, an older file may remain; check its timestamp and contents before attributing it to the current command.
+
+`vr_status` uses the same writable-folder fallback as `vr_diagnose` and prints
+the actual saved path. Its console footer points to the one-step ZIP command.
+
+The complete report includes the Overlord release name, build configuration,
+Git revision/dirty state, compile time, actual client path, loaded PE timestamp
+and PDB GUID/age. The separate `target identity` section identifies the original
+and cached **game** executable, not the Overlord build. Incident UTC time, process
+ID, map, native frontend/scene state and pause/video state identify the sampled
+context without a separate player interview. Missing native values are reported
+as unavailable.
+
+Windows build, CPU/RAM, the actual game D3D adapter/driver, loaded module names
+and native current VR/graphics values are included. First runtime failures
+survive recovery and session cleanup, so a later generic error does not erase
+the initiating API/stage. First and last console errors also survive ordinary
+message rollover. Legacy scene probe counters are labelled separately from
+native pair/conversion and runtime submission counters.
+
+If optional deep report formatting fails, the status file explicitly marks
+`report_quality=core_only` and retains the core report instead of leaving only
+an old file. Core summaries are written first in diagnostic packages, so an
+oversized deep GPU census cannot consume the space reserved for basic identity,
+runtime/input, menu/HUD, view-publication and native-output evidence.
+GPU capture/session status reads report `snapshot_busy` when their producer
+holds the lock, rather than waiting for that GPU work or inventing zero counters.
+
+Javelin and the fixed thermal M82 in Of Their Own Accord are included in both
+full and core reports. Cached ownership/input, native HUD material candidates,
+layer selection/draws and blend/depth rejection, auxiliary selection and record
+preparation, and per-eye composition identities are recorded at their producers.
+The stages retain first/last captured failures and the last success across exit
+or dismount. Javelin's optional HUD gaps remain distinct from scene failure;
+fixed-scope HUD is mandatory. Compositor stage and HRESULT availability, plus
+canvas clip-W, distinguish rejected draws from an anchored plane behind the head.
+No extra GPU readback, image capture or runtime call is enabled by these counters.
+The captured narrative/damage layers that follow screen composition also report
+their current fade RGBA, age, reference and visibility metadata, so a black
+overlay can be distinguished from a failed auxiliary view or screen draw.
+
+`vr_menu_status` and `vr_hud_capture_status` use the same formatters included in
+this report. Menu publication ages, image ownership/generation and capture hook
+readiness are therefore available from one `vr_status` call. OpenXR additionally
+counts accepted world, menu-only and empty frames separately and records the
+last menu preparation gate and rejected image counts. `submitted_frames` alone
+does not establish that a world projection was submitted or visible in the HMD.
+
+Frontend view preparation counters and first/last failed prerequisite are always
+recorded, including when `vr_debugViewProbes` is off. The optional CPU trace ring
+can have zero records while production hooks are running. Reject samples retain
+transaction/frame/thread/slot identity and age; historical startup rejections
+must be read alongside subsequent preparation/publication counters.
 
 Common topic-specific commands are listed below with their registered spelling and capitalization:
 
@@ -60,7 +139,7 @@ Both `vr_status` and `vr_input_status` save the complete report to the shared fi
 ### Controller input: one report after the problem
 
 For an input problem, ask the player to run either `vr_input_status` or
-`vr_status` once and share `minidumps/overlord-status-latest.txt`. Both commands
+`vr_status` once and share `diagnose/overlord-status-latest.txt`. Both commands
 save the complete runtime report, including device and input evidence. No
 precise sequence of dashboard, controller or logging operations is required.
 The player does not need to compare logs or interpret counters. Do this before restarting the

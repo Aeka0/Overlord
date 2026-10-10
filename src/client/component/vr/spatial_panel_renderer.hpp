@@ -43,6 +43,8 @@ namespace vr::spatial_panel
 		bool draw_screen_scope(ID3D11DeviceContext*,ID3D11ShaderResourceView* scene,ID3D11ShaderResourceView* ink,
 			ID3D11RenderTargetView*,const projected_quad& canvas,unsigned width,unsigned height,
 			ID3D11ShaderResourceView* shadow=nullptr,ID3D11ShaderResourceView* flash=nullptr) noexcept;
+		struct scope_draw_status {const char* stage{"not_attempted"};HRESULT result{};bool result_known{};const char* shader{"none"};};
+		scope_draw_status last_scope_draw() const noexcept {return scope_status_;}
 		// Batch native encoded ink with source-over, then composite once over the
 		// current linear target. Overlapping icons preserve all preceding layers.
 		bool draw_layers(ID3D11DeviceContext*, ID3D11RenderTargetView*, const image_layer*,
@@ -90,5 +92,7 @@ namespace vr::spatial_panel
 		Microsoft::WRL::ComPtr<ID3D11DepthStencilState> scene_depth_;
 		Microsoft::WRL::ComPtr<ID3D11BlendState> blend_;
 		bool ready_{};
+		scope_draw_status scope_status_;
+		scope_draw_status initialization_status_;
 	};
 }

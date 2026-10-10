@@ -495,9 +495,10 @@ namespace vr::controllers
 				controller_input::clock::now(),"[VR input summary] ");
 			console::print_text(console::con_type_info,overview.str());
 			const auto* vr_enabled = game::Dvar_FindVar("vr_enable");
-			if (diagnostics::write_status_snapshot(vr_enabled && vr_enabled->current.enabled))
-				console::info("[VR input] Complete report saved to %s. Share this file.\n",diagnostics::status_snapshot_path);
-			else console::error("[VR input] Report save FAILED; an older file may remain. Share this console output.\n");
+			std::string saved_path;
+			if (diagnostics::write_status_snapshot(vr_enabled && vr_enabled->current.enabled,&saved_path))
+				console::info("[VR input] Report saved to %s. Run vr_diagnose or press Ctrl+Shift+F8 for one uploadable ZIP.\n",saved_path.c_str());
+			else console::error("[VR input] Report save FAILED in all diagnostic folders; an older file is not this capture.\n");
 		}
 	} // namespace
 

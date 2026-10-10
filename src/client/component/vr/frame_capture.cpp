@@ -870,4 +870,10 @@ namespace vr
 		const std::lock_guard lock(mutex_);
 		return status_;
 	}
+	bool frame_capture::try_get_status(frame_capture_status& output) const noexcept
+	{
+		const std::unique_lock lock(mutex_,std::try_to_lock);
+		if(!lock.owns_lock())return false;
+		output=status_;return true;
+	}
 }

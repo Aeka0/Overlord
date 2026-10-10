@@ -182,6 +182,8 @@ namespace vr::native_render_session
 		void cancel_pair(std::uint64_t pair_id) noexcept;
 		void record_capture(bool success) noexcept;
 		[[nodiscard]] status get_status() const noexcept;
+		// Diagnostics must not wait behind GPU work holding the session lock.
+		[[nodiscard]] bool try_get_status(status& output) const noexcept;
 
 	private:
 		mutable std::recursive_mutex mutex_;

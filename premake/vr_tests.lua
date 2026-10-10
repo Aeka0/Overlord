@@ -9,6 +9,14 @@ return function()
 		targetdir ("%{wks.location}/bin/%{cfg.platform}/%{cfg.buildcfg}/vr-tests/" .. output_directory)
 	end
 
+	test_executable("vr-support-diagnostics-tests", "support-diagnostics")
+		files {"./tests/vr/support_diagnostics_tests.cpp", "./src/client/component/vr/diagnostics/support_archive.cpp",
+			"./src/common/utils/compression.cpp"}
+		includedirs {"./tests/vr", "./src/client"}
+		minizip.import()
+		json.import()
+		gsl.import()
+
 	local vr_runtime_sources = {
 		"./src/client/component/vr/controller_input.cpp",
 		"./src/client/component/vr/controller_input.hpp",

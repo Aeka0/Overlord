@@ -1,5 +1,6 @@
 #pragma once
 #include "fixed_sniper_policy.hpp"
+#include <string>
 namespace game {struct playerState_s;struct usercmd_s;}
 namespace vr::gameplay::fixed_sniper
 {
@@ -9,4 +10,6 @@ namespace vr::gameplay::fixed_sniper
 	bool command(const controller_input::frame&,bool gameplay,game::usercmd_s*,float* angles,float deadzone,float speed) noexcept;
 	void suspend_input() noexcept;
 	float head_gain() noexcept;
+	std::string format_input_status();
+	std::string format_render_status();
 }

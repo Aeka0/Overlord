@@ -5,6 +5,7 @@
 #include "../auxiliary_scene.hpp"
 #include "../native_thermal.hpp"
 #include "../settings.hpp"
+#include "../diagnostics/report_paths.hpp"
 #include "component/command.hpp"
 #include "component/console.hpp"
 #include "component/scheduler.hpp"
@@ -29,23 +30,32 @@ namespace vr::gameplay::fixed_sniper
 		bool installed{};
 		std::atomic_bool alive{true};
 		std::atomic_uint64_t commands{},shots{};
+		std::atomic_uint64_t observer_tick{},command_tick{},command_epoch{};
+		const char* admission_reason{"not_observed"};
+		std::array<char,64> observed_weapon{};
+		int observed_entity{-1};
+		std::atomic<float> sampled_head_gain{settings::scripted_head_gain.default_value},sampled_hand_travel{hand_travel.default_value},sampled_hand_noise{hand_noise.default_value};
 		template<class T> T read(const void* p,std::size_t offset)
 		{T value{};std::memcpy(&value,static_cast<const std::byte*>(p)+offset,sizeof(value));return value;}
 		void invalidate(){const std::lock_guard lock(mutex);published={};entity_generation=0;}
 		void observe()
 		{
 			state next{};std::uint64_t generation{};
+			const char* why="inactive_or_scene_unavailable";std::array<char,64> weapon_name{};int candidate=-1;
 			if(alive && installed && head_pose_bridge::get_status().enabled && game::CL_IsCgameInitialized())
 			{
 				const auto* ps=reinterpret_cast<const game::playerState_s*>(game::g_entities[0].client);
 				const int entity=ps?read<std::uint16_t>(ps,0x1e):-1;
+				candidate=entity;why=ps?"not_mounted_or_entity_invalid":"player_unavailable";
 				if(ps && mounted::attached(ps->e_flags) && entity>0 && entity<4000)
 				{
 					const auto* ent=&game::g_entities[entity];const auto token=read<unsigned>(ent,0x80)&511;
 					const auto* definition=token?game::weapon_defs[token]:nullptr;
 					const auto* name=definition?read<const char*>(definition,0):nullptr;
+					if(name)std::memcpy(weapon_name.data(),name,(std::min)(strnlen_s(name,128),weapon_name.size()-1));
+					why="weapon_or_turret_owner_mismatch";
 					if(name && accepts(ps->e_flags,entity,{name,strnlen_s(name,128)}) && read<std::uint16_t>(ent,0x10c)==1 && read<void*>(ent,0x138))
-					{next.entity=entity;next.time=ps->commandTime;next.player=reinterpret_cast<std::uintptr_t>(ps);generation=weapons::native_carry::entity_key(entity).generation;}
+					{next.entity=entity;next.time=ps->commandTime;next.player=reinterpret_cast<std::uintptr_t>(ps);generation=weapons::native_carry::entity_key(entity).generation;why="admitted";}
 				}
 			}
 			const std::lock_guard lock(mutex);
@@ -56,6 +66,8 @@ namespace vr::gameplay::fixed_sniper
 				next.epoch=same?published.epoch:++next_epoch;next.started=same?published.started:next.time;
 			}
 			published=next;entity_generation=generation;
+			admission_reason=why;observed_weapon=weapon_name;observed_entity=candidate;
+			observer_tick=GetTickCount64();
 		}
 	}
 	state current(const game::playerState_s* ps) noexcept
@@ -70,11 +82,13 @@ namespace vr::gameplay::fixed_sniper
 	float head_gain() noexcept
 	{
 		const auto* value=game::Dvar_FindVar(settings::scripted_head_gain.name);
-		return value?value->current.value:settings::scripted_head_gain.default_value;
+		const auto result=value?value->current.value:settings::scripted_head_gain.default_value;
+		sampled_head_gain=result;return result;
 	}
 	bool command(const controller_input::frame& input,bool gameplay,game::usercmd_s* cmd,float* angles,float deadzone,float speed) noexcept
 	{
 		const auto owner=current();
+		command_tick=GetTickCount64();command_epoch=owner.epoch;
 		const auto now=controller_input::clock::now();
 		const auto value=input_control.consume(input,owner.epoch,gameplay,deadzone,speed,now);
 		head_pose_bridge::tracking_reference reference;
@@ -88,6 +102,7 @@ namespace vr::gameplay::fixed_sniper
 			context.tan_half_y=game::refdef->fovY; // Native scene tangent, not the runtime HMD FOV.
 			context.travel=hand_travel_dvar?hand_travel_dvar->current.value:hand_travel.default_value;
 			context.noise=hand_noise_dvar?hand_noise_dvar->current.value:hand_noise.default_value;
+			sampled_hand_travel=context.travel;sampled_hand_noise=context.noise;
 			for(unsigned h=0;h<2;++h)
 				if(input.runtime_grip[h].valid && head_pose_bridge::tracking_position(reference,input.runtime_grip[h].tracking.position_meters,context.positions[h]))
 					context.tracked|=1u<<h;
@@ -105,6 +120,19 @@ namespace vr::gameplay::fixed_sniper
 		++commands;return true;
 	}
 	void suspend_input() noexcept{input_control.reset();hand_control.reset();hand_mask=0;}
+	std::string format_input_status()
+	{
+		state owner;const char* why{};std::array<char,64> weapon{};int candidate{};std::uint64_t observed_at{};
+		{const std::unique_lock lock(mutex,std::try_to_lock);if(!lock.owns_lock())return "[VR fixed sniper input] snapshot_busy=yes\n";
+			owner=published;why=admission_reason;weapon=observed_weapon;candidate=observed_entity;observed_at=observer_tick.load();}
+		const auto now=GetTickCount64();
+		const auto age=[now](std::uint64_t tick)->std::int64_t{return tick&&now>=tick?static_cast<std::int64_t>(now-tick):-1;};
+		return std::format("[VR fixed sniper input] alive={} thermal_contract={} published_epoch={} entity={} native_time={} observer_age_ms={} command_epoch={} command_age_ms={} commands={} shots={} hand_mask={} hand_updates={}\n",
+			alive.load(),installed,owner.epoch,owner.entity,owner.time,age(observed_at),command_epoch.load(),age(command_tick),
+			commands.load(),shots.load(),hand_mask.load(),hand_updates.load())+
+			std::format("  admission={} candidate_entity={} native_weapon={} sampled_head_gain={} hand_travel_m={} hand_deadzone_m={}\n",
+				why,candidate,weapon.data(),sampled_head_gain.load(),sampled_hand_travel.load(),sampled_hand_noise.load());
+	}
 	class component final:public component_interface
 	{
 		void post_unpack() override
@@ -123,10 +151,10 @@ namespace vr::gameplay::fixed_sniper
 			scripting::on_level_start(invalidate);scripting::on_shutdown([](bool,bool after){if(!after)invalidate();});
 			::command::add("vr_fixedSniper_status",[]
 			{
-				const auto s=current();
-				const auto report=std::format("epoch={} entity={} commands={} shots={} head_gain={}\nhand_mask={} hand_updates={} hand_travel_m={} hand_deadzone_m={}\n",
-					s.epoch,s.entity,commands.load(),shots.load(),head_gain(),hand_mask.load(),hand_updates.load(),hand_travel_dvar->current.value,hand_noise_dvar->current.value);
-				console::info("[VR fixed sniper] %s",report.c_str());utils::io::write_file_atomic("minidumps/overlord-fixed-sniper-input.txt",report);
+				const auto report=format_input_status();console::print_text(console::con_type_info,report);
+				const auto path=diagnostics::save_named_report("overlord-fixed-sniper-input.txt",report);
+				if(path.empty())console::error("[VR fixed sniper] Report save failed\n");
+				else console::info("[VR fixed sniper] Saved %s\n",diagnostics::report_path_text(path).c_str());
 			});
 		}
 		void pre_destroy() override{alive=false;auxiliary_scene::screen_scope_epoch=nullptr;invalidate();}

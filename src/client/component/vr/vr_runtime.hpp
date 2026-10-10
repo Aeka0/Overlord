@@ -8,6 +8,8 @@
 #include "component/d3d11.hpp"
 #include "frame_capture.hpp"
 #include "steamvr_input_diagnostics.hpp"
+#include "composition_diagnostics.hpp"
+#include "runtime_failure_history.hpp"
 
 namespace vr
 {
@@ -98,6 +100,8 @@ namespace vr
 		std::int32_t session_state{};
 		std::int64_t last_xr_result{};
 		std::uint64_t submitted_frames{};
+		frame_submission_status frame_submission;
+		runtime_failure_history failures;
 		// A frame context is sampled on the renderer thread before the engine
 		// builds its view-dependent scene. Submission may happen later, but the
 		// eye family and pose must come from this same context.

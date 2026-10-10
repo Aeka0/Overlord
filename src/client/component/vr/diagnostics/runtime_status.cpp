@@ -43,6 +43,34 @@ namespace vr::diagnostics::detail
 		output << "  backend=" << available(runtime_status.backend_name);
 		output << " selection=" << available(runtime_status.backend_selection_reason) << '\n';
 		output << "  menu_surface=" << available(runtime_status.menu_surface_mode) << '\n';
+		const auto& failures=runtime_status.failures;
+		output<<"  runtime_failures: scope=process total="<<failures.total<<" retained="<<failures.retained<<'\n';
+		const auto append_failure=[&](const char* kind,const runtime_failure_event& event)
+		{
+			output<<"  "<<kind<<": tick="<<event.tick<<" session="<<event.session<<" frame="<<event.frame
+				<<" repeats="<<event.repetitions<<" code="<<event.code<<" operation="<<quoted_text(event.operation)
+				<<" stage="<<quoted_text(event.stage)<<" detail="<<quoted_text(event.detail)
+				<<" runtime="<<quoted_text(event.runtime)<<" system="<<quoted_text(event.system)<<'\n';
+		};
+		if(failures.total)append_failure("first_runtime_failure",failures.first);
+		for(std::size_t i{};i<failures.retained;++i)
+			append_failure("runtime_failure",failures.recent[(failures.next+failures.recent.size()-failures.retained+i)%failures.recent.size()]);
+		if (runtime_status.backend_name == "openxr")
+		{
+			const auto& frames = runtime_status.frame_submission;
+			const auto now = GetTickCount64();
+			output << "  openxr_frame_submission: scope=process completed=" << frames.completed
+				<< " world=" << frames.world << " menu_only=" << frames.menu_only << " empty=" << frames.empty
+				<< " last_world_layers=" << frames.last_world_layers << " last_menu_layers=" << frames.last_menu_layers
+				<< " age_ms=" << (frames.last_tick && now >= frames.last_tick ? static_cast<std::int64_t>(now-frames.last_tick) : -1) << '\n';
+			const auto& menu = frames.menu;
+			output << "  openxr_menu_preparation: state=" << menu.state << " movie=" << yes_no(menu.movie)
+				<< " age_ms=" << (menu.tick && now >= menu.tick ? static_cast<std::int64_t>(now-menu.tick) : -1)
+				<< " layers=" << menu.layers << " candidates=" << menu.candidates
+				<< " missing=" << menu.missing << " invalid=" << menu.invalid
+				<< " generation_mismatch=" << menu.generation_mismatch << " stale_cursor=" << menu.stale_cursor
+				<< " owner_mismatch=" << menu.owner_mismatch << '\n';
+		}
 		output << "  sdk_headers_available=" << yes_no(runtime_status.sdk_headers_available);
 		output << " state=" << to_string(runtime_status.state) << '\n';
 		output << "  loader_loaded=" << yes_no(runtime_status.loader_loaded);
@@ -278,6 +306,9 @@ namespace vr::diagnostics::detail
 		else
 		{
 			const auto& capture = runtime_status.capture;
+			if(capture.snapshot_busy)output<<"  capture: snapshot_busy=yes counters=unavailable\n";
+			else
+			{
 			output << "  capture: produced=" << capture.produced;
 			output << " ready=" << capture.ready;
 			output << " acquired=" << capture.acquired;
@@ -297,6 +328,7 @@ namespace vr::diagnostics::detail
 			output << "  capture_native: produced=" << capture.native_produced;
 			output << " pairs_acquired=" << capture.native_pairs_acquired;
 			output << " pair_misses=" << capture.native_pair_misses << '\n';
+			}
 		}
 		output << "  worker: active=" << yes_no(runtime_status.worker_active);
 		output << " phase=" << available(runtime_status.worker_phase);

@@ -132,13 +132,15 @@ See the [development guide](docs/development.md) for build details, checks appro
 
 ## Reporting Issues and Contributing
 
-Search [existing issues](https://github.com/Aeka0/Overlord/issues) before submitting a report. Reports in English or Chinese are welcome. Please include:
+Search [existing issues](https://github.com/Aeka0/Overlord/issues) before submitting a report. Reports in English or Chinese are welcome.
 
-- The version or commit you are using.
-- Your headset, controllers, Windows and VR runtime versions, and selected OpenXR/OpenVR backend.
-- The mission, checkpoint, weapon, or interaction where the problem occurs.
-- Steps to reproduce the issue, along with expected and actual behavior.
-- Relevant error text or trimmed log excerpts, if needed.
+While the problem is visible, press **Ctrl+Shift+F8** with the game window selected,
+or run **`vr_diagnose`** in Overlord's console. After about five seconds, Explorer
+opens with a diagnostic ZIP selected. Attach that one file and briefly describe
+what happened and the mission/checkpoint or interaction. You do not need to copy
+console text or manually collect versions and settings. If the game has already
+crashed, attach its generated crash ZIP from `minidumps`. See the
+[diagnostic guide](docs/vr-diagnostics-workflow.md) for capture contents and limits.
 
 Do not upload game files, access credentials, or unchecked full memory dumps to public issues. See the [security policy](SECURITY.md) for reporting issues that involve sensitive personal information.
 

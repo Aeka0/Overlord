@@ -8,6 +8,8 @@ Status formatting is split by subject:
 
 | File | Report sections |
 | --- | --- |
+| `session_status.cpp` | Client/PDB identity, process/game context and native current settings |
+| `environment_status.cpp` | Windows/CPU/RAM, actual D3D adapter/driver and module names |
 | `runtime_status.cpp` | Runtime, controller input, display settings, and head pose |
 | `frontend_status.cpp` | View publication, scene input completion, culling, and target routing |
 | `execution_status.cpp` | Output merger, draw hooks, execution census and owner admission |
@@ -44,6 +46,22 @@ The status file lock still covers the entire format-and-replace transaction.
 Do not parallelize report sections or move formatting outside that lock: doing
 so could mix stream state, reorder observations, or allow an older snapshot to
 replace a newer one. Render/runtime producers remain independent of file I/O.
+
+`support_bundle.cpp` owns the bounded, explicitly requested five-second capture
+and sparse automatic status checkpoints on a dedicated worker. It shares the
+complete coordinator formatter with `vr_status`; it never executes console
+commands or enables heavyweight probes. `support_archive.cpp` owns bounded file
+selection/staging and final ZIP publication, independently of game/runtime/UI
+state. Only a successfully closed ZIP is renamed into the uploadable result.
+
+`screen_display.hpp` supplies bounded producer snapshots for fixed scope,
+Javelin, their native HUD capture and the shared auxiliary view. Producers and
+readers use try-locks; dropped observations are explicit. They retain CPU values
+and static reason names only, never graphics leases or native borrowed pointers.
+Feature commands reuse the same cached formatters as the full/core report.
+`report_paths.hpp` centralizes `diagnose` output and writable-directory fallback.
+The same worker is cancelled and joined before VR teardown. Existing artifacts
+retain their own timestamps and a historical association label.
 
 `runtime_code_snapshot.cpp` exports bounded, validated executable-memory ranges
 for offline analysis. The renderer invokes it at the existing loader boundary,

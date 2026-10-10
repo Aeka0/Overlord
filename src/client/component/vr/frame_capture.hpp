@@ -55,6 +55,7 @@ namespace vr
 
 	struct frame_capture_status
 	{
+		bool snapshot_busy{};
 		std::uint64_t produced{};
 		std::uint64_t ready{};
 		std::uint64_t acquired{};
@@ -110,6 +111,8 @@ namespace vr
 		void invalidate(std::uint64_t generation) noexcept;
 		void revoke_all() noexcept;
 		[[nodiscard]] frame_capture_status get_status() const noexcept;
+		// A busy capture producer is unavailable evidence, never zero counters.
+		[[nodiscard]] bool try_get_status(frame_capture_status& output) const noexcept;
 
 	private:
 		enum class slot_state

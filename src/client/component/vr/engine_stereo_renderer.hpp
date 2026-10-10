@@ -1,11 +1,35 @@
 #pragma once
 
 #include <cstdint>
+#include <array>
 
 namespace vr::engine_stereo_renderer
 {
 	struct scene_handoff_status { std::uint64_t attempts{}, publications{}, failures{}; };
 	[[nodiscard]] scene_handoff_status get_scene_handoff_status() noexcept;
+	enum class view_rejection : std::uint8_t
+	{
+		none, initializer_not_observed, allocator_count, views_unavailable,
+		eye_derivation, eye_finalization, culling_admission, generator_not_observed,
+		views_not_prepared, publication_contract, record_arena_unavailable,
+		binding_publication, count
+	};
+	struct view_rejection_sample
+	{
+		view_rejection reason{view_rejection::none};
+		std::uint64_t tick{}, transaction{}, frame{};
+		std::uintptr_t slot{};
+		std::uint32_t thread{}, allocator_calls{}, initializer_calls{}, generator_calls{};
+	};
+	struct view_preparation_status
+	{
+		std::uint64_t allocator_entries{}, initializer_entries{}, generator_entries{};
+		std::uint64_t scoped_initializers{}, scoped_generators{}, derivations{}, prepared{};
+		std::array<std::uint64_t, static_cast<std::size_t>(view_rejection::count)> rejections{};
+		view_rejection_sample first, last;
+	};
+	[[nodiscard]] view_preparation_status get_view_preparation_status() noexcept;
+	const char* to_string(view_rejection value) noexcept;
 	struct culling_union_status
 	{
 		std::uint64_t attempts{};
