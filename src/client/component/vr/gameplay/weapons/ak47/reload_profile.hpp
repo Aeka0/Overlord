@@ -40,6 +40,10 @@ namespace vr::gameplay::weapons::ak47
 		                     .additional_bullet_bones = additional_bullets,
 		                     .rigid_magazine_source = "h2_viewmodel_ak47_base"};
 		    p.slide_capture = &handle_capture;
+		    // Extend acquisition 4 cm outward (-Y) and forward (+X), without
+		    // moving the tab or hand fits or relaxing the receiver-side boundary.
+		    p.slide_grab_low[1] -= 4.f / 2.54f;
+		    p.slide_grab_high[0] += 4.f / 2.54f;
 		    p.magazine_fills = magazine_fills;
 		    p.magazine_tracking = magazine_tracking_frame::controller;
 		    return p;

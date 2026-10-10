@@ -74,7 +74,9 @@ trigger. Actual bolt handle geometry is on negative gun Y. The original right
 hand cocking animation no longer supplies the manipulation pose. Both left-hand
 edges contact the outer tab near gun-local (22.22, -5.76, 10.42) cm. The acquisition
 box is (21.8, -5.9, 9.7)..(23.0, -3.0, 11.2) cm, corrected from a region about
-10 cm behind the protruding tab. These are desktop-reviewed ergonomic candidates;
+10 cm behind the protruding tab. The profile extends acquisition 4 cm to the
+right (-Y) and forward (+X), retaining the receiver-side wrist boundary and
+the original hardware/hand fits. These are desktop-reviewed ergonomic candidates;
 headset comfort and glove-dependent contact still need acceptance.
 
 Primary tac/GL/shotgun equip actions use the shared suppression policy and 13

@@ -28,6 +28,18 @@ namespace handle_refinement_tests
 				check(w::choose_part_grip(poses,wrong,{},d->slide_grab_low,d->slide_grab_high,units,d->slide_capture,h).pose==w::no_part_grip,
 					"AK assistance cannot acquire from the magazine/left side of the receiver wall");
 			}
+			const auto contact=compose(expected,{poses[style].contact_in_wrist,{0,0,0,1}}).position;
+			for(int axis:{0,1})for(float extra:{.039f,.041f})
+			{
+				auto point=contact;const float direction=axis==0?1.f:-1.f;
+				point[axis]=(axis==0?w::ak47::bolt_grab_high[axis]:w::ak47::bolt_grab_low[axis])+
+					direction*(d->interaction.slide_radius+extra)*units;
+				auto wrist=expected;wrist.position=add(expected.position,sub(point,contact));
+				const auto candidate=w::choose_part_grip(poses,wrist,{},d->slide_grab_low,d->slide_grab_high,units,d->slide_capture,h);
+				Fixture f(d);f.owner.rear=vr::hand(1-h);f.step();
+				f.geometry.slide_distance=candidate.distance_meters;f.geometry.slide_pose=candidate.pose;f.trigger(true);
+				check(f.control.slide_held()==(extra<.04f),"AK adds exactly 4 cm of rightward and forward acquisition for both hands and all skins");
+			}
 		}
 		for(int h=0;h<2;++h)
 		{
