@@ -75,14 +75,13 @@ namespace vr::controller_input
 		std::array<float, 2> turn{};
 		std::array<hand_pose, 2> grip{};
 		std::array<hand_pose, 2> aim{};
-		// Preserve the raw pair for diagnostics and its rigid grip-to-aim basis.
-		// Wrist alignment uses this pair; the physical lever uses filtered grip.
+		// Preserve unfiltered poses for diagnostics and mechanical controls.
+		// Visual wrist calibration uses the filtered grip as one rigid pose.
 		std::array<hand_pose, 2> runtime_aim{}; // Unfiltered SDK pointing pose.
 		std::array<hand_pose, 2> runtime_grip{}; // Unfiltered adapter grip in its reported calibration basis.
 		std::array<float,3> orientation_degrees{}; // pitch, yaw, roll
-		bool orientation_settling{};
-		std::array<float,3> wrist_pivot_meters{settings::wrist_inward.default_value,
-			settings::wrist_back.default_value,settings::wrist_up.default_value};
+		bool orientation_settling{}; // Position or angle calibration changed; fence physical motion history.
+		std::array<float,3> position_offsets_meters{}; // inward, back, up in the selected grip frame.
 		std::uint64_t continuity_generation{}; // Producer continuity, independent of game simulation cadence.
 		input_observation source{}; // Diagnostic provenance only; never grants gameplay admission.
 	};

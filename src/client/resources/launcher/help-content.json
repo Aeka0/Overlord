@@ -5810,9 +5810,10 @@
       "text": {
         "zh-CN": {
           "title": "下挂 M203、GP-25 与霰弹枪",
-          "intro": "主枪与下挂机构分别装填；下挂弹药使用腰侧 Grip + Trigger 组合取用。",
+          "intro": "主枪与下挂机构分别装填；默认开启的智能选择弹药会根据两者状态决定腰间取出的弹药。",
           "steps": [
-            "空闲手在腰侧先按住 Grip，再新按住同一只手的 Trigger，取一发下挂弹药。只按 Trigger 会取主枪弹药。",
+            "空闲手在腰侧新按住 Trigger 取弹药。主枪无弹匣或已装填弹药耗尽时优先取主弹匣；否则，充分开启的空 M203、空 GP-25 或弹管未满的下挂霰弹枪优先取对应下挂弹药。",
+            "加握 Grip 选择另一种弹药；持续按住 Trigger 时，在腰间按下或松开 Grip 可切换。可在玩法设置中关闭智能选择，恢复 Trigger 取主弹匣、Grip + Trigger 取下挂弹药。",
             "M203：用 Grip 握住下挂前部，沿枪身向前滑开筒体；装入一发后拉回闭合。前部握持同时用于支撑和开合。",
             "GP-25：把榴弹送入前方筒口。用 Grip 握住它的辅助握位，再用这只手 Trigger 发射。",
             "下挂霰弹枪：在对应装填位置补弹，用下挂泵动握位完成拉后、推前循环。",
@@ -5821,9 +5822,10 @@
         },
         "en": {
           "title": "Underbarrel M203, GP-25 and shotgun",
-          "intro": "Primary and underbarrel feeds load separately. Use a waist Grip + Trigger chord for underbarrel ammunition.",
+          "intro": "Primary and underbarrel feeds load separately. Smart ammo selection is on by default and chooses waist ammunition from their current state.",
           "steps": [
-            "At the waist, hold Grip in a free hand, then newly hold that same hand’s Trigger to draw underbarrel ammunition. Trigger alone draws primary ammunition.",
+            "Newly hold Trigger with a free hand at your waist. A missing primary magazine or exhausted loaded primary ammunition takes priority; otherwise an empty, sufficiently open M203, empty GP-25 or underbarrel shotgun with room in its tube selects its own ammunition.",
+            "Hold Grip to choose the other ammo type. While holding Trigger at your waist, press or release Grip to switch. Disable smart selection in Gameplay to restore Trigger for primary and Grip + Trigger for underbarrel ammo.",
             "M203: Grip its front support/tube and slide it forward to open. Insert a round and slide back closed; the front grasp serves support and opening.",
             "GP-25: seat the grenade at the front tube mouth. Grip its support position and fire with that hand’s Trigger.",
             "Underbarrel shotgun: feed its loading contact and cycle its own pump fully back and forward.",
@@ -5832,9 +5834,10 @@
         },
         "zh-TW": {
           "title": "下掛 M203、GP-25 與霰彈槍",
-          "intro": "主槍與下掛機構分別裝填；下掛彈藥使用腰側 Grip + Trigger 組合取用。",
+          "intro": "主槍與下掛機構分別裝填；預設開啟的智慧選擇彈藥會根據兩者狀態決定腰間取出的彈藥。",
           "steps": [
-            "空閑手在腰側先按住 Grip，再新按住同一只手的 Trigger，取一發下掛彈藥。只按 Trigger 會取主槍彈藥。",
+            "空閒手在腰側新按住 Trigger 取彈藥。主槍無彈匣或已裝填彈藥耗盡時優先取主彈匣；否則，充分開啟的空 M203、空 GP-25 或彈管未滿的下掛霰彈槍優先取對應下掛彈藥。",
+            "加握 Grip 選擇另一種彈藥；持續按住 Trigger 時，在腰間按下或鬆開 Grip 可切換。可在玩法設定中關閉智慧選擇，恢復 Trigger 取主彈匣、Grip + Trigger 取下掛彈藥。",
             "M203：用 Grip 握住下掛前部，沿槍身向前滑開筒體；裝入一發后拉回閉合。前部握持同時用于支撐和開合。",
             "GP-25：把榴彈送入前方筒口。用 Grip 握住它的輔助握位，再用這只手 Trigger 發射。",
             "下掛霰彈槍：在對應裝填位置補彈，用下掛泵動握位完成拉后、推前循環。",
@@ -5843,9 +5846,10 @@
         },
         "fr": {
           "title": "M203, GP-25 et fusil sous canon",
-          "intro": "Les deux alimentations se chargent séparément. À la taille, utilisez Grip + Trigger pour les munitions sous canon.",
+          "intro": "Les deux alimentations se chargent séparément. La sélection intelligente, activée par défaut, choisit les munitions à la taille selon leur état.",
           "steps": [
-            "À la taille, maintenez Grip d’une main libre puis pressez à nouveau Trigger de la même main. Trigger seul prend les munitions principales.",
+            "Pressez Trigger d’une main libre à la taille. Le chargeur principal absent ou les munitions principales chargées épuisées ont priorité. Sinon, un M203 vide et suffisamment ouvert, un GP-25 vide ou un fusil sous canon avec de la place dans son tube choisit ses propres munitions.",
+            "Maintenez Grip pour l’autre type. En gardant Trigger à la taille, pressez ou relâchez Grip pour changer. Désactivez la sélection intelligente dans Gameplay pour retrouver Trigger pour l’arme principale et Grip + Trigger pour l’arme sous canon.",
             "M203 : Grip à l’avant sur le tube/appui, glissez vers l’avant pour ouvrir, insérez puis reculez pour fermer. Cette prise sert aussi d’appui.",
             "GP-25 : insérez à l’entrée avant du tube. Grip sur l’appui, Trigger de cette main pour tirer.",
             "Fusil sous canon : chargez son point d’alimentation et effectuez un cycle complet de sa propre pompe.",
@@ -5854,9 +5858,10 @@
         },
         "de": {
           "title": "Unterlauf-M203, GP-25 und Schrotflinte",
-          "intro": "Haupt- und Unterlaufwaffe werden getrennt geladen. Unterlaufmunition mit Grip + Trigger an der Hüfte nehmen.",
+          "intro": "Haupt- und Unterlaufwaffe werden getrennt geladen. Die standardmäßig aktive intelligente Munitionswahl wählt an der Hüfte nach ihrem Zustand.",
           "steps": [
-            "An der Hüfte mit freier Hand Grip halten, dann Trigger derselben Hand neu drücken. Trigger allein nimmt Hauptmunition.",
+            "An der Hüfte mit freier Hand Trigger neu drücken. Ein fehlendes Hauptmagazin oder verbrauchte geladene Hauptmunition hat Vorrang. Sonst wählt ein leerer, ausreichend geöffneter M203, leerer GP-25 oder eine Unterlauf-Schrotflinte mit Platz im Magazinrohr ihre eigene Munition.",
+            "Grip halten, um die andere Munition zu wählen. Bei gehaltenem Trigger an der Hüfte Grip drücken oder loslassen, um zu wechseln. Intelligente Auswahl in Gameplay ausschalten, um Trigger für Hauptmunition und Grip + Trigger für Unterlaufmunition wiederherzustellen.",
             "M203: Vorderrohr/Stütze mit Grip greifen, zum Öffnen vorschieben, laden und zurückschieben. Vordergriff dient auch als Stütze.",
             "GP-25: Granate vorne ins Rohr setzen. Stützposition mit Grip greifen und Trigger dieser Hand abfeuern.",
             "Unterlaufschrotflinte: an eigener Ladeöffnung laden und eigene Pumpe ganz zurück und vor bewegen.",
@@ -5865,9 +5870,10 @@
         },
         "es": {
           "title": "M203, GP-25 y escopeta bajo cañón",
-          "intro": "La alimentación principal y secundaria se carga aparte. Usa Grip + Trigger en la cintura para munición secundaria.",
+          "intro": "La alimentación principal y secundaria se carga aparte. La selección inteligente está activada por defecto y elige la munición en la cintura según su estado.",
           "steps": [
-            "En la cintura mantén Grip con la mano libre y pulsa de nuevo su Trigger. Trigger solo saca munición principal.",
+            "Pulsa Trigger con una mano libre en la cintura. Un cargador principal ausente o la munición principal cargada agotada tiene prioridad. Si no, un M203 vacío y suficientemente abierto, un GP-25 vacío o una escopeta acoplada con espacio en su tubo elige su propia munición.",
+            "Mantén Grip para elegir el otro tipo. Con Trigger mantenido en la cintura, pulsa o suelta Grip para cambiar. Desactiva la selección inteligente en Gameplay para restaurar Trigger para munición principal y Grip + Trigger para secundaria.",
             "M203: agarra tubo/apoyo delantero con Grip, desliza adelante para abrir, mete la granada y atrás para cerrar. También sirve de apoyo.",
             "GP-25: coloca la granada en la boca frontal. Agarra el apoyo con Grip y dispara con su Trigger.",
             "Escopeta: carga por su punto de entrada y acciona su propia corredera completamente atrás y adelante.",
@@ -5876,9 +5882,10 @@
         },
         "ru": {
           "title": "Подствольные M203, GP-25 и дробовик",
-          "intro": "Основное и подствольное оружие заряжаются отдельно. Для подствольных боеприпасов используйте Grip + Trigger у пояса.",
+          "intro": "Основное и подствольное оружие заряжаются отдельно. Умный выбор включён по умолчанию и выбирает боеприпасы у пояса по их состоянию.",
           "steps": [
-            "У пояса свободной рукой держите Grip, затем заново нажмите её Trigger. Один Trigger берёт основную муницию.",
+            "У пояса нажмите Trigger свободной рукой. Снятый основной магазин или израсходованные заряженные патроны имеют приоритет. Иначе пустой и достаточно открытый M203, пустой ГП-25 или подствольный дробовик с местом в трубчатом магазине выбирает свои боеприпасы.",
+            "Удерживайте Grip для другого типа. При удержании Trigger у пояса нажмите или отпустите Grip для переключения. Отключите умный выбор в Gameplay, чтобы вернуть Trigger для основного оружия и Grip + Trigger для подствольного.",
             "M203: возьмитесь Grip за переднюю опору/трубу, сдвиньте вперёд, вставьте гранату и закройте назад. Хват также поддерживает оружие.",
             "GP-25: вставьте гранату спереди в трубу. Возьмите опору Grip и стреляйте Trigger этой руки.",
             "Подствольный дробовик: загрузите в его точку и полностью передёрните его помпу назад-вперёд.",
@@ -5887,9 +5894,10 @@
         },
         "ja": {
           "title": "アンダーバレル M203・GP-25・ショットガン",
-          "intro": "主銃と下部武器は別々に装填します。下部弾薬は腰で Grip + Trigger を使います。",
+          "intro": "主銃と下部武器は別々に装填します。初期状態で有効な弾薬の自動選択が、両者の状態に応じて腰から取る弾薬を選びます。",
           "steps": [
-            "空いた手を腰に置き Grip を保持してから、同じ手の Trigger を新たに押します。Trigger だけでは主銃の弾薬になります。",
+            "空いた手を腰に置き Trigger を新たに押します。主銃のマガジンが外れているか装填済みの弾薬がない場合は主銃用を優先します。それ以外は、空で十分に開いた M203、空の GP-25、弾倉に空きがある下部ショットガン用の弾薬を選びます。",
+            "Grip を押すと別の弾薬を選べます。腰で Trigger を保持したまま Grip を押すか離すと切り替わります。Gameplay で自動選択を無効にすると、Trigger で主銃用、Grip + Trigger で下部武器用を取る従来の操作に戻ります。",
             "M203：前部支持位置／筒を Grip で握って前へスライドし、開きます。弾を入れ後ろへ戻して閉じます。この保持位置は支持にも使います。",
             "GP-25：前方の筒口に榴弾を装着します。支持位置を Grip で握り、その手の Trigger で発射します。",
             "下部ショットガン：専用の装填位置に弾を入れ、専用ポンプを最後まで引いて押します。",
@@ -5898,9 +5906,10 @@
         },
         "ko": {
           "title": "하부 M203, GP-25 및 산탄총",
-          "intro": "주 무기와 하부 무기는 따로 장전합니다. 하부 탄약은 허리에서 Grip + Trigger로 꺼냅니다.",
+          "intro": "주 무기와 하부 무기는 따로 장전합니다. 기본적으로 켜진 스마트 탄약 선택이 두 무기의 상태에 따라 허리에서 꺼낼 탄약을 고릅니다.",
           "steps": [
-            "허리에서 빈손 Grip을 유지한 뒤 같은 손 Trigger를 새로 누르세요. Trigger만 누르면 주 무기 탄약이 나옵니다.",
+            "허리에서 빈손의 Trigger를 새로 누르세요. 주 탄창이 없거나 장전된 주 탄약이 소진되면 주 탄창을 우선합니다. 그 외에는 비어 있고 충분히 열린 M203, 빈 GP-25 또는 탄관에 여유가 있는 하부 산탄총용 탄약을 선택합니다.",
+            "Grip을 누르면 다른 탄약을 선택합니다. 허리에서 Trigger를 유지한 채 Grip을 누르거나 놓아 전환하세요. Gameplay에서 스마트 선택을 끄면 Trigger로 주 탄약, Grip + Trigger로 하부 탄약을 꺼내는 기존 조작으로 돌아갑니다.",
             "M203: 앞 받침/총열을 Grip으로 잡고 앞으로 밀어 엽니다. 탄을 넣고 뒤로 밀어 닫습니다. 앞 잡기는 보조와 열기에 함께 사용됩니다.",
             "GP-25: 앞 발사관 입구에 유탄을 넣습니다. 보조 위치를 Grip으로 잡고 그 손의 Trigger로 발사합니다.",
             "하부 산탄총: 전용 장전 접촉점에 넣고 자체 펌프를 끝까지 뒤로 당겼다가 앞으로 미세요.",

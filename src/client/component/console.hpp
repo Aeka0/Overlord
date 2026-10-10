@@ -2,6 +2,7 @@
 
 #include <cstddef>
 #include <string_view>
+#include <string>
 #include <vector>
 
 namespace console
@@ -46,6 +47,7 @@ namespace console
 	}
 
 	void print_text(int type, std::string_view text);
+	std::string diagnostic_history(bool errors_only = false);
 
 	template <typename... Args>
 	void error(const char* fmt, Args&&... args)

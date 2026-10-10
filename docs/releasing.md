@@ -23,7 +23,11 @@ Build RelWithDebInfo for normal gameplay and Debug for diagnosis. See
 [development.md](development.md). Before packaging, run
 `tests/vr/client_feature_parity_tests.py` against the selected build's EXE/PDB
 pair, including when selecting Release. Missing feature entry points or
-read-only mutable storage must block the candidate. After building and auditing,
+read-only mutable storage must block the candidate. Release uses ordinary
+optimization with WPO disabled across build inputs. Build
+`vr-aggregate-publication-tests` in Release before packaging; the packager runs
+its publication/readback/reset check and audits the client EXE/PDB automatically.
+After building and auditing,
 create an overlay with:
 
 ~~~bat
@@ -34,6 +38,11 @@ The archive under `output/packages/<version-name>/` includes the executable, app
 input bindings, artwork, loose project scripts, the Khronos OpenXR loader and
 license notices. It excludes PDBs, user settings, logs, original game files and
 raw ZoneTool assets. Retain matching PDBs privately; they can contain local source paths.
+
+The supplied `h2_killfeed_sounds.ff` is bundled with the client, alongside its
+feedback and ducking scripts. Its editable aliases, FLAC sources and ZoneTool
+manifest live under `data/zonetool/h2_killfeed_sounds` and `data/zone_source`;
+rebuild this sound-only zone with a compatible H2 ZoneTool when changing audio.
 
 The overlay requires a legally owned game and the base H2-Mod data required by
 the installation. The client build does not compile data/zone_source/ and

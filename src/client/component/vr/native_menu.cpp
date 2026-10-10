@@ -407,6 +407,38 @@ namespace vr::native_menu
 		{std::array<std::uint8_t,N> mask;mask.fill(255);return bool(utils::hook_validation::verify_masked_bytes(reinterpret_cast<void*>(at),{bytes,mask.data(),N}));}
 	}
 	state current() noexcept {const std::lock_guard lock(mutex);return published;}
+	std::string format_status()
+	{
+		state s; pointer p; std::shared_ptr<const images> image;
+		{const std::lock_guard lock(mutex);s=published;p=input_pointer;image=output;}
+		const auto now=GetTickCount64();
+		const auto age=[now](std::uint64_t stamp)->std::int64_t
+		{return stamp&&now>=stamp?static_cast<std::int64_t>(now-stamp):-1;};
+		unsigned layers{};if(image)for(const auto& layer:image->layers)if(layer)++layers;
+		std::ostringstream out;
+		// Only published LUI/capture data here. Status may run during native VM
+		// teardown; live engine queries are guarded in the game-context section.
+		out<<"[VR menus] ready="<<installed.load()<<" requested="<<requested.load()
+			<<" enabled="<<s.enabled<<" frontend="<<s.frontend<<" video="<<s.video
+			<<" menus="<<s.count<<" session="<<s.session<<" revision="<<s.revision
+			<<" age_ms="<<age(s.timestamp)<<" blocked="<<s.blocked<<" briefing="<<s.briefing
+			<<" scene_dim="<<s.scene_dim<<" tagged="<<tagged.load()<<" rejected="<<rejected.load()
+			<<" rejected_command=0x"<<std::hex<<rejected_command.load()<<std::dec
+			<<" publications="<<publications.load()<<" layers="<<layers
+			<<" cached_draws="<<cached_draws.load()<<" input_ready="<<p.ready<<" ray_hit="<<p.hit
+			<<" pointer_age_ms="<<age(p.stamp)<<" overlay_errors="<<p.overlay_errors
+			<<" last_overlay_error="<<p.overlay_error<<'\n';
+		if(image)
+		{
+			out<<"  menu_images: session="<<image->owner.session<<" revision="<<image->owner.revision
+				<<" owner_matches="<<(image->owner.session==s.session&&image->owner.revision==s.revision)<<'\n';
+			for(std::size_t i{};i<image->layers.size();++i)if(const auto& layer=image->layers[i])
+				out<<"  menu_image["<<i<<"]: sequence="<<layer->sequence<<" generation="<<layer->generation
+					<<" age_ms="<<age(layer->timestamp)<<" size="<<layer->width<<'x'<<layer->height
+					<<" texture="<<bool(layer->texture)<<'\n';
+		}
+		return out.str();
+	}
 	presentation current_presentation() noexcept
 	{
 		if(!installed||!requested)return {};
@@ -512,11 +544,7 @@ namespace vr::native_menu
 			scheduler::loop([]{try{(void)observe();deliver();}catch(...){++rejected;::input::release_vr_ui_input();reset_vm();}},scheduler::lui);
 			if(debug_options::enabled(debug_options::probe::menu_input))
 				scheduler::loop([]{try{write_input_trace();}catch(...){}},scheduler::async,1s);
-			command::add("vr_menu_status",[]{const auto s=current();pointer p;std::shared_ptr<const images> image;
-				{const std::lock_guard lock(mutex);p=input_pointer;image=output;}
-				unsigned layers{};if(image)for(const auto& layer:image->layers)if(layer)++layers;
-				console::info("[VR menus] cached_draws=%llu\n",cached_draws.load());
-				console::info("[VR menus] ready=%d requested=%d frontend=%d video=%d menus=%u session=%llu revision=%llu tagged=%llu rejected=%llu rejected_command=%04x publications=%llu layers=%u input_ready=%d ray_hit=%d overlay_errors=%llu last_overlay_error=%d\n",installed.load(),requested.load(),s.frontend,s.video,s.count,s.session,s.revision,tagged.load(),rejected.load(),rejected_command.load(),publications.load(),layers,p.ready,p.hit,p.overlay_errors,p.overlay_error);});
+			command::add("vr_menu_status",[]{console::print_text(console::con_type_info,format_status());});
 		}
 		void pre_destroy() override {set_requested(false);reset_vm();}
 	};

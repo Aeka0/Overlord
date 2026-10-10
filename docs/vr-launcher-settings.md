@@ -152,13 +152,27 @@ Visual comfort includes **Disable blur** (`vr_disableBlur`, off by default).
 spatial HUD while preserving menus. See [presentation options](vr-presentation-options.md)
 for rendering boundaries.
 
-VR Settings has five categories: **Basics** contains visual comfort and controller
-alignment; **Gameplay** contains turning, aiming and throwable speed; **Cheats** contains
+VR Settings has six categories: **Basics** contains the quick guide, VR backend,
+turning (the third section, directly below VR backend) and visual comfort;
+**Calibration** contains controller alignment; **Gameplay** contains aiming,
+weapon interaction and throwable speed; **Cheats** contains
 no recoil, health protection, native notarget and ammunition modes, all off by default;
 **Other** contains
-live stream preview and Hide all HUD; **Debug** contains optional diagnostic probes. Switching categories keeps
+hit / kill audio, live stream preview and Hide all HUD; **Debug** contains optional diagnostic probes. Switching categories keeps
 unsaved changes and the scroll position of each category. The left sidebar's Save
-button saves all categories; Reset restores the entire draft's defaults.
+button saves all categories; Reset restores the entire draft's defaults.
+
+Other's Hit / kill audio (`vr_killfeedStyle`) defaults to Modern Warfare (2019).
+Disabled, Black Ops Cold War and Modern Warfare Classic are also available.
+MW2019 replaces the hit sound with a kill or headshot-kill sound on lethal damage;
+BOCW cycles its hit variants and layers the kill sound, while Classic uses one
+sound for all hits. Only the local player's damage to living targets is considered,
+and death notifications determine kills. Feedback briefly lowers combat audio
+without changing dialogue or music. The original per-group volume levels are
+preserved. The GSC feedback script owns recovery: it holds until 150 ms after
+the last feedback and fades back over 180 ms.
+The selection is saved for the next game
+launch; Reset restores MW2019. There is no in-game settings menu for this feature.
 
 Cheats displays a recommendation to complete the campaign once before enabling
 it. Demigod/God cannot prevent scripted deaths. Infinite reserves locks carried
@@ -173,6 +187,13 @@ branch before the player knockdown sequence begins. Dogs remain able to attack.
 These policies apply only when VR is enabled. See [enemy combat](vr-enemy-combat.md)
 for the native boundaries and acceptance checks.
 
+Gameplay > Weapon interaction includes `vr_smartAmmoSelection` (default on).
+New waist draws prioritize the primary magazine when it is absent or its loaded
+ammunition is exhausted. Otherwise they select a grenade for an empty, sufficiently
+open M203 or empty GP-25, or a shell for a partially filled underbarrel shotgun tube.
+Grip chooses the other supply; disabling the option restores the original
+modifier behavior. See [underbarrel interaction](vr-underbarrel-runtime.md).
+
 The former Ammo Drop preview is now the saved `vr_discardAmmoPenalty` toggle
 (default off). Enabling it loses all remaining rounds when a discarded magazine
 or speedloader expires or hits the world, and when live revolver rounds are
@@ -243,6 +264,7 @@ and regression tests.
 | Turn style | `vr_turnMode` | `smooth` | `smooth`, `snap` |
 | Smooth speed | `vr_turnSpeed` | 90 degrees/second | 15 to 360 |
 | Snap angle | `vr_snapAngle` | 30 degrees | 5 to 90 |
+| Near-eye sight attraction (Gameplay > Aiming) | `vr_adsComfort` | true | boolean |
 | VR aim assist strength | `vr_aimAssistStrength` | 0 (off) | 0 to 100 |
 | No recoil (Cheats; inverted checkbox) | `vr_recoil` | true (checkbox off) | boolean |
 | Single-hand penalty | `vr_recoilPenalty` | `long` | `all`, `long`, `off` |
@@ -290,25 +312,20 @@ unarmed walking, sprinting, crouch movement and crawling; headset tracking is
 independent. See [VR movement camera bob](vr-camera-bob.md) for native contracts
 and headset acceptance checks.
 
-Offsets translate the complete wrist frame, including its rotation center,
-instead of changing the physical controller-to-wrist lever on every adjustment.
-The physical baseline still rotates with the grip. The alignment difference is
-expressed in the recentered player reference using the runtime raw-grip/aim
-relation; it does not follow wrist rotation or HMD looking direction. Inward
-remains mirrored per hand. This preserves the former placement when runtime aim
-is aligned with the player reference, while changing other orientations so the
-alignment difference no longer sweeps an arc. Shared definitions live in
-`src/client/component/vr/settings.hpp`.
-
-Advanced saved console controls `vr_wristPivotInward`, `vr_wristPivotBack`, and
-`vr_wristPivotUp` describe the physical grip-local baseline (defaults
--0.02/0.12/0 m, range -0.5 to 0.5 m). They are separate from the launcher
-alignment controls and are preserved by launcher saves. These offsets are a
-configurable reference baseline, not an anatomical measurement or a universal
-controller profile.
-Existing saved pivot values are not overwritten by new defaults or presets;
-testing the zero-Up correction on an existing profile requires explicitly setting
-`vr_wristPivotUp 0`. Other devices can adjust it independently.
+Position offsets select one rigid point in the controller's grip frame, shared
+by rendering and physical interactions. Inward remains mirrored per hand.
+The point follows controller rotation and whole-body physical turning; head
+looking and aim-angle calibration do not translate it. Tune the offsets so a
+rotation about your physical wrist leaves the virtual wrist stationary. A value
+that only makes one neutral pose look correct can still move the wrist during
+rotation. Defaults and presets are tuning starting points, not anatomical
+measurements. Existing values are retained and may need recalibration after this
+change. Shared definitions live in `src/client/component/vr/settings.hpp`.
+
+The separate `vr_wristPivot*` and `vr_standardWristPivot*` controls are retired.
+Saved entries are preserved by launcher saves but no longer affect hand poses;
+the selected `vr_handOffset*` or `vr_standardHandOffset*` bank now defines the
+complete calibrated wrist point and its rotation centre.
 
 The three angle controls also live under **Basics > Controller alignment**.
 They rotate both hands and their held weapons about the controller's local axes:

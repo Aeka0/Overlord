@@ -166,10 +166,17 @@ Offline coverage:
 Diagnostics: `vr_fixedSniper_status` reports ownership/input requests;
 `vr_fixedSniper_renderStatus` reports planned scopes, composed eyes and missing
 pairs. Existing `vr_hud_capture_status` identifies unsupported native blend/depth
-state. The render-status command also saves `minidumps/overlord-fixed-sniper.txt`.
+state. The render-status command also saves `diagnose/overlord-fixed-sniper.txt`.
 Counters are requests/compositions, not confirmation of hits or heat pixels.
-The input-status command also saves `minidumps/overlord-fixed-sniper-input.txt`,
+The input-status command also saves `diagnose/overlord-fixed-sniper-input.txt`,
 including active hand mask, applied displacement count and current hand tuning.
+Both sections now appear in `vr_status`, the bounded core summary and the automatic
+`vr_diagnose` package. The report includes producer-side admission/weapon identity,
+HUD material candidates and layer counts, epoch/device/reference/age mismatches,
+auxiliary crop/near-plane/thermal/history gates, and per-eye composition failures.
+First/last retained failures and last success survive leaving the display. Canvas
+clip-W is recorded because an anchored plane behind the viewer legitimately draws
+black; a successful composition is not proof that the plane is visible.
 
 The failed build's live counters showed zero planned auxiliary views, zero
 composed scope eyes and repeated unsupported blends. A bounded D3D state read

@@ -111,11 +111,11 @@ aim orientation rotates the original wrist-to-gun relationship. Unreachable
 targets use the configured arm-extension policy rather than changing the
 native body or weapon root.
 
-Saved wrist-pivot offsets are separate from the existing hand position and
-angle alignment controls. They define the controller point that maps to the
-anatomical wrist and are not an automatic calibration system. Adjust them only
-when the tracked hand and rendered wrist have a consistent relative offset;
-resampling or adding smoothing does not correct a wrong reference point.
+Position calibration selects one grip-local wrist point independently of aim
+angle calibration. The separate saved wrist-pivot controls are retired.
+The [hand-alignment contract](vr-hand-alignment.md) describes this position
+reference, the native wrist-to-weapon relation, and the independent headset
+acceptance required before claiming an alignment repair.
 
 ## Verification and device acceptance
 

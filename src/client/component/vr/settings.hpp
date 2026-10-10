@@ -23,10 +23,15 @@ namespace vr::settings
 	struct choice_setting
 	{
 		const char* name;
-		std::array<const char*, 4> values; // Null terminated for native enum registration.
+		std::array<const char*, 5> values; // Null terminated for native enum registration.
 		int default_index{};
-		std::array<const char*, 4> label_keys{}; // Launcher localization keys, paired with values.
+		std::array<const char*, 5> label_keys{}; // Launcher localization keys, paired with values.
 	};
+	inline constexpr choice_setting killfeed_style{
+		.name = "vr_killfeedStyle",
+		.values = {"off", "bocw", "mw_classic", "mw2019"},
+		.default_index = 3,
+		.label_keys = {"choice.disabled", "choice.bocw", "choice.mwClassic", "choice.mw2019"}};
 	inline constexpr choice_setting cheat_health{
 	    .name = "vr_cheatHealth",
 	    .values = {"off", "demigod", "god"},
@@ -48,7 +53,7 @@ namespace vr::settings
 		.default_index = 1,
 		.label_keys = {"choice.standardControllerPose", "choice.legacyControllerPose"}};
 	inline constexpr std::array choices{
-		runtime_backend, controller_pose_mode,
+		runtime_backend, controller_pose_mode, killfeed_style,
 	    choice_setting{
 	        .name = turn_mode, .values = {"smooth", "snap"}, .label_keys = {"choice.smooth", "choice.snap"}},
 	    choice_setting{.name = recoil_penalty,
@@ -99,20 +104,24 @@ namespace vr::settings
 	inline constexpr boolean_setting quick_reload{"vr_quickReload", true};
 	inline constexpr boolean_setting chambering_guide{"vr_chamberingGuide", false};
 	inline constexpr boolean_setting physical_ladders{"vr_physicalLadders", true};
+	inline constexpr boolean_setting smart_ammo_selection{"vr_smartAmmoSelection", true};
 	inline constexpr boolean_setting discard_ammo_penalty{"vr_discardAmmoPenalty", false};
 	inline constexpr boolean_setting hide_hud{"vr_hideHud", false};
 	inline constexpr boolean_setting disable_blur{"vr_disableBlur", false};
 	inline constexpr boolean_setting disable_dog_pounce{"vr_disableDogPounce", true};
+	inline constexpr boolean_setting ads_comfort{"vr_adsComfort", true};
 	inline constexpr auto toggles = []
 	{
 		constexpr std::array gameplay{recording_mode,
 		                              quick_reload,
 		                              chambering_guide,
 		                              physical_ladders,
+		                              smart_ammo_selection,
 		                              discard_ammo_penalty,
 		                              hide_hud,
 		                              disable_blur,
 		                              disable_dog_pounce,
+		                              ads_comfort,
 		                              boolean_setting{disable_lens_flare, false},
 		                              boolean_setting{camera_bob, true},
 		                              boolean_setting{recoil, true},
@@ -142,17 +151,8 @@ namespace vr::settings
 		           : 0.f;
 	}
 	inline constexpr float max_hand_offset = .5f;
-	// Physical grip-to-wrist baseline, separate from presentation alignment.
-	// Advanced saved console controls; launcher edits preserve these entries.
-	inline constexpr number_setting wrist_inward{
-	    "vr_wristPivotInward", -.02f, -max_hand_offset, max_hand_offset, .01f};
-	inline constexpr number_setting wrist_back{
-	    "vr_wristPivotBack", .12f, -max_hand_offset, max_hand_offset, .01f};
-	// Zero Up matches the saved rigid-local trial that improved alignment before
-	// the pivot/alignment split. The old -5 cm default was not that trial's value.
-	// This remains a tuning baseline, not a measured anatomical calibration.
-	inline constexpr number_setting wrist_up{"vr_wristPivotUp", 0.f, -max_hand_offset, max_hand_offset, .01f};
-	inline constexpr std::array wrist_pivots{wrist_inward, wrist_back, wrist_up};
+	// One grip-local point determines both wrist placement and its rotation
+	// centre. Position and angle calibration remain independent.
 	inline constexpr number_setting hand_inward{
 	    "vr_handOffsetInward", 0.f, -max_hand_offset, max_hand_offset, .01f};
 	inline constexpr number_setting hand_back{
@@ -184,10 +184,6 @@ namespace vr::settings
 		number_setting{"vr_standardHandAnglePitch", 0.f, -180.f, 180.f, 1.f},
 		number_setting{"vr_standardHandAngleYaw", 0.f, -180.f, 180.f, 1.f},
 		number_setting{"vr_standardHandAngleRoll", 0.f, -180.f, 180.f, 1.f}};
-	inline constexpr std::array standard_wrist_pivots{
-		number_setting{"vr_standardWristPivotInward", -.027f, -max_hand_offset, max_hand_offset, .01f},
-		number_setting{"vr_standardWristPivotBack", .016253897f, -max_hand_offset, max_hand_offset, .01f},
-		number_setting{"vr_standardWristPivotUp", .008063812f, -max_hand_offset, max_hand_offset, .01f}};
 	inline constexpr std::array standard_alignment_presets{
 		alignment_preset{"standard_default", "Standard baseline", {-.007f, -.096073247f, -.034157186f, 0, 0, 0}},
 		alignment_preset{"meta_quest_3", "Meta Quest 3", {-.027f, .051438062f, -.085542142f, -20, 0, 0}}};

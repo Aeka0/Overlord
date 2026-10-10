@@ -2,6 +2,7 @@
 #include "native_followed_fx.hpp"
 #include "followed_fx_policy.hpp"
 #include "native_weapon_fx.hpp"
+#include "native_fx_checkpoint.hpp"
 #include <utils/native_memory.hpp>
 #include "component/fastfiles.hpp"
 #include "component/scheduler.hpp"
@@ -18,6 +19,7 @@ namespace vr::gameplay::native_followed_fx
         {
             game::FxEffectDef definition{};std::vector<game::FxElemDef> elements;
             std::mutex mutex;state current;std::uint64_t generation{};
+            game::FxEffectDef* source{};unsigned attached_mask{};std::string checkpoint_name;
         };
         std::array<std::unique_ptr<entry>,8> storage;
         std::array<std::atomic<entry*>,8> published{};
@@ -75,6 +77,31 @@ namespace vr::gameplay::native_followed_fx
             return utils::native_memory::read_bytes(actual.data(),reinterpret_cast<const void*>(at),N) &&
                 std::equal(actual.begin(),actual.end(),bytes);
         }
+        handle definition(game::FxEffectDef* source,unsigned mask)
+        {
+            if(!source || !source->name)return {};
+            const auto count=std::int64_t(source->elemDefCountLooping)+source->elemDefCountEmission+source->elemDefCountOneShot;
+            if(count<=0 || count>32 || source->elemDefCountLooping<0 || source->elemDefCountEmission<0 ||
+                source->elemDefCountOneShot<0 || !source->elemDefs || source->msecLoopingLife<=0 || source->msecLoopingLife>60000 ||
+                (count<32 && (mask>>count)))return {};
+            for(unsigned i=0;i<storage.size();++i)if(storage[i] && storage[i]->source==source && storage[i]->attached_mask==mask)
+                return {i,storage[i]->generation};
+            for(unsigned i=0;i<storage.size();++i)if(!storage[i])
+            {
+                auto p=std::make_unique<entry>();p->source=source;p->attached_mask=mask;
+                p->checkpoint_name=native_fx::checkpoint::name(native_fx::checkpoint::variant::followed,
+                    {source->name,strnlen_s(source->name,native_fx::checkpoint::source_name_limit+1)},mask);
+                if(p->checkpoint_name.empty())return {};
+                p->definition=*source;p->elements.assign(source->elemDefs,source->elemDefs+count);
+                for(unsigned n=0;n<unsigned(count);++n)if(mask&(1u<<n))
+                    p->elements[n].flags=(p->elements[n].flags&~game::FX_ELEM_RUN_MASK)|game::FX_ELEM_RUN_RELATIVE_TO_EFFECT;
+                p->definition.elemDefs=p->elements.data();p->definition.name=p->checkpoint_name.c_str();p->generation=++generation;
+                const std::array<game::FxEffectDef*,1> definitions{&p->definition};
+                if(!native_fx::checkpoint::publish(definitions))return {};
+                storage[i]=std::move(p);published[i].store(storage[i].get(),std::memory_order_release);return {i,generation};
+            }
+            return {};
+        }
     }
     bool initialize() noexcept
     {
@@ -100,6 +127,7 @@ namespace vr::gameplay::native_followed_fx
         spawn_hook.create(spawn_address,spawn);update_hook.create(update_address,update);
         fastfiles::on_pre_unload([] {
             // Native DB unload is already drained, as for rigid-part/DObj owners.
+            native_fx::checkpoint::remove(native_fx::checkpoint::variant::followed);
             for(auto& p:published)p.store(nullptr,std::memory_order_release);
             for(auto& p:storage)p.reset();
         });
@@ -108,17 +136,15 @@ namespace vr::gameplay::native_followed_fx
     handle create(game::FxEffectDef* source,std::span<const unsigned> attached_elements)
     {
         if(!ready || !source || !scheduler::is_executing(scheduler::pipeline::main))return {};
-        const int count=source->elemDefCountLooping+source->elemDefCountEmission+source->elemDefCountOneShot;
-        if(count<=0 || count>32 || !source->elemDefs || source->msecLoopingLife<=0 || source->msecLoopingLife>60000)return {};
-        for(auto i:attached_elements)if(i>=unsigned(count))return {};
-        for(unsigned i=0;i<storage.size();++i)if(!storage[i])
-        {
-            auto p=std::make_unique<entry>();p->definition=*source;p->elements.assign(source->elemDefs,source->elemDefs+count);
-            for(auto n:attached_elements)p->elements[n].flags=(p->elements[n].flags&~game::FX_ELEM_RUN_MASK)|game::FX_ELEM_RUN_RELATIVE_TO_EFFECT;
-            p->definition.elemDefs=p->elements.data();p->generation=++generation;
-            storage[i]=std::move(p);published[i].store(storage[i].get(),std::memory_order_release);return {i,generation};
-        }
-        return {};
+        unsigned mask{};
+        for(auto n:attached_elements){if(n>=32)return {};mask|=1u<<n;}
+        return definition(source,mask);
+    }
+    game::FxEffectDef* restore_definition(game::FxEffectDef* source,unsigned mask)
+    {
+        if(!initialize())return nullptr;
+        const auto h=definition(source,mask);
+        auto* p=get(h);return p?&p->definition:nullptr;
     }
     bool start(handle h,std::uint64_t activation,int time,hands::anchor pose)
     {

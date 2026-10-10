@@ -183,6 +183,6 @@ namespace vr::diagnostics
 		    << prefix
 		    << "input_help: losses are availability transitions, not proof of a physical device disconnect; age_ms=-1 means unobserved.\n"
 		    << prefix
-		    << "input_help: Share minidumps/overlord-status-latest.txt after vr_input_status or vr_status; no manual log comparison is needed.\n";
+		    << "input_help: Run vr_diagnose or press Ctrl+Shift+F8 for one diagnostic ZIP; its folder opens automatically.\n";
 	}
 }

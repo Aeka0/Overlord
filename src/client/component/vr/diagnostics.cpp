@@ -5,6 +5,7 @@
 #include "build_config.hpp"
 #include "diagnostics/status_sections.hpp"
 #include "diagnostics/format_helpers.hpp"
+#include "diagnostics/report_paths.hpp"
 #include "region_capture.hpp"
 #include "engine_backend_probe.hpp"
 #include "engine_stereo_binding.hpp"
@@ -29,7 +30,12 @@
 #include "engine_view_probe.hpp"
 #include "head_pose_bridge.hpp"
 #include "gameplay/hands/status.hpp"
+#include "gameplay/fixed_sniper.hpp"
+#include "gameplay/javelin_screen.hpp"
+#include "diagnostics/screen_display.hpp"
 #include "native_render_session.hpp"
+#include "native_menu.hpp"
+#include "native_hud_capture.hpp"
 #include "vr_runtime.hpp"
 
 #include <exception/minidump.hpp>
@@ -78,6 +84,16 @@ namespace vr::diagnostics
 		std::mutex timing_mutex;
 		timing_state timings;
 		std::mutex status_snapshot_mutex;
+		std::filesystem::path saved_status_path;
+		bool persist_status_locked(const std::string& report)
+		{
+			for(const auto& root:report_directories())
+			{
+				const auto path=root/"overlord-status-latest.txt";
+				if(utils::io::write_file_atomic(path,report)){saved_status_path=path;return true;}
+			}
+			return false;
+		}
 
 		struct trace_entry
 		{
@@ -400,6 +416,15 @@ namespace vr::diagnostics
 		timings.resize_before = event.timestamp == clock::time_point{} ? clock::now() : event.timestamp;
 	}
 
+	namespace
+	{
+		std::string screen_displays_status()
+		{
+			return gameplay::fixed_sniper::format_input_status()+gameplay::fixed_sniper::format_render_status()+
+				gameplay::weapons::javelin_screen::format_status()+screen::auxiliary.format("auxiliary display scene",GetTickCount64());
+		}
+	}
+
 	std::string format_status_text(const bool dvar_enabled)
 	{
 		const auto identity = target_identity::get();
@@ -460,6 +485,10 @@ namespace vr::diagnostics
 
 		std::ostringstream output;
 		output << "[VR] status\n";
+		detail::append_session_status(output, identity.compatibility_probe_passed);
+		detail::append_environment_status(output, device);
+		output << "capture context: " << (graphics.present_count == 0 ?
+			"before_first_present (startup snapshot; does not describe a rendered failure)" : "rendering_observed") << '\n';
 		output << "target identity:\n";
 		output << "  original_path=" << available(identity.original_path) << '\n';
 		output << "  original_size=" << identity.original_file_size << " bytes";
@@ -741,7 +770,14 @@ namespace vr::diagnostics
 		output << bridge_status.last_full_height << " eye_viewport=";
 		output << bridge_status.last_left_width << 'x';
 		output << bridge_status.last_right_width << '\n';
-		const auto native = native_render_session::active().get_status();
+		native_render_session::status native;
+		if(!native_render_session::active().try_get_status(native))
+			output<<"  native_session: snapshot_busy=yes counters=unavailable (GPU owner not waited on)\n";
+		else
+		{
+		output << "  production_native_output: renderer_ready=" << yes_no(runtime_status.native_renderer_ready)
+			<< " pairs_acquired=" << native.pair_acquires << " pairs_released=" << native.pair_releases
+			<< " conversions=" << native.conversion_completions << " conversion_failures=" << native.conversion_failures << '\n';
 		output << "  native_session: available=" << yes_no(native.available);
 		output << " generation=" << native.device_generation;
 		output << " target=" << native.width << 'x' << native.height;
@@ -847,6 +883,7 @@ namespace vr::diagnostics
 			<< native.last_source_view_create_result;
 		output << std::dec << std::nouppercase << '\n';
 		output << "  capability_probe=" << available(native.capability_probe) << '\n';
+		}
 		for (std::size_t index = 0; index < runtime_status.eyes.size(); ++index)
 		{
 			const auto& eye = runtime_status.eyes[index];
@@ -857,6 +894,9 @@ namespace vr::diagnostics
 		output << " last_xr_result=" << runtime_status.last_xr_result;
 		output << " (" << available(runtime_status.last_xr_result_name) << ")\n";
 		output << "  last_error=" << available(runtime_status.last_error) << '\n';
+		output << native_menu::format_status() << native_hud_capture::format_status();
+		output << screen_displays_status();
+		output << console::diagnostic_history(true);
 		output << gameplay::hands::status();
 		output << "  native_renderer: ready=" << yes_no(runtime_status.native_renderer_ready);
 		output << " failures=" << runtime_status.native_renderer_failure_count;
@@ -902,7 +942,60 @@ namespace vr::diagnostics
 		return output.str();
 	}
 
-	bool write_status_snapshot(const bool dvar_enabled) noexcept
+	namespace
+	{
+		std::string format_core_status_text(const bool dvar_enabled)
+		{
+			std::ostringstream out;
+			out<<"[VR] core_status (bounded summary; deep GPU census omitted)\n";
+			const auto device=d3d11::get_device_snapshot();const auto graphics=d3d11::get_graphics_status();
+			const auto runtime_status=runtime::get().get_status();const auto head=head_pose_bridge::get_status();
+			detail::append_session_status(out,target_identity::get().compatibility_probe_passed);
+			detail::append_environment_status(out,device);
+			out<<"capture context: "<<(graphics.present_count?"rendering_observed":"before_first_present")<<'\n'
+				<<"vr_enable="<<yes_no(dvar_enabled)<<" present_count="<<graphics.present_count<<" present_failed="<<graphics.failed_present_count<<'\n';
+			detail::append_runtime_status(out,runtime_status,head);
+			native_render_session::status native;
+			const bool native_known=native_render_session::active().try_get_status(native);
+			const auto handoff=engine_stereo_renderer::get_scene_handoff_status();
+			const auto preparation=engine_stereo_renderer::get_view_preparation_status();
+			const auto owner=engine_stereo_owner_pass::get_report();
+			if(!native_known)out<<"native_output: snapshot_busy=yes counters=unavailable\n";
+			else out<<"native_output: renderer_ready="<<yes_no(runtime_status.native_renderer_ready)
+				<<" pairs_acquired="<<native.pair_acquires<<" pairs_released="<<native.pair_releases
+				<<" conversions="<<native.conversion_completions<<" conversion_failures="<<native.conversion_failures<<'\n';
+			out<<"view_publication: attempts="<<handoff.attempts<<" publications="<<handoff.publications
+				<<" failures="<<handoff.failures<<" prepared="<<preparation.prepared
+				<<" last_rejection="<<engine_stereo_renderer::to_string(preparation.last.reason)<<'\n';
+			out<<"owner_failure: reason="<<engine_stereo_owner_pass::to_string(owner.last_failure)
+				<<" pair="<<owner.failure_pair<<" eye="<<owner.failure_eye<<" display="<<owner.display_transform_error<<'\n';
+			out<<"runtime_error="<<detail::quoted_text(runtime_status.last_error)
+				<<" native_error="<<detail::quoted_text(runtime_status.native_renderer_error)<<'\n';
+			out<<native_menu::format_status()<<native_hud_capture::format_status()<<gameplay::hands::status()
+				<<screen_displays_status()<<console::diagnostic_history(true);
+			return out.str();
+		}
+		std::string compose_status_text(const bool dvar_enabled)
+		{
+			try{return format_status_text(dvar_enabled)+format_engine_probe_text(engine_stereo_probe::get_status());}
+			catch(const std::exception& error)
+			{return "[VR] report_quality=core_only full_report_error="+detail::quoted_text(error.what())+"\n"+format_core_status_text(dvar_enabled);}
+		}
+	}
+
+	std::string collect_core_status_text(const bool dvar_enabled)
+	{
+		const std::lock_guard lock(status_snapshot_mutex);
+		return format_core_status_text(dvar_enabled);
+	}
+
+	std::string collect_status_text(const bool dvar_enabled)
+	{
+		const std::lock_guard lock(status_snapshot_mutex);
+		return compose_status_text(dvar_enabled);
+	}
+
+	bool write_status_snapshot(const bool dvar_enabled, std::string* const saved_path) noexcept
 	{
 		try
 		{
@@ -910,11 +1003,9 @@ namespace vr::diagnostics
 			// command and watchdog use the same fixed .tmp sibling; formatting outside
 			// this lock could also let an older snapshot overwrite a newer one.
 			const std::lock_guard lock(status_snapshot_mutex);
-			const auto status = format_status_text(dvar_enabled);
-			const auto engine_probe = format_engine_probe_text(
-				engine_stereo_probe::get_status());
-			return utils::io::write_file_atomic(
-				status_snapshot_path, status + engine_probe);
+			const auto saved=persist_status_locked(compose_status_text(dvar_enabled));
+			if(saved&&saved_path)*saved_path=report_path_text(saved_status_path);
+			return saved;
 		}
 		catch (...)
 		{
@@ -927,19 +1018,17 @@ namespace vr::diagnostics
 		try
 		{
 			std::string status;
-			std::string engine_probe;
 			bool saved{};
+			std::string saved_path;
 			{
 				const std::lock_guard lock(status_snapshot_mutex);
-				status = format_status_text(dvar_enabled);
-				engine_probe = format_engine_probe_text(
-					engine_stereo_probe::get_status());
-				saved = utils::io::write_file_atomic(status_snapshot_path, status + engine_probe);
+				status = compose_status_text(dvar_enabled);
+				saved = persist_status_locked(status);
+				if(saved)saved_path=report_path_text(saved_status_path);
 			}
 			console::print_text(console::con_type_info, status);
-			console::print_text(console::con_type_info, engine_probe);
-			if (saved) console::info("[VR] Complete report saved to %s. Share this file.\n",status_snapshot_path);
-			else console::error("[VR] Report save FAILED; an older file may remain. Share this console output.\n");
+			if (saved) console::info("[VR] Report saved to %s. For one uploadable ZIP, run vr_diagnose or press Ctrl+Shift+F8.\n",saved_path.c_str());
+			else console::error("[VR] Report save FAILED in all diagnostic folders; an older file is not this capture. Check free space and folder permissions.\n");
 		}
 		catch (...)
 		{

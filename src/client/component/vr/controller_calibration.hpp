@@ -7,8 +7,8 @@ namespace vr::controller_calibration
 	using angles=std::array<float,3>;
 	using matrix=std::array<std::array<float,3>,3>;
 	inline constexpr angles defaults{settings::hand_pitch.default_value,settings::hand_yaw.default_value,settings::hand_roll.default_value};
-	inline constexpr angles default_pivot{settings::wrist_inward.default_value,settings::wrist_back.default_value,settings::wrist_up.default_value};
-	struct configuration {angles orientation=defaults,pivot=default_pivot;};
+	inline constexpr angles default_position{settings::hand_inward.default_value,settings::hand_back.default_value,settings::hand_up.default_value};
+	struct configuration {angles orientation=defaults,position=default_position;};
 	using settings_provider=configuration(*)(controller_pose_pipeline::mode) noexcept;
 	// Native settings are optional: standalone runtimes retain shared defaults
 	// without importing game dvars or component registration.
@@ -20,7 +20,7 @@ namespace vr::controller_calibration
 			for (unsigned i = 0; i < 3; ++i)
 			{
 				result.orientation[i] = settings::standard_hand_alignment[i + 3].default_value;
-				result.pivot[i] = settings::standard_wrist_pivots[i].default_value;
+				result.position[i] = settings::standard_hand_alignment[i].default_value;
 			}
 		return result;
 	}
@@ -51,20 +51,20 @@ namespace vr::controller_calibration
 	}
 	class calibration
 	{
-		angles previous_{},previous_pivot_{};
+		angles previous_{},previous_position_{};
 		controller_input::clock::time_point changed_at_{};
 		bool initialized_{},settling_{};
 	public:
-		controller_input::frame apply(const controller_input::frame& raw,angles degrees,angles pivot=default_pivot) noexcept
+		controller_input::frame apply(const controller_input::frame& raw,angles degrees,angles position=default_position) noexcept
 		{
 			auto out=raw;out.runtime_grip=raw.grip;out.runtime_aim=raw.aim;out.orientation_degrees=degrees;out.orientation_settling=false;
-			out.wrist_pivot_meters=pivot;
-			for (const float x:pivot) if (!std::isfinite(x) || std::abs(x)>settings::max_hand_offset)
-			{for (auto& p:out.aim) p.valid=false;return out;}
+			out.position_offsets_meters=position;
+			for (float value:position) if (!std::isfinite(value) || std::abs(value)>settings::max_hand_offset)
+			{for (auto& pose:out.aim) pose.valid=false;return out;}
 			if (!valid(degrees)) {for (auto& p:out.aim) p.valid=false;return out;}
-			if (!initialized_) {previous_=degrees;previous_pivot_=pivot;initialized_=true;}
-			else if (previous_!=degrees || previous_pivot_!=pivot)
-			{previous_=degrees;previous_pivot_=pivot;changed_at_=raw.sampled_at;settling_=true;}
+			if (!initialized_) {previous_=degrees;previous_position_=position;initialized_=true;}
+			else if (previous_!=degrees || previous_position_!=position)
+			{previous_=degrees;previous_position_=position;changed_at_=raw.sampled_at;settling_=true;}
 			// Live calibration is not hand motion. Mark the discontinuity for
 			// melee history without hiding the model or losing a holding hand.
 			if (settling_)

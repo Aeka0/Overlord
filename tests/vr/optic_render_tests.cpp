@@ -256,6 +256,8 @@ int main()
 		(pixel(32,32)&0xFFFFFF)==0x00FF00 && (pixel(2,2)&0xFFFFFF)==0,
 		"missing native reload HUD preserves live scope scene instead of blacking the canvas");
 	check(!renderer.draw_screen_scope(context.Get(),saved.view.Get(),reticle.Get(),target.Get(),screen_rect(0,0,0,1),size,size),"degenerate scope cannot reach the shader");
+	check(std::string_view(renderer.last_scope_draw().stage)=="canvas"&&!renderer.last_scope_draw().result_known,
+		"scope diagnostics distinguish invalid geometry from an unobserved driver HRESULT");
 	{
 		ComPtr<ID3D11Texture2D> shadow,flash;ComPtr<ID3D11ShaderResourceView> shadow_view,flash_view;
 		auto desc=td;desc.Usage=D3D11_USAGE_DEFAULT;desc.CPUAccessFlags=0;desc.BindFlags=D3D11_BIND_SHADER_RESOURCE;

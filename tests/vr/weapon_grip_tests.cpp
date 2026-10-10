@@ -534,7 +534,7 @@ int main()
 				vr::head_pose_bridge::world_pose grip{
 					sub(targets[h].position, rotate(rotation, scale(local_meters,40))),
 					{rotate(rotation,{1,0,0}),rotate(rotation,{0,1,0}),rotate(rotation,{0,0,1})}};
-				check(make_wrist_target(grip,grip,grip,grip,axes,{},40,h,{-.02f,.12f,-.05f},{-.02f,.12f,-.05f},corrected[h]) &&
+				check(make_wrist_target(grip,grip,{},40,h,{-.02f,.12f,-.05f},corrected[h]) &&
 					close(corrected[h].position, targets[h].position), "M9 physical wrist pivot recovered from moving controller");
 			}
 			auto posed = output;

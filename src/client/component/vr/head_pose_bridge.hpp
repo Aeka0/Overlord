@@ -60,6 +60,7 @@ namespace vr::head_pose_bridge
 		std::uint64_t game_view_applications{};
 		std::uint64_t game_view_history_misses{};
 		float game_view_yaw_contribution{};
+		vector3 roomscale_offset_meters{}; // Last applied shared world-origin correction.
 	};
 
 	struct spatial_frame

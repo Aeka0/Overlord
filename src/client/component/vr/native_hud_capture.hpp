@@ -1,6 +1,7 @@
 #pragma once
 #include "component/d3d11.hpp"
 #include <memory>
+#include <string>
 #include "directional_ui.hpp"
 #include "narrative_ui.hpp"
 #include "gameplay/weapon_identity.hpp"
@@ -10,6 +11,7 @@
 
 namespace vr::native_hud_capture
 {
+	std::string format_status();
 	struct frame
 	{
 		Microsoft::WRL::ComPtr<ID3D11Texture2D> texture;

@@ -2,6 +2,7 @@
 
 #include "head_pose_bridge.hpp"
 #include "camera_rig.hpp"
+#include "roomscale_origin.hpp"
 #include "game_view.hpp"
 #include "remote_view.hpp"
 #include "continuous_view_angles.hpp"
@@ -40,10 +41,12 @@ namespace vr::head_pose_bridge
 		bool head_stabilized{};
 		std::uint64_t filter_epoch{};
 		vector3 local_position_units{};
+		vector3 roomscale_offset_meters{};
 		matrix3 local_orientation{identity_matrix};
 		std::chrono::steady_clock::time_point pose_sampled_at{};
 		game_view::state game_view_state;
 		game_view::camera_rig scripted_camera;
+		game_view::roomscale_origin roomscale;
 		game_view::continuous_angles absolute_angles, local_angles;
 		game_view::horizontal_heading local_heading;
 		std::uint64_t game_view_applications{};
@@ -444,6 +447,8 @@ namespace vr::head_pose_bridge
 		body_estimator.reset();
 		pose_sampled_at = {};
 		game_view_state = {};remote_view_state={};
+		roomscale.reset();
+		roomscale_offset_meters = {};
 		scripted_camera = {};
 		absolute_angles = local_angles = {};
 		local_heading = {};
@@ -488,6 +493,8 @@ namespace vr::head_pose_bridge
 		stabilization::invalidate();
 		head_filter.reset();tracking_correction={};head_stabilized=false;
 		game_view_state={};remote_view_state={};scripted_camera={};camera_frame_available=false;camera_applied=false;
+		roomscale.reset();
+		roomscale_offset_meters = {};
 		body_estimator.reset();
 	}
 
@@ -532,6 +539,7 @@ namespace vr::head_pose_bridge
 	{
 		const std::lock_guard lock(state_mutex);
 		game_view_state.record(command_time, packed_pitch, tracked);
+		roomscale.record(command_time);
 		remote_view_state.record(command_time);
 		if (tracked) scripted_camera.record(command_time);
 	}
@@ -590,7 +598,8 @@ namespace vr::head_pose_bridge
 		vector3 head_meters{};for(unsigned i=0;i<3;++i)head_meters[i]=local_position_units[i]/world_scale;
 		const auto scripted_epoch=request.policy.owns_rotation()?request.epoch:0;
 		float command_head_yaw{};
-		if (!game_view_state.resolve(command_time, recenter_count, command_head_yaw) &&
+		const bool command_resolved=game_view_state.resolve(command_time, recenter_count, command_head_yaw);
+		if (!command_resolved &&
 			!scripted_epoch && !scripted_camera.owns_camera())
 		{
 			camera_applied = false;camera_frame_available = false;
@@ -602,8 +611,18 @@ namespace vr::head_pose_bridge
 		const auto composed=scripted_camera.compose({original_axis,head_axis,head_meters,
 			extracted_yaw_degrees,local_heading.yaw,command_head_yaw,command_time,recenter_count},request,rotation_reference);
 		extracted_yaw_degrees=composed.base_heading;base_yaw_axis=composed.base_axis;
+		vector3 turn_offset_meters{};
+		const bool ordinary = request.policy == game_view::camera_profiles::gameplay &&
+			!request.epoch && !request.position_epoch && !request.entry_epoch;
+		if (!ordinary) roomscale.reset();
+		else if (!roomscale.offset(command_time, recenter_count, base_yaw_axis, head_meters, turn_offset_meters,command_resolved))
+		{
+			camera_applied = false;camera_frame_available = false;
+			++composition_failure_count;return false;
+		}
 		auto head_offset=composed.head_offset;for(auto& x:head_offset)x*=world_scale;
 		vector3 composed_origin=original_origin;
+		for (unsigned i=0;i<3;++i) composed_origin[i]+=turn_offset_meters[i]*world_scale;
 		for(unsigned world_axis=0;world_axis<3;++world_axis)for(unsigned i=0;i<3;++i)
 			composed_origin[world_axis]+=head_offset[i]*base_yaw_axis[i][world_axis];
 		const auto& composed_axis=composed.axis;
@@ -639,10 +658,12 @@ namespace vr::head_pose_bridge
 			}
 		}
 		camera_applied = true;
+		roomscale_offset_meters = turn_offset_meters;
 		if(!composed.spatial){camera_frame_available=false;++camera_applications;return true;}
 		// Translate the tracking frame as a whole: hands retain 1:1 motion relative
 		// to the head instead of drifting away from a scaled cinematic camera.
 		auto tracking_origin=original_origin;
+		for (unsigned i=0;i<3;++i) tracking_origin[i]+=turn_offset_meters[i]*world_scale;
 		for(unsigned coordinate=0;coordinate<3;++coordinate)for(unsigned i=0;i<3;++i)
 			tracking_origin[coordinate]+=(head_offset[i]-local_position_units[i])*base_yaw_axis[i][coordinate];
 		camera_frame = {reference_pose, tracking_origin, base_yaw_axis, world_scale, recenter_count,
@@ -760,6 +781,7 @@ namespace vr::head_pose_bridge
 			game_view_applications,
 			game_view_history_misses,
 			game_view_yaw_contribution,
+			roomscale_offset_meters,
 		};
 	}
 }

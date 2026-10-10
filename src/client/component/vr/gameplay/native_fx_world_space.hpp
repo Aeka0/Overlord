@@ -4,6 +4,7 @@
 #include <memory>
 #include <vector>
 #include "game/assets.hpp"
+#include "native_fx_checkpoint_policy.hpp"
 
 namespace vr::gameplay::native_fx
 {
@@ -20,6 +21,7 @@ namespace vr::gameplay::native_fx
 			game::FxEffectDef definition{};
 			std::vector<game::FxElemDef> elements;
 			std::array<std::vector<game::FxElemVisuals>,max_elements> runners;
+			std::string checkpoint_name;
 		};
 		using storage=std::vector<std::unique_ptr<entry>>;
 		storage entries_;
@@ -31,7 +33,7 @@ namespace vr::gameplay::native_fx
 		}
 		game::FxEffectDef* copy(const game::FxEffectDef* source,storage& pending,unsigned depth)
 		{
-			if(!source)return nullptr;
+			if(!source || !source->name)return nullptr;
 			if(auto* existing=find(entries_,source))return existing;
 			if(auto* existing=find(pending,source))return existing; // Shared/cyclic child graph.
 			if(entries_.size()+pending.size()>=capacity || depth>=16)return nullptr;
@@ -43,6 +45,10 @@ namespace vr::gameplay::native_fx
 			if(count>max_elements || (count && !source->elemDefs))return nullptr;
 			auto next=std::make_unique<entry>();auto& e=*next;
 			e.source=source;e.definition=*source;
+			e.checkpoint_name=checkpoint::name(checkpoint::variant::world,
+				{source->name,strnlen_s(source->name,checkpoint::source_name_limit+1)});
+			if(e.checkpoint_name.empty())return nullptr;
+			e.definition.name=e.checkpoint_name.c_str();
 			if(count)e.elements.assign(source->elemDefs,source->elemDefs+count);
 			e.definition.elemDefs=count?e.elements.data():nullptr;
 			pending.push_back(std::move(next));
@@ -92,5 +98,11 @@ namespace vr::gameplay::native_fx
 		}
 		void clear() noexcept {entries_.clear();}
 		std::size_t size() const noexcept {return entries_.size();}
+		std::array<game::FxEffectDef*,capacity> checkpoint_definitions() const noexcept
+		{
+			std::array<game::FxEffectDef*,capacity> result{};
+			for(std::size_t i=0;i<entries_.size();++i)result[i]=&entries_[i]->definition;
+			return result;
+		}
 	};
 }

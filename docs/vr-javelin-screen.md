@@ -104,4 +104,9 @@ WARP fixed-screen composition. Headset readability and live target alignment
 still require user acceptance; mathematical and GPU fixtures do not establish it.
 
 `vr_javelinDisplay_status` reports mode, trigger arming, camera epoch/origin/axis,
-planned views and composed eyes. It writes `minidumps/overlord-javelin-display.txt`.
+planned views and composed eyes. It writes `diagnose/overlord-javelin-display.txt`.
+The same section is included automatically in `vr_status`, its core summary,
+and `vr_diagnose`. No extra player commands are required. It records cached input
+and camera ownership, HUD rejection/retention, auxiliary request identity, crop,
+per-eye composition gates and compositor stage/HRESULT when available. Missing
+optional Javelin ink is reported separately from a failed scene/display frame.

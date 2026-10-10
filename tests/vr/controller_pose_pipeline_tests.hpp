@@ -115,13 +115,14 @@ namespace controller_pose_pipeline_tests
 		// point while the published grip itself remains in standard coordinates.
 		const auto legacy = controller_pose_reference::touch_legacy_reference();
 		for (unsigned hand = 0; hand < 2; ++hand)
+		for (unsigned preset = 0; preset < settings::alignment_presets.size(); ++preset)
 		{
 			const auto sign = hand == 0 ? 1.f : -1.f;
-			const pose_filter::vec old_lever{sign * settings::wrist_inward.default_value,
-			    settings::wrist_up.default_value, settings::wrist_back.default_value};
+			const auto& old_values = settings::alignment_presets[preset].values;
+			const pose_filter::vec old_lever{sign * old_values[0], old_values[2], old_values[1]};
 			const auto canonical = pose_filter::compose(legacy.hands[hand].grip_from_calibration, {old_lever});
-			const pose_filter::vec baseline{sign * settings::standard_wrist_pivots[0].default_value,
-			    settings::standard_wrist_pivots[2].default_value, settings::standard_wrist_pivots[1].default_value};
+			const auto& values = settings::standard_alignment_presets[preset].values;
+			const pose_filter::vec baseline{sign * values[0], values[2], values[1]};
 			check(pose_filter::length(pose_filter::sub(canonical.position, baseline)) < 1e-6f,
 			    "Standard wrist baseline retains the original physical point on both hands");
 		}

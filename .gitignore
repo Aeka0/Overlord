@@ -164,11 +164,13 @@ user*.bat
 .agents/
 .devlog/
 .devlop/
+.feedback/
 
 # Local build/test artifacts
 .tests-temp/
 .tools-temp/
 output/
+/diagnose/
 __pycache__/
 node_modules/
 

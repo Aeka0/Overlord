@@ -60,6 +60,10 @@ acquiring an already-open handle. This is interaction tolerance, not an exported
 animation measurement. Contact uses the external left tab rather than the long
 internal bolt mesh; hand retargeting does not relocate the tab.
 
+Right-hand acquisition on this left-side tab selects the index hook with the
+controller palm up and the pinky hook with the palm down. The left hand retains
+its native down / pinky-up pair. The selected style stays fixed during a held stroke.
+
 The reviewed magazine mouth is at gun-local Z = 1.5 cm. The native reload's
 clip-out frame has the support hand away from the dropped magazine, so it is not
 a grasp reference. Frame 44 grips the returning magazine body before insertion.

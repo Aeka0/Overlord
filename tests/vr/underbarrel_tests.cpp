@@ -2,6 +2,7 @@
 #include "component/vr/hand.hpp"
 using vr::hand;
 #include "component/vr/gameplay/underbarrel_feed.hpp"
+#include "component/vr/gameplay/underbarrel_supply.hpp"
 #include "component/vr/gameplay/underbarrel_binding.hpp"
 #include "component/vr/gameplay/underbarrel_rig.hpp"
 #include "component/vr/gameplay/underbarrel_runtime.hpp"
@@ -20,6 +21,67 @@ int main()
 	namespace w=vr::gameplay::weapons;namespace u=w::underbarrel;
 	int failures{},checks{};auto check=[&](bool ok,const char* label){++checks;if(!ok){++failures;std::cerr<<"FAIL "<<label<<'\n';}};
 	support_handoff_tests::run(check);
+	for(auto type:{u::kind::m203,u::kind::gp25,u::kind::shotgun})
+	{
+		auto ammo=u::import_native({{53,7},54,type},0,9);
+		if(type==u::kind::m203)ammo.open=true;
+		check(u::prefer_secondary_supply(ammo,.1f,.1f,false),"loadable empty modules prefer their own ammunition");
+		check(!u::prefer_secondary_supply(ammo,.1f,.1f,true),"missing primary magazine or exhausted primary feed takes priority for every module");
+		auto empty=ammo;empty.reserve=0;
+		check(!u::prefer_secondary_supply(empty,.1f,.1f,false),"empty secondary reserve falls back to the primary magazine");
+		auto held=ammo;held.held=1;held.loader=vr::hand::left;
+		check(!u::prefer_secondary_supply(held,.1f,.1f,false),"existing secondary escrow never becomes a new draw preference");
+		for(int loaded=1;loaded<=u::capacity(type);++loaded)
+		{
+			auto full=u::import_native(ammo.id,loaded,9);
+			check(u::prefer_secondary_supply(full,.1f,.1f,false)==(type==u::kind::shotgun && loaded<4),
+				"launchers require an empty chamber; chambered shotgun states top up their underfilled tube");
+		}
+	}
+	{
+		auto ammo=u::import_native({{53,7},54,u::kind::m203},0,9);ammo.open=true;
+		const float threshold=.1f*u::action_open_fraction;
+		check(!u::prefer_secondary_supply(ammo,std::nextafter(threshold,0.f),.1f,false) &&
+			u::prefer_secondary_supply(ammo,threshold,.1f,false),"M203 needs the actual opening threshold, including a partially closing action");
+		ammo.open=false;
+		check(!u::prefer_secondary_supply(ammo,.1f,.1f,false),"empty closed M203 keeps primary selection");
+		ammo.open=true;
+		for(float travel:{-.1f,.11f,std::numeric_limits<float>::quiet_NaN(),std::numeric_limits<float>::infinity()})
+			check(!u::prefer_secondary_supply(ammo,travel,.1f,false),"invalid M203 travel cannot prefer a grenade");
+		for(float stroke:{0.f,-.1f,1.f,std::numeric_limits<float>::quiet_NaN()})
+			check(!u::prefer_secondary_supply(ammo,.1f,stroke,false),"invalid M203 stroke cannot admit loading preference");
+		check(!u::prefer_secondary_supply({},.1f,.1f,false),"unadmitted module state retains primary priority");
+	}
+	{
+		auto ammo=u::import_native({{53,7},54,u::kind::shotgun},4,9);
+		const auto shot=u::plan(ammo,{u::operation::shot,ammo.id,ammo.revision,vr::hand::right,vr::hand::left,true});
+		check(shot && !u::prefer_secondary_supply(shot.next,0,.1f,false),"an empty shotgun chamber does not imply room in its still-full tube");
+		if(shot)
+		{
+			const auto opened=u::plan(shot.next,{u::operation::open,ammo.id,shot.next.revision,vr::hand::right,vr::hand::left});
+			check(opened && !u::prefer_secondary_supply(opened.next,.1f,.1f,false),"opening a full shotgun tube keeps primary priority");
+			if(opened)
+			{
+				const auto closed=u::plan(opened.next,{u::operation::close,ammo.id,opened.next.revision,vr::hand::right,vr::hand::left});
+				check(closed && u::prefer_secondary_supply(closed.next,0,.1f,false),"pump chambering makes one tube slot available for smart shell selection");
+			}
+		}
+	}
+	for(auto actor:{vr::hand::left,vr::hand::right})for(bool smart:{false,true})for(bool preferred:{false,true})for(bool grip:{false,true})
+	{
+		namespace hi=vr::gameplay::hand_interaction;
+		const auto selected=u::select_secondary_supply(smart,preferred,grip)?hi::domain::underbarrel:hi::domain::magazine;
+		check(selected==((smart?preferred!=grip:grip)?hi::domain::underbarrel:hi::domain::magazine),
+			"Grip chooses the other smart default; disabled policy retains the original modifier");
+		hi::arbiter arbiter;arbiter.begin(1,3);arbiter.select_supply(actor,{selected,{53,7}});
+		for(auto provider:{hi::domain::magazine,hi::domain::underbarrel})
+			arbiter.offer({actor,{{provider,{53,7},0,17},hi::role::supply,hi::button::trigger,hi::recipe::single,{}},1,30,.5f,1,true,true});
+		int draws{};arbiter.resolve([&](const auto& candidate){++draws;return candidate.desired.destination.provider==selected;});
+		check(draws==1 && arbiter.find(actor,{selected,{53,7},0,17}),"one fresh waist Trigger grants exactly the selected supply in either hand");
+		check(u::route(true,false,false,false,true,selected==hi::domain::underbarrel,true)==
+			(selected==hi::domain::underbarrel?u::trigger_route::secondary_supply:u::trigger_route::primary_supply),
+			"secondary draw execution follows its grant even without Grip");
+	}
 	for(auto rear:{vr::hand::left,vr::hand::right})for(auto type:{u::kind::m203,u::kind::shotgun})for(float units:{1.f,39.3701f})
 	{
 		using namespace vr::gameplay::hands;

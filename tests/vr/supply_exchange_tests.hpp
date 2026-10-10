@@ -21,6 +21,23 @@ namespace supply_exchange_tests
 		check(hi::supply_selection(hi::domain::magazine,release,press,true)==hi::domain::none &&
 			hi::supply_selection(hi::domain::magazine,{false,false,true,false,1},press,true)==hi::domain::none,
 			"Trigger release or unarmed reconnect cannot exchange ammunition");
+		for(auto source:{hi::domain::magazine,hi::domain::underbarrel})for(auto edge:{press,release})
+		{
+			const auto opposite=source==hi::domain::magazine?hi::domain::underbarrel:hi::domain::magazine;
+			check(hi::supply_selection(source,held,edge,true,true)==opposite,
+				"Smart selection exchanges either initial ammo type on a fresh Grip press or release");
+			check(hi::supply_selection(source,held,edge,false,true)==hi::domain::none &&
+				hi::supply_selection(source,release,edge,true,true)==hi::domain::none &&
+				hi::supply_selection(source,{false,false,true,false,1},edge,true,true)==hi::domain::none,
+				"Smart exchange still requires a waist contact and an uninterrupted held Trigger");
+		}
+		check(hi::supply_selection(hi::domain::underbarrel,held,held,true,true)==hi::domain::none &&
+			hi::supply_selection(hi::domain::underbarrel,held,{true,true,true,true,2},true,true)==hi::domain::none &&
+			hi::supply_selection(hi::domain::underbarrel,held,{true,false,true,false,2},true,true)==hi::domain::none,
+			"No edge, ambiguous edges and reconnected Grip cannot retarget smart-selected escrow");
+		check(hi::supply_selection(hi::domain::underbarrel,held,press,true)==hi::domain::none &&
+			hi::supply_selection(hi::domain::magazine,held,release,true)==hi::domain::none,
+			"Disabled smart selection preserves the original directional Grip modifier");
 		for(auto actor:{hand::left,hand::right})for(auto kind:{u::kind::m203,u::kind::gp25,u::kind::shotgun})for(int rounds:{0,7,30})
 		{
 			const auto rear=hand(1-int(actor));auto rules=w::m4::reload_rules;rules.discard_penalty=true;

@@ -215,6 +215,7 @@ namespace fastfiles
 				}
 			}
 
+			try_add_zone(zones, allocator, "h2_killfeed_sounds", false);
 			add_mod_zones(zones, allocator, mods::zone_priority::post_common);
 
 			game::DB_LoadXAssets(zones.data(), static_cast<int>(zones.size()), sync_mode);

@@ -6,6 +6,7 @@
 #include <stdexcept>
 #include <string>
 #include <json.hpp>
+#include "format_helpers.hpp"
 
 namespace vr::diagnostics
 {
@@ -16,8 +17,7 @@ namespace vr::diagnostics
 
 	inline std::string input_quoted(std::string value)
 	{
-		if (value.size() > 512) value = value.substr(0, 512) + "[truncated]";
-		return nlohmann::json(value).dump(-1, ' ', false, nlohmann::json::error_handler_t::replace);
+		return detail::quoted_text(value);
 	}
 
 	inline nlohmann::json read_input_manifest(std::ostream& out, const std::filesystem::path& path)

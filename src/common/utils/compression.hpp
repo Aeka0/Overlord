@@ -2,6 +2,7 @@
 
 #include <string>
 #include <unordered_map>
+#include <filesystem>
 
 #define CHUNK 16384u
 
@@ -20,6 +21,7 @@ namespace utils::compression
 		public:
 			void add(std::string filename, std::string data);
 			bool write(const std::string& filename, const std::string& comment = {});
+			bool write_file(const std::filesystem::path& filename, const std::string& comment = {});
 
 		private:
 			std::unordered_map<std::string, std::string> files_;

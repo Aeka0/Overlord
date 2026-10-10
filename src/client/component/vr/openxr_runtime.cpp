@@ -413,7 +413,7 @@ namespace vr::openxr
 				const std::lock_guard lock(status_mutex_);
 				snapshot = status_snapshot_;
 			}
-			snapshot.capture = capture_.get_status();
+			snapshot.capture.snapshot_busy = !capture_.try_get_status(snapshot.capture);
 			return snapshot;
 		}
 
@@ -424,7 +424,7 @@ namespace vr::openxr
 			status_.last_xr_result_name = result_name(result);
 		}
 
-		bool fail(const runtime_state state, const char* operation, const XrResult result)
+		bool fail(const runtime_state state, const char* operation, const XrResult result, const bool record_history = true)
 		{
 			status_.state = state;
 			status_.last_error = std::format("{} failed (XrResult={} {})",
@@ -432,6 +432,8 @@ namespace vr::openxr
 			                                 static_cast<std::int64_t>(result),
 			                                 result_name(result));
 			set_result(result);
+			if(record_history)status_.failures.record(GetTickCount64(),status_.session_generation,status_.frame_context_id,result,
+				operation,status_.last_initialization_stage,status_.last_error,status_.runtime_name,status_.system_name);
 			return false;
 		}
 
@@ -1288,6 +1290,14 @@ namespace vr::openxr
 				status_.reinitialize_pending = true;
 				return fail(runtime_state::recoverable_error, "xrEndFrame", result);
 			}
+			auto& submission = status_.frame_submission;
+			++submission.completed;
+			submission.last_tick = GetTickCount64();
+			submission.last_world_layers = world == world_submission::include ? 1u : 0u;
+			submission.last_menu_layers = count-submission.last_world_layers;
+			if (submission.last_world_layers) ++submission.world;
+			else if (count) ++submission.menu_only;
+			else ++submission.empty;
 			if (!retired)
 				return fail(
 				    runtime_state::fatal_for_vr, "native OpenXR pair retirement", XR_ERROR_RUNTIME_FAILURE);
@@ -1639,6 +1649,11 @@ namespace vr::openxr
 		}
 		bool frame_failure(const char* operation, XrResult result)
 		{
+			// Cleanup can itself fail. Preserve the initiating operation before
+			// settling images/ending the frame, then restore its current error below.
+			status_.failures.record(GetTickCount64(),status_.session_generation,status_.frame_context_id,result,
+				operation,status_.last_initialization_stage,std::format("{} failed (XrResult={} {})",operation,
+					static_cast<std::int64_t>(result),result_name(result)),status_.runtime_name,status_.system_name);
 			for (auto& eye : eyes_)
 			{
 				XrResult ignored{};
@@ -1648,7 +1663,7 @@ namespace vr::openxr
 				(void)finish_prediction(world_submission::omit);
 				inputs_.invalidate(controller_input::input_reason::frame_submission_failed,result);
 			head_pose_bridge::invalidate_pose();
-			fail(runtime_state::recoverable_error, operation, result);
+			fail(runtime_state::recoverable_error, operation, result, false);
 			(void)teardown_preserving_error();
 			return false;
 		}
@@ -1713,6 +1728,7 @@ namespace vr::openxr
 			                                                 .cylinder_supported = cylinder_supported_,
 			                                                 .format = menu_format_};
 			const auto menu_result = menus_.prepare(dispatch_, menu_input);
+			status_.frame_submission.menu = menu_result.diagnostic;
 			if (!menu_result)
 			{
 				const auto detail = std::string(menu_result.call.operation) +

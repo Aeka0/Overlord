@@ -194,6 +194,8 @@ namespace vr::engine_stereo_renderer
 			frontend_snapshot begin_snapshot;
 			engine_view_probe::record_flags flags{};
 			std::uint32_t slot_calls{};
+			std::uint32_t initializer_calls{};
+			view_rejection rejection{view_rejection::none};
 			std::uint32_t generator_calls{};
 			std::uint32_t return_calls{};
 			std::uintptr_t last_slot{};
@@ -226,6 +228,11 @@ namespace vr::engine_stereo_renderer
 		std::atomic_uint64_t frontend_epoch_sequence{};
 		std::atomic_uint64_t target_prepare_owner_sequence{};
 		std::atomic_uint64_t scene_publication_attempts{}, scene_publication_successes{}, scene_publication_failures{};
+		std::atomic_uint64_t allocator_entries{}, initializer_entries{}, generator_entries{};
+		std::atomic_uint64_t scoped_initializers{}, scoped_generators{}, view_derivations{}, prepared_views{};
+		std::array<std::atomic_uint64_t, static_cast<std::size_t>(view_rejection::count)> view_rejections{};
+		std::mutex view_rejection_mutex;
+		view_rejection_sample first_view_rejection, last_view_rejection;
 		std::atomic_uint64_t culling_union_attempts{};
 		std::atomic_uint64_t culling_union_applications{};
 		std::atomic_uint64_t culling_union_failures{};
@@ -587,6 +594,21 @@ namespace vr::engine_stereo_renderer
 			};
 		}
 
+		void reject_view(view_transaction_context& transaction, const view_rejection reason) noexcept
+		{
+			// Retain the earliest failing prerequisite in each scene, even when the
+			// downstream generator later observes the same unavailable views.
+			if (transaction.rejection != view_rejection::none) return;
+			transaction.rejection = reason;
+			view_rejections[static_cast<std::size_t>(reason)].fetch_add(1, std::memory_order_relaxed);
+			const view_rejection_sample sample{reason, GetTickCount64(), transaction.token.transaction_id,
+				transaction.token.frontend_frame_id, transaction.last_slot, GetCurrentThreadId(),
+				transaction.slot_calls, transaction.initializer_calls, transaction.generator_calls};
+			const std::lock_guard lock(view_rejection_mutex);
+			if (first_view_rejection.reason == view_rejection::none) first_view_rejection = sample;
+			last_view_rejection = sample;
+		}
+
 		class view_transaction_scope final
 		{
 		public:
@@ -708,6 +730,8 @@ namespace vr::engine_stereo_renderer
 				if (context_.token)
 				{
 					const auto end_snapshot = read_frontend_snapshot();
+					if (!context_.initializer_calls) reject_view(context_, view_rejection::initializer_not_observed);
+					else if (!context_.generator_calls) reject_view(context_, view_rejection::generator_not_observed);
 					engine_view_probe::end(context_.token, {
 						context_.begin_snapshot.slot_count,
 						end_snapshot.slot_count,
@@ -774,6 +798,7 @@ namespace vr::engine_stereo_renderer
 
 		void* allocate_view_slot_probe_stub()
 		{
+			allocator_entries.fetch_add(1, std::memory_order_relaxed);
 			auto* const transaction = active_view_transaction;
 			if (transaction == nullptr)
 			{
@@ -873,17 +898,17 @@ namespace vr::engine_stereo_renderer
 		bool derive_stereo_eye_slots(const void* const natural_slot,
 			const engine_view_probe::transaction_token& token,
 			engine_stereo_view::slot_pair& output,
-			std::array<engine_stereo_bridge::render_config, 2>& configs) noexcept
+			std::array<engine_stereo_bridge::render_config, 2>& configs,
+			view_rejection& reason) noexcept
 		{
 			output = {};
 			configs = {};
+			reason = view_rejection::eye_derivation;
 			if (natural_slot == nullptr || !token) return false;
-
-			if (!engine_stereo_bridge::get_render_configs(configs) ||
-				!engine_stereo_view::derive(natural_slot, configs, output))
-			{
-				return false;
-			}
+			reason = view_rejection::views_unavailable;
+			if (!engine_stereo_bridge::get_render_configs(configs)) return false;
+			reason = view_rejection::eye_derivation;
+			if (!engine_stereo_view::derive(natural_slot, configs, output)) return false;
 			std::memcpy(output.native_tan_half.data(),static_cast<const std::byte*>(natural_slot)+0x140,sizeof(output.native_tan_half));
 			if(const auto provider=auxiliary_scene::screen_scope_epoch.load())output.screen_scope_epoch=provider();
 			if(const auto provider=eye_composition::remote_camera_epoch.load())output.remote_camera_epoch=provider();
@@ -898,6 +923,7 @@ namespace vr::engine_stereo_renderer
 			}
 			if (!engine_stereo_view::validate_finalized(output))
 			{
+				reason = view_rejection::eye_finalization;
 				output = {};
 				return false;
 			}
@@ -1015,6 +1041,7 @@ namespace vr::engine_stereo_renderer
 		void initialize_view_slot_probe_stub(const void* const scene_descriptor,
 			void* const slot)
 		{
+			initializer_entries.fetch_add(1, std::memory_order_relaxed);
 			auto* const transaction = active_view_transaction;
 			if (transaction == nullptr || !transaction->token)
 			{
@@ -1023,6 +1050,8 @@ namespace vr::engine_stereo_renderer
 				return;
 			}
 
+			++transaction->initializer_calls;
+			scoped_initializers.fetch_add(1, std::memory_order_relaxed);
 			const auto before = read_frontend_snapshot();
 			std::array<std::uint8_t, view_slot_size> before_bytes{};
 			if (view_diagnostics_enabled() && slot != nullptr)
@@ -1050,6 +1079,7 @@ namespace vr::engine_stereo_renderer
 				scene_descriptor, slot);
 			if (transaction->slot_calls != 1 || transaction->stereo_views_ready)
 			{
+				reject_view(*transaction, view_rejection::allocator_count);
 				// Never join initializers from different record-local states.
 				transaction->stereo_views = {};
 				transaction->stereo_views_ready = false;
@@ -1058,15 +1088,20 @@ namespace vr::engine_stereo_renderer
 			{
 				engine_stereo_view::slot_pair stereo_views{};
 				std::array<engine_stereo_bridge::render_config, 2> configs{};
+				view_rejection reason{};
+				view_derivations.fetch_add(1, std::memory_order_relaxed);
 				if (derive_stereo_eye_slots(slot, transaction->token, stereo_views,
-					configs))
+					configs, reason))
 				{
 					std::memcpy(transaction->frontend_slot.data(), slot,
 						transaction->frontend_slot.size());
 					transaction->stereo_views = stereo_views;
 					transaction->stereo_views_ready = apply_production_culling_union(
 						slot, configs, *transaction);
+					if (transaction->stereo_views_ready) prepared_views.fetch_add(1, std::memory_order_relaxed);
+					else reject_view(*transaction, view_rejection::culling_admission);
 				}
+				else reject_view(*transaction, reason);
 			}
 
 			const auto after = read_frontend_snapshot();
@@ -1144,7 +1179,12 @@ namespace vr::engine_stereo_renderer
 		void publish_generator_views(view_transaction_context& transaction,
 			const frontend_snapshot& frontend, std::uint32_t index, const void* slot, const void* selected)
 		{
-			if (!transaction.stereo_views_ready || !transaction.token) return;
+			if (!transaction.stereo_views_ready || !transaction.token)
+			{
+				reject_view(transaction, transaction.initializer_calls ? view_rejection::views_not_prepared :
+					view_rejection::initializer_not_observed);
+				return;
+			}
 			scene_publication_attempts.fetch_add(1, std::memory_order_relaxed);
 			const auto fail = [&]
 			{
@@ -1155,10 +1195,10 @@ namespace vr::engine_stereo_renderer
 				frontend.frontend == 0 || index >= engine_view_probe::frontend_record_capacity ||
 				index != transaction.last_slot_index || !slot || selected != slot ||
 				std::memcmp(slot, transaction.frontend_slot.data(), transaction.frontend_slot.size()) != 0)
-			{ fail(); return; }
+			{ reject_view(transaction, view_rejection::publication_contract); fail(); return; }
 			std::uintptr_t arena{};
 			std::memcpy(&arena, reinterpret_cast<const void*>(frontend.frontend + frontend_record_arena_pointer_offset), sizeof(arena));
-			if (!arena) { fail(); return; }
+			if (!arena) { reject_view(transaction, view_rejection::record_arena_unavailable); fail(); return; }
 			const auto record = arena + index * engine_view_probe::frontend_record_stride;
 			region_capture::phase_scope timing(region_capture::phase::scene_publication,
 				reinterpret_cast<void*>(record), frontend.frontend);
@@ -1172,13 +1212,14 @@ namespace vr::engine_stereo_renderer
 				transaction.token.frontend_frame_id, transaction.token.transaction_id, transaction.stereo_views});
 			timing.finish(transaction.stereo_published);
 			if (transaction.stereo_published) scene_publication_successes.fetch_add(1, std::memory_order_relaxed);
-			else fail();
+			else {reject_view(transaction, view_rejection::binding_publication); fail();}
 		}
 
 		void generate_draw_surfs_probe_stub(const std::uint32_t local_client,
 			const std::uint32_t frontend_record_index, void* const scratch,
 			void* const selected, void* const slot, void* const per_client_output)
 		{
+			generator_entries.fetch_add(1, std::memory_order_relaxed);
 			auto* const transaction = active_view_transaction;
 			if (transaction == nullptr)
 			{
@@ -1187,6 +1228,7 @@ namespace vr::engine_stereo_renderer
 				per_client_output);
 				return;
 			}
+			scoped_generators.fetch_add(1, std::memory_order_relaxed);
 			const auto before = read_frontend_snapshot();
 			const auto token = transaction->token;
 			std::int32_t draw_type{};
@@ -3202,6 +3244,42 @@ namespace vr::engine_stereo_renderer
 	scene_handoff_status get_scene_handoff_status() noexcept
 	{
 		return {scene_publication_attempts.load(), scene_publication_successes.load(), scene_publication_failures.load()};
+	}
+
+	view_preparation_status get_view_preparation_status() noexcept
+	{
+		view_preparation_status result;
+		result.allocator_entries=allocator_entries.load(std::memory_order_relaxed);
+		result.initializer_entries=initializer_entries.load(std::memory_order_relaxed);
+		result.generator_entries=generator_entries.load(std::memory_order_relaxed);
+		result.scoped_initializers=scoped_initializers.load(std::memory_order_relaxed);
+		result.scoped_generators=scoped_generators.load(std::memory_order_relaxed);
+		result.derivations=view_derivations.load(std::memory_order_relaxed);
+		result.prepared=prepared_views.load(std::memory_order_relaxed);
+		for(std::size_t i{};i<result.rejections.size();++i)result.rejections[i]=view_rejections[i].load(std::memory_order_relaxed);
+		const std::lock_guard lock(view_rejection_mutex);
+		result.first=first_view_rejection;result.last=last_view_rejection;
+		return result;
+	}
+
+	const char* to_string(const view_rejection value) noexcept
+	{
+		switch(value)
+		{
+		case view_rejection::none: return "none";
+		case view_rejection::initializer_not_observed: return "initializer_not_observed";
+		case view_rejection::allocator_count: return "allocator_count";
+		case view_rejection::views_unavailable: return "views_unavailable";
+		case view_rejection::eye_derivation: return "eye_derivation";
+		case view_rejection::eye_finalization: return "eye_finalization";
+		case view_rejection::culling_admission: return "culling_admission";
+		case view_rejection::generator_not_observed: return "generator_not_observed";
+		case view_rejection::views_not_prepared: return "views_not_prepared";
+		case view_rejection::publication_contract: return "publication_contract";
+		case view_rejection::record_arena_unavailable: return "record_arena_unavailable";
+		case view_rejection::binding_publication: return "binding_publication";
+		default: return "unknown";
+		}
 	}
 
 	culling_union_status get_culling_union_status() noexcept

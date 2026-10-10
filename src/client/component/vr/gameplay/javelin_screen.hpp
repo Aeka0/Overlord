@@ -1,11 +1,13 @@
 #pragma once
 #include "weapon_interaction.hpp"
 #include <string_view>
+#include <string>
 
 namespace vr::gameplay::weapons::javelin_screen
 {
 	// Screen input/camera ownership is separate from ammunition and native locks.
 	bool enabled() noexcept;
+	std::string format_status();
 	hold capture_owner() noexcept;
 	void input(const controller_input::frame&,const hold&,bool allowed) noexcept;
 	bool requested(const hold&) noexcept;

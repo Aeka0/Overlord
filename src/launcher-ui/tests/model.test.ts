@@ -7,6 +7,7 @@ import {
   fields,
   categories,
   SettingError,
+  visible,
   type SettingsState,
 } from "../src/model";
 import { catalogs } from "../src/i18n";
@@ -125,6 +126,22 @@ test("every migrated field has translations in every existing locale", () => {
       Object.keys(shellTranslations[language]),
       Object.keys(shellTranslations.en),
     );
+});
+
+test("turning follows the backend in Basics and sight attraction belongs to Aiming", () => {
+  const basicsGroups = [...new Set(fields.filter((field) => field.category === "basics").map((field) => field.group))];
+  assert.deepEqual(basicsGroups.slice(0, 2), ["settings.runtimeBackend", "settings.turning"]);
+  for (const name of ["vr_turnMode", "vr_turnSpeed", "vr_snapAngle"])
+    assert.equal(fields.find((field) => field.name === name)?.category, "basics");
+  for (const [name, mode] of [["vr_turnSpeed", "smooth"], ["vr_snapAngle", "snap"]]) {
+    const field = fields.find((field) => field.name === name)!;
+    assert.equal(visible(field, { vr_turnMode: mode }), true);
+    assert.equal(visible(field, { vr_turnMode: mode === "smooth" ? "snap" : "smooth" }), false);
+  }
+  const attraction = fields.find((field) => field.name === "vr_adsComfort")!;
+  assert.equal(attraction.category, "gameplay");
+  assert.equal(attraction.group, "settings.aiming");
+  assert.equal(attraction.type, "toggle");
 });
 
 test("startup declaration is translated and retains the version and report details", () => {

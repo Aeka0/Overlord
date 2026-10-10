@@ -50,6 +50,15 @@ engine, or runtime calls and does not retain native entity pointers. Tag queries
 run outside the tracking mutex. Rotation is composed once for the shared camera;
 each eye then applies its own eye offset and projection.
 
+Ordinary gameplay uses `roomscale_origin.hpp` to turn about the current tracked
+head instead of the recenter point. It observes the native accepted yaw after
+removing that command's HMD contribution, then compensates the shared world
+origin used by the camera, hands and body equipment. Native movement and collision
+remain unchanged. A bounded command-time history prevents repeated passes or
+older prediction frames from integrating a turn again. Recenter and load reset
+clear the correction; scripted, vehicle and fixed-optic cameras retain their own
+origin policies. `vr_status` reports the applied `roomscale_origin_offset_m`.
+
 Command and rendering paths use the same `camera_request_for` selection. Fixed
 thermal optics take priority over mounted weapon views, which take priority over
 scripted scenes, followed by ordinary gameplay. Rotation ownership determines

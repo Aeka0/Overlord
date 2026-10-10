@@ -1232,6 +1232,12 @@ float4 main(float4 position : SV_Position) : SV_Target
 		const std::lock_guard lock(mutex_);
 		return status_;
 	}
+	bool session::try_get_status(status& output) const noexcept
+	{
+		const std::unique_lock lock(mutex_,std::try_to_lock);
+		if(!lock.owns_lock())return false;
+		output=status_;return true;
+	}
 
 	session& active() noexcept
 	{

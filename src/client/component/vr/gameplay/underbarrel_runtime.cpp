@@ -2,6 +2,7 @@
 #include "hand_interaction/runtime.hpp"
 #include "hand_interaction/constraints.hpp"
 #include "underbarrel_runtime.hpp"
+#include "underbarrel_supply.hpp"
 #include "carry_interaction.hpp"
 #include "official_cheats.hpp"
 #include "underbarrel_feedback.hpp"
@@ -20,6 +21,8 @@
 #include "component/scheduler.hpp"
 #include "component/command.hpp"
 #include "component/console.hpp"
+#include "component/vr/settings.hpp"
+#include "game/dvars.hpp"
 #include "game/game.hpp"
 #include "loader/component_loader.hpp"
 #include <utils/io.hpp>
@@ -36,6 +39,9 @@ namespace vr::gameplay::weapons::underbarrel
 			return type==kind::m203 || grasp==lease::support?capability::aim|capability::action:capability::action;
 		}
 		std::atomic_bool installed{},alive{true};
+		game::dvar_t* smart_ammo_selection{};
+		bool smart_supply_enabled()noexcept
+		{return smart_ammo_selection ? smart_ammo_selection->current.enabled : settings::smart_ammo_selection.default_value;}
 		std::mutex publication;
 		instance_cache<scene,15> scenes;
 		instance_cache<presentation,143> views;
@@ -373,7 +379,7 @@ namespace vr::gameplay::weapons::underbarrel
 					runtime.previous = contact.stroke_hand;
 					runtime.previous_distance = contact.hand_distance;
 					const auto next = projected.travel;
-					if (next >= contact.stroke * .9f && !runtime.view.ammo.open)
+					if (next >= contact.stroke * action_open_fraction && !runtime.view.ammo.open)
 					{
 						if (!apply(runtime, operation::open, &contact))
 						{
@@ -476,7 +482,8 @@ namespace vr::gameplay::weapons::underbarrel
 			                           contact.waist_distance <= contact.waist_radius &&
 			                               (held.support == hand::none ||
 			                                (runtime.view.owns_support && runtime.view.grip == lease::none)),
-			                           squeeze.active && squeeze.down,
+			                           hand_interaction::granted(hand(off),hand_interaction::domain::underbarrel,held.id(),
+			                                                     hand_interaction::button::trigger),
 			                           true);
 			if (trigger == trigger_route::fire || trigger == trigger_route::secondary_supply)
 			{
@@ -487,7 +494,7 @@ namespace vr::gameplay::weapons::underbarrel
 					    !apply(runtime, operation::shot, &contact, true))
 						++rejected;
 				}
-				else if (runtime.view.grip == lease::none && grip_down && input.trigger[off].active &&
+				else if (runtime.view.grip == lease::none && input.trigger[off].active &&
 				         input.trigger[off].down && input.trigger[off].generation == pinch.generation &&
 				         hand_interaction::granted(hand(off),
 				                                   hand_interaction::domain::underbarrel,
@@ -521,7 +528,7 @@ namespace vr::gameplay::weapons::underbarrel
 			const auto actor=hand(s.contact_hand);if(!(input.valid_hands&(1u<<s.contact_hand)))continue;
 			const auto from=hi::pose(actor).driver;if(from.object!=s.owner.id())continue;
 			const auto selected=hi::supply_selection(from.provider,hi::input(actor,hi::button::trigger),hi::input(actor,hi::button::grip),
-				input.waist(actor,s.supply,s.waist_radius)<=s.waist_radius);
+				input.waist(actor,s.supply,s.waist_radius)<=s.waist_radius,smart_supply_enabled());
 			if(selected==hi::domain::none)continue;
 			auto* r=records.find(s.owner.id());
 			if(!r || !r->view.active || r->view.fault || r->view.grip!=lease::none || r->assembly!=s.assembly ||
@@ -559,18 +566,31 @@ namespace vr::gameplay::weapons::underbarrel
 		{
 			auto s=copy[i];const auto* live=input.find(s.owner.id());if(!live || !binding_current(s,*live,input.input))continue;
 			const auto actor=hand(s.contact_hand);const auto grip=hi::input(actor,hi::button::grip),pinch=hi::input(actor,hi::button::trigger);
-			if(grip.down && hi::free(actor))hi::select_supply(actor,hi::domain::underbarrel,s.owner.id());
 			if(!grip.press && !pinch.press)continue;
 			const auto view=current(s.owner.id());auto ammo=view.ammo;
 			if(!view.active){const auto binding=native::resolve(s.owner.id());if(!binding)continue;const auto obs=native::observe(binding);if(!obs.valid)continue;ammo=import_native(binding.id,obs.ammo.loaded,obs.ammo.reserve);}
+			const bool smart=smart_supply_enabled();
+			if(view.active && smart && pinch.press)
+			{
+				const auto binding=native::resolve(s.owner.id());if(!binding || binding.id!=ammo.id)continue;
+				const auto observed=native::observe(binding);if(!observed.valid)continue;
+				const auto sync=reconcile(ammo,binding.id,observed.ammo);
+				if(!sync || sync.native_after!=observed.ammo)continue;
+				ammo=sync.next;
+			}
 			s=sample_contact(s,input.input,live->owner,live->gun,input.wrists[s.contact_hand],input.body.head_position,input.body.head_yaw_axis,input.body.units_per_meter,view.travel);
 			if(grip.press && grip.down)
 			{
 				const auto picked=choose_grip(ammo,view.travel,s.firing_distance,s.action_distance,{s.support_facing,s.facing},s.support_radius);
 				if(picked!=lease::none)hi::offer({actor,{hi::object(hi::domain::underbarrel,s.owner.id(),0,s.assembly),picked==lease::firing?hi::role::firing:hi::role::foregrip,hi::button::grip,hi::recipe::single,grip_capabilities(s.type,picked)},grip.event,15,picked==lease::firing?s.firing_distance/firing_acquire:s.action_distance/s.support_radius,1,true,true});
 			}
-			if(pinch.press && pinch.down && grip.down && s.waist_distance<=s.waist_radius)
-				hi::offer({actor,{hi::object(hi::domain::underbarrel,s.owner.id(),0,s.assembly),hi::role::supply,hi::button::trigger,hi::recipe::single,{}},pinch.event,30,s.waist_distance/s.waist_radius,1,true,true});
+			if(pinch.press && pinch.down && s.waist_distance<=s.waist_radius)
+			{
+				const bool preferred=smart && !view.fault && prefer_secondary_supply(ammo,view.travel,s.stroke,physical_reload::primary_supply_needed(s.owner.id()));
+				const bool secondary=select_secondary_supply(smart,preferred,grip.down);
+				if(hi::free(actor))hi::select_supply(actor,secondary?hi::domain::underbarrel:hi::domain::magazine,s.owner.id());
+				if(secondary)hi::offer({actor,{hi::object(hi::domain::underbarrel,s.owner.id(),0,s.assembly),hi::role::supply,hi::button::trigger,hi::recipe::single,{}},pinch.event,30,s.waist_distance/s.waist_radius,1,true,true});
+			}
 		}
 	}
 	void report_interactions() noexcept
@@ -897,9 +917,11 @@ namespace vr::gameplay::weapons::underbarrel
 	{
 		void post_unpack()override
 		{
+			smart_ammo_selection=dvars::register_bool(settings::smart_ammo_selection.name,settings::smart_ammo_selection.default_value,
+				game::DVAR_FLAG_SAVED,"Automatically choose underbarrel ammunition at the waist when it needs loading; prioritize an absent or empty primary magazine");
 			installed=native::initialize();
 			command::add("vr_underbarrel_status",[]{scheduler::once([]{
-				std::ostringstream out;out<<"ready="<<enabled()<<" shots="<<shots<<" commits="<<commits<<" rejected="<<rejected<<" reason="<<reason<<'\n';
+				std::ostringstream out;out<<"ready="<<enabled()<<" smart_ammo="<<smart_supply_enabled()<<" shots="<<shots<<" commits="<<commits<<" rejected="<<rejected<<" reason="<<reason<<'\n';
 				for(const auto& e:records.entries())if(e.id){const auto& r=e.value;const auto& v=r.view;out<<"host="<<e.id.weapon<<" generation="<<e.id.generation<<" module="<<v.ammo.id.definition<<" kind="<<int(v.ammo.id.type)
 					<<" loaded="<<v.ammo.loaded<<" reserve="<<v.ammo.reserve<<" held="<<v.ammo.held<<" chamber="<<v.ammo.chamber<<" open="<<v.ammo.open<<" spent="<<v.ammo.spent<<" travel="<<v.travel<<" grip="<<int(v.grip)<<" fault="<<v.fault
 					<<" input="<<r.sequence<<" same_hand_chords="<<r.same_hand_chords<<" native_reductions="<<r.native_reductions<<" last_native="<<r.last_native_before<<"->"<<r.last_native_after

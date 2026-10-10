@@ -43,7 +43,6 @@ namespace openxr_adaptation_tests
 			new_input.grip[hand] = new_input.runtime_grip[hand] = {true, {standard.position, standard.orientation}};
 			old_input.aim[hand] = old_input.runtime_aim[hand] = new_input.aim[hand] = new_input.runtime_aim[hand] =
 			    {true, {aim.position, aim.orientation}};
-			new_input.wrist_pivot_meters = controller_calibration::defaults_for(controller_pose_pipeline::mode::standard).pivot;
 			const auto& old_values = settings::alignment_presets[preset].values;
 			const auto& new_values = settings::standard_alignment_presets[preset].values;
 			anchor old_target, new_target;
@@ -109,8 +108,10 @@ namespace openxr_adaptation_tests
 				runtime.get_status().controller_reference_ids[0].empty() &&
 				runtime.get_status().controller_pose_reference_error.empty(),
 				"standard pipeline published legacy calibration metadata");
-			tests::require(std::abs(input.wrist_pivot_meters[1] - settings::standard_wrist_pivots[1].default_value) < 1e-6f,
-				"standard input consumed legacy wrist calibration");
+				tests::require(input.orientation_degrees == controller_calibration::defaults_for(controller_pose_pipeline::mode::standard).orientation,
+					"standard input consumed legacy angle calibration");
+				tests::require(input.position_offsets_meters == controller_calibration::defaults_for(controller_pose_pipeline::mode::standard).position,
+					"standard input consumed legacy position calibration");
 			runtime.shutdown();
 		}
 	}
@@ -624,11 +625,25 @@ namespace openxr_adaptation_tests
 		                       loader.statistics().projection_frames == 0 && vr::tests::menu_pointer.ready &&
 		                       vr::tests::menu_pointer.hit,
 		                   "frontend must present and hit-test native UI without a world source");
+		const auto submission = runtime.get_status().frame_submission;
+		vr::tests::require(submission.world == 0 && submission.menu_only == 1 &&
+			submission.last_world_layers == 0 && submission.last_menu_layers > 0 &&
+			std::string_view(submission.menu.state) == "ready",
+			"menu-only layers must not be diagnosed as submitted stereo world content");
 		const auto pixel = loader.statistics().last_menu_pixel;
 		vr::tests::require((pixel & 255) > 85 && (pixel & 255) < 100 && ((pixel >> 24) & 255) >= 127 &&
 		                       ((pixel >> 24) & 255) <= 128,
 		                   "encoded premultiplied UI must decode before linear composition");
 		runtime.on_present_post(shown, S_OK);
+		vr::tests::menu_images.reset();
+		vr::tests::menu_state.timestamp = GetTickCount64();
+		const auto missing = present(graphics, 3);
+		runtime.on_present(missing);
+		const auto unavailable = runtime.get_status().frame_submission;
+		vr::tests::require(unavailable.world == 0 && unavailable.menu_only == 1 && unavailable.empty > submission.empty &&
+			std::string_view(unavailable.menu.state) == "menu_images_missing" && !vr::tests::menu_pointer.ready,
+			"successful zero-layer menu frames must retain the missing publication gate");
+		runtime.on_present_post(missing, S_OK);
 		runtime.shutdown();
 	}
 	template <class Loader> void canted_native_views(Loader& loader, const d3d11::device_snapshot& graphics)

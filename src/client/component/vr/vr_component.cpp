@@ -5,6 +5,7 @@
 
 #include "diagnostics.hpp"
 #include "diagnostics/renderer_evidence.hpp"
+#include "diagnostics/support_bundle.hpp"
 #include "debug_options.hpp"
 #include "desktop_mirror.hpp"
 #include "desktop_mirror_layout.hpp"
@@ -653,7 +654,9 @@ namespace vr
 			(void)engine_backend_probe::get_backend_watchdog_status();
 			(void)engine_stereo_execution::get_status();
 			const bool enabled = vr_enable != nullptr && vr_enable->current.enabled;
-			(void)diagnostics::write_status_snapshot(enabled);
+			// Warm mutexes/singletons without replacing an incident with the
+			// pre-Present, disabled startup state (public reports #14/#44).
+			(void)diagnostics::collect_status_text(enabled);
 		}
 
 		void configure_engine_probe()
@@ -810,6 +813,10 @@ namespace vr
 			dvars::register_enum(settings::runtime_backend.name, runtime_backends.data(),
 				settings::runtime_backend.default_index, game::DVAR_FLAG_SAVED,
 				"VR backend for game startup; select it before entering the game");
+			static auto killfeed_styles = settings::killfeed_style.values;
+			dvars::register_enum(settings::killfeed_style.name, killfeed_styles.data(),
+				settings::killfeed_style.default_index, game::DVAR_FLAG_SAVED,
+				"Local player hit and kill feedback audio style");
 			vr_enable = dvars::register_bool("vr_enable", true, game::DVAR_FLAG_SAVED,
 				"Enable VR rendering after vr_reinit");
 			static const char* probe_modes[]{"off", "observe", nullptr};
@@ -844,6 +851,8 @@ namespace vr
 			scheduler::loop(monitor_present_progress, scheduler::pipeline::async, 250ms);
 			gui::on_frame(on_gui_frame, true);
 			command::add("vr_status", print_status);
+			diagnostics::support::start([]{return vr_enable&&vr_enable->current.enabled;});
+			command::add("vr_diagnose", diagnostics::support::request);
 			command::add("vr_reinit", request_reinitialize);
 			command::add("vr_recenter", recenter_head_tracking);
 			command::add("vr_engineProbe_reset", reset_engine_probe);
@@ -859,6 +868,7 @@ namespace vr
 
 		void pre_destroy() override
 		{
+			diagnostics::support::stop();
 			accepting_work.store(false, std::memory_order_release);
 			shutdown_started.store(true, std::memory_order_release);
 			stall_watchdog_stop.store(true, std::memory_order_release);

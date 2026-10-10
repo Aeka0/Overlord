@@ -441,8 +441,8 @@ namespace vr::controllers
 			console::info("[VR input] hand_angle_pitch=%.2f yaw=%.2f roll=%.2f settling=%d runtime_aim_preserved=1\n",
 				input.orientation_degrees[0],input.orientation_degrees[1],input.orientation_degrees[2],input.orientation_settling);
 			console::info("[VR input] pose_pipeline=%s\n", controller_pose_pipeline::name(input.pose_pipeline));
-			console::info("[VR input] wrist_pivot_inward/back/up_m=%.4f/%.4f/%.4f alignment=translated_wrist_frame\n",
-				input.wrist_pivot_meters[0],input.wrist_pivot_meters[1],input.wrist_pivot_meters[2]);
+			console::info("[VR input] wrist_calibration=grip_local_point inward/back/up_m=%.4f/%.4f/%.4f\n",
+				input.position_offsets_meters[0],input.position_offsets_meters[1],input.position_offsets_meters[2]);
 			console::info("[VR input] game_view=hmd pitch_yaw_commands=%llu history_misses=%llu "
 				"camera_command_head_yaw=%.3f tracking_world_yaw=%.3f\n",
 				head.game_view_applications, head.game_view_history_misses,
@@ -495,9 +495,10 @@ namespace vr::controllers
 				controller_input::clock::now(),"[VR input summary] ");
 			console::print_text(console::con_type_info,overview.str());
 			const auto* vr_enabled = game::Dvar_FindVar("vr_enable");
-			if (diagnostics::write_status_snapshot(vr_enabled && vr_enabled->current.enabled))
-				console::info("[VR input] Complete report saved to %s. Share this file.\n",diagnostics::status_snapshot_path);
-			else console::error("[VR input] Report save FAILED; an older file may remain. Share this console output.\n");
+			std::string saved_path;
+			if (diagnostics::write_status_snapshot(vr_enabled && vr_enabled->current.enabled,&saved_path))
+				console::info("[VR input] Report saved to %s. Run vr_diagnose or press Ctrl+Shift+F8 for one uploadable ZIP.\n",saved_path.c_str());
+			else console::error("[VR input] Report save FAILED in all diagnostic folders; an older file is not this capture.\n");
 		}
 	} // namespace
 

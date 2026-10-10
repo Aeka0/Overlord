@@ -20,7 +20,9 @@ namespace vr::gameplay::weapons::underbarrel
 		int loaded{},reserve{},held{};bool chamber{},spent{},open{};
 		hand loader{hand::none};
 	};
-	inline int capacity(kind k)noexcept{return k==kind::shotgun ? 4 : k==kind::none ? 0 : 1;}
+	inline constexpr int shotgun_tube_capacity=3;
+	inline int capacity(kind k)noexcept{return k==kind::shotgun ? shotgun_tube_capacity+1 : k==kind::none ? 0 : 1;}
+	inline constexpr float action_open_fraction=.9f;
 	inline std::int64_t total(const state& s)noexcept{return std::int64_t(s.loaded)+s.reserve+s.held;}
 	inline bool valid(const state& s)noexcept
 	{
@@ -89,7 +91,7 @@ namespace vr::gameplay::weapons::underbarrel
 				q.op==operation::insert?(s.open&&!s.chamber?tube::operation::load_port:tube::operation::load_tube):
 				q.op==operation::open?tube::operation::rack_open:q.op==operation::close?tube::operation::rack_close:
 				q.op==operation::cleanup?tube::operation::cleanup:tube::operation::discard;
-			const auto inner=tube::plan({3,tube::action_drive::pump},feed,{op,s.id.host.weapon,s.id.host.generation,s.revision,q.rear,q.actor,q.unlock,q.actor,q.sustained});
+			const auto inner=tube::plan({shotgun_tube_capacity,tube::action_drive::pump},feed,{op,s.id.host.weapon,s.id.host.generation,s.revision,q.rear,q.actor,q.unlock,q.actor,q.sustained});
 			if(!inner)return tx;
 			auto n=s;n.revision=inner.next.revision;n.loaded=inner.after.loaded;n.reserve=inner.next.reserve;n.held=inner.next.held_rounds;
 			n.chamber=inner.next.chamber;n.spent=inner.next.spent_case;n.open=inner.next.phase==tube::action::held_open;n.loader=inner.next.loader_hand;
@@ -135,13 +137,13 @@ namespace vr::gameplay::weapons::underbarrel
 	// A fresh pinch chooses exactly one route. Exchanging an existing supply
 	// requires a separate waist-bound Grip edge and an atomic escrow transfer.
 	enum class trigger_route { none, existing_lease, fire, part, primary_supply, secondary_supply };
-	inline trigger_route route(bool fresh,bool occupied,bool firing,bool part,bool waist,bool squeeze,bool installed)noexcept
+	inline trigger_route route(bool fresh,bool occupied,bool firing,bool part,bool waist,bool secondary,bool installed)noexcept
 	{
 		if(occupied)return trigger_route::existing_lease;
 		if(!fresh)return trigger_route::none;
 		if(firing)return trigger_route::fire;
 		if(part)return trigger_route::part;
-		if(waist)return squeeze && installed ? trigger_route::secondary_supply : trigger_route::primary_supply;
+		if(waist)return secondary && installed ? trigger_route::secondary_supply : trigger_route::primary_supply;
 		return trigger_route::none;
 	}
 }

@@ -8,6 +8,35 @@
     "description": "settings.runtimeBackendHint"
   },
   {
+    "name": "vr_turnMode",
+    "category": "basics",
+    "group": "settings.turning",
+    "label": "settings.turnStyle",
+    "type": "choice"
+  },
+  {
+    "name": "vr_turnSpeed",
+    "category": "basics",
+    "group": "settings.turning",
+    "label": "settings.turnSpeed",
+    "type": "number",
+    "visibleWhen": [
+      "vr_turnMode",
+      "smooth"
+    ]
+  },
+  {
+    "name": "vr_snapAngle",
+    "category": "basics",
+    "group": "settings.turning",
+    "label": "settings.snapAngle",
+    "type": "number",
+    "visibleWhen": [
+      "vr_turnMode",
+      "snap"
+    ]
+  },
+  {
     "name": "vr_desktopStabilization",
     "category": "basics",
     "group": "settings.stabilization",
@@ -251,33 +280,12 @@
     "row": "settings.angleOffsets"
   },
   {
-    "name": "vr_turnMode",
+    "name": "vr_adsComfort",
     "category": "gameplay",
-    "group": "settings.turning",
-    "label": "settings.turnStyle",
-    "type": "choice"
-  },
-  {
-    "name": "vr_turnSpeed",
-    "category": "gameplay",
-    "group": "settings.turning",
-    "label": "settings.turnSpeed",
-    "type": "number",
-    "visibleWhen": [
-      "vr_turnMode",
-      "smooth"
-    ]
-  },
-  {
-    "name": "vr_snapAngle",
-    "category": "gameplay",
-    "group": "settings.turning",
-    "label": "settings.snapAngle",
-    "type": "number",
-    "visibleWhen": [
-      "vr_turnMode",
-      "snap"
-    ]
+    "group": "settings.aiming",
+    "label": "settings.adsComfort",
+    "type": "toggle",
+    "description": "settings.adsComfortHint"
   },
   {
     "name": "vr_aimAssistStrength",
@@ -341,6 +349,14 @@
     "description": "settings.chamberingGuideHint"
   },
   {
+    "name": "vr_smartAmmoSelection",
+    "category": "gameplay",
+    "group": "settings.weaponInteraction",
+    "label": "settings.smartAmmoSelection",
+    "type": "toggle",
+    "description": "settings.smartAmmoSelectionHint"
+  },
+  {
     "name": "vr_discardAmmoPenalty",
     "category": "gameplay",
     "group": "settings.ammoDrop",
@@ -381,6 +397,14 @@
     "description": "settings.cheatAmmoHint"
   },
   {
+    "name": "vr_killfeedStyle",
+    "category": "other",
+    "group": "settings.weaponFeedback",
+    "label": "settings.killfeedStyle",
+    "type": "choice",
+    "description": "settings.killfeedStyleHint"
+  },
+  {
     "name": "vr_recordingMode",
     "category": "other",
     "group": "settings.recordingMode",
@@ -391,14 +415,10 @@
   {
     "name": "vr_recordingDim",
     "category": "other",
-    "group": "settings.recordingDim",
+    "group": "settings.recordingMode",
     "label": "settings.recordingDim",
     "type": "number",
-    "description": "settings.recordingDimHint",
-    "visibleWhen": [
-      "vr_recordingMode",
-      true
-    ]
+    "description": "settings.recordingDimHint"
   },
   {
     "name": "vr_hideHud",

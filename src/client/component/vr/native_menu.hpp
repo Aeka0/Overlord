@@ -36,6 +36,8 @@ namespace vr::native_menu
 		std::array<std::shared_ptr<const native_hud_capture::frame>,menu_surface::surface_count> layers;
 	};
 	state current() noexcept;
+	// Shared by the standalone command and complete VR incident report.
+	std::string format_status();
 	struct presentation {bool enabled{},frontend{},scene{},video{},fullscreen_video{};};
 	// Present-owner probe: does not depend on a running LUI VM/scheduler.
 	presentation current_presentation() noexcept;

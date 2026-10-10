@@ -6,6 +6,7 @@ import json
 from pathlib import Path, PurePosixPath
 import shutil
 import subprocess
+import sys
 import tempfile
 import zipfile
 
@@ -42,6 +43,22 @@ LICENSE_SOURCES = {
 def collect(configuration: str, base_data: Path | None = None) -> dict[str, Path]:
     build = ROOT / "build/bin/x64" / configuration
     binary = "overlord-debug" if configuration == "Debug" else "overlord"
+    # Audit the actual EXE/PDB, including local staging. A build alone must not
+    # let missing features or read-only publication storage reach a package.
+    checks = [[sys.executable, str(ROOT / "tests/vr/client_feature_parity_tests.py"),
+               str(build / f"{binary}.exe")]]
+    if configuration == "Release":
+        probe = build / "vr-tests/aggregate-publication/vr-aggregate-publication-tests.exe"
+        inputs = [ROOT / "premake5.lua", ROOT / "premake/vr_tests.lua",
+                  ROOT / "tests/vr/aggregate_publication_tests.cpp"]
+        if not probe.is_file() or probe.stat().st_mtime < max(p.stat().st_mtime for p in inputs):
+            raise ValueError("Build vr-aggregate-publication-tests in Release for the current build policy before packaging")
+        checks.append([str(probe)])
+    for command in checks:
+        try:
+            subprocess.run(command, cwd=ROOT, check=True, timeout=30)
+        except (subprocess.CalledProcessError, subprocess.TimeoutExpired) as error:
+            raise ValueError(f"Client qualification failed for {configuration}: {Path(command[-1]).name}") from error
     files: dict[str, Path] = {}
 
     def add(source: Path, destination: str) -> None:
@@ -82,6 +99,7 @@ def collect(configuration: str, base_data: Path | None = None) -> dict[str, Path
             raise ValueError(f"Missing or unsafe default binding: {path}")
     tree(ROOT / "data/cdata", "h2-mod", {".lua", ".gsc", ".cfg", ".json", ".csv", ".flac"})
     tree(build / "h2-mod/ui_scripts/vr_gameplay", "h2-mod/ui_scripts/vr_gameplay", {".lua"})
+    add(build / "h2-mod/zone/h2_killfeed_sounds.ff", "h2-mod/zone/h2_killfeed_sounds.ff")
     for name in ["LICENSE", "THIRD_PARTY_NOTICES.md"]:
         add(ROOT / name, name)
     add(ROOT / "docs/client-installation.md", "README.md")
@@ -95,7 +113,8 @@ def collect(configuration: str, base_data: Path | None = None) -> dict[str, Path
     if base_data is not None:
         base_data = base_data.resolve()
         zone = base_data / "zone"
-        expected = {source.stem + ".ff" for source in (ROOT / "data/zone_source").glob("*.csv")}
+        expected = {source.stem + ".ff" for source in (ROOT / "data/zone_source").glob("*.csv")
+                    if source.stem != "h2_killfeed_sounds"}  # Already bundled with the client.
         found = set()
         for source in sorted(zone.rglob("*.ff")):
             if source.name not in expected:

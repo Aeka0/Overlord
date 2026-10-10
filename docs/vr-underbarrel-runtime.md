@@ -54,6 +54,25 @@ native capacity have been validated. Reserve changes do not convert to loaded
 ammunition implicitly. The primary feed remains unchanged when the module fires
 or reloads.
 
+`vr_smartAmmoSelection` is a saved toggle under Gameplay > Weapon interaction,
+enabled by default, including profiles without an explicit value. On a fresh
+waist Trigger press, an absent primary magazine or zero rounds across its
+magazine and chamber takes priority. Otherwise the default supply is:
+
+| Module | Prefer secondary ammunition when |
+| --- | --- |
+| M203 | Empty, open, and actual slider travel reaches the existing 90% opening threshold |
+| GP-25 | Empty |
+| Underbarrel shotgun | Fewer than three shells in its tube, excluding the chamber; four rounds total with a chambered shell |
+
+Secondary ammunition also requires available reserves and validated module state.
+Unavailable primary-feed state conservatively keeps primary priority. Holding
+Grip chooses the other supply. While Trigger remains held at the waist, a fresh
+Grip press or release exchanges the current item through the existing atomic
+reserve transfer. Mechanical or setting changes alone never retarget held
+ammunition. Turning the option off restores Trigger for primary and Grip +
+Trigger for secondary, including the original directional Grip exchange.
+
 ## Physical actions
 
 ### M203

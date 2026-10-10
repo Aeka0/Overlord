@@ -2,6 +2,7 @@
 #include "console.hpp"
 #include "console_format.hpp"
 #include "console_output_queue.hpp"
+#include "console_history.hpp"
 #include "loader/component_loader.hpp"
 
 #include "game/game.hpp"
@@ -26,6 +27,7 @@ namespace console
 		utils::hook::detour printf_hook;
 		std::recursive_mutex print_mutex;
 		detail::output_queue output_queue;
+		detail::message_history diagnostic_messages;
 		std::thread output_thread;
 		HANDLE output_event{};
 		std::atomic_bool output_stopping{};
@@ -143,6 +145,7 @@ namespace console
 		int dispatch_message(const int type, const std::string& message)
 		{
 			if(output_stopping.load())return 0;
+			diagnostic_messages.push(type,message,GetTickCount64());
 			output_queue.push(type,message);
 			if(output_event)SetEvent(output_event);
 			return static_cast<int>(std::min(message.size(),std::size_t(INT_MAX)));
@@ -383,6 +386,10 @@ namespace console
 		{
 			print(type, "%.*s", static_cast<int>(chunk.size()), chunk.data());
 		}
+	}
+	std::string diagnostic_history(const bool errors_only)
+	{
+		return diagnostic_messages.format(errors_only);
 	}
 
 	class component final : public component_interface

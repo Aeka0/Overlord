@@ -15,7 +15,7 @@ namespace vr::controller_calibration
 			for (unsigned i=0;i<3;++i)
 			{
 				if (const auto* setting=bank[i]) values.orientation[i]=setting->current.value;
-				if (const auto* setting=bank[i+3]) values.pivot[i]=setting->current.value;
+				if (const auto* setting=bank[i+3]) values.position[i]=setting->current.value;
 			}
 			return values;
 		}
@@ -27,15 +27,14 @@ namespace vr::controller_calibration
 			for (unsigned bank = 0; bank < controls.size(); ++bank)
 			{
 				const auto& alignment = bank == 0 ? settings::standard_hand_alignment : settings::hand_alignment;
-				const auto& pivots = bank == 0 ? settings::standard_wrist_pivots : settings::wrist_pivots;
 				for (unsigned i = 0; i < 3; ++i)
 				{
 					const auto& angle = alignment[i + 3];
 					controls[bank][i] = dvars::register_float(angle.name, angle.default_value, angle.min,
 					    angle.max, game::DVAR_FLAG_SAVED, "Aim-local pitch/yaw/roll calibration in degrees");
-					const auto& pivot = pivots[i];
-					controls[bank][i + 3] = dvars::register_float(pivot.name, pivot.default_value, pivot.min,
-					    pivot.max, game::DVAR_FLAG_SAVED, "Grip-local physical wrist pivot in meters; independent of alignment");
+					const auto& position = alignment[i];
+					controls[bank][i+3] = dvars::register_float(position.name, position.default_value,
+						position.min, position.max, game::DVAR_FLAG_SAVED, "Grip-local wrist point calibration in meters");
 				}
 			}
 			set_settings_provider(native_settings);

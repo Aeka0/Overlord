@@ -10,6 +10,7 @@
 #include "../weapon_carry_runtime.hpp"
 #include "../weapon_carry_pose.hpp"
 #include "../../controller_input.hpp"
+#include "../../settings.hpp"
 #include "../animation_presentation.hpp"
 #include "component/command.hpp"
 #include "component/console.hpp"
@@ -68,10 +69,8 @@ namespace vr::gameplay::hands
 		game::dvar_t* shoulder_half_width{};
 		game::dvar_t* shoulder_down{};
 		game::dvar_t* shoulder_back{};
-		game::dvar_t* hand_inward{};
-		game::dvar_t* hand_back{};
-		game::dvar_t* hand_up{};
 		game::dvar_t* grips_enabled{};
+		game::dvar_t* ads_comfort_enabled{};
 		bool animation_query_ready{};
 		std::atomic<bool> alive{true};
 		std::atomic_uint64_t asset_generation{1};
@@ -894,8 +893,7 @@ namespace vr::gameplay::hands
 				return;
 			}
 			probe.shoulder_target = shoulders;
-			probe.wrist_offsets = {
-			    hand_inward->current.value, hand_back->current.value, hand_up->current.value};
+			probe.wrist_offsets = {input.position_offsets_meters[0],input.position_offsets_meters[1],input.position_offsets_meters[2]};
 			for (int hand = 0; hand < 2; ++hand)
 			{
 				head_pose_bridge::world_pose grip{}, aim{};
@@ -1338,7 +1336,8 @@ namespace vr::gameplay::hands
 					    owner,
 					    solver().binding.assembly_key,
 					    sight.optic.type,
-					    ads_control.allowed && solver().binding.active_profile->id != "javelin" && gameplay &&
+					    ads_comfort_enabled && ads_comfort_enabled->current.enabled && ads_control.allowed &&
+					        solver().binding.active_profile->id != "javelin" && gameplay &&
 					        !selection_transition && !manipulating,
 					    alignment * distance_weight,
 					    eye_geometry.clearance_meters,
@@ -2009,7 +2008,7 @@ namespace vr::gameplay::hands
 				     << probe.offsets.half_width_meters << '/' << probe.offsets.down_meters << '/'
 				     << probe.offsets.back_meters << " head=[" << probe.head_position[0] << ','
 				     << probe.head_position[1] << ',' << probe.head_position[2] << "]\n";
-				text << "wrist_offset=translated_wrist_frame inward/back/up_m="
+				text << "wrist_offset=grip_local_point inward/back/up_m="
 				     << probe.wrist_offsets.inward_meters << '/' << probe.wrist_offsets.back_meters << '/'
 				     << probe.wrist_offsets.up_meters << '\n';
 				text << "forearm_twist=final_anatomical_axial applied_hands=" << probe.forearm_twist_hands
@@ -2082,22 +2081,17 @@ namespace vr::gameplay::hands
 			    true,
 			    game::DVAR_FLAG_SAVED,
 			    "Authored weapon grip profiles, open free hand and equip presentation suppression");
+			ads_comfort_enabled = dvars::register_bool(
+			    settings::ads_comfort.name,
+			    settings::ads_comfort.default_value,
+			    game::DVAR_FLAG_SAVED,
+			    "Move compatible two-handed sights closer to the eye while aiming");
 			enabled = dvars::register_bool(
 			    "vr_independentHands",
 			    true,
 			    game::DVAR_FLAG_SAVED,
 			    "Independent controller-driven hands, including empty-hand presentation");
 			command::add("vr_hands_status", print_status);
-			const auto& alignment = settings::active_hand_alignment();
-			const std::array outputs{&hand_inward, &hand_back, &hand_up};
-			for (const auto& fields : {settings::hand_alignment, settings::standard_hand_alignment})
-				for (unsigned i = 0; i < outputs.size(); ++i)
-				{
-					auto* value = dvars::register_float(fields[i].name, fields[i].default_value,
-						fields[i].min, fields[i].max, game::DVAR_FLAG_SAVED,
-						"Hand alignment in meters in the selected grip coordinates");
-					if (fields[i].name == alignment[i].name) *outputs[i] = value;
-				}
 			shoulder_half_width =
 			    dvars::register_float("vr_shoulderHalfWidth",
 			                          0.18f,

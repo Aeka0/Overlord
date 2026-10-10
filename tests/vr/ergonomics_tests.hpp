@@ -52,10 +52,11 @@ namespace ergonomics_tests
 		for(const auto* d:{&w::mp5::physical,&w::ump::physical,&w::aug::physical,&w::tavor::physical,&w::scar::physical,&w::fal::physical})
 		for(int actor=0;actor<2;++actor)
 		{
-			const auto pose=actor?vr::gameplay::hands::pose_mirror::part(d->slide_grips[1],mirror):d->slide_grips[1];
+			const auto pinky_style=actor && d==&w::scar::physical?0:1;
+			const auto pose=actor?vr::gameplay::hands::pose_mirror::part(d->slide_grips[pinky_style],mirror):d->slide_grips[pinky_style];
 			const auto contact=compose(pose.wrist,{pose.contact_in_wrist,{0,0,0,1}}).position;
 			check(pose.fingers.data()==w::hand_poses::edge_handle::pinky_fingers.data() &&
-				pose.wrist.position[1]>contact[1]+.4f,"palm-up side grasp uses the little finger with wrist outside the receiver");
+				pose.wrist.position[1]>contact[1]+.4f,"side pinky grasp keeps the wrist outside the receiver for either hand");
 		}
 		check(w::hand_poses::edge_handle::source_styles[0].fingers.data()==w::hand_poses::edge_handle::index_fingers.data() &&
 			w::hand_poses::edge_handle::source_styles[1].fingers.data()==w::hand_poses::edge_handle::pinky_fingers.data() &&

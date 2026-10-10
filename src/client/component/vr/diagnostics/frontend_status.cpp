@@ -11,6 +11,7 @@
 #include "../engine_stereo_execution.hpp"
 #include "../engine_stereo_renderer.hpp"
 #include "../engine_view_probe.hpp"
+#include "../debug_options.hpp"
 
 #include <algorithm>
 #include <iomanip>
@@ -64,7 +65,7 @@ namespace vr::diagnostics::detail
 		output << "  fx_culling_union: attempts=" << culling_status.fx_attempts;
 		output << " applied=" << culling_status.fx_applications;
 		output << " failures=" << culling_status.fx_failures << '\n';
-		output << "  strict_scene_pair=";
+		output << "  legacy_scene_pair=";
 		if (bridge_status.coherent_stereo_pairs != 0)
 		{
 			output << "observed";
@@ -81,6 +82,7 @@ namespace vr::diagnostics::detail
 		output << " calls=" << bridge_status.scene_calls;
 		output << " coherent=" << bridge_status.coherent_stereo_pairs;
 		output << " incoherent=" << bridge_status.incoherent_stereo_pairs << '\n';
+		output << "  scene_pair_help: legacy scene_calls/stereo_frames are observer counters; production output is native pairs/conversions and runtime submission.\n";
 		output << "  cpu_view_probe=" << (view_probe_status.enabled ? "enabled" : "disabled");
 		output << " transactions=" << view_probe_status.transaction_count;
 		output << " records=" << view_probe_status.newest_sequence;
@@ -91,6 +93,31 @@ namespace vr::diagnostics::detail
 		output << " invalid_slot=" << view_probe_status.invalid_slot_records;
 		output << " count_mismatch=" << view_probe_status.count_mismatch_records;
 		output << " thread_mismatch=" << view_probe_status.thread_mismatch_records << '\n';
+		output << "  cpu_view_trace_loaded=" << yes_no(debug_options::enabled(debug_options::probe::view))
+			<< " (zero trace records do not mean the production hooks were skipped)\n";
+		const auto preparation = engine_stereo_renderer::get_view_preparation_status();
+		output << "  view_preparation: allocator_entries=" << preparation.allocator_entries
+			<< " initializer_entries=" << preparation.initializer_entries
+			<< " generator_entries=" << preparation.generator_entries
+			<< " scoped_initializers=" << preparation.scoped_initializers
+			<< " scoped_generators=" << preparation.scoped_generators
+			<< " derivations=" << preparation.derivations << " prepared=" << preparation.prepared << '\n';
+		output << "  view_rejections: scope=first_failed_prerequisite_per_scene";
+		for (std::size_t i = 1; i < preparation.rejections.size(); ++i)
+			output << ' ' << engine_stereo_renderer::to_string(static_cast<engine_stereo_renderer::view_rejection>(i))
+				<< '=' << preparation.rejections[i];
+		output << '\n';
+		const auto rejection_now = GetTickCount64();
+		const auto append_rejection = [&](const char* label, const engine_stereo_renderer::view_rejection_sample& sample)
+		{
+			output << "  " << label << ": reason=" << engine_stereo_renderer::to_string(sample.reason)
+				<< " age_ms=" << (sample.tick && rejection_now >= sample.tick ? static_cast<std::int64_t>(rejection_now-sample.tick) : -1)
+				<< " transaction=" << sample.transaction << " frame=" << sample.frame << " thread=" << sample.thread
+				<< " slot=0x" << std::hex << sample.slot << std::dec << " allocator_calls=" << sample.allocator_calls
+				<< " initializer_calls=" << sample.initializer_calls << " generator_calls=" << sample.generator_calls << '\n';
+		};
+		append_rejection("first_view_rejection", preparation.first);
+		append_rejection("last_view_rejection", preparation.last);
 		output << "  cpu_view_state: snapshots=" << view_probe_status.view_state_snapshots;
 		output << " slot_stable=" << view_probe_status.stable_slot_comparisons;
 		output << " slot_changed=" << view_probe_status.changed_slot_comparisons;

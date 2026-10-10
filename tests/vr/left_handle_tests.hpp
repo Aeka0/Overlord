@@ -25,9 +25,12 @@ namespace left_handle_tests
 			const auto original=compose(source.wrist,{source.contact_in_wrist,{0,0,0,1}}).position;
 			check(length(sub(contact,original))<.00001f,"both hands wrap the same left handle without reflecting hardware");
 			if(actor)
+			{
+				const auto right_style=d==&w::scar::physical?1-style:style;
 				check(source.opposite_pose && grasp.wrist.position[1]>contact[1]+1.f &&
-					grasp.fingers.data()==(style?w::hand_poses::edge_handle::pinky_fingers.data():w::hand_poses::edge_handle::index_fingers.data()),
+					grasp.fingers.data()==(right_style?w::hand_poses::edge_handle::pinky_fingers.data():w::hand_poses::edge_handle::index_fingers.data()),
 					"right index and pinky hooks keep the wrist outside the left receiver wall");
+			}
 			for(bool caught:{false,true})
 			{
 				if(caught && !d->handle_catch)continue;

@@ -54,8 +54,17 @@ does not change the provenance requirements above.
 - The pinned deps/shader-tool checkout has no standalone license file. Confirm
   its applicable permission before redistributing its code or linked
   implementation; a submodule URL does not supply missing permission.
+- `data/zonetool/h2_killfeed_sounds` contains the eleven supplied H2 Killfeed
+  FLAC clips and their sound aliases, imported from the local reference prototype.
+  `data/zone_source/h2_killfeed_sounds.csv` is the ZoneTool build manifest.
+  `data/zone/h2_killfeed_sounds.ff` is the supplied compiled sound-only zone;
+  it is bundled so client builds do not require a game installation or ZoneTool.
+  The audio's source titles are BOCW, MW Classic and MW2019. Preserve the
+  supplied assets' provenance and permission evidence for public redistribution.
+  The runtime scripts adapt the prototype's damage/death feedback and ducking;
+  its LUI settings and experimental recoil model are not included.
 - Proprietary game executables, game archives, local asset-export directories,
-  captures, minidumps and generated fastfiles are excluded from this snapshot.
+  captures, minidumps and other generated fastfiles are excluded from this snapshot.
 
 These are explicit review items, not a claim that every inherited asset has
 already received complete legal clearance.

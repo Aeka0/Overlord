@@ -9,6 +9,14 @@ return function()
 		targetdir ("%{wks.location}/bin/%{cfg.platform}/%{cfg.buildcfg}/vr-tests/" .. output_directory)
 	end
 
+	test_executable("vr-support-diagnostics-tests", "support-diagnostics")
+		files {"./tests/vr/support_diagnostics_tests.cpp", "./src/client/component/vr/diagnostics/support_archive.cpp",
+			"./src/common/utils/compression.cpp"}
+		includedirs {"./tests/vr", "./src/client"}
+		minizip.import()
+		json.import()
+		gsl.import()
+
 	local vr_runtime_sources = {
 		"./src/client/component/vr/controller_input.cpp",
 		"./src/client/component/vr/controller_input.hpp",
@@ -79,6 +87,10 @@ return function()
 	end
 
 	group "Tests"
+	test_executable("vr-aggregate-publication-tests", "aggregate-publication")
+		files {"./tests/vr/aggregate_publication_tests.cpp"}
+		flags {"NoPCH"}
+
 	project "vr-weapon-catalog"
 		kind "StaticLib"
 		language "C++"
@@ -205,6 +217,12 @@ return function()
 			"./src/client/component/ui_script_modules.hpp"}
 		includedirs {"./src/client", "./deps/lua"}
 		links {"lua"}
+
+	test_executable("vr-killfeed-audio-tests", "killfeed-audio")
+		files {"./tests/vr/killfeed_audio_tests.cpp", "./tests/vr/killfeed_audio_tests.lua"}
+		includedirs {"./deps/lua"}
+		links {"lua"}
+		gsc_tool.import()
 
 	test_executable("vr-region-capture-tests", "region-capture")
 		files {"./tests/vr/region_capture_tests.cpp"}

@@ -14,6 +14,7 @@ using vr::hand;
 #include "skinned_part_tests.hpp"
 #include "opaque_mesh_tests.hpp"
 #include "native_fx_world_space_tests.hpp"
+#include "native_fx_checkpoint_tests.hpp"
 #include <limits>
 #include "component/vr/gameplay/immutable_surface_cache.hpp"
 #include "component/vr/gameplay/hands/pose_math.hpp"
@@ -24,6 +25,7 @@ int main()
 	int failed=model_identity_tests::run()+console_format_tests::run()+animation_index_bridge_tests::run()+launcher_aim_bridge_tests::run()+use_range_bridge_tests::run()+oilrig_angle_bridge_tests::run()+startup_callbacks_tests::run();
 	const auto check=[&](bool ok,const char* name) { if (!ok) { ++failed; std::cerr << "FAIL: " << name << '\n'; } };
 	native_fx_world_space_tests(check);
+	native_fx_checkpoint_tests(check);
 	{
 		struct descriptor{std::uint32_t version{},mask{};std::array<int,4> groups{};const int* borrowed{};};
 		vr::gameplay::weapons::immutable_surface_cache<descriptor> cache;
