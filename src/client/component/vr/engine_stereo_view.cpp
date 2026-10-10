@@ -452,13 +452,12 @@ namespace vr::engine_stereo_view
 			}
 			if (view_projection_energy < 0.1f || inverse_energy < 0.1f) return false;
 		}
-		// Before H2's finalizer runs these two ranges are still identical copies of
-		// the natural center-eye slot. A successful stereo finalization must make
-		// both the combined and inverse matrices eye-local.
-		if (std::memcmp(value.eyes[0].bytes.data() + view_projection_matrix_offset,
-			value.eyes[1].bytes.data() + view_projection_matrix_offset,
-			16 * sizeof(float)) == 0 ||
-			std::memcmp(value.eyes[0].bytes.data() + inverse_view_projection_matrix_offset,
+		// H2's finalizer (0x14077F550) forms +0x80 from view rotation and
+		// projection only. Identical eye FOVs legitimately produce identical
+		// camera-relative matrices. It adds the eye origin only when writing
+		// the inverse at +0xC0; that range must differ to reject the unchanged
+		// center-eye copies left by derive() or a duplicated eye's result.
+		if (std::memcmp(value.eyes[0].bytes.data() + inverse_view_projection_matrix_offset,
 				value.eyes[1].bytes.data() + inverse_view_projection_matrix_offset,
 				16 * sizeof(float)) == 0)
 		{

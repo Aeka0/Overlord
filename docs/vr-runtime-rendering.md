@@ -85,6 +85,16 @@ Status reports the separate `known_conversion(recording/execute/replay)` counts.
 
 `engine_stereo_renderer::publish_generator_views` publishes finalized view identity before calling the native draw-surface generator, allowing the concurrent backend to claim the same scene. It does not copy unfinished surface or FX data at that point.
 
+H2's view-slot finalizer (`0x14077F550`) writes the camera-relative rotation ×
+projection matrix at `+0x80`, then incorporates the eye origin from `+0x100` into
+the inverse at `+0xC0`. Identical eye FOVs, including the symmetric FOVs reported
+in issue #34, can therefore produce identical `+0x80` matrices. Finalization
+validation permits that equality while requiring distinct inverse matrices,
+finite nonempty matrices, and coherent eye/publication identity. Derived slots
+that still contain copied center-eye matrices remain rejected. The CPU smoke
+test covers symmetric and asymmetric FOVs and the backend cloning gate; it does
+not establish affected-device headset acceptance.
+
 `engine_stereo_owner_pass::begin` calls `engine_scene_completion::await` before cloning. The completion module runs H2's native job-pumping waits in initial -> surfaces -> effects order, checks frontend identity before and after waits, and then checks all four input flags. No eye/GPU scope has been entered at this point. The caller must not wait while holding resources required by the workers it is waiting for.
 
 This preserves two distinct points: publish immutable views early, then read scene contents after native producers complete. Moving publication after the native function returns can miss the backend consumption window. Cloning earlier to reduce waiting can copy unfinished transparency or effect lists.

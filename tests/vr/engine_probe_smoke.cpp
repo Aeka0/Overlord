@@ -930,14 +930,16 @@ namespace
 	}
 
 	vr::engine_stereo_view::slot_pair make_finalized_binding_pair(
-		const std::array<float, 3>& source_origin = {})
+		const std::array<float, 3>& source_origin = {},
+		const std::array<vr::engine_stereo_bridge::eye_projection, 2>& projections =
+			{{{-1.376f, 0.839f, -0.966f, 1.428f},
+				{-0.839f, 1.376f, -0.966f, 1.428f}}})
 	{
 		using namespace vr::engine_stereo_bridge;
 		configure_bridge();
 		vr::tests::require(publish_view_family(191,
 			{-0.0315f, 0.0f, 0.0f}, {0.0315f, 0.0f, 0.0f},
-			{{{-1.376f, 0.839f, -0.966f, 1.428f},
-				{-0.839f, 1.376f, -0.966f, 1.428f}}}),
+			projections),
 			"binding test could not publish a view family");
 		std::array<render_config, 2> configs{};
 		vr::tests::require(get_render_configs(configs),
@@ -973,6 +975,60 @@ namespace
 		vr::tests::require(vr::engine_stereo_view::validate_finalized(pair),
 			"binding test pair did not satisfy the finalized slot contract");
 		return pair;
+	}
+
+	void expect_symmetric_eye_finalization()
+	{
+		// Issue #34: VDXR can report identical symmetric FOVs. H2's combined
+		// matrix is camera-relative; its inverse also contains the eye origin.
+		const auto pair = make_finalized_binding_pair({10.0f, 20.0f, 30.0f},
+			{{{-1.2795f, 1.2795f, -1.2795f, 1.2795f},
+				{-1.2795f, 1.2795f, -1.2795f, 1.2795f}}});
+		constexpr auto matrix_size = 16 * sizeof(float);
+		vr::tests::require(std::memcmp(pair.eyes[0].bytes.data() + 0x80,
+			pair.eyes[1].bytes.data() + 0x80, matrix_size) == 0,
+			"symmetric-FOV fixture did not retain identical camera-relative matrices");
+		vr::engine_stereo_view::scene_record_pair records{};
+		alignas(16) std::array<std::uint8_t,
+			vr::engine_stereo_view::h2_scene_record_size> natural{};
+		std::memcpy(natural.data() + vr::engine_stereo_view::h2_view_origin_offset,
+			pair.natural_camera.data(), sizeof(pair.natural_camera));
+		vr::tests::require(vr::engine_stereo_view::clone_scene_records(
+			natural.data(), pair, records),
+			"symmetric-FOV stereo views were rejected by backend scene cloning");
+
+		auto invalid = pair;
+		std::memcpy(invalid.eyes[1].bytes.data() + 0xC0,
+			invalid.eyes[0].bytes.data() + 0xC0, matrix_size);
+		vr::tests::require(!vr::engine_stereo_view::validate_finalized(invalid) &&
+			!vr::engine_stereo_view::clone_scene_records(natural.data(), invalid, records),
+			"copied center/other-eye inverse matrices passed finalization");
+
+		std::array<vr::engine_stereo_bridge::render_config, 2> configs{};
+		vr::tests::require(vr::engine_stereo_bridge::get_render_configs(configs) &&
+			vr::engine_stereo_view::derive(pair.eyes[0].bytes.data(), configs, invalid) &&
+			!vr::engine_stereo_view::validate_finalized(invalid),
+			"derived slots retaining nonzero source matrices passed without finalization");
+
+		for (const auto offset : {0x80u, 0xC0u})
+		{
+			for (const auto non_finite : {std::numeric_limits<float>::quiet_NaN(),
+				std::numeric_limits<float>::infinity()})
+			{
+				invalid = pair;
+				std::memcpy(invalid.eyes[1].bytes.data() + offset, &non_finite, sizeof(float));
+				vr::tests::require(!vr::engine_stereo_view::validate_finalized(invalid),
+					"symmetric-FOV finalization accepted a non-finite matrix");
+			}
+			invalid = pair;
+			std::memset(invalid.eyes[1].bytes.data() + offset, 0, matrix_size);
+			vr::tests::require(!vr::engine_stereo_view::validate_finalized(invalid),
+				"symmetric-FOV finalization accepted an empty matrix");
+		}
+		invalid = pair;
+		++invalid.eyes[1].publication;
+		vr::tests::require(!vr::engine_stereo_view::validate_finalized(invalid),
+			"symmetric-FOV finalization accepted mixed publications");
 	}
 
 	void expect_isolated_backend_scene_record_clones()
@@ -2070,6 +2126,7 @@ int main()
 		expect_same_frame_view_family_contract();
 		expect_render_target_observation_contract();
 		expect_record_local_asymmetric_eye_slots();
+		expect_symmetric_eye_finalization();
 		expect_isolated_backend_scene_record_clones();
 		expect_scene_clone_rejects_mixed_camera_generations();
 		expect_owner_pass_target4_resource_contract();
