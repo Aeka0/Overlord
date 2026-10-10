@@ -149,7 +149,7 @@ test("startup declaration is translated and retains the version and report detai
   for (const [language, catalog] of Object.entries(catalogs)) {
     for (const key of keys) assert.ok(catalog[key]?.length, `${language}: ${key}`);
     assert.ok(catalog["notice.maintenance"].includes("{version}"), language);
-    assert.ok(catalog["notice.feedback"].includes("vr_status") && catalog["notice.feedback"].includes("minidump"), language);
+    assert.ok(catalog["notice.feedback"].includes("vr_diagnose") && catalog["notice.feedback"].includes("minidump"), language);
   }
   assert.ok(catalogs["zh-CN"]["notice.maintenance"].endsWith("版本更迭也可能破坏游戏存档和进度。"));
 });

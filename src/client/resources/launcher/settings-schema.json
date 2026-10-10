@@ -106,14 +106,16 @@
     "category": "basics",
     "group": "settings.comfort",
     "label": "settings.disableFlares",
-    "type": "toggle"
+    "type": "toggle",
+    "description": "settings.disableFlaresHint"
   },
   {
     "name": "vr_cameraBob",
     "category": "basics",
     "group": "settings.comfort",
     "label": "settings.cameraBob",
-    "type": "toggle"
+    "type": "toggle",
+    "description": "settings.cameraBobHint"
   },
   {
     "name": "vr_controllerPoseMode",
@@ -320,9 +322,18 @@
   {
     "name": "vr_recoilPenalty",
     "category": "gameplay",
-    "group": "settings.recoil",
+    "group": "settings.challenge",
     "label": "settings.applyTo",
-    "type": "choice"
+    "type": "choice",
+    "description": "settings.recoilHint"
+  },
+  {
+    "name": "vr_discardAmmoPenalty",
+    "category": "gameplay",
+    "group": "settings.challenge",
+    "label": "settings.ammoDrop",
+    "type": "toggle",
+    "description": "settings.ammoDropHint"
   },
   {
     "name": "vr_physicalLadders",
@@ -355,13 +366,6 @@
     "label": "settings.smartAmmoSelection",
     "type": "toggle",
     "description": "settings.smartAmmoSelectionHint"
-  },
-  {
-    "name": "vr_discardAmmoPenalty",
-    "category": "gameplay",
-    "group": "settings.ammoDrop",
-    "label": "settings.ammoDrop",
-    "type": "toggle"
   },
   {
     "name": "vr_recoil",

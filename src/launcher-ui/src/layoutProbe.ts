@@ -10,7 +10,7 @@ export function inspectStartupNotice(version: string) {
     modal: dialog.matches(":modal"),
     version: text.includes(version) && !!version,
     paragraphs: content.querySelectorAll("p").length === 3,
-    diagnostics: text.includes("vr_status") && text.includes("minidump"),
+    diagnostics: text.includes("vr_diagnose") && text.includes("minidump"),
     fits: bounds.left >= 0 && bounds.top >= 0 && bounds.right <= innerWidth && bounds.bottom <= innerHeight,
     contentFits: content.scrollWidth <= content.clientWidth + 1,
     dismissed: false,
