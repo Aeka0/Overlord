@@ -5,6 +5,7 @@
 #include "component/vr/engine_stereo_output_merger.hpp"
 #include "component/vr/engine_stereo_resource_ops.hpp"
 #include "native_post_aa_boundary_tests.hpp"
+#include "component/vr/diagnostics/post_aa.hpp"
 
 #include <array>
 #include <iostream>
@@ -751,6 +752,40 @@ int main()
 	if (vr::native_post_aa::accepts_ldr(input_desc, input_rtv_desc, srgb, 16, 16) ||
 		vr::native_post_aa::accepts_ldr(input_desc, input_rtv_desc, input_srv_desc, 8, 16))
 		return fail("incompatible LDR encoding/extent accepted");
+	{
+		namespace diagnostic = vr::diagnostics::post_aa;
+		const auto reference = diagnostic::observe(13, aa_input.Get(), aa_input.Get(),
+			aa_input_view.Get(), aa_input_source.Get());
+		if (diagnostic::rejection(reference, reference)) return fail("valid AA diagnostic identity rejected");
+		auto scratch_desc = description;
+		scratch_desc.Format = DXGI_FORMAT_R8G8_UNORM;
+		Microsoft::WRL::ComPtr<ID3D11Texture2D> scratch;
+		Microsoft::WRL::ComPtr<ID3D11RenderTargetView> scratch_rtv;
+		Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> scratch_srv;
+		if (FAILED(device->CreateTexture2D(&scratch_desc, nullptr, &scratch)) ||
+			FAILED(device->CreateRenderTargetView(scratch.Get(), nullptr, &scratch_rtv)) ||
+			FAILED(device->CreateShaderResourceView(scratch.Get(), nullptr, &scratch_srv)))
+			return fail("AA diagnostic two-channel fixture");
+		const auto captured = diagnostic::observe(14, scratch.Get(), scratch.Get(), scratch_rtv.Get(), scratch_srv.Get());
+		const auto mismatch = diagnostic::observe(15, scratch.Get(), scratch.Get(), scratch_rtv.Get(), aa_input_source.Get());
+		const auto missing = diagnostic::observe(14, nullptr, nullptr, nullptr, nullptr);
+		const auto reason = [](const char* actual, const char* expected)
+		{ return actual && std::strcmp(actual, expected) == 0; };
+		if (!reason(diagnostic::rejection(captured, reference), "texture_format") ||
+			captured.texture.Format != DXGI_FORMAT_R8G8_UNORM || captured.texture.Width != 16 ||
+			!reason(diagnostic::rejection(mismatch, reference), "rtv_srv_resource_mismatch") ||
+			!reason(diagnostic::rejection(missing, reference), "image_missing"))
+			return fail("AA diagnostics failed to distinguish format, identity and missing targets");
+		auto changed = reference;changed.texture.Width=8;
+		if (!reason(diagnostic::rejection(changed, reference), "texture_extent")) return fail("AA extent diagnostic");
+		changed=reference;changed.input=srgb;
+		if (!reason(diagnostic::rejection(changed, reference), "srv_format")) return fail("AA view format diagnostic");
+		changed=reference;changed.texture.BindFlags=D3D11_BIND_RENDER_TARGET;
+		if (!reason(diagnostic::rejection(changed, reference), "texture_bindings")) return fail("AA binding diagnostic");
+		scratch_srv.Reset();scratch_rtv.Reset();scratch.Reset();
+		if (!reason(diagnostic::rejection(captured, reference), "texture_format"))
+			return fail("AA evidence depends on released GPU resources");
+	}
 	for (std::uint64_t pair_id : {100u, 101u})
 	{
 		if (!vr::engine_stereo_eye_resources::begin_pair(pair_id, device.Get(), context.Get(), 5, aa_bindings))

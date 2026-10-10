@@ -1776,7 +1776,7 @@ namespace vr::engine_stereo_renderer
 		{
 			if (!record || native_display_record || !route) return false;
 			native_display_route = route;
-			if (!native_post_aa::select_display_target(record, route, native_display_route.destination))
+			if (!native_post_aa::select_display_target(record, route, native_display_route.destination, view))
 				return false;
 			native_display_record = record;
 			native_display_routes = 0;

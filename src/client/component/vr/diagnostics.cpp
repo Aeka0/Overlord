@@ -36,6 +36,7 @@
 #include "native_render_session.hpp"
 #include "native_menu.hpp"
 #include "native_hud_capture.hpp"
+#include "native_post_aa.hpp"
 #include "vr_runtime.hpp"
 
 #include <exception/minidump.hpp>
@@ -969,6 +970,7 @@ namespace vr::diagnostics
 				<<" last_rejection="<<engine_stereo_renderer::to_string(preparation.last.reason)<<'\n';
 			out<<"owner_failure: reason="<<engine_stereo_owner_pass::to_string(owner.last_failure)
 				<<" pair="<<owner.failure_pair<<" eye="<<owner.failure_eye<<" display="<<owner.display_transform_error<<'\n';
+			out<<native_post_aa::status_text();
 			out<<"runtime_error="<<detail::quoted_text(runtime_status.last_error)
 				<<" native_error="<<detail::quoted_text(runtime_status.native_renderer_error)<<'\n';
 			out<<native_menu::format_status()<<native_hud_capture::format_status()<<gameplay::hands::status()

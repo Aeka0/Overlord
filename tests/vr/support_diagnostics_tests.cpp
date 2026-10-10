@@ -3,6 +3,7 @@
 #include "component/vr/runtime_failure_history.hpp"
 #include "component/vr/diagnostics/support_archive.hpp"
 #include "component/vr/diagnostics/screen_display.hpp"
+#include "component/vr/diagnostics/post_aa.hpp"
 #include <utils/compression.hpp>
 #include <unzip.h>
 #include <iowin32.h>
@@ -30,6 +31,31 @@ int main()
 	check(events.total==21&&events.retained==8&&events.recent[(events.next+7)%8].repetitions==2,
 		"repeated API failure updates the latest occurrence without evicting distinct events");
 	const auto temporary=std::filesystem::temp_directory_path();
+	{
+		namespace aa=vr::diagnostics::post_aa;
+		aa::history validation;aa::failure sample;
+		sample.tick=10;sample.stage="smaa_scratch_extent";sample.detail="texture_format";
+		sample.selected=vr::native_post_aa::mode::smaa_t2x;sample.view={42,3,1,false};
+		sample.route={5,4};sample.targets_known=true;sample.failed.id=14;
+		sample.failed.texture_known=true;sample.failed.texture.Format=DXGI_FORMAT_R8G8_UNORM;
+		sample.reference.id=4;sample.reference.texture_known=true;
+		sample.reference.texture.Width=2064;sample.reference.texture.Height=2208;
+		validation.record(sample);
+		for(unsigned i=0;i<100;++i)
+		{
+			sample.tick=20+i;sample.detail="texture_extent";sample.failed.id=15;
+			sample.selected=vr::native_post_aa::mode::filmic_smaa;sample.view={50+i,4,0,false};
+			validation.record(sample);
+		}
+		const auto report=validation.format(200);
+		check(report.size()<8192&&report.find("failures=101")!=std::string::npos&&
+			report.find("first_failure: sequence=1")!=std::string::npos&&
+			report.find("latest_failure: sequence=101")!=std::string::npos&&
+			report.find("detail=texture_format mode=smaa_t2x(3) pair=42 eye=1 generation=3")!=std::string::npos&&
+			report.find("detail=texture_extent mode=filmic_smaa(4)")!=std::string::npos&&
+			report.find("target=14")!=std::string::npos&&report.find("target=15")!=std::string::npos,
+			"AA diagnostics retain bounded first/latest failure context across modes and generations");
+	}
 	{
 		namespace screen=vr::diagnostics::screen;
 		screen::trace display;screen::sample sample;

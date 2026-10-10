@@ -15,7 +15,7 @@ namespace vr::native_post_aa
 	// AA consumes native RGBA8 PostFX output, including its alpha channel.
 	// Validate that destination before the native display transform writes it.
 	[[nodiscard]] bool select_display_target(const void* record, native_display_contract::route route,
-		std::uint32_t& destination) noexcept;
+		std::uint32_t& destination, const view_identity& view) noexcept;
 	[[nodiscard]] bool apply(void* record, native_display_contract::route route,
 		const view_identity& view) noexcept;
 	// Publish history only after the complete pair has been admitted. A failed

@@ -40,21 +40,35 @@ namespace vr::native_post_aa
 	// H2's LDR ping-pong images use TYPELESS storage with plain-UNORM views;
 	// SMAA scratch/history images use typed UNORM storage. Both preserve the
 	// same encoded RGBA values. An sRGB view would change that color contract.
+	[[nodiscard]] inline const char* ldr_rejection(const D3D11_TEXTURE2D_DESC& texture,
+		const D3D11_RENDER_TARGET_VIEW_DESC& output, const D3D11_SHADER_RESOURCE_VIEW_DESC& input,
+		std::uint32_t width, std::uint32_t height) noexcept
+	{
+		if (!width || !height) return "expected_extent";
+		if (texture.Width != width || texture.Height != height) return "texture_extent";
+		if (texture.Format != DXGI_FORMAT_R8G8B8A8_TYPELESS && texture.Format != DXGI_FORMAT_R8G8B8A8_UNORM)
+			return "texture_format";
+		if (texture.ArraySize != 1) return "texture_array";
+		if (texture.MipLevels != 1) return "texture_mips";
+		if (texture.SampleDesc.Count != 1 || texture.SampleDesc.Quality != 0) return "texture_samples";
+		if (texture.Usage != D3D11_USAGE_DEFAULT) return "texture_usage";
+		if (texture.CPUAccessFlags != 0) return "texture_cpu_access";
+		if (texture.MiscFlags != 0) return "texture_misc";
+		constexpr auto bindings = D3D11_BIND_RENDER_TARGET | D3D11_BIND_SHADER_RESOURCE;
+		if ((texture.BindFlags & bindings) != bindings) return "texture_bindings";
+		if (output.Format != DXGI_FORMAT_R8G8B8A8_UNORM) return "rtv_format";
+		if (output.ViewDimension != D3D11_RTV_DIMENSION_TEXTURE2D) return "rtv_dimension";
+		if (output.Texture2D.MipSlice != 0) return "rtv_mip";
+		if (input.Format != DXGI_FORMAT_R8G8B8A8_UNORM) return "srv_format";
+		if (input.ViewDimension != D3D11_SRV_DIMENSION_TEXTURE2D) return "srv_dimension";
+		if (input.Texture2D.MostDetailedMip != 0 || input.Texture2D.MipLevels != 1) return "srv_mips";
+		return nullptr;
+	}
 	[[nodiscard]] inline bool accepts_ldr(const D3D11_TEXTURE2D_DESC& texture,
 		const D3D11_RENDER_TARGET_VIEW_DESC& output, const D3D11_SHADER_RESOURCE_VIEW_DESC& input,
 		std::uint32_t width, std::uint32_t height) noexcept
 	{
-		return width != 0 && height != 0 && texture.Width == width && texture.Height == height &&
-			(texture.Format == DXGI_FORMAT_R8G8B8A8_TYPELESS || texture.Format == DXGI_FORMAT_R8G8B8A8_UNORM) &&
-			texture.ArraySize == 1 && texture.MipLevels == 1 && texture.SampleDesc.Count == 1 &&
-			texture.SampleDesc.Quality == 0 && texture.Usage == D3D11_USAGE_DEFAULT &&
-			texture.CPUAccessFlags == 0 && texture.MiscFlags == 0 &&
-			(texture.BindFlags & (D3D11_BIND_RENDER_TARGET | D3D11_BIND_SHADER_RESOURCE)) ==
-			(D3D11_BIND_RENDER_TARGET | D3D11_BIND_SHADER_RESOURCE) &&
-			output.Format == DXGI_FORMAT_R8G8B8A8_UNORM && output.ViewDimension == D3D11_RTV_DIMENSION_TEXTURE2D &&
-			output.Texture2D.MipSlice == 0 && input.Format == DXGI_FORMAT_R8G8B8A8_UNORM &&
-			input.ViewDimension == D3D11_SRV_DIMENSION_TEXTURE2D && input.Texture2D.MostDetailedMip == 0 &&
-			input.Texture2D.MipLevels == 1;
+		return ldr_rejection(texture, output, input, width, height) == nullptr;
 	}
 
 	struct view_identity

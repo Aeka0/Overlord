@@ -3,6 +3,7 @@
 #include "native_post_aa_frame_thunk.hpp"
 #include "native_post_aa_depth.hpp"
 #include "native_render_contract.hpp"
+#include "diagnostics/post_aa.hpp"
 #include "component/d3d11.hpp"
 #include "game/game.hpp"
 #include "loader/component_loader.hpp"
@@ -56,6 +57,7 @@ namespace vr::native_post_aa
 		std::array<std::atomic_uint32_t, 3> last_mode{};
 		std::atomic_uint64_t failures{}, seeds{}, commits{};
 		std::atomic<const char*> last_error{"none"};
+		diagnostics::post_aa::history validation_failures;
 
 		bool reject(const char* reason) noexcept
 		{
@@ -132,6 +134,46 @@ namespace vr::native_post_aa
 			image->texture.shaderView->GetDesc(&input);
 			return owner.Get() == device && accepts_ldr(desc, output, input, expected.Width, expected.Height);
 		}
+
+		diagnostics::post_aa::target observe_target(const std::uint32_t id)
+		{
+			game::GfxImage* image{};
+			std::memcpy(&image, reinterpret_cast<const void*>(native_render_contract::target_registry_base +
+				id * native_render_contract::target_registry_stride), sizeof(image));
+			return diagnostics::post_aa::observe(id, image, image ? image->texture.map : nullptr,
+				target_view(id), image ? image->texture.shaderView : nullptr);
+		}
+
+		bool reject_validation(const void* record, const native_display_contract::route route,
+			const view_identity& view, mode selected, const char* reason,
+			const std::uint32_t target = UINT32_MAX) noexcept
+		{
+			diagnostics::post_aa::failure sample;
+			sample.tick = GetTickCount64(); sample.thread = GetCurrentThreadId();
+			sample.record = reinterpret_cast<std::uintptr_t>(record);
+			sample.selected = selected; sample.view = view; sample.route = route; sample.stage = reason;
+			if (target != UINT32_MAX)
+			{
+				// The native GPU owner still holds the registry stable here. Never
+				// defer these reads to the command worker after VR tears down.
+				sample.targets_known = true;
+				sample.reference = observe_target(route.destination);
+				sample.failed = target == route.destination ? sample.reference : observe_target(target);
+				const char* detail = diagnostics::post_aa::identity_rejection(sample.failed);
+				if (!detail)
+					detail = target == route.destination ?
+						(native_display_contract::accepts(sample.failed.texture) ? nullptr : "display_descriptor") :
+						diagnostics::post_aa::rejection(sample.failed, sample.reference);
+				sample.detail = detail ? detail : "not_reproduced_at_capture";
+				if (target == 14 || target == 15)
+				{
+					sample.peer_known = true;
+					sample.peer = observe_target(target == 14 ? 15 : 14);
+				}
+			}
+			validation_failures.record(sample);
+			return reject(reason);
+		}
 	}
 
 	bool append_history_bindings(const void* record,
@@ -152,32 +194,36 @@ namespace vr::native_post_aa
 	}
 
 	bool select_display_target(const void* record, const native_display_contract::route route,
-		std::uint32_t& destination) noexcept
+		std::uint32_t& destination, const view_identity& view) noexcept
 	{
 		if (!record || !route) return reject("display_identity");
 		const auto selected = read_mode(record);
-		if (!supported(selected)) return reject("unsupported_mode");
+		const auto fail = [&](const char* reason, std::uint32_t target = UINT32_MAX)
+		{
+			return reject_validation(record, route, view, selected, reason, target);
+		};
+		if (!supported(selected)) return fail("unsupported_mode");
 		destination = route.destination;
 		if (selected == mode::none) return true;
-		if (!native_contract()) return reject("native_contract");
-		if (!frame_reads_installed.load(std::memory_order_acquire)) return reject("frame_reader_hooks");
+		if (!native_contract()) return fail("native_contract");
+		if (!frame_reads_installed.load(std::memory_order_acquire)) return fail("frame_reader_hooks");
 		const auto output = target_texture(route.destination);
-		if (!output) return reject("display_target_missing");
+		if (!output) return fail("display_target_missing", route.destination);
 		D3D11_TEXTURE2D_DESC desc{};
 		Microsoft::WRL::ComPtr<ID3D11Device> device;
 		output->GetDesc(&desc);
 		output->GetDevice(&device);
-		if (!native_display_contract::accepts(desc) || !matches_extent(display_input_target, desc, device.Get()))
-			return reject("native_ldr_input");
+		if (!native_display_contract::accepts(desc)) return fail("native_ldr_input", route.destination);
+		if (!matches_extent(display_input_target, desc, device.Get())) return fail("native_ldr_input", display_input_target);
 		if (selected >= mode::smaa && selected <= mode::filmic_smaa_t2x)
 		{
 			for (const auto target : {14u, 15u})
-				if (!matches_extent(target, desc, device.Get())) return reject("smaa_scratch_extent");
+				if (!matches_extent(target, desc, device.Get())) return fail("smaa_scratch_extent", target);
 			if (filmic(selected) && !matches_extent(filmic_scratch_target, desc, device.Get()))
-				return reject("filmic_scratch_extent");
+				return fail("filmic_scratch_extent", filmic_scratch_target);
 			for (const auto target : history_targets)
 				if (needs_history(selected, target) && !matches_extent(target, desc, device.Get()))
-					return reject("history_extent");
+					return fail("history_extent", target);
 		}
 		destination = display_input_target;
 		return true;
@@ -314,6 +360,7 @@ namespace vr::native_post_aa
 			<< " complete=" << completions[0] << '/' << completions[1] << '/' << completions[2]
 			<< " history_seeds=" << seeds << " pair_commits=" << commits << " failures=" << failures
 			<< " last_error=" << last_error.load() << '\n';
+		out << validation_failures.format(GetTickCount64());
 		return out.str();
 	}
 

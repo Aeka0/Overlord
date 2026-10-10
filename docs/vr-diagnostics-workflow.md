@@ -86,6 +86,21 @@ the initiating API/stage. First and last console errors also survive ordinary
 message rollover. Legacy scene probe counters are labelled separately from
 native pair/conversion and runtime submission counters.
 
+Post-AA validation failures are included in full and core reports as
+`native_post_aa_validation`. The first and latest captured failures survive
+VR session/device cleanup and subsequent successful rendering for this process.
+They identify the scene-record AA mode, pair, eye, device generation, route,
+timestamp and failed target. `detail` separates missing resources, RTV/SRV/map
+identity, device ownership, texture size/format/bindings and view format/mips.
+The report includes expected LDR requirements and the actual texture/RTV/SRV
+descriptions, plus the other SMAA scratch target when target 14 or 15 fails.
+An unchanged first/latest event is printed once. Contention is explicit as
+`dropped_samples` or `snapshot_busy`; a missing sample is not proof of success.
+Metadata is copied at the rejection under the native GPU owner; commands never
+revisit registry pointers or retain GPU resources. There is no extra GPU readback
+or per-frame descriptor sampling. This adds evidence without relaxing AA checks
+or changing the selected AA mode.
+
 If optional deep report formatting fails, the status file explicitly marks
 `report_quality=core_only` and retains the core report instead of leaving only
 an old file. Core summaries are written first in diagnostic packages, so an
