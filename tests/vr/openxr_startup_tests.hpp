@@ -118,7 +118,29 @@ namespace openxr_startup_tests
 		vr::openxr::runtime_backend runtime{query};
 		runtime.set_desired_enabled(true);
 		runtime.set_scene_mode(vr::scene_mode::synthetic);
-		require(runtime.initialize(graphics), "automatic runtime initialization failed");
+		if(vr::tests::process_integrity_level()>=SECURITY_MANDATORY_HIGH_RID)
+		{
+			// Hosted Windows CI is elevated. Verify the real loader policy's
+			// rejection here; the remaining mock tests still run without overrides.
+			require(!runtime.initialize(graphics),"high-integrity automatic runtime selection must fail closed");
+			const auto status=runtime.get_status();
+			require(status.state==vr::runtime_state::runtime_unavailable &&
+				status.last_initialization_stage=="runtime_selection" &&
+				status.last_error.find("high integrity")!=std::string::npos && environment().empty() &&
+				loader.statistics().instances_created==0,
+				"elevated automatic selection must reject before loading a runtime or changing the environment");
+			SetEnvironmentVariableW(L"XR_RUNTIME_JSON",L"explicit-runtime.json");
+			require(!runtime.initialize(graphics) && environment()==L"explicit-runtime.json" &&
+				runtime.get_status().last_error.find("elevated processes")!=std::string::npos &&
+				loader.statistics().instances_created==0,
+				"elevated explicit selection must fail closed and preserve its original environment");
+			runtime.shutdown();
+			return;
+		}
+		const bool initialized=runtime.initialize(graphics);
+		const auto status=runtime.get_status();
+		require(initialized,std::format("automatic runtime initialization failed: state={} stage={} error={}",
+			vr::to_string(status.state),status.last_initialization_stage,status.last_error));
 		require(queries == 1 && environment().empty() && loader.statistics().instances_with_runtime_override == 1 &&
 		            runtime.get_status().runtime_override_set_by_policy &&
 		            runtime.get_status().runtime_override_manifest == utf8(manifest.wstring()),
