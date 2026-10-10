@@ -45,7 +45,7 @@ namespace vr::gameplay::grenades
 		{
 			state value;anchor root{};vec pull_start{},pull_delta{},velocity{};
 			int grasp_started{},pin_started{};clock::time_point grasp_at{},pin_at{};quat pull_rotation{0,0,0,1};
-			release_motion motion;std::uint64_t button_generation{},button_presses{};
+			release_motion motion;std::uint64_t button_generation{},button_presses{},motion_continuity{};
 			throwback::candidate source{};
 		};
 		struct pin_debris {bool active{};kind type{};anchor root{};vec velocity{};int started{};std::uint64_t reference{};unsigned mask{};};
@@ -93,7 +93,7 @@ namespace vr::gameplay::grenades
 		{
 			std::array<sound_event,16> batch{};unsigned count{};
 			{const std::lock_guard lock(sound_mutex);count=sound_count;std::copy_n(sounds.begin(),count,batch.begin());sound_count=0;}
-			const auto input=controller_input::latest();const auto now=GetTickCount64();
+			const auto input=controller_input::latest_interaction();const auto now=GetTickCount64();
 			const auto* paused=game::Dvar_FindVar("cl_paused");
 			for(unsigned i=0;i<count;++i)
 			{
@@ -456,12 +456,18 @@ namespace vr::gameplay::grenades
 				++handoffs;weapons::feedback::carry_confirmation(next,f.input);
 			}
 			const unsigned h=unsigned(s.holder);if(h>1)continue;
+			if (item.motion_continuity != f.input.continuity_generation)
+			{
+				item.motion.reset();
+				item.motion_continuity = f.input.continuity_generation;
+			}
 			if((f.valid_hands&(1u<<h)) && s.reference==f.input.reference_generation)
 			{
 				auto wrist=f.wrists[h];wrist.rotation=normalize(multiply(wrist.rotation,pub.basis[h]));
 				item.root=compose(wrist,authored::attachment(s.type,pub.mirror[h],h==0));
 				item.motion.sample(item.root.position,f.input.sampled_at,f.body.units_per_meter);
 			}
+			else item.motion.reset(); // Missing/inferred geometry cannot retain an old throw impulse.
 			if(s.stage==phase::safe && (i>=chest_count || tokens[i]!=s.weapon || !native::available(s.weapon))){s.stow();continue;}
 			const auto grip=hi::input(s.holder,hi::button::grip);
 			if(grip.release || (f.input.squeeze[h].active && !f.input.squeeze[h].down))
@@ -527,7 +533,7 @@ namespace vr::gameplay::grenades
 		{items={};debris={};player=ps;last_time=now;publish();return;}
 		player=ps;last_time=now;
 		const auto* paused=game::Dvar_FindVar("cl_paused");if(!paused || paused->current.integer)return;
-		const auto input=controller_input::latest();
+		const auto input=controller_input::latest_interaction();
 		for(auto& item:items)
 		{
 			auto& s=item.value;if(!s.held())continue;

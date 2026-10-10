@@ -699,7 +699,7 @@ namespace vr::gameplay::equipment::special::cliffhanger
 		if (climbing)
 		{
 			hi::frame f;
-			f.input = controller_input::latest();
+			f.input = controller_input::latest_interaction();
 			if (head_pose_bridge::get_spatial_frame(f.body) &&
 			    f.body.generation == f.input.reference_generation)
 			{
@@ -917,7 +917,7 @@ namespace vr::gameplay::equipment::special::cliffhanger
 		if (!scheduler::is_executing(scheduler::pipeline::server))
 			return;
 		const auto c = latest();
-		const auto input = controller_input::latest();
+		const auto input = controller_input::latest_interaction();
 		if (!c.active || !enabled() || !input.focused || !fresh(input.sampled_at) ||
 		    (reference && reference != input.reference_generation) || suspended)
 		{

@@ -135,7 +135,7 @@ namespace vr::gameplay::cliffhanger_physical
 		}
 		bool entry_available()
 		{
-			const auto input = controller_input::latest();
+			const auto input = controller_input::latest_interaction();
 			const auto* paused = game::Dvar_FindVar("cl_paused");
 			head_pose_bridge::spatial_frame spatial;
 			if (!paused || paused->current.integer || *game::keyCatchers || !input.focused ||
@@ -749,7 +749,7 @@ namespace vr::gameplay::cliffhanger_physical
 				reason = "waiting for restored VR resources; supports retained";
 				return;
 			}
-			const auto input = controller_input::latest();
+			const auto input = controller_input::latest_interaction();
 			head_pose_bridge::spatial_frame spatial;
 			if (!entry_available() || !head_pose_bridge::get_spatial_frame(spatial))
 			{

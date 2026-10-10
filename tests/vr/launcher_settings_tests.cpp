@@ -312,7 +312,14 @@ int main(int argc, char** argv)
 			presets[1]["id"] == "meta_quest_3" && presets[1]["label"] == "Meta Quest 3", "Shared preset catalog");
 		for (const auto& field : vr::settings::hand_alignment)
 			require(initial[field.name] == 0 && presets[0]["values"][field.name] == 0,
-				"New profiles and None must zero all six alignment fields");
+				"Legacy defaults and None remain compatible with accepted controller setups");
+		const json standard_wrist{{"vr_standardHandOffsetInward", -.007}, {"vr_standardHandOffsetBack", .016254},
+			{"vr_standardHandOffsetUp", .008064}, {"vr_standardHandAnglePitch", 0},
+			{"vr_standardHandAngleYaw", 0}, {"vr_standardHandAngleRoll", 0}};
+		require(controller_presets(true)[0]["values"] == standard_wrist,
+			"Standard wrist baseline changes depth/height while preserving lateral and angle defaults");
+		require(read_values("seta vr_standardHandOffsetBack -0.096073\n")["vr_standardHandOffsetBack"] == -.096073,
+			"Changing the Standard baseline must not overwrite a saved custom point");
 		const json quest_values{{"vr_handOffsetInward", -.02}, {"vr_handOffsetBack", .12}, {"vr_handOffsetUp", -.1},
 			{"vr_handAnglePitch", -20}, {"vr_handAngleYaw", 0}, {"vr_handAngleRoll", 0}};
 		require(presets[1]["values"] == quest_values, "Quest 3 matches the accepted six-value calibration exactly");

@@ -49,6 +49,43 @@ identity mismatch rejects the adapter rather than installing a partial hook.
 
 ## Holding authority and firing
 
+OpenXR analog actions retain their value, availability and suggested source in
+the common input frame. Touch trigger/squeeze press at 0.55 and release below
+0.45. Index uses the shipped OpenVR binding defaults: trigger 0.01/0.005 and
+squeeze force 0.15/0.05 (press/release). Vive squeeze keeps click semantics.
+Profile policy is selected separately for each hand, with bounded retries;
+focus/action loss clears the latch and recovery changes the digital generation.
+`vr_status` includes `analog_hand` rows for diagnosis. OpenVR keeps binding-owned
+digital thresholds and reports common analog values as unavailable; it does not
+apply a second latch. OpenXR threshold feel still needs real-device acceptance.
+
+Carry drop velocity requires consecutive admitted samples from the same pose
+pipeline, reference, adapter generation, producer continuity and world scale.
+An invalid hand clears its own motion history; the first recovered sample seeds
+history with zero velocity. Real grip release intent is still resolved once by
+the existing carry transaction. Invalid and valid-but-untracked controller poses
+both fence motion history. Quality recovery is observable through producer
+continuity and seeds history before estimating another throw.
+
+The common pose keeps position/orientation validity and tracking independently.
+OpenXR fills the SDK flags; OpenVR maps Running_OK to full tracking and treats
+out-of-range/rotation-only data conservatively. Unknown quality cannot authorize
+precision interaction. `latest()` supplies visual/diagnostic poses, while
+`latest_interaction()` derives precision admission from that same publication
+without changing buttons or held ownership. `sdk_grip/sdk_aim` retain poses before
+device adaptation; `runtime_grip/runtime_aim` retain the adapted, unfiltered basis.
+OpenXR also records the target display time; OpenVR reports zero when unavailable.
+`vr_status` includes `pose_quality_hand` rows. These contracts need separate HMD
+occlusion and controller/runtime acceptance.
+
+An unavailable free/support hand uses the existing resting-arm fallback without
+forcing a valid primary hand out of the visual solve. Missing or inferred tracking
+suspends support steering while preserving its grasp. With trusted tracking,
+carry authority checks the current solved support contact, release distance and
+eight-centimetre minimum two-hand baseline, alongside specialized underbarrel
+rules. A spatial release affects only the support lease and requires a fresh
+press to acquire it again; tracking recovery can resume the existing lease.
+
 Each held weapon has one control owner. The other hand may support the weapon or
 operate an explicitly admitted part, but it does not acquire firing authority
 from render order or Trigger timing. Handoffs transfer the current weapon state

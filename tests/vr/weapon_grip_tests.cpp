@@ -49,6 +49,7 @@ using vr::hand;
 #include "palm_contact_tests.hpp"
 #include "secondary_motion_tests.hpp"
 #include "weapon_carry_tests.hpp"
+#include "component/vr/gameplay/support_retention.hpp"
 #include "weapon_hud_lifetime_tests.hpp"
 #include "pickup_ammunition_tests.hpp"
 #include "world_interaction_tests.hpp"
@@ -751,6 +752,77 @@ int main()
 		sample(true); check(present_rifle().support == hand::none, "coincident hands release M4 without undefined axis");
 		rifle_targets[0].position = add(rifle_targets[1].position,rotate(rifle_targets[1].rotation,span));
 		sample(true); check(present_rifle().support == hand::none, "M4 cannot auto regrab after crossing while squeezed");
+	}
+	{
+		using namespace carry;
+		const float units = 39.37007874f;
+		const auto m4_library = bind_weapon_poses(rig, definitions, m4::foregrip);
+		for (unsigned scenario = 0; scenario < 3; ++scenario)
+		{
+			inventory authority;
+			const owned_weapon entry[]{{52, {false, false}}};
+			check(authority.reconcile(entry), "support retention admits a real carry instance");
+			const auto id = authority.find_definition(52)->id;
+			check(authority.equip(id, hand::right), "support retention equips the primary grip");
+			grip_presenter presented;
+			auto current_targets = targets;
+			const auto span = sub(m4::foregrip.wrists[0].position, m4::foregrip.wrists[1].position);
+			current_targets[0].position = add(current_targets[1].position, span);
+			auto long_native = native;
+			long_native[1].position = {-25, 2, 0}; long_native[2].position = {-12, 2, -20};
+			long_native[4].position = {-25, -2, 0}; long_native[5].position = {-12, -2, -20};
+			const std::array<vec, 2> retention_shoulders{long_native[1].position, long_native[4].position};
+			bool tracked = true;
+			const auto present_authority = [&]
+			{
+				return presented.update(m4::foregrip, m4_library, rig, long_native, current_targets, retention_shoulders,
+					axes, input, authority.find(id)->owner, assembly, units, true, false, now, output, limited, tracked, true);
+			};
+			const auto gun = [&]
+			{
+				const auto rotation = aimed_rotation(m4::foregrip.aiming,
+					control_rotation(m4::foregrip, 1, current_targets[1].rotation),
+					current_targets[1].position, current_targets[0].position, span);
+				return anchor{sub(current_targets[1].position, rotate(rotation, m4::foregrip.wrists[1].position)), rotation};
+			};
+			const auto retain = [&]
+			{
+				const auto status = retained_support(m4::foregrip, gun(), m4::foregrip.wrists[0],
+					current_targets[1].position, current_targets[0].position, units, tracked);
+				if (status == support_retention::released)
+					authority.release(id, 1u, location::absent, false, [](const instance&) { return false; });
+				return status;
+			};
+			sample(false); check(present_authority().valid, "authoritative presenter initializes primary grip");
+			check(support_contact(m4::foregrip, gun(), m4::foregrip.wrists[0],
+				current_targets[1].position, current_targets[0].position, units), "carry acquisition admits the actual authored contact");
+			check(claim_grip(authority, {.actor=hand::left, .pressed=true, .available=true, .support=id}).pose_changed,
+				"real carry claim acquires support before retention tests");
+			for (unsigned i=0;i<15;++i) { sample(true); (void)present_authority(); }
+			const float q = std::sqrt(.5f);
+			current_targets[1].rotation = {0,0,q,q};
+			check(retain()==support_retention::retained && present_authority().support==hand::left,
+				"authority and presenter retain the solved contact through a 90 degree rear turn");
+			if (scenario == 0) current_targets[0].position = add(current_targets[1].position, scale(unit(span), 60));
+			if (scenario == 1) current_targets[0].position = current_targets[1].position;
+			if (scenario == 2) tracked = false;
+			const auto status = retain(); sample(true); const auto view = present_authority();
+			check(view.support==hand::none && authority.in_hand(hand::right),
+				"suspended/released support never drops the primary weapon or keeps steering");
+			check((scenario==2 && status==support_retention::suspended && authority.find(id)->owner.support==hand::left) ||
+				(scenario!=2 && status==support_retention::released && authority.find(id)->owner.support==hand::none),
+				"tracking suspension preserves ownership while invalid geometry releases only the support lease");
+			tracked=true; current_targets[0].position=add(current_targets[1].position,span);
+			(void)retain(); sample(true);
+			if (scenario==2) check(present_authority().support==hand::left, "tracking recovery restores the existing support without a new grab");
+			else
+			{
+				check(!claim_grip(authority,{.actor=hand::left,.available=true,.support=id}).pose_changed && present_authority().support==hand::none,
+					"returning while squeezed cannot manufacture a new support grab");
+				check(claim_grip(authority,{.actor=hand::left,.pressed=true,.available=true,.support=id}).pose_changed,
+					"fresh press can reacquire support after a spatial release");
+			}
+		}
 	}
 	std::cout << "weapon grip failures=" << failures << '\n';
 	return failures ? 1 : 0;

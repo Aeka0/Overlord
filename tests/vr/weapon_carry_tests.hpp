@@ -13,6 +13,7 @@
 #include <memory>
 #include "weapon_identity_tests.hpp"
 #include "holster_presentation_tests.hpp"
+#include "weapon_carry_motion_tests.hpp"
 
 namespace weapon_carry_tests
 {
@@ -20,6 +21,7 @@ namespace weapon_carry_tests
 	{
 		weapon_identity_tests::run(check);
 		holster_presentation_tests::run(check);
+		weapon_carry_motion_tests::run(check);
 		using namespace vr::gameplay::weapons;
 		using namespace carry;
 		namespace hands=vr::gameplay::hands;

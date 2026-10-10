@@ -91,7 +91,7 @@ namespace vr::gameplay::vehicles::native
 		}
 		bool fresh(const snapshot& s)
 		{
-			const auto input = controller_input::latest();
+			const auto input = controller_input::latest_interaction();
 			const auto now = controller_input::clock::now();
 			const auto driving = current();
 			return presentation_allowed() && s.driving.epoch == driving.epoch &&
@@ -265,7 +265,7 @@ namespace vr::gameplay::vehicles::native
 		{
 			if (!fresh(s) || !aim_ready(s) || !s.inserted || s.magazine_grabbed || s.quick_loading)
 				return false;
-			const auto input = controller_input::latest();
+			const auto input = controller_input::latest_interaction();
 			const auto h = unsigned(s.owner.rear);
 			return input.squeeze[h].active && input.squeeze[h].down && input.trigger[h].active &&
 			       ((s.fire && input.trigger[h].down) ||

@@ -77,7 +77,7 @@ namespace vr::gameplay::interaction
 	{
 		if(!ready || !alive || !enabled->current.enabled || !weapons::carry::active() || !game::CL_IsCgameInitialized() ||
 			!sequences::for_player(game::g_entities[0].client).allow_world_use || scripted_control::allowed(game::g_entities[0].client))return false;
-		f.input=controller_input::latest();const auto now=controller_input::clock::now();const auto head=head_pose_bridge::get_status();
+		f.input=controller_input::latest_interaction();const auto now=controller_input::clock::now();const auto head=head_pose_bridge::get_status();
 		const auto* paused=game::Dvar_FindVar("cl_paused");
 		if(!f.input.focused || f.input.orientation_settling || !f.input.sequence || !head.enabled || !head.pose_available || head.recenter_pending ||
 			*game::keyCatchers || !paused || paused->current.integer || now<f.input.sampled_at || now-f.input.sampled_at>150ms ||

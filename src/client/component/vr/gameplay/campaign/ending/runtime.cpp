@@ -201,7 +201,7 @@ namespace vr::gameplay::ending
 		                 head_pose_bridge::spatial_frame& spatial,
 		                 std::array<hand_sample, 2>& hands)
 		{
-			input = controller_input::latest();
+			input = controller_input::latest_interaction();
 			const auto* pause = game::Dvar_FindVar("cl_paused");
 			if (!pause || pause->current.integer || *game::keyCatchers || !input.focused ||
 			    input.orientation_settling || !fresh(input.sampled_at) ||

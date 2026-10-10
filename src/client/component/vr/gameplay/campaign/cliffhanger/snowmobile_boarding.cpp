@@ -42,7 +42,7 @@ namespace vr::gameplay::cliffhanger::boarding
 			}
 			const auto now = clock::now();
 			const auto fresh = [&](clock::time_point at) { return now >= at && now - at <= 150ms; };
-			const auto input = controller_input::latest();
+			const auto input = controller_input::latest_interaction();
 			const auto head = head_pose_bridge::get_status();
 			const auto* paused = game::Dvar_FindVar("cl_paused");
 			head_pose_bridge::spatial_frame body;

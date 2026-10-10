@@ -362,7 +362,7 @@ namespace vr::gameplay::ladders
     bool apply_camera_origin(float* origin,float view_height,int linked_entity,int frame_time)noexcept
     {
         if(!origin || !std::isfinite(view_height) || view_height<0 || view_height>128)return false;
-        const auto input=controller_input::latest();
+        const auto input=controller_input::latest_interaction();
         const auto now=clock::now();const std::lock_guard lock(mutex);
         if(!published.moving || published.carrier!=linked_entity || !published.reference || input.reference_generation!=published.reference || !input.sequence || now-published.at>150ms)return false;
         const auto seconds=std::chrono::duration<double>(now.time_since_epoch()).count();

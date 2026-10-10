@@ -86,7 +86,7 @@ namespace vr::gameplay::equipment::special::notebook
 			snapshot s;{const std::lock_guard lock(mutex);s=published;}
 			if(!s.enabled || !head_pose_bridge::get_status().enabled || !s.selected.notebook || !s.asset || s.asset->source!=s.selected.model || !fresh(s.at) || s.state.stage==phase::remote ||
 				(!s.state.requested() && !scripted_control::predicted_allowed()))return;
-			const auto input=controller_input::latest();head_pose_bridge::spatial_frame body;
+			const auto input=controller_input::latest_interaction();head_pose_bridge::spatial_frame body;
 			if(!input.focused || !fresh(input.sampled_at) || !head_pose_bridge::get_spatial_frame(body) || body.generation!=s.reference || input.reference_generation!=s.reference)return;
 			anchor base=stowed_root(body);float angle{};
 			if(s.state.held())
@@ -215,7 +215,7 @@ namespace vr::gameplay::equipment::special::notebook
 		if(suspended)draw_intent.reset();
 		if(state.requested())
 		{
-			const auto input=controller_input::latest();const auto native=native::observe_agm();
+			const auto input=controller_input::latest_interaction();const auto native=native::observe_agm();
 			const bool valid=game::CL_IsCgameInitialized() && timeline==weapons::native_ammunition::timeline();
 			if(!valid){++authorization;state.close();selected={};remote=false;publish();return;}
 			// The remote-control lease outlives both hand leases. Recentring,

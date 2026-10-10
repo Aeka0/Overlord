@@ -124,6 +124,23 @@ namespace vr::diagnostics::detail
 			<< " grip_valid=" << controls.grip[0].valid << ',' << controls.grip[1].valid
 			<< " aim_valid=" << controls.aim[0].valid << ',' << controls.aim[1].valid;
 		output << " system_name=" << available(runtime_status.system_name) << '\n';
+		for (unsigned h = 0; h < 2; ++h)
+		{
+			const auto& trigger = controls.trigger_analog[h];
+			const auto& squeeze = controls.squeeze_analog[h];
+			const auto& quality = controls.grip[h].quality;
+			output << "  pose_quality_hand=" << h << " known=" << quality.known
+				<< " position_valid/tracked=" << quality.position_valid << '/' << quality.position_tracked
+				<< " orientation_valid/tracked=" << quality.orientation_valid << '/' << quality.orientation_tracked
+				<< " interaction_ready=" << controller_input::interaction_ready(controls.grip[h])
+				<< " target_display_time=" << controls.target_display_time
+				<< " sdk_grip_valid=" << controls.sdk_grip[h].valid
+				<< " sdk_grip_position=" << controls.sdk_grip[h].tracking.position_meters[0] << ','
+				<< controls.sdk_grip[h].tracking.position_meters[1] << ',' << controls.sdk_grip[h].tracking.position_meters[2] << '\n';
+			output << "  analog_hand=" << h
+				<< " trigger_active/value/source=" << trigger.active << '/' << trigger.value << '/' << controller_input::to_string(trigger.source)
+				<< " squeeze_active/value/source=" << squeeze.active << '/' << squeeze.value << '/' << controller_input::to_string(squeeze.source) << '\n';
+		}
 		append_input_history(output,controller_input::get_input_history(),controller_input::clock::now());
 		append_steamvr_input(output,runtime_status.openvr_input_diagnostics,controller_input::clock::now());
 		output << "  last_runtime_name=" << available(runtime_status.last_runtime_name);

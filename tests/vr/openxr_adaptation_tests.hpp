@@ -44,7 +44,11 @@ namespace openxr_adaptation_tests
 			new_input.grip[hand] = new_input.runtime_grip[hand] = {true, {standard.position, standard.orientation}};
 			old_input.aim[hand] = old_input.runtime_aim[hand] = new_input.aim[hand] = new_input.runtime_aim[hand] =
 			    {true, {aim.position, aim.orientation}};
-			const auto& old_values = settings::alignment_presets[preset].values;
+			auto old_values = settings::alignment_presets[preset].values;
+			// Standard's revised trial baseline uses the historical physical
+			// wrist point; Legacy's compatibility default remains device zero.
+			// Compare the same physical point when qualifying the adapter.
+			if (preset == 0) old_values[1] = .12f;
 			const auto& new_values = settings::standard_alignment_presets[preset].values;
 			anchor old_target, new_target;
 			tests::require(tracked_wrist(old_input, body, {}, int(hand), {old_values[0], old_values[1], old_values[2]}, old_target) &&

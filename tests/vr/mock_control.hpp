@@ -12,6 +12,8 @@ namespace vr::tests::mock
 		canted_views,
 		parallel_views,
 		scaled_view_quaternions,
+		view_count_mismatch,
+		invalid_eye_pose,
 		runtime_unavailable,
 		no_hmd,
 		graphics_mismatch,
@@ -32,6 +34,7 @@ namespace vr::tests::mock
 		destroy_instance,
 		end_session,
 		get_current_interaction_profile,
+		locate_views,
 	};
 
 	struct statistics
@@ -79,6 +82,7 @@ namespace vr::tests::mock
 	using set_synthetic_checks_fn = void(WINAPI*)(BOOL);
 	using set_action_value_fn = void(WINAPI*)(const char*, float, float);
 	using set_view_flags_fn = void(WINAPI*)(std::uint64_t);
+	using set_hand_flags_fn = void(WINAPI*)(unsigned, std::uint64_t);
 	using set_head_height_fn = void(WINAPI*)(float);
 	using set_runtime_name_fn = void(WINAPI*)(const char*);
 	using set_interaction_profile_fn = void(WINAPI*)(unsigned, const char*);

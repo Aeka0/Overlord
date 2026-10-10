@@ -152,7 +152,8 @@ namespace vr::settings
 	}
 	inline constexpr float max_hand_offset = .5f;
 	// One grip-local point determines both wrist placement and its rotation
-	// centre. Position and angle calibration remain independent.
+	// centre. Position and angle calibration remain independent. Retain the
+	// existing Legacy defaults for previously accepted controller setups.
 	inline constexpr number_setting hand_inward{
 	    "vr_handOffsetInward", 0.f, -max_hand_offset, max_hand_offset, .01f};
 	inline constexpr number_setting hand_back{
@@ -174,18 +175,21 @@ namespace vr::settings
 	    alignment_preset{"none", "None", {0, 0, 0, 0, 0, 0}},
 	    alignment_preset{"meta_quest_3", "Meta Quest 3", {-.02f, .12f, -.1f, -20.f, 0, 0}}};
 	// Application calibration in OpenXR grip coordinates, independent of the
-	// retained legacy settings. Baselines are the old Touch defaults expressed
-	// in the standard frame once, not runtime/model-specific pose corrections.
+	// retained legacy settings. The Standard trial baseline uses the former
+	// physical wrist's legacy back/up point (0.12/0 m), expressed through the
+	// existing canonical Touch grip relation, rather than the legacy device origin.
+	// Lateral placement and aim angles retain their accepted defaults. This is
+	// an application baseline candidate, not anatomy measured for every controller.
 	// See docs/vr-runtime-rendering.md for provenance and removal boundaries.
 	inline constexpr std::array standard_hand_alignment{
 		number_setting{"vr_standardHandOffsetInward", -.007f, -max_hand_offset, max_hand_offset, .01f},
-		number_setting{"vr_standardHandOffsetBack", -.096073247f, -max_hand_offset, max_hand_offset, .01f},
-		number_setting{"vr_standardHandOffsetUp", -.034157186f, -max_hand_offset, max_hand_offset, .01f},
+		number_setting{"vr_standardHandOffsetBack", .016253897f, -max_hand_offset, max_hand_offset, .01f},
+		number_setting{"vr_standardHandOffsetUp", .008063812f, -max_hand_offset, max_hand_offset, .01f},
 		number_setting{"vr_standardHandAnglePitch", 0.f, -180.f, 180.f, 1.f},
 		number_setting{"vr_standardHandAngleYaw", 0.f, -180.f, 180.f, 1.f},
 		number_setting{"vr_standardHandAngleRoll", 0.f, -180.f, 180.f, 1.f}};
 	inline constexpr std::array standard_alignment_presets{
-		alignment_preset{"standard_default", "Standard baseline", {-.007f, -.096073247f, -.034157186f, 0, 0, 0}},
+		alignment_preset{"standard_default", "Standard wrist baseline", {-.007f, .016253897f, .008063812f, 0, 0, 0}},
 		alignment_preset{"meta_quest_3", "Meta Quest 3", {-.027f, .051438062f, -.085542142f, -20, 0, 0}}};
 	inline const auto& active_hand_alignment() noexcept
 	{

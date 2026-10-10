@@ -1418,6 +1418,10 @@ namespace vr::openxr
 			result = dispatch_.locate_views(session_, &locate, &state, 2, &count, prediction_.views.data());
 			if (XR_FAILED(result) || count != 2)
 			{
+				inputs_.invalidate(XR_FAILED(result) ? controller_input::input_reason::tracking_failed :
+					controller_input::input_reason::view_configuration_unsupported,
+					XR_FAILED(result) ? result : XR_ERROR_VIEW_CONFIGURATION_TYPE_UNSUPPORTED);
+				head_pose_bridge::invalidate_pose();
 				(void)finish_prediction(world_submission::omit);
 				return fail(runtime_state::recoverable_error,
 				            "xrLocateViews",
@@ -1445,6 +1449,7 @@ namespace vr::openxr
 				if (!copy_pose(prediction_.views[eye].pose, eye_poses[eye]))
 				{
 					inputs_.invalidate(controller_input::input_reason::pose_invalid);
+					head_pose_bridge::invalidate_pose();
 					(void)finish_prediction(world_submission::omit);
 					return false;
 				}

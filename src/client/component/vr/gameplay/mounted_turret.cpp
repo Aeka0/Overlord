@@ -337,7 +337,7 @@ namespace vr::gameplay::mounted
 			{original();return;}
 			const auto* native=read<const std::byte*>(turret,0x138);
 			if (!native) {original();return;}
-			const auto input=controller_input::latest();
+			const auto input=controller_input::latest_interaction();
 			const auto c=advance_control(turret,&suburban,ps,read<std::array<float,2>>(turret,0x58),
 				read<std::array<float,2>>(native,0xc),read<std::array<float,2>>(native,0x14),input);
 			const auto saved=read<std::array<float,2>>(ps,0x108);
@@ -388,7 +388,7 @@ namespace vr::gameplay::mounted
 			const auto* definition=utils::hook::invoke<const game::VehicleDef*>(0x1406BEEF0,read<unsigned>(native,0x270));
 			if(!definition){original();return;}
 			static_assert(offsetof(game::VehicleDef,turretHorizSpanLeft)==0x590 && offsetof(game::VehicleDef,turretVertSpanUp)==0x598);
-			const auto input=controller_input::latest();
+			const auto input=controller_input::latest_interaction();
 			const auto c=advance_control(vehicle,&blackhawk,ps,read<std::array<float,2>>(vehicle,0x6c),
 				{-definition->turretVertSpanUp,-definition->turretHorizSpanRight},{definition->turretVertSpanDown,definition->turretHorizSpanLeft},input);
 			// Native vehicle notification reads the current usercmd at e860;
@@ -436,7 +436,7 @@ namespace vr::gameplay::mounted
 		{
 			geometry g;calibration a;view_publication previous;
 			{const std::lock_guard lock(mutex);g=rendered;a=authored;previous=rendered_view;}
-			const auto input=controller_input::latest();const auto now=clock::now();
+			const auto input=controller_input::latest_interaction();const auto now=clock::now();
 			const auto frame_time=game::CG_GetGameTime(0);
 			head_pose_bridge::spatial_frame body;auto c=p.sampled;
 			const auto* paused=game::Dvar_FindVar("cl_paused");
@@ -553,7 +553,7 @@ namespace vr::gameplay::mounted
 		if (!matrices) return;
 		for (unsigned b=0;b<read<std::uint8_t>(object,0x10);++b)
 			if (!(read<std::uint32_t>(object,0x80+(b/32)*4)&(0x80000000u>>(b%32)))) return;
-		const auto input=controller_input::latest();head_pose_bridge::spatial_frame body;
+		const auto input=controller_input::latest_interaction();head_pose_bridge::spatial_frame body;
 		const bool source_changed=rebuilt || cached.object!=object || cached.matrices!=matrices || cached.timestamp!=timestamp;
 		if(source_changed)
 		{

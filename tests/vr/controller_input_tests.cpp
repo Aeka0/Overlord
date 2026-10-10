@@ -11,6 +11,7 @@ using vr::hand;
 #include "controller_orientation_tests.hpp"
 #include "controller_pose_pipeline_tests.hpp"
 #include "controller_profile_retry_tests.hpp"
+#include "controller_pose_quality_tests.hpp"
 #include "input_history_tests.hpp"
 #include "input_manifest_tests.hpp"
 #include "slow_simulation_input_tests.hpp"
@@ -37,6 +38,7 @@ int main()
 	controller_orientation_tests(check);
 	controller_pose_pipeline_tests::run(check);
 	controller_profile_retry_tests(check);
+	controller_pose_quality_tests(check);
 	input_history_tests(check);
 	input_manifest_tests(check);
 	controller_stance_tests(check);

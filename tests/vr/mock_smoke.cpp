@@ -100,6 +100,7 @@ namespace
 			set_cylinder_supported=load<vr::tests::mock::set_cylinder_supported_fn>("h2vMockSetCylinderSupported");
 			set_synthetic_checks=load<vr::tests::mock::set_synthetic_checks_fn>("h2vMockSetSyntheticChecks");
 			set_view_flags = load<vr::tests::mock::set_view_flags_fn>("h2vMockSetViewFlags");
+			set_hand_flags = load<vr::tests::mock::set_hand_flags_fn>("h2vMockSetHandFlags");
 			set_head_height = load<vr::tests::mock::set_head_height_fn>("h2vMockSetHeadHeight");
 			set_runtime_name = load<vr::tests::mock::set_runtime_name_fn>("h2vMockSetRuntimeName");
 			set_interaction_profile = load<vr::tests::mock::set_interaction_profile_fn>("h2vMockSetInteractionProfile");
@@ -142,6 +143,7 @@ namespace
 		vr::tests::mock::set_synthetic_checks_fn set_synthetic_checks{};
 		vr::tests::mock::set_eye_extent_fn set_eye_extent{};
 		vr::tests::mock::set_view_flags_fn set_view_flags{};
+		vr::tests::mock::set_hand_flags_fn set_hand_flags{};
 		vr::tests::mock::set_head_height_fn set_head_height{};
 		vr::tests::mock::set_runtime_name_fn set_runtime_name{};
 		vr::tests::mock::set_interaction_profile_fn set_interaction_profile{};
@@ -587,6 +589,7 @@ namespace
 }
 
 #include "openxr_adaptation_tests.hpp"
+#include "openxr_device_input_tests.hpp"
 #include "openxr_startup_tests.hpp"
 
 int main()
@@ -632,6 +635,8 @@ int main()
 		openxr_adaptation_tests::focused_startup_height(loader,graphics);
 		openxr_adaptation_tests::virtualdesktop_grip_reference(loader,graphics);
 		openxr_adaptation_tests::focused_input(loader,graphics);
+		openxr_device_input_tests::analog_input(loader,graphics);
+		openxr_device_input_tests::failed_view_publication(loader,graphics);
 		openxr_adaptation_tests::knuckles_prompt_identity(loader,graphics);
 		openxr_adaptation_tests::native_pair(loader,graphics);
 		openxr_adaptation_tests::native_pair(loader,graphics,vr::tests::mock::scenario::parallel_views);

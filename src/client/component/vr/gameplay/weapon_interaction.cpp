@@ -146,11 +146,13 @@ namespace vr::gameplay::weapons
 				return;
 			}
 			const auto owner = sample_native_equipped();
-			const auto input = controller_input::latest();
+			const auto input = controller_input::latest_interaction();
 			shot_context shot{entity, current_muzzle(),
 				spread_hook_installed && disable_hip_fire_spread && disable_hip_fire_spread->current.enabled, {}};
 			const auto now = controller_input::clock::now();
+			const auto driver = owner.holding_hand();
 			if (!gameplay_active(input) || !scripted_control::firing_allowed(entity->client) || now < input.sampled_at ||
+				!valid_hand(driver) || !input.grip[int(driver)].valid || !input.aim[int(driver)].valid ||
 				now - input.sampled_at > std::chrono::milliseconds(150) ||
 				!ready(shot.pose, owner, input.reference_generation, now) ||
 				entity_weapon(entity) != owner.weapon || entity_delivery(entity, owner.weapon)==fire_delivery::unsupported)
@@ -191,7 +193,7 @@ namespace vr::gameplay::weapons
 		{
 			const auto owner = current_hold();
 			const auto pose = current_muzzle();
-			const auto input = controller_input::latest();
+			const auto input = controller_input::latest_interaction();
 			std::ostringstream out;
 			out << "[VR fire] identity=" << identity_verified << " hooks=" << hooks_installed
 				<< " projectile=" << projectile_verified << " delivery=" << static_cast<int>(controller_fire_delivery(owner.weapon))

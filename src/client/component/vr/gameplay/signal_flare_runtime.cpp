@@ -371,7 +371,7 @@ namespace vr::gameplay::equipment::special::flare
     {
         if(!scheduler::is_executing(scheduler::pipeline::server))return;
         if(epoch!=mission::generation() || timeline!=weapons::native_ammunition::timeline())reset();
-        const auto input=controller_input::latest();
+        const auto input=controller_input::latest_interaction();
         bool dead{};
         const bool player_dead=game::CL_IsCgameInitialized() && player_life::read(game::g_entities[0].client,dead) && dead;
         if(!mission::active() || player_dead)

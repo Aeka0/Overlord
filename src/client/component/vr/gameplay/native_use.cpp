@@ -188,7 +188,7 @@ namespace vr::gameplay::interaction::native
 			const bool ours=player==&game::g_entities[0] && (holding || controlling);
 			if (ours)
 			{
-				const auto input=controller_input::latest();head_pose_bridge::spatial_frame body;
+				const auto input=controller_input::latest_interaction();head_pose_bridge::spatial_frame body;
 				const bool valid_frame=holding && input.focused && now>=input.sampled_at && now-input.sampled_at<=150ms && input.reference_generation==lease.reference &&
 					head_pose_bridge::get_spatial_frame(body) && body.generation==lease.reference;
 				// Re-run native hint admission for precisely the held target. An empty

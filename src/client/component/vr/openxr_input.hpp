@@ -3,6 +3,7 @@
 #include "controller_input.hpp"
 #include "controller_pose_reference.hpp"
 #include "controller_profile_retry.hpp"
+#include <vector>
 
 #if H2V_OPENXR_HEADERS_AVAILABLE
 namespace vr::openxr
@@ -17,6 +18,8 @@ namespace vr::openxr
 			XrSpace grip_space{}, aim_space{};
 			controller_input::digital_sampler trigger_state, squeeze_state, touch_state, primary_state,
 			    secondary_state;
+			controller_input::analog_latch trigger_latch, squeeze_latch;
+			controller_input::analog_policy trigger_policy{}, squeeze_policy{};
 		};
 		XrActionSet set_{};
 		XrAction move_{}, turn_{}, sprint_{}, jump_{}, menu_{}, recenter_{};
@@ -28,6 +31,9 @@ namespace vr::openxr
 		XrInstance instance_{};
 		bool profile_refresh_pending_{true};
 		controller_profile::refresh_retry prompt_profile_retry_;
+		std::array<controller_profile::refresh_retry, 2> analog_profile_retry_;
+		std::vector<XrPath> binding_profiles_;
+		void refresh_analog_profiles(const dispatch_table&, XrSession, controller_input::clock::time_point) noexcept;
 		bool refresh_prompt_profile(const dispatch_table&,XrSession) noexcept;
 		std::array<bool, 2> profile_matches_{};
 		bool refresh_profiles(const dispatch_table&, XrSession, XrResult&, std::string&);

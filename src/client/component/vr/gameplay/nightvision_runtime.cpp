@@ -244,7 +244,7 @@ namespace vr::gameplay::equipment::nightvision
 			// Main dispatch may precede finish() publishing the completed grasp.
 			// Accept our prior gesture witness, but never another held object.
 			if(authorization.load()!=token || !weapons::carry::active() || !command_hand_free(hi::current(),actor,reference))return false;
-			const auto input=controller_input::latest();const auto now=clock::now();
+			const auto input=controller_input::latest_interaction();const auto now=clock::now();
 			if(!input.focused || input.reference_generation!=reference || now<input.sampled_at || now-input.sampled_at>std::chrono::milliseconds(150))return false;
 			const auto current=observe();return current && current.slot==expected.slot && current.on==expected.on;
 		});

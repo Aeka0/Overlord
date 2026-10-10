@@ -127,5 +127,9 @@ namespace grenade_tests
 		check(vr::gameplay::hands::length(motion.velocity(now+500ms,40))==0,"stale hand motion cannot throw");
 		motion.sample({1000,0,0},now+50ms,40);
 		check(vr::gameplay::hands::length(motion.velocity(now+50ms,40))==0,"tracking teleport cannot create an extreme throw");
+		motion.reset();motion.sample({1000,0,0},now+60ms,40);
+		check(vr::gameplay::hands::length(motion.velocity(now+60ms,40))==0,"first sample after quality suspension cannot retain a throw impulse");
+		motion.sample({1004,0,0},now+100ms,40);
+		check(std::abs(motion.velocity(now+100ms,40)[0]-100)<.01f,"continuous grenade motion resumes after history is reseeded");
 	}
 }

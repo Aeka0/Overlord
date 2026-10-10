@@ -61,7 +61,7 @@ namespace vr::gameplay::weapons::shield
    if(!managed || !parameters || !result)return original;
    const bool outgoing=attacker==&game::g_entities[0] || parameters->shooter==0;
    ++queries;
-   const auto input=controller_input::latest();const auto now=controller_input::clock::now();
+   const auto input=controller_input::latest_interaction();const auto now=controller_input::clock::now();
    const auto tracking=head_pose_bridge::get_status();
    if(!tracking.enabled || !tracking.pose_available || tracking.recenter_pending || tracking.recenter_count!=input.reference_generation ||
     !input.focused || input.orientation_settling || !input.sequence || now<input.sampled_at || now-input.sampled_at>150ms)return original;
@@ -101,7 +101,7 @@ namespace vr::gameplay::weapons::shield
     utils::hook::invoke<void>(0x1404ac950,result->position.data(),result->normal.data(),parameters->start.data(),
      weapon,alternate,int(parameters->shooter),&game::g_entities[0],19,0x47);++events;
    }
-   feedback::carry_confirmation(owner.holding_hand(),controller_input::latest());
+   feedback::carry_confirmation(owner.holding_hand(),controller_input::latest_interaction());
    return false; // Native pellet/penetration caller stops this segment here.
   }
   template<std::size_t N> bool verify(std::uintptr_t at,const std::uint8_t (&bytes)[N])
@@ -113,7 +113,7 @@ namespace vr::gameplay::weapons::shield
  bool firing_clear(weapon_identity weapon,hands::vec muzzle) noexcept
  {
   if(!enabled() || !carry::active())return true;
-  const auto input=controller_input::latest();const auto now=controller_input::clock::now();
+  const auto input=controller_input::latest_interaction();const auto now=controller_input::clock::now();
   const auto gun=carry::firing_scene(weapon);const auto owner=carry::held(weapon);
   for(const auto& item:carry::held_instances())
   {

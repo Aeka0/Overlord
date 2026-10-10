@@ -177,7 +177,10 @@ namespace ads_comfort_tests
 			check(fast>.44f && slow<.15f,"thermal completes its much larger approach while ordinary scope retains its slower settling");
 			check(thermal.update(sample,owner,1,sight::thermal,true,1,.45f,sample.sampled_at)==fast,
 				"duplicate samples cannot accelerate thermal movement");
-			for(int i=0;i<60;++i)
+			// Returning the full 45 cm at 0.9 m/s needs at least 500 ms,
+			// followed by the existing critically damped spring's settling tail.
+			// Keep the per-frame speed assertion; allow 750 ms to reach <1 mm.
+			for(int i=0;i<75;++i)
 			{
 				sample.sampled_at+=milliseconds(10);++sample.sequence;
 				fast=thermal.update(sample,owner,1,sight::thermal,true,0,.45f,sample.sampled_at);

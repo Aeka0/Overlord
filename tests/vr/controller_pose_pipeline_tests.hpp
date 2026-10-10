@@ -118,13 +118,16 @@ namespace controller_pose_pipeline_tests
 		for (unsigned preset = 0; preset < settings::alignment_presets.size(); ++preset)
 		{
 			const auto sign = hand == 0 ? 1.f : -1.f;
-			const auto& old_values = settings::alignment_presets[preset].values;
+			auto old_values = settings::alignment_presets[preset].values;
+			// Standard's trial baseline selects the former physical wrist point;
+			// Legacy's default still selects device zero for compatibility.
+			if (preset == 0) old_values[1] = .12f;
 			const pose_filter::vec old_lever{sign * old_values[0], old_values[2], old_values[1]};
 			const auto canonical = pose_filter::compose(legacy.hands[hand].grip_from_calibration, {old_lever});
 			const auto& values = settings::standard_alignment_presets[preset].values;
 			const pose_filter::vec baseline{sign * values[0], values[2], values[1]};
 			check(pose_filter::length(pose_filter::sub(canonical.position, baseline)) < 1e-6f,
-			    "Standard wrist baseline retains the original physical point on both hands");
+			    "Standard presets encode their declared reference points on both hands");
 		}
 	}
 }

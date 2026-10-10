@@ -901,7 +901,7 @@ namespace vr::gameplay::hands
 				    !head_pose_bridge::tracking_to_world(spatial, input.grip[hand].tracking, grip) ||
 				    !head_pose_bridge::tracking_to_world(spatial, input.aim[hand].tracking, aim))
 				{
-					if (independent && hand != int(owner.holding_hand()))
+					if (hand != int(owner.holding_hand()))
 					{
 						targets[hand] = {add(shoulders[hand], vec{0, 0, -.35f * spatial.units_per_meter}),
 						                 {0, 0, 0, 1}};
@@ -1239,6 +1239,11 @@ namespace vr::gameplay::hands
 					    if (!owner.can_fire())
 						    return false;
 					    const auto other = static_cast<vr::hand>(1 - static_cast<int>(owner.rear));
+					    if (!controller_input::interaction_ready(input.grip[int(owner.rear)]) ||
+						    !controller_input::interaction_ready(input.aim[int(owner.rear)]) ||
+						    !controller_input::interaction_ready(input.grip[int(other)]) ||
+						    !controller_input::interaction_ready(input.aim[int(other)]))
+						    return false;
 					    if (module_grip.active && !module_grip.owns_support &&
 					        (module_grip.ammo.open || module_grip.travel > .001f))
 						    return false;

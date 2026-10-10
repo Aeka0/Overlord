@@ -371,7 +371,7 @@ namespace vr::gameplay::vehicles
 				state.geometry_ready = geometry.geometry_ready;
 				state.handle_pose_ready = geometry.handle_pose_ready;
 			}
-			const auto input = controller_input::latest();
+			const auto input = controller_input::latest_interaction();
 			const auto now = clock::now();
 			const auto head = head_pose_bridge::get_status();
 			hi::frame frame;

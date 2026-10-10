@@ -68,6 +68,7 @@ namespace
 	constexpr auto tracked_pose_flags = XR_VIEW_STATE_POSITION_VALID_BIT | XR_VIEW_STATE_ORIENTATION_VALID_BIT |
 	                                    XR_VIEW_STATE_POSITION_TRACKED_BIT | XR_VIEW_STATE_ORIENTATION_TRACKED_BIT;
 	XrViewStateFlags g_view_flags = tracked_pose_flags;
+	std::array<XrSpaceLocationFlags, 2> g_hand_flags{tracked_pose_flags, tracked_pose_flags};
 	float g_head_height{};
 	std::string g_runtime_name{"h2v mock OpenXR runtime"};
 	std::array<std::string, 2> g_profiles{ "/interaction_profiles/oculus/touch_controller", "/interaction_profiles/oculus/touch_controller" };
@@ -180,6 +181,7 @@ extern "C" __declspec(dllexport) void WINAPI h2vMockReset()
 	g_minimum_feature_level = D3D_FEATURE_LEVEL_10_0;
 	g_should_render = XR_TRUE;
 	g_view_flags = tracked_pose_flags;
+	g_hand_flags = {tracked_pose_flags, tracked_pose_flags};
 	g_head_height = 0;
 	g_runtime_name = "h2v mock OpenXR runtime";
 	g_profiles.fill("/interaction_profiles/oculus/touch_controller");
@@ -230,6 +232,11 @@ extern "C" __declspec(dllexport) void WINAPI h2vMockSetSyntheticChecks(BOOL enab
 extern "C" __declspec(dllexport) void WINAPI h2vMockSetActionValue(const char* action,float x,float y)
 { const std::lock_guard lock(g_mutex);if(action)g_action_values[action]={x,y}; }
 
+extern "C" __declspec(dllexport) void WINAPI h2vMockSetHandFlags(unsigned hand, const std::uint64_t flags)
+{
+	const std::lock_guard lock(g_mutex);
+	if (hand < g_hand_flags.size()) g_hand_flags[hand] = flags;
+}
 extern "C" __declspec(dllexport) void WINAPI h2vMockSetViewFlags(const std::uint64_t flags)
 {
 	const std::lock_guard lock(g_mutex);
@@ -848,7 +855,13 @@ XrResult XRAPI_CALL mockLocateViews(const XrSession session, const XrViewLocateI
 	{
 		return XR_ERROR_VALIDATION_FAILURE;
 	}
-	{ const std::lock_guard lock(g_mutex); view_state->viewStateFlags = g_view_flags; }
+	{
+		const std::lock_guard lock(g_mutex);
+		XrResult result{};
+		if (consume_failure_locked(failure_point::locate_views, result)) return result;
+		view_state->viewStateFlags = g_view_flags;
+	}
+	if (g_scenario == scenario::view_count_mismatch) { *count = 1; return XR_SUCCESS; }
 	*count = 2;
 	for (std::uint32_t index = 0; index < 2; ++index)
 	{
@@ -856,6 +869,8 @@ XrResult XRAPI_CALL mockLocateViews(const XrSession session, const XrViewLocateI
 		views[index].next = nullptr;
 		views[index].pose = {};
 		views[index].pose.orientation.w = 1.0f;
+		if (g_scenario == scenario::invalid_eye_pose && index == 1)
+			views[index].pose.orientation.w = 0;
 		if(g_scenario==scenario::canted_views){views[index].pose.orientation.y=index==0?-.05f:.05f;views[index].pose.orientation.w=std::sqrt(1-.05f*.05f);}
 		views[index].pose.position.x = index == 0 ? -0.032f : 0.032f;
 		views[index].pose.position.y = g_head_height;
@@ -1025,6 +1040,7 @@ XrResult XRAPI_CALL mockLocateSpace(XrSpace space,XrSpace base,XrTime time,XrSpa
 	if(space->action)
 	{
 		if(!space->owner->synced){value->locationFlags=0;return XR_SUCCESS;}
+		value->locationFlags = g_hand_flags[space->action->name.starts_with("left_") ? 0 : 1];
 		value->pose.position={space->action->name.starts_with("left_")?-.2f:.2f,0,-.3f};
 	}
 	else value->pose.position.y = g_head_height;

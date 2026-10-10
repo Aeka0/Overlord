@@ -18,6 +18,7 @@ namespace vr::openxr
 			std::array<const char*, 2> primary, secondary;
 			bool trigger_touch;
 			bool menu_button;
+			controller_input::analog_policy trigger_policy, squeeze_policy;
 		};
 		constexpr std::array recipes{
 		    binding_recipe{.profile = "/interaction_profiles/oculus/touch_controller",
@@ -26,21 +27,27 @@ namespace vr::openxr
 		                   .primary = {"/input/x/click", "/input/a/click"},
 		                   .secondary = {"/input/y/click", "/input/b/click"},
 		                   .trigger_touch = true,
-		                   .menu_button = true},
+		                   .menu_button = true,
+		                   .trigger_policy = controller_input::value_button,
+		                   .squeeze_policy = controller_input::value_button},
 		    binding_recipe{.profile = "/interaction_profiles/valve/index_controller",
 		                   .axis = "/input/thumbstick",
 		                   .squeeze = "/input/squeeze/force",
 		                   .primary = {"/input/a/click", "/input/a/click"},
 		                   .secondary = {"/input/b/click", "/input/b/click"},
 		                   .trigger_touch = true,
-		                   .menu_button = false},
+		                   .menu_button = false,
+		                   .trigger_policy = controller_input::index_trigger,
+		                   .squeeze_policy = controller_input::index_squeeze},
 		    binding_recipe{.profile = "/interaction_profiles/htc/vive_controller",
 		                   .axis = "/input/trackpad",
 		                   .squeeze = "/input/squeeze/click",
 		                   .primary = {},
 		                   .secondary = {},
 		                   .trigger_touch = false,
-		                   .menu_button = true}};
+		                   .menu_button = true,
+		                   .trigger_policy = controller_input::value_button,
+		                   .squeeze_policy = controller_input::click_button}};
 	}
 
 	bool input_actions::initialize(const dispatch_table& xr,
@@ -51,6 +58,7 @@ namespace vr::openxr
 	{
 		instance_ = instance;
 		prompt_profile_retry_.reset();
+		for (auto& retry : analog_profile_retry_) retry.reset();
 		hud_controller::set_knuckles(controller_input::input_backend::openxr,false);
 		profile_refresh_pending_ = true;
 		XrActionSetCreateInfo info{XR_TYPE_ACTION_SET_CREATE_INFO};
@@ -98,8 +106,10 @@ namespace vr::openxr
 		}
 		// Core profiles only. Bindings preserve physical left/right roles, while
 		// weapon ownership and dominant-hand choices remain in gameplay.
-		for (const auto& recipe : recipes)
+		binding_profiles_.resize(recipes.size());
+		for (std::size_t recipe_index = 0; recipe_index < recipes.size(); ++recipe_index)
 		{
+			const auto& recipe = recipes[recipe_index];
 			std::vector<XrActionSuggestedBinding> bindings;
 			const auto bind = [&](XrAction action, const std::string& path)
 			{
@@ -145,6 +155,7 @@ namespace vr::openxr
 				error = "xrStringToPath: interaction profile";
 				return false;
 			}
+			binding_profiles_[recipe_index] = profile_path;
 			const XrInteractionProfileSuggestedBinding suggested{
 			    XR_TYPE_INTERACTION_PROFILE_SUGGESTED_BINDING,
 			    nullptr,
@@ -195,8 +206,11 @@ namespace vr::openxr
 	void input_actions::profile_changed() noexcept
 	{
 		prompt_profile_retry_.reset();
+		for (auto& retry : analog_profile_retry_) retry.reset();
 		hud_controller::set_knuckles(controller_input::input_backend::openxr,false);
 		invalidate();
+		for (auto& hand : hands_)
+			hand.trigger_policy = hand.squeeze_policy = {};
 		profile_matches_.fill(false);
 		profile_refresh_pending_ = true;
 	}
@@ -265,6 +279,48 @@ namespace vr::openxr
 		return queried;
 	}
 
+	void input_actions::refresh_analog_profiles(const dispatch_table& xr, XrSession session,
+		controller_input::clock::time_point now) noexcept
+	{
+		for (unsigned h = 0; h < hands_.size(); ++h)
+		{
+			auto& retry = analog_profile_retry_[h];
+			if (!retry.ready(now)) continue;
+			XrPath user{};
+			XrInteractionProfileState profile{XR_TYPE_INTERACTION_PROFILE_STATE};
+			if (XR_FAILED(xr.string_to_path(instance_, h == 0 ? "/user/hand/left" : "/user/hand/right", &user)) ||
+				XR_FAILED(xr.get_current_interaction_profile(session, user, &profile)))
+			{
+				retry.record_result(false, now);
+				continue;
+			}
+			retry.record_result(profile.interactionProfile != XR_NULL_PATH, now);
+			auto& hand = hands_[h];
+			controller_input::analog_policy trigger{}, squeeze{};
+			for (std::size_t i = 0; i < recipes.size(); ++i)
+				if (profile.interactionProfile != XR_NULL_PATH && profile.interactionProfile == binding_profiles_[i])
+				{
+					trigger = recipes[i].trigger_policy;
+					squeeze = recipes[i].squeeze_policy;
+					break;
+				}
+			// A newly identified source must rearm through the existing digital
+			// generation contract; changing thresholds is not a physical press.
+			if (trigger != hand.trigger_policy)
+			{
+				hand.trigger_latch.reset();
+				(void)hand.trigger_state.sample(false, false, now);
+			}
+			if (squeeze != hand.squeeze_policy)
+			{
+				hand.squeeze_latch.reset();
+				(void)hand.squeeze_state.sample(false, false, now);
+			}
+			hand.trigger_policy = trigger;
+			hand.squeeze_policy = squeeze;
+		}
+	}
+
 	bool input_actions::sample(const dispatch_table& xr,
 	                           XrSession session,
 	                           XrSpace base,
@@ -278,6 +334,7 @@ namespace vr::openxr
 		frame.pose_pipeline = pose_pipeline_;
 		frame.sequence = ++sequence_;
 		frame.sampled_at = controller_input::clock::now();
+		frame.target_display_time = time;
 		frame.reference_generation = head_pose_bridge::get_status().recenter_count;
 		frame.source.backend = input_backend::openxr;
 		frame.source.runtime_focus = focused;
@@ -298,6 +355,7 @@ namespace vr::openxr
 			invalidate(input_reason::profile_query_failed, result);
 			return false;
 		}
+		if (frame.focused) refresh_analog_profiles(xr, session, frame.sampled_at);
 		const auto capture = [&](input_channel channel, XrResult api, bool active, bool finite = true)
 		{
 			if (channel != input_channel::count)
@@ -319,7 +377,8 @@ namespace vr::openxr
 			return state.sample(available, value.currentState, frame.sampled_at);
 		};
 		const auto analog_button =
-		    [&](XrAction action, controller_input::digital_sampler& state, input_channel channel)
+		    [&](XrAction action, controller_input::digital_sampler& state, controller_input::analog_latch& latch,
+		        controller_input::analog_policy policy, controller_input::analog_value& raw, input_channel channel)
 		{
 			XrActionStateFloat value{XR_TYPE_ACTION_STATE_FLOAT};
 			const XrActionStateGetInfo get{XR_TYPE_ACTION_STATE_GET_INFO, nullptr, action, XR_NULL_PATH};
@@ -327,7 +386,8 @@ namespace vr::openxr
 			capture(channel, api, value.isActive, std::isfinite(value.currentState));
 			const bool available =
 			    frame.focused && XR_SUCCEEDED(api) && value.isActive && std::isfinite(value.currentState);
-			return state.sample(available, value.currentState >= .55f, frame.sampled_at);
+			raw = {available, std::isfinite(value.currentState) ? value.currentState : 0.f, policy.source};
+			return state.sample(available, latch.sample(raw, policy, frame.sampled_at), frame.sampled_at);
 		};
 		const auto axis = [&](XrAction action, std::array<float, 2>& output, input_channel channel)
 		{
@@ -356,6 +416,12 @@ namespace vr::openxr
 				return;
 			XrSpaceLocation location{XR_TYPE_SPACE_LOCATION};
 			const auto located = xr.locate_space(space, base, time, &location);
+			if (XR_SUCCEEDED(located))
+				output.quality = {
+					(location.locationFlags & XR_SPACE_LOCATION_POSITION_VALID_BIT) != 0,
+					(location.locationFlags & XR_SPACE_LOCATION_ORIENTATION_VALID_BIT) != 0,
+					(location.locationFlags & XR_SPACE_LOCATION_POSITION_TRACKED_BIT) != 0,
+					(location.locationFlags & XR_SPACE_LOCATION_ORIENTATION_TRACKED_BIT) != 0, true};
 			auto& condition = frame.source.channels[index(channel)];
 			condition = XR_FAILED(located) ? input_condition{input_reason::action_query_failed, located}
 			                               : input_condition{input_reason::pose_invalid};
@@ -384,13 +450,16 @@ namespace vr::openxr
 		{
 			auto& hand = hands_[h];
 			frame.trigger[h] =
-			    analog_button(hand.trigger, hand.trigger_state, hand_channel(input_channel::left_trigger, h));
+			    analog_button(hand.trigger, hand.trigger_state, hand.trigger_latch, hand.trigger_policy,
+			                  frame.trigger_analog[h], hand_channel(input_channel::left_trigger, h));
 			frame.squeeze[h] =
-			    analog_button(hand.squeeze, hand.squeeze_state, hand_channel(input_channel::left_squeeze, h));
+			    analog_button(hand.squeeze, hand.squeeze_state, hand.squeeze_latch, hand.squeeze_policy,
+			                  frame.squeeze_analog[h], hand_channel(input_channel::left_squeeze, h));
 			frame.trigger_touch[h] = boolean(hand.touch, hand.touch_state);
 			frame.primary[h] = boolean(hand.primary, hand.primary_state);
 			frame.secondary[h] = boolean(hand.secondary, hand.secondary_state);
 			pose(hand.grip, hand.grip_space, frame.grip[h], hand_channel(input_channel::left_grip, h));
+			frame.sdk_grip[h] = frame.grip[h];
 			if (!grip_reference_.required_profile.empty() && !profile_matches_[h])
 			{
 				if (frame.grip[h].valid)
@@ -404,6 +473,7 @@ namespace vr::openxr
 				frame.source.channels[index(hand_channel(input_channel::left_grip, h))] = {
 				    input_reason::calibration_invalid};
 			pose(hand.aim, hand.aim_space, frame.aim[h], hand_channel(input_channel::left_aim, h));
+			frame.sdk_aim[h] = frame.aim[h];
 		}
 		controller_input::publish(frame);
 		controller_haptics::bindings({frame.grip[0].valid, frame.grip[1].valid});
@@ -428,6 +498,11 @@ namespace vr::openxr
 	void input_actions::invalidate(controller_input::input_reason reason, std::int64_t code) noexcept
 	{
 		const auto now = controller_input::clock::now();
+		for (auto& hand : hands_)
+		{
+			hand.trigger_latch.reset();
+			hand.squeeze_latch.reset();
+		}
 		for (auto& hand : hands_)
 			for (auto* state : {&hand.trigger_state,
 			                    &hand.squeeze_state,
@@ -469,6 +544,10 @@ namespace vr::openxr
 		hud_controller::set_knuckles(controller_input::input_backend::openxr,false);
 		prompt_profile_retry_.reset();
 		instance_ = XR_NULL_HANDLE;
+		for (auto& retry : analog_profile_retry_) retry.reset();
+		binding_profiles_ = {};
+		for (auto& hand : hands_)
+			hand.trigger_policy = hand.squeeze_policy = {};
 		profile_refresh_pending_ = true;
 		profile_matches_.fill(false);
 		return {};

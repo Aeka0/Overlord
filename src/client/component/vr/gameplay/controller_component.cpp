@@ -169,7 +169,7 @@ namespace vr::controllers
 			controller_input::remote_stick stick{};bool remote_allowed{};std::uint64_t remote_epoch{};
 			if(local_client==0 && building_client==0 && cmd)
 			{
-				const auto input=controller_input::latest();const auto head=head_pose_bridge::get_status();
+				const auto input=controller_input::latest_interaction();const auto head=head_pose_bridge::get_status();
 				const bool allowed=alive && enabled && enabled->current.enabled && head.enabled && head.pose_available &&
 					!head.recenter_pending && head.recenter_count==input.reference_generation && normal_gameplay();
 				remote_allowed=allowed && input.focused;
@@ -266,7 +266,7 @@ namespace vr::controllers
 				return;
 			normal_input_seen = true;
 			const auto head = head_pose_bridge::get_status();
-			const auto input = controller_input::latest();
+			const auto input = controller_input::latest_interaction();
 			const bool gameplay = enabled && enabled->current.enabled && head.enabled &&
 								  head.pose_available && !head.recenter_pending &&
 								  head.recenter_count == input.reference_generation &&
@@ -344,7 +344,7 @@ namespace vr::controllers
 			const auto now = controller_input::clock::now();
 			if (now - last_command > std::chrono::milliseconds(150))
 			{
-				if (local_client==0) gameplay::interaction::command(controller_input::latest(),false,now);
+				if (local_client==0) gameplay::interaction::command(controller_input::latest_interaction(),false,now);
 				locomotion.reset();driving_locomotion.reset();
 				buttons.reset();
 				stance.reset();
@@ -362,7 +362,7 @@ namespace vr::controllers
 			{
 				// Also runs when native scripted branches bypass normal locomotion.
 				// This is still before insertion into the native usercmd ring.
-				const auto input=controller_input::latest();const auto head=head_pose_bridge::get_status();
+				const auto input=controller_input::latest_interaction();const auto head=head_pose_bridge::get_status();
 				const auto story=gameplay::sequences::for_player(game::CG_GetPredictedPlayerState(0));
 				const bool gameplay=enabled && enabled->current.enabled && head.enabled && head.pose_available &&
 					!head.recenter_pending && head.recenter_count==input.reference_generation && normal_gameplay();
@@ -412,13 +412,13 @@ namespace vr::controllers
 				{
 					// Vehicle commands can bypass CL_NormalInput while gameplay is
 					// active. Mounted controls retain their own fresh-input/fire gate.
-					const auto input=controller_input::latest();const auto head=head_pose_bridge::get_status();
+					const auto input=controller_input::latest_interaction();const auto head=head_pose_bridge::get_status();
 					const bool gameplay=enabled && enabled->current.enabled && head.enabled && head.pose_available &&
 						!head.recenter_pending && head.recenter_count==input.reference_generation && normal_gameplay();
 					gameplay::mounted::command(input,gameplay,result->buttons);
 				}
 				weapons::independent_fire::command(false);
-				if (local_client==0) gameplay::interaction::command(controller_input::latest(),false,now);
+				if (local_client==0) gameplay::interaction::command(controller_input::latest_interaction(),false,now);
 				gameplay::weapon_hud::suspend();
 				if(!vehicle_input_seen){locomotion.reset();driving_locomotion.reset();}
 				buttons.reset();
@@ -436,7 +436,7 @@ namespace vr::controllers
 			console::info("[VR input] story_brake_commands=%llu story_melee_commands=%llu\n",story_brake_count.load(),story_melee_count.load());
 			console::info("[VR input] remote_axes_verified=%d remote_axis_commands=%llu remote_stick_commands=%llu\n",
 				remote_axes_verified,remote_axis_commands.load(),remote_stick_commands.load());
-			const auto input = controller_input::latest();
+			const auto input = controller_input::latest_interaction();
 			const auto head = head_pose_bridge::get_status();
 			console::info("[VR input] hand_angle_pitch=%.2f yaw=%.2f roll=%.2f settling=%d runtime_aim_preserved=1\n",
 				input.orientation_degrees[0],input.orientation_degrees[1],input.orientation_degrees[2],input.orientation_settling);

@@ -248,6 +248,10 @@ namespace vr::steamvr_input
 					output.tracking.orientation[row][col] = matrix[row][col];
 			}
 			output.valid = true;
+			const bool tracked = value.pose.eTrackingResult == TrackingResult_Running_OK;
+			output.quality = {true, true, tracked,
+				tracked || value.pose.eTrackingResult == TrackingResult_Fallback_RotationOnly, true};
+			(aim ? frame.sdk_aim : frame.sdk_grip)[hand] = output;
 			if (pose_pipeline_ == controller_pose_pipeline::mode::standard &&
 				(!system_ || !pose_adapter_.normalize(*system_, *input_, VRRenderModels(), handle,
 					value.activeOrigin, hand, aim, frame.sampled_at, output)))

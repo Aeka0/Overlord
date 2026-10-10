@@ -77,7 +77,7 @@ namespace vr::gameplay::weapons::independent_fire
 		const auto* ps=reinterpret_cast<const game::playerState_s*>(game::g_entities[0].client);if (!ps) return;
 		if (player!=ps || ps->commandTime<last_command) {instances={};player=ps;}
 		const int command_time=ps->commandTime;last_command=command_time;
-		const auto input=controller_input::latest();const auto now=controller_input::clock::now();
+		const auto input=controller_input::latest_interaction();const auto now=controller_input::clock::now();
 		bool command_enabled;
 		{const std::lock_guard lock(gate_mutex);command_enabled=gate && now>=gate_at && now-gate_at<=150ms;}
 		const auto head=head_pose_bridge::get_status();

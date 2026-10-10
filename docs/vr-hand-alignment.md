@@ -21,6 +21,18 @@ sign mirrors between the physical hands. Conversion uses the current world
 scale; head looking and aim-angle adjustment cannot translate this point.
 The numeric defaults and presets are starting values, not measured anatomy.
 
+The Standard trial baseline retains the former physical wrist's 0.12 m backward
+component in the legacy reference frame. Its Standard equivalent is
+back/up `0.016253897/0.008063812` m through the existing canonical Touch transform.
+The former Standard default `-0.096073247/-0.034157186` m represented the old
+legacy device origin. Reusing that origin as the unified wrist point moved the
+rotation centre forward/up in the observed controller frame. Inward and aim
+angles retain their previous defaults. These two coordinates are an application
+baseline candidate, not a controller-independent anatomical measurement.
+Existing saved calibrations remain intact; selecting the Standard baseline preset
+applies the revised point. Legacy defaults, custom points and the Quest preset are
+preserved for previously accepted controller setups.
+
 For an empty hand, presentation applies the admitted native model's existing
 neutral wrist basis to the control rotation. For an occupied hand, the existing
 weapon pose supplies the authored wrist-to-weapon relationship. The arm solver
@@ -108,3 +120,21 @@ pass through native spread, optional aim assistance and other existing firing
 rules. A no-firing pose capture cannot establish final ballistic acceptance.
 Keep a geometry repair in the model/hand transform chain; independently bending
 bullets toward a menu pointer would conceal a remaining visual mismatch.
+
+## Position baseline audit, 2026-10-11
+
+Two operator-coordinated captures used the same Standard settings and left hand,
+with Colt45 and Anaconda respectively. Exact instance/hand matching retained
+1,615 and 1,080 wrist records. Replaying the published grip-local point against
+the committed wrist differed by at most 0.054 mm. Their common wrist-to-ray
+height was approximately 3.613 cm, while native wrist-to-muzzle heights differed
+(about 9.947 cm and 8.416 cm). The signed pitch medians were near zero.
+The operator confirmed that the hands were forward/high while angles and lateral
+alignment were acceptable; those accepted dimensions are preserved.
+
+Replaying the historical physical baseline's back/up components on the first
+capture reduced the main turning-window point-cloud p95 radius from about
+10.88 cm to 3.62 cm, with negligible lateral change. This supports a position-only
+baseline trial. The gesture was not mechanically constrained, so these radii
+and fitted pivots are not anatomical ground truth. The revised baseline still
+requires headset acceptance of placement and rotation, including other controllers.
