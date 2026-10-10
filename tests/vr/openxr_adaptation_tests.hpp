@@ -32,7 +32,6 @@ namespace openxr_adaptation_tests
 		body.units_per_meter = 100;
 		const auto reference = controller_pose_reference::touch_legacy_reference();
 		for (unsigned hand = 0; hand < 2; ++hand)
-		for (unsigned preset = 0; preset < settings::alignment_presets.size(); ++preset)
 		for (const controller_calibration::angles rotation : {controller_calibration::angles{},
 		    {70, 0, 0}, {-45, 35, 25}, {0, 0, 90}})
 		{
@@ -44,18 +43,23 @@ namespace openxr_adaptation_tests
 			new_input.grip[hand] = new_input.runtime_grip[hand] = {true, {standard.position, standard.orientation}};
 			old_input.aim[hand] = old_input.runtime_aim[hand] = new_input.aim[hand] = new_input.runtime_aim[hand] =
 			    {true, {aim.position, aim.orientation}};
-			auto old_values = settings::alignment_presets[preset].values;
-			// Standard's revised trial baseline uses the historical physical
-			// wrist point; Legacy's compatibility default remains device zero.
-			// Compare the same physical point when qualifying the adapter.
-			if (preset == 0) old_values[1] = .12f;
-			const auto& new_values = settings::standard_alignment_presets[preset].values;
+			// Explicit equivalent custom points qualify the coordinate adapter;
+			// zero defaults intentionally select each pipeline's own grip origin.
+			const position_offsets old_values{0, .12f, 0};
+			const position_offsets new_values{-.007f, .016253897f, .008063812f};
+			new_input.pose_pipeline = controller_pose_pipeline::mode::standard;
 			anchor old_target, new_target;
-			tests::require(tracked_wrist(old_input, body, {}, int(hand), {old_values[0], old_values[1], old_values[2]}, old_target) &&
-			    tracked_wrist(new_input, body, {}, int(hand), {new_values[0], new_values[1], new_values[2]}, new_target),
+			tests::require(tracked_wrist(old_input, body, {}, int(hand), old_values, old_target) &&
+			    tracked_wrist(new_input, body, {}, int(hand), new_values, new_target),
 			    "wrist coordinate equivalence fixture could not produce targets");
 			tests::require(length(sub(old_target.position, new_target.position)) < .0001f,
-			    "standard grip calibration moved the final gameplay wrist relative to the legacy preset");
+			    "equivalent custom points must produce the same wrist in both coordinate frames");
+			const auto defaults = controller_calibration::defaults_for(new_input.pose_pipeline).position;
+			head_pose_bridge::world_pose grip;
+			tests::require(head_pose_bridge::tracking_to_world(body, new_input.grip[hand].tracking, grip) &&
+			    tracked_wrist(new_input, body, {}, int(hand), {defaults[0], defaults[1], defaults[2]}, new_target) &&
+			    length(sub(new_target.position, grip.position)) < .0001f,
+			    "zero Standard defaults must retain the grip origin without a hidden baseline");
 		}
 	}
 	inline vr::controller_pose_reference::configuration grip_fixture;

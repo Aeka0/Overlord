@@ -21,17 +21,12 @@ sign mirrors between the physical hands. Conversion uses the current world
 scale; head looking and aim-angle adjustment cannot translate this point.
 The numeric defaults and presets are starting values, not measured anatomy.
 
-The Standard trial baseline retains the former physical wrist's 0.12 m backward
-component in the legacy reference frame. Its Standard equivalent is
-back/up `0.016253897/0.008063812` m through the existing canonical Touch transform.
-The former Standard default `-0.096073247/-0.034157186` m represented the old
-legacy device origin. Reusing that origin as the unified wrist point moved the
-rotation centre forward/up in the observed controller frame. Inward and aim
-angles retain their previous defaults. These two coordinates are an application
-baseline candidate, not a controller-independent anatomical measurement.
-Existing saved calibrations remain intact; selecting the Standard baseline preset
-applies the revised point. Legacy defaults, custom points and the Quest preset are
-preserved for previously accepted controller setups.
+Both Standard and Legacy default to zero position and angle adjustment. The
+shared **None** preset sets all six values to zero in the selected bank. In
+Standard mode this selects the published standard grip origin; there is no
+additional built-in wrist offset. Legacy retains its own grip frame. The former
+Standard trial baseline and Meta Quest 3 preset are retired. Saved custom values
+remain editable and are not rewritten by the default change.
 
 For an empty hand, presentation applies the admitted native model's existing
 neutral wrist basis to the control rotation. For an occupied hand, the existing
@@ -136,5 +131,7 @@ Replaying the historical physical baseline's back/up components on the first
 capture reduced the main turning-window point-cloud p95 radius from about
 10.88 cm to 3.62 cm, with negligible lateral change. This supports a position-only
 baseline trial. The gesture was not mechanically constrained, so these radii
-and fitted pivots are not anatomical ground truth. The revised baseline still
-requires headset acceptance of placement and rotation, including other controllers.
+and fitted pivots are not anatomical ground truth. On subsequent headset review,
+the operator preferred manually zeroed Standard offsets. The historical candidate
+was therefore retired in favor of zero defaults; this is local headset feedback,
+not a measured anatomical baseline for every controller.

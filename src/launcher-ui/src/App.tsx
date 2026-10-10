@@ -348,13 +348,7 @@ function Launcher({ data }: { data: Bootstrap }) {
       >
         {controller.state.controllerPresets.map((preset) => (
           <option key={preset.id} value={preset.id}>
-            {preset.id === "standard_default"
-              ? t("choice.standardControllerBaseline")
-              : preset.id === "none"
-              ? t(guide ? "oobe.otherDevice" : "choice.none")
-              : preset.id === "meta_quest_3"
-                ? t("choice.quest3")
-                : preset.label}
+            {preset.id === "none" ? t("choice.none") : preset.label}
           </option>
         ))}
         <option value="custom">{t("choice.custom")}</option>

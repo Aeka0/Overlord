@@ -323,14 +323,13 @@ Existing custom legacy calibration is not automatically interpreted as standard
 grip calibration. Select the appropriate preset or adjust the standard bank.
 All gameplay consumers resolve the same selected calibration catalog.
 
-The standard application baselines are the existing Touch baseline/preset
-expressed once in OpenXR grip coordinates: `p_standard = inverse(T_device_grip)
-* p_legacy`, using the documented legacy transform below. Inward is mirrored
-between hands; tracking Y is Up and Z is Back. This preserves the original
-physical wrist point for that baseline without changing the published standard
-grip. These are application tuning defaults, not measured anatomy or runtime
-identity detection. Other controller shapes and personal calibration still need
-headset acceptance. `vr_status` and `vr_input_status` report `pose_pipeline`.
+Both calibration banks default to zero position and angle adjustment and share
+one **None** preset. Zero selects the grip origin in the selected coordinate
+frame, without an additional wrist baseline. Inward is mirrored between hands;
+tracking Y is Up and Z is Back. Standard and Legacy grip origins differ, so the
+same nonzero numbers are not a conversion between them. Saved custom values are
+preserved; other controller shapes and personal calibration still need headset
+acceptance. `vr_status` and `vr_input_status` report `pose_pipeline`.
 
 Removal boundaries:
 

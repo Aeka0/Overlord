@@ -224,16 +224,15 @@ Dropdowns use a shared custom list with arrow-key navigation, Enter/Space to
 confirm, Escape to cancel, and dismissal on outside click, scroll or resize.
 
 **Basics > Controller alignment > Preset** controls the three position offsets
-and three angles together. **None** sets all six to zero and is the default for
-new profiles and Restore all defaults. **Meta Quest 3** applies inward/back/up
-of -0.02/0.12/-0.1 meters and pitch/yaw/roll of -20/0/0 degrees, using saved
-per-device offsets. These values are a starting point, not a measured fit for
-every Quest 3 user. Manual values that differ from both presets display
-**Custom**; selecting Custom preserves the current draft for editing.
+and three angles together. **None** is the only built-in preset and sets all six
+to zero in either controller pose mode. New profiles and Restore all defaults
+use the same zero values. Zero selects that mode's grip origin without a hidden
+wrist offset. Manual nonzero values display **Custom**; selecting Custom preserves
+the current draft for editing.
 
 The preset is inferred from the six numeric values on load, save and manual
 input, so existing profiles retain their calibration and console edits are
-recognized. Numerically identical input such as -20.0 still matches. Only the
+recognized. Numerically identical input such as 0.0 still matches. Only the
 six dvars are saved; there is no separate preset identifier or migration. Preset
 selection leaves other unsaved settings and advanced wrist-pivot calibration
 unchanged. Save or Launch applies the draft through the existing settings path.
@@ -338,8 +337,7 @@ They rotate both hands and their held weapons about the controller's local axes:
 positive pitch tilts up, positive yaw turns left, positive roll tilts the right
 side down. Negative pitch lowers the aim; zero on all three restores the runtime
 aim orientation. Angle calibration does not change the position correction.
-The initial -4-degree pitch trial was superseded by the None and Meta Quest 3
-presets. Console commands use the same names, for example
+Console commands use the same names, for example
 `vr_handAnglePitch -20`, and take effect on the next input frame.
 Live changes reset melee motion history for 200 ms so calibration cannot be
 mistaken for a strike; the calibrated model remains visible and held.

@@ -18,9 +18,8 @@ namespace launcher_vr_settings
 	inline json controller_presets(bool standard = false)
 	{
 		auto result=json::array();
-		const auto& presets = standard ? vr::settings::standard_alignment_presets : vr::settings::alignment_presets;
 		const auto& fields = standard ? vr::settings::standard_hand_alignment : vr::settings::hand_alignment;
-		for (const auto& preset:presets)
+		for (const auto& preset:vr::settings::alignment_presets)
 		{
 			json values=json::object();
 			for (std::size_t i=0;i<vr::settings::hand_alignment.size();++i)

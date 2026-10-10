@@ -1,7 +1,6 @@
 #pragma once
 
 #include "component/vr/steamvr_pose_adapter.hpp"
-#include "component/vr/touch_controller_reference.hpp"
 #include <cstring>
 
 namespace controller_pose_pipeline_tests
@@ -111,23 +110,5 @@ namespace controller_pose_pipeline_tests
 		adapter.reset();
 		after.pose_reference_generation = adapter.generation();
 		check(controller_input::producer_discontinuity(before, after), "Rebinding fences physical velocity history even if tracking remains valid");
-		// The converted application baseline preserves the previous physical wrist
-		// point while the published grip itself remains in standard coordinates.
-		const auto legacy = controller_pose_reference::touch_legacy_reference();
-		for (unsigned hand = 0; hand < 2; ++hand)
-		for (unsigned preset = 0; preset < settings::alignment_presets.size(); ++preset)
-		{
-			const auto sign = hand == 0 ? 1.f : -1.f;
-			auto old_values = settings::alignment_presets[preset].values;
-			// Standard's trial baseline selects the former physical wrist point;
-			// Legacy's default still selects device zero for compatibility.
-			if (preset == 0) old_values[1] = .12f;
-			const pose_filter::vec old_lever{sign * old_values[0], old_values[2], old_values[1]};
-			const auto canonical = pose_filter::compose(legacy.hands[hand].grip_from_calibration, {old_lever});
-			const auto& values = settings::standard_alignment_presets[preset].values;
-			const pose_filter::vec baseline{sign * values[0], values[2], values[1]};
-			check(pose_filter::length(pose_filter::sub(canonical.position, baseline)) < 1e-6f,
-			    "Standard presets encode their declared reference points on both hands");
-		}
 	}
 }

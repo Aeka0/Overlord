@@ -308,26 +308,19 @@ int main(int argc, char** argv)
 			require(!validate(candidate), "Every toggle is required in a save payload");
 		}
 		require(read_values("") == initial, "A new profile must load defaults");
-		const auto presets = controller_presets();
-		require(presets.size() == 2 && presets[0]["id"] == "none" && presets[0]["label"] == "None" &&
-			presets[1]["id"] == "meta_quest_3" && presets[1]["label"] == "Meta Quest 3", "Shared preset catalog");
-		for (const auto& field : vr::settings::hand_alignment)
-			require(initial[field.name] == 0 && presets[0]["values"][field.name] == 0,
-				"Legacy defaults and None remain compatible with accepted controller setups");
-		const json standard_wrist{{"vr_standardHandOffsetInward", -.007}, {"vr_standardHandOffsetBack", .016254},
-			{"vr_standardHandOffsetUp", .008064}, {"vr_standardHandAnglePitch", 0},
-			{"vr_standardHandAngleYaw", 0}, {"vr_standardHandAngleRoll", 0}};
-		require(controller_presets(true)[0]["values"] == standard_wrist,
-			"Standard wrist baseline changes depth/height while preserving lateral and angle defaults");
 		require(read_values("seta vr_standardHandOffsetBack -0.096073\n")["vr_standardHandOffsetBack"] == -.096073,
-			"Changing the Standard baseline must not overwrite a saved custom point");
-		const json quest_values{{"vr_handOffsetInward", -.02}, {"vr_handOffsetBack", .12}, {"vr_handOffsetUp", -.1},
-			{"vr_handAnglePitch", -20}, {"vr_handAngleYaw", 0}, {"vr_handAngleRoll", 0}};
-		require(presets[1]["values"] == quest_values, "Quest 3 matches the accepted six-value calibration exactly");
-		for (const auto& preset : presets)
+			"Changing defaults must not overwrite a saved custom point");
+		for (bool standard : {false, true})
 		{
+			const auto presets = controller_presets(standard);
+			require(presets.size() == 1 && presets[0]["id"] == "none" && presets[0]["label"] == "None",
+				"Both calibration banks expose only the shared None preset");
+			const auto& fields = standard ? vr::settings::standard_hand_alignment : vr::settings::hand_alignment;
+			for (const auto& field : fields)
+				require(initial[field.name] == 0 && presets[0]["values"][field.name] == 0,
+					"New profiles and None must zero all six alignment fields in both banks");
 			auto candidate = initial;
-			candidate.update(preset["values"]);
+			candidate.update(presets[0]["values"]);
 			require(validate(candidate), "Every compiled preset must pass the normal save validation");
 		}
 		require(initial[vr::settings::aim_assist_strength.name] == 0, "VR aim assist must default off");
@@ -348,11 +341,9 @@ int main(int argc, char** argv)
 			"seta cg_fov \"90\"\r\nseta vr_wristPivotUp \"-0.075\"\r\n";
 		const auto original = preserved + "seta vr_turnMode \"smooth\"\r\n"
 			"seta vr_handOffsetUp \"0.1\"\r\nseta VR_HANDOFFSETUP \"-.2\" // calibrated\r\n";
-		auto quest_settings = initial;
-		quest_settings.update(quest_values);
-		const auto quest_config = update_config(original, quest_settings);
-		require(quest_config.substr(0, preserved.size()) == preserved && read_values(quest_config) == quest_settings,
-			"Preset values round trip without changing advanced wrist calibration or unrelated config");
+		const auto default_config = update_config(original, initial);
+		require(default_config.substr(0, preserved.size()) == preserved && read_values(default_config) == initial,
+			"Reset to zero defaults preserves retired advanced fields and unrelated config");
 		require(read_values(original)[vr::settings::hand_up.name] == -.2, "Last recognized assignment wins");
 		const auto updated = update_config(original, changed);
 		require(updated.substr(0, preserved.size()) == preserved, "Unrelated config and UTF-8 must survive verbatim");
