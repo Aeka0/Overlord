@@ -9,6 +9,7 @@
 #include <iostream>
 #include <fstream>
 #include <limits>
+#include <sstream>
 #include <shellapi.h>
 
 namespace
@@ -419,7 +420,7 @@ int main(int argc, char** argv)
 			auto issues = json::array();
 			append_risks(issues, safe_graphics, true);
 			require(issues.empty(), "Safe native graphics settings pass preflight");
-			const std::string unsafe = "\xef\xbb\xbfseta r_ssaaSamples 1\nseta 0x70BF1633 4\nseta r_preloadShadersFrontendAllow 1\nseta r_preloadShaders 0\nseta sm_cacheSunShadow Enabled\nseta sm_cacheSpotShadows 0\nbind F2 togglemenu\n";
+			const std::string unsafe = "\xef\xbb\xbfseta r_ssaaSamples 1\nseta 0x70BF1633 4\nseta r_preloadShadersFrontendAllow 1\nseta r_preloadShaders 0\nseta sm_cacheSunShadow Enabled\nseta sm_cacheSpotShadows 0\nseta r_fill_texture_memory 0\nbind F2 togglemenu\n";
 			const auto values = read_risk_settings(unsafe);
 			require(values[0] == "4", "Last hashed assignment wins alongside named assignments and BOM");
 			append_risks(issues, unsafe, true);
@@ -435,7 +436,7 @@ int main(int argc, char** argv)
 			require(!launch_allowed(warnings, json::array()) && !launch_allowed(warnings, json::array({"shaders"})) && launch_allowed(warnings, json::array({"shaders", "shadows"})),
 				"Every currently present warning requires acknowledgement on this launch");
 			issues = json::array(); append_risks(issues, "", false);
-			require(issues.size() == 3 && issues[0]["severity"] == "error" && issues[0]["fixable"] == false,
+			require(issues.size() == 4 && issues[0]["severity"] == "error" && issues[0]["fixable"] == false,
 				"Unknown values are explicit and game-profile repair is unavailable outside a game directory");
 			require(risk_value(0, std::string("1.0")) == risk_state::safe && risk_value(0, std::string("garbage")) == risk_state::unknown,
 				"SSAA compares native numeric meaning and malformed values cannot pass");
@@ -443,6 +444,32 @@ int main(int argc, char** argv)
 			require(invalid_fix, "Repair targets are a fixed allowlist rather than user-supplied paths");
 			issues = json::array(); append_risks(issues, "seta r_ssaaSamples \xff\n", true);
 			require(!issues.dump().empty(), "Malformed non-UTF-8 risk values are classified without leaking invalid text to the UI");
+			for (const auto* value : {"1", "true", "TRUE", "0", "false", "False", "invalid"})
+			{
+				issues = json::array();
+				const auto profile = safe_graphics + "seta r_fill_texture_memory " + value + "\n";
+				append_risks(issues, profile, true);
+				const bool safe = same_name(value, "false") || std::string_view(value) == "0";
+				require(issues.empty() == safe, "Fill memory accepts native boolean text and saved numeric values");
+				if (safe) continue;
+				require(issues.size() == 1 && issues[0]["id"] == "fillMemory" && issues[0]["severity"] == "warning" && issues[0]["fixable"] == true,
+					"Fill memory is a repairable warning, including unrecognized values");
+				require(issues[0]["detailKey"] == (std::string_view(value) == "invalid" ? "preflight.unknownSetting" : "preflight.fillMemoryDetail"),
+					"Enabled fill memory shows its performance warning");
+				require(!launch_allowed(report(issues, true), json::array()) && launch_allowed(report(issues, true), json::array({"fillMemory"})),
+					"Fill memory warning requires acknowledgement for this launch");
+			}
+			std::ostringstream fill_hash;
+			fill_hash << "0x" << std::hex << static_cast<std::uint32_t>(dvars::generate_hash("r_fill_texture_memory"));
+			const auto fill_profile = unsafe + "seta r_fill_texture_memory true\nseta " + fill_hash.str() + " 0\n";
+			require(read_risk_settings(fill_profile)[5] == "0", "Last hashed fill-memory assignment wins");
+			const auto fill_repaired = disable_risk_settings(fill_profile, risk_group("fillMemory"));
+			const auto fill_values = read_risk_settings(fill_repaired);
+			require(fill_values[5] == "0" && fill_values[0] == "4" && fill_values[1] == "1" && fill_values[3] == "Enabled" &&
+				fill_repaired.find(fill_hash.str()) == std::string::npos && fill_repaired.find("bind F2 togglemenu") != std::string::npos,
+				"Fill-memory repair removes named/hashed duplicates and preserves other risks and bindings");
+			require(disable_risk_settings(fill_repaired, risk_group("fillMemory")) == fill_repaired,
+				"Fill-memory repair is idempotent");
 		}
 		require(safe_graphics.substr(0, 3) == "\xef\xbb\xbf", "Offline repair preserves UTF-8 BOM");
 		require(safe_graphics.find("0x70BF1633") == std::string::npos && safe_graphics.find("R_SSAASAMPLES") == std::string::npos,

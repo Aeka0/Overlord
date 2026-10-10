@@ -8,12 +8,16 @@ Clicking **Launch game** runs a fresh check beside the launcher executable.
 Missing/invalid supported game EXEs, `amd_ags_x64.dll`, `bink2w64.dll`, and the
 OpenXR loader when OpenXR is selected are blocking red items. SSAA must be
 explicitly saved as 1 (Off); other or unknown values also block startup. Shader
-preloading and sun/spot shadow caching are yellow warnings, including profiles
-that do not establish explicit safe values. Warnings may be accepted for that
-launch only. There is no persistent warning-suppression option.
+preloading, sun/spot shadow caching and filling remaining video memory are yellow
+warnings, including profiles that do not establish explicit safe values. Warnings
+may be accepted for that launch only. There is no persistent warning-suppression option.
 
-Each repairable row offers **Fix**. SSAA, shader preloading and shadow caching
-are repaired separately with the existing atomic profile writer. A missing
+Filling remaining video memory reduces the performance of streaming and other
+VR-related software; its warning recommends disabling the option.
+
+Each repairable row offers **Fix**. SSAA, shader preloading, shadow caching and
+filling remaining video memory are repaired separately with the existing atomic
+profile writer. A missing
 OpenXR loader is restored from the matching SDK DLL embedded in the launcher.
 Original game EXEs/DLLs must be restored from the game installation. OpenVR is
 statically linked, and the TLS helper is already embedded; neither requires an
@@ -24,14 +28,16 @@ so a new blocking problem or unacknowledged warning returns to the dialog.
 **VR Settings > Debug > Disable all risk settings** immediately saves the native
 game configuration without starting the game. It disables SSAA, shader caching
 (frontend precaching and level preloading), cached sun shadows and cached spot
-shadows. A status message beside the button reports success or a retryable error.
+shadows, as well as filling remaining video memory. A status message beside the
+button reports success or a retryable error.
 Other settings, bindings and any unsaved VR draft are preserved.
 
 The action uses the same profile selection and atomic writer as VR settings.
 It writes `r_ssaaSamples = 1`, `r_preloadShadersFrontendAllow = 0`,
-`r_preloadShaders = 0`, `sm_cacheSunShadow = Disabled` and
-`sm_cacheSpotShadows = Disabled`. Named and hexadecimal-hash assignments are
-merged together, including duplicates. The game reads the saved values on its
+`r_preloadShaders = 0`, `sm_cacheSunShadow = Disabled`,
+`sm_cacheSpotShadows = Disabled` and `r_fill_texture_memory = 0`. Named and
+hexadecimal-hash assignments are merged together, including duplicates.
+The game reads the saved values on its
 next start; this action does not delete cache files or alter a running game.
 
 ## VR backend selection

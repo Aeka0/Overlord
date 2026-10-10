@@ -27,6 +27,8 @@
     "preflight.shadersDetail": "Shader preloading is enabled and may cause IDXGI and Texture3D crashes during loading. Fix disables frontend and level shader preloading.",
     "preflight.shadows": "Shadow caching",
     "preflight.shadowsDetail": "Shadow caching is enabled and may cause rendering problems in VR. Fix disables both sun and spot shadow caches.",
+    "preflight.fillMemory": "Fill remaining video memory",
+    "preflight.fillMemoryDetail": "Filling remaining video memory is enabled and reduces the performance of streaming and other VR-related software. Fix disables this setting.",
     "preflight.unknownSetting": "The saved profile does not establish a safe value for this setting. Fix explicitly disables it.",
     "preflight.fixFailed": "The repair could not be saved. Check folder permissions and whether the file is in use."
   },
@@ -58,6 +60,8 @@
     "preflight.shadersDetail": "着色器预加载已开启，可能导致加载期间出现 IDXGI 和 Texture3D 崩溃。修复会关闭前端和关卡的着色器预加载。",
     "preflight.shadows": "阴影缓存",
     "preflight.shadowsDetail": "阴影缓存已开启，可能导致 VR 渲染问题。修复会关闭太阳光和聚光灯的阴影缓存。",
+    "preflight.fillMemory": "填充剩余显存",
+    "preflight.fillMemoryDetail": "填充剩余显存已开启，会导致串流及其他 VR 相关软件性能下降。修复会关闭此项设置。",
     "preflight.unknownSetting": "已保存的配置无法确认此项处于安全值。修复会明确将其关闭。",
     "preflight.fixFailed": "无法保存修复。请检查目录权限及文件是否被占用。"
   },
@@ -89,6 +93,8 @@
     "preflight.shadersDetail": "著色器預載入已開啟，可能導致載入期間出現 IDXGI 和 Texture3D 當機。修復會關閉前端和關卡的著色器預載入。",
     "preflight.shadows": "陰影快取",
     "preflight.shadowsDetail": "陰影快取已開啟，可能導致 VR 繪製問題。修復會關閉太陽光和聚光燈的陰影快取。",
+    "preflight.fillMemory": "填充剩餘顯示記憶體",
+    "preflight.fillMemoryDetail": "填充剩餘顯示記憶體已開啟，會導致串流及其他 VR 相關軟體效能下降。修復會關閉此項設定。",
     "preflight.unknownSetting": "已儲存的設定無法確認此項處於安全值。修復會明確將其關閉。",
     "preflight.fixFailed": "無法儲存修復。請檢查目錄權限及檔案是否被佔用。"
   },
@@ -120,6 +126,8 @@
     "preflight.shadersDetail": "Le préchargement des shaders est activé et peut provoquer des plantages IDXGI et Texture3D pendant le chargement. Corriger désactive le préchargement des menus et des niveaux.",
     "preflight.shadows": "Cache des ombres",
     "preflight.shadowsDetail": "Le cache des ombres peut perturber le rendu VR. Corriger désactive les caches des ombres du soleil et des projecteurs.",
+    "preflight.fillMemory": "Remplir la mémoire vidéo restante",
+    "preflight.fillMemoryDetail": "Le remplissage de la mémoire vidéo restante est activé et réduit les performances du streaming et des autres logiciels liés à la VR. Corriger désactive ce réglage.",
     "preflight.unknownSetting": "Le profil enregistré ne confirme pas une valeur sûre. Corriger désactive explicitement ce réglage.",
     "preflight.fixFailed": "La correction n’a pas pu être enregistrée. Vérifiez les permissions et si le fichier est utilisé."
   },
@@ -151,6 +159,8 @@
     "preflight.shadersDetail": "Shader-Vorladen ist aktiv und kann während des Ladens zu IDXGI- und Texture3D-Abstürzen führen. Beheben deaktiviert das Vorladen für Menüs und Level.",
     "preflight.shadows": "Schatten-Cache",
     "preflight.shadowsDetail": "Der aktive Schatten-Cache kann VR-Darstellungsfehler verursachen. Beheben deaktiviert Sonnen- und Spotlicht-Schatten-Caches.",
+    "preflight.fillMemory": "Verbleibenden Grafikspeicher füllen",
+    "preflight.fillMemoryDetail": "Das Füllen des verbleibenden Grafikspeichers ist aktiviert und verringert die Leistung von Streaming und anderer VR-Software. Beheben deaktiviert diese Einstellung.",
     "preflight.unknownSetting": "Das gespeicherte Profil bestätigt keinen sicheren Wert. Beheben deaktiviert diese Einstellung ausdrücklich.",
     "preflight.fixFailed": "Die Reparatur konnte nicht gespeichert werden. Prüfen Sie die Dateirechte und ob die Datei verwendet wird."
   },
@@ -182,6 +192,8 @@
     "preflight.shadersDetail": "La precarga de shaders está activada y puede provocar fallos de IDXGI y Texture3D durante la carga. Corregir desactiva la precarga de menús y niveles.",
     "preflight.shadows": "Caché de sombras",
     "preflight.shadowsDetail": "La caché de sombras puede causar problemas de renderizado en RV. Corregir desactiva las cachés del sol y los focos.",
+    "preflight.fillMemory": "Llenar la memoria de vídeo restante",
+    "preflight.fillMemoryDetail": "Llenar la memoria de vídeo restante está activado y reduce el rendimiento del streaming y de otros programas relacionados con la RV. Corregir desactiva este ajuste.",
     "preflight.unknownSetting": "El perfil guardado no confirma un valor seguro. Corregir desactiva explícitamente este ajuste.",
     "preflight.fixFailed": "No se pudo guardar la corrección. Revisa los permisos y si el archivo está en uso."
   },
@@ -213,6 +225,8 @@
     "preflight.shadersDetail": "Предзагрузка шейдеров включена и может вызывать сбои IDXGI и Texture3D во время загрузки. Исправление отключит предзагрузку для меню и уровней.",
     "preflight.shadows": "Кэширование теней",
     "preflight.shadowsDetail": "Кэширование теней может вызывать ошибки изображения в VR. Исправление отключит кэши теней солнца и прожекторов.",
+    "preflight.fillMemory": "Заполнить оставшуюся видеопамять",
+    "preflight.fillMemoryDetail": "Заполнение оставшейся видеопамяти включено и снижает производительность стриминга и других программ для VR. Исправление отключит эту настройку.",
     "preflight.unknownSetting": "Сохранённый профиль не подтверждает безопасное значение. Исправление явно отключит эту настройку.",
     "preflight.fixFailed": "Не удалось сохранить исправление. Проверьте права доступа и не используется ли файл."
   },
@@ -244,6 +258,8 @@
     "preflight.shadersDetail": "シェーダー事前読み込みが有効で、読み込み中に IDXGI や Texture3D のクラッシュを招く可能性があります。修復するとメニューとステージの事前読み込みを無効にします。",
     "preflight.shadows": "シャドウキャッシュ",
     "preflight.shadowsDetail": "シャドウキャッシュは VR 描画の問題を招く可能性があります。修復すると太陽光とスポットライトのキャッシュを無効にします。",
+    "preflight.fillMemory": "残りのビデオメモリを埋める",
+    "preflight.fillMemoryDetail": "残りのビデオメモリを埋める設定が有効で、ストリーミングやその他の VR 関連ソフトウェアのパフォーマンスが低下します。修復するとこの設定を無効にします。",
     "preflight.unknownSetting": "保存された設定から安全な値を確認できません。修復するとこの設定を明示的に無効にします。",
     "preflight.fixFailed": "修復を保存できませんでした。フォルダーのアクセス権とファイルの使用状況を確認してください。"
   },
@@ -275,6 +291,8 @@
     "preflight.shadersDetail": "셰이더 사전 로딩이 켜져 있으며 로딩 중 IDXGI 및 Texture3D 충돌을 일으킬 수 있습니다. 수정하면 메뉴와 레벨의 사전 로딩을 끕니다.",
     "preflight.shadows": "그림자 캐시",
     "preflight.shadowsDetail": "그림자 캐시는 VR 렌더링 문제를 일으킬 수 있습니다. 수정하면 태양광과 스포트라이트 그림자 캐시를 끕니다.",
+    "preflight.fillMemory": "남은 비디오 메모리 채우기",
+    "preflight.fillMemoryDetail": "남은 비디오 메모리 채우기가 켜져 있어 스트리밍 및 기타 VR 관련 소프트웨어의 성능이 저하됩니다. 수정하면 이 설정을 끕니다.",
     "preflight.unknownSetting": "저장된 설정에서 안전한 값을 확인할 수 없습니다. 수정하면 이 설정을 명시적으로 끕니다.",
     "preflight.fixFailed": "수정 내용을 저장할 수 없습니다. 폴더 권한과 파일 사용 여부를 확인하세요."
   }

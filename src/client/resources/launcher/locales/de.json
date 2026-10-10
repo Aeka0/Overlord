@@ -1,8 +1,8 @@
 {
   "settings.riskHeading": "Risikoeinstellungen",
   "settings.disableRisk": "Alle Risikoeinstellungen deaktivieren",
-  "settings.riskHint": "SSAA, Shader-Cache und beide Schatten-Caches ohne Spielstart in der Spielkonfiguration deaktivieren. Wird sofort gespeichert.",
-  "status.riskDisabled": "SSAA, Shader-Cache und beide Schatten-Caches sind deaktiviert. Für den nächsten Spielstart gespeichert.",
+  "settings.riskHint": "Das Füllen des verbleibenden Grafikspeichers, SSAA, Shader-Cache und beide Schatten-Caches ohne Spielstart in der Spielkonfiguration deaktivieren. Wird sofort gespeichert.",
+  "status.riskDisabled": "Das Füllen des verbleibenden Grafikspeichers, SSAA, Shader-Cache und beide Schatten-Caches sind deaktiviert. Für den nächsten Spielstart gespeichert.",
   "error.disableRisk": "Risikoeinstellungen konnten nicht deaktiviert werden.",
   "nav.play": "Spielen",
   "nav.language": "Sprache",

@@ -1,8 +1,8 @@
 {
   "settings.riskHeading": "Ajustes de riesgo",
   "settings.disableRisk": "Desactivar todos los ajustes de riesgo",
-  "settings.riskHint": "Desactiva SSAA, la caché de sombreadores y ambas cachés de sombras en la configuración sin iniciar el juego. Se guarda al instante.",
-  "status.riskDisabled": "SSAA, la caché de sombreadores y ambas cachés de sombras están desactivados. Guardado para el próximo inicio del juego.",
+  "settings.riskHint": "Desactiva el llenado de la memoria de vídeo restante, SSAA, la caché de sombreadores y ambas cachés de sombras en la configuración sin iniciar el juego. Se guarda al instante.",
+  "status.riskDisabled": "El llenado de la memoria de vídeo restante, SSAA, la caché de sombreadores y ambas cachés de sombras están desactivados. Guardado para el próximo inicio del juego.",
   "error.disableRisk": "No se pudieron desactivar los ajustes de riesgo.",
   "nav.play": "Jugar",
   "nav.language": "Idioma",

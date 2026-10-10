@@ -1,8 +1,8 @@
 {
   "settings.riskHeading": "風險設定",
   "settings.disableRisk": "關閉所有風險設定",
-  "settings.riskHint": "無需啟動遊戲，即可關閉遊戲設定中的 SSAA、著色器快取及兩項陰影快取。點擊後立即儲存。",
-  "status.riskDisabled": "已關閉 SSAA、著色器快取及兩項陰影快取，設定已儲存，下次啟動遊戲時生效。",
+  "settings.riskHint": "無需啟動遊戲，即可關閉遊戲設定中的填充剩餘顯示記憶體、SSAA、著色器快取及兩項陰影快取。點擊後立即儲存。",
+  "status.riskDisabled": "已關閉填充剩餘顯示記憶體、SSAA、著色器快取及兩項陰影快取，設定已儲存，下次啟動遊戲時生效。",
   "error.disableRisk": "無法關閉風險設定。",
   "nav.play": "開始游戲",
   "nav.language": "語言",

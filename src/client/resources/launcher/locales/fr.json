@@ -1,8 +1,8 @@
 {
   "settings.riskHeading": "Paramètres à risque",
   "settings.disableRisk": "Désactiver tous les paramètres à risque",
-  "settings.riskHint": "Désactive le SSAA, le cache des shaders et les deux caches d’ombres dans la configuration sans lancer le jeu. Enregistrement immédiat.",
-  "status.riskDisabled": "Le SSAA, le cache des shaders et les deux caches d’ombres sont désactivés. Configuration enregistrée pour le prochain lancement du jeu.",
+  "settings.riskHint": "Désactive le remplissage de la mémoire vidéo restante, le SSAA, le cache des shaders et les deux caches d’ombres dans la configuration sans lancer le jeu. Enregistrement immédiat.",
+  "status.riskDisabled": "Le remplissage de la mémoire vidéo restante, le SSAA, le cache des shaders et les deux caches d’ombres sont désactivés. Configuration enregistrée pour le prochain lancement du jeu.",
   "error.disableRisk": "Impossible de désactiver les paramètres à risque.",
   "nav.play": "Jouer",
   "nav.language": "Langue",

@@ -6,22 +6,26 @@
 
 namespace launcher_vr_settings
 {
+	enum class risk_value_type { samples, boolean, toggle_enum };
+
 	struct risk_setting
 	{
 		const char* name;
 		const char* disabled_value;
+		risk_value_type type;
 	};
 
 	// Native PCVideo/AdvancedVideo options, committed by PCOptions. SSAA Off
 	// means one sample; shadow caches are enums, not the derived *Enabled bools.
 	// Disable both frontend precaching and level shader preloading. The latter
 	// also gates its subordinate AfterCinematic timing option.
-	inline constexpr std::array<risk_setting, 5> risk_settings{{
-		{"r_ssaaSamples", "1"},
-		{"r_preloadShadersFrontendAllow", "0"},
-		{"r_preloadShaders", "0"},
-		{"sm_cacheSunShadow", "Disabled"},
-		{"sm_cacheSpotShadows", "Disabled"},
+	inline constexpr std::array<risk_setting, 6> risk_settings{{
+		{"r_ssaaSamples", "1", risk_value_type::samples},
+		{"r_preloadShadersFrontendAllow", "0", risk_value_type::boolean},
+		{"r_preloadShaders", "0", risk_value_type::boolean},
+		{"sm_cacheSunShadow", "Disabled", risk_value_type::toggle_enum},
+		{"sm_cacheSpotShadows", "Disabled", risk_value_type::toggle_enum},
+		{"r_fill_texture_memory", "0", risk_value_type::boolean},
 	}};
 
 	inline bool risk_name(std::string_view saved, const char* name)
@@ -56,6 +60,7 @@ namespace launcher_vr_settings
 		if (id == "ssaa") return {risk_settings.data(), 1};
 		if (id == "shaders") return {risk_settings.data() + 1, 2};
 		if (id == "shadows") return {risk_settings.data() + 3, 2};
+		if (id == "fillMemory") return {risk_settings.data() + 5, 1};
 		throw std::runtime_error("Unsupported risk-setting repair.");
 	}
 
