@@ -48,8 +48,8 @@
           "inputs": { "click": { "output": "/actions/gameplay/in/left_squeeze" } },
           "parameters": {
             "force_input": "force",
-            "click_activate_threshold": "0.15",
-            "click_deactivate_threshold": "0.05",
+            "click_activate_threshold": "0.08",
+            "click_deactivate_threshold": "0.02",
             "haptic_amplitude": "0"
           }
         },
@@ -58,8 +58,8 @@
           "inputs": { "click": { "output": "/actions/gameplay/in/right_squeeze" } },
           "parameters": {
             "force_input": "force",
-            "click_activate_threshold": "0.15",
-            "click_deactivate_threshold": "0.05",
+            "click_activate_threshold": "0.08",
+            "click_deactivate_threshold": "0.02",
             "haptic_amplitude": "0"
           }
         },
