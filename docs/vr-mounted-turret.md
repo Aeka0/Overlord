@@ -191,7 +191,44 @@ The adapter should supply one eligible attack intent through the native turret
 command route, exclude it from carried-weapon ownership, and preserve native
 spin-up, cadence, effects, damage, and script events. Do not call the handheld
 bullet adapter or synthesize an additional shot. The exact hand gate must cover
-every input source during VR turret ownership.
+every input source during VR turret ownership.
+
+The aim update alone does not establish bullet direction. Native fire later
+calls `0x140534500` from `0x140534A17` to build weapon parameters. Its player
+branch reads player view angles again through `0x140680AE0`, after the mounted
+aim adapter has restored independent head look. This made the visible gun and
+actual shots disagree (public issues #19 and #27).
+
+For the local player's currently owned `minigun_laatpv_player` in VR, the
+parameter-call adapter selects the existing non-client geometry branch using
+the turret as the geometry source. That branch composes native turret base and
+local aim axes and takes the native muzzle tag position. The surrounding fire
+function retains the real shooter for attribution, spread, damage and script
+notifications. No player angles are modified. Other profiles and ownership
+states retain the original geometry source. The call target, parameter-function
+prologue, player-geometry branch and native matrix composition are verified
+before installing this adapter. `vr_turret_status` reports
+`fire_parameter_calls` and `native_fire_parameters`; headset alignment and
+affected-mission firing acceptance remain required.
+
+### Mounted aiming laser
+
+After VR hand takeover, Team Player's Suburban minigun displays a thin red
+laser from its unique `tag_flash`. The final frontend camera refreshes the
+completed gun skeleton and captures its emitter, then releases the native
+DObj lock before querying collision. The emitter binding is cached per asset
+epoch. Authored entry, pause, focus/tracking loss, recenter and dismount omit
+the laser until ownership and fresh tracking are valid again.
+
+The shared weapon-laser service supplies the existing client collision trace,
+0.6 mm beam half-width, 4 mm contact spot and per-eye reverse-Z depth rendering.
+A bounded sample ring qualifies the emitter and collision result against the
+exact scene-source camera; older/future cameras and samples over 150 ms are
+rejected. Both eyes reuse one world ray. The composition callback performs no
+native collision calls, and missing depth omits the beam. No map asset, native
+laser definition or separate renderer is added. `vr_weapon_laser_status`
+reports `mounted_traces` and `mounted_pairs`. Headset verification must confirm
+the emitted direction, both-eye occlusion and alignment with actual shots.
 
 ### Aim and camera
 

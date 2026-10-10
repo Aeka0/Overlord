@@ -3,6 +3,7 @@
 #include "component/vr/gameplay/hands/rig_builder.hpp"
 #include "mounted_turret.hpp"
 #include "mounted_turret_pose.hpp"
+#include "mounted_turret_laser.hpp"
 #include "campaign/sequences/camera_policies.hpp"
 #include "shoulder_anchors.hpp"
 #include "native_carry.hpp"
@@ -72,6 +73,8 @@ namespace vr::gameplay::mounted
 		std::atomic_uint64_t world_depth_submissions{};
 		std::atomic_uint64_t model_pose_updates{},shield_publications{};
 		std::atomic_uint64_t render_preparations{};
+		std::atomic_uint64_t fire_parameter_calls{},native_fire_parameters{};
+		std::atomic_bool laser_ready{};
 		std::atomic_uint64_t skin_preparations{},skin_pose_changes{},skin_rejections{};
 		template<class T> T read(const void* p,std::size_t offset)
 		{T v{};std::memcpy(&v,static_cast<const std::byte*>(p)+offset,sizeof(v));return v;}
@@ -355,6 +358,25 @@ namespace vr::gameplay::mounted
 			if (!c.valid || !control.firing(input)) write(ps,0xe90c,read<unsigned>(ps,0xe90c)&~1u);
 			publish_control(&suburban,input,c,control.angles);
 		}
+		void fire_parameters_stub(game::gentity_s* turret,game::gentity_s* player,void* parameters)
+		{
+			++fire_parameter_calls;
+			const auto original=[&](game::gentity_s* source){utils::hook::invoke<void>(0x140534500,turret,source,parameters);};
+			if (!alive || !installed || player!=&game::g_entities[0] || supported(turret)!=&suburban ||
+				!head_pose_bridge::get_status().enabled) {original(player);return;}
+			const auto* ps=read<const std::byte*>(player,0x118);
+			const auto entity=read<std::uint16_t>(turret,0x8c);
+			if (!ps || entity<=0 || entity>=4000 || !attached(read<unsigned>(ps,0x58)) ||
+				read<std::uint16_t>(ps,0x1e)!=entity || read<std::uint16_t>(turret,0x10c)!=1 || read<const void*>(turret,0x118))
+			{original(player);return;}
+			// The player branch reads PS.viewangles again, after aim_stub restored
+			// head look. The existing non-client branch composes the turret's native
+			// base/local aim axes and uses its muzzle tag for both origin witnesses.
+			// This argument selects geometry only: G_Turret_Fire retains the real
+			// player for damage attribution, spread, native fire and notifications.
+			original(turret);
+			++native_fire_parameters;
+		}
 		std::byte* vehicle_player(const game::gentity_s* vehicle)
 		{
 			if(!alive || !installed || !vehicle || !head_pose_bridge::get_status().enabled || supported(vehicle)!=&blackhawk)return nullptr;
@@ -419,6 +441,62 @@ namespace vr::gameplay::mounted
 		{const auto* p=reinterpret_cast<const std::byte*>(address);return p[0]==std::byte{0xe8} && address+5+read<std::int32_t>(p,1)==target;}
 	}
 	bool active() noexcept {return admitted(latest());}
+	bool laser_current(std::uint64_t instance,std::uint64_t reference) noexcept
+	{
+		const auto p=latest();const auto input=controller_input::latest_interaction();
+		return laser_ready && alive && installed && p.profile==&suburban && p.instance==instance &&
+			p.reference==reference && fresh(p.at) && p.state.free_hands && p.sampled.valid &&
+			input.focused && !input.orientation_settling && fresh(input.sampled_at) && input.reference_generation==reference;
+	}
+	bool prepare_laser(laser_ray& output) noexcept
+	{
+		laser_ready=false;output={};
+		const auto p=latest();
+		if(!alive || !installed || p.profile!=&suburban || !p.state.free_hands || !p.sampled.valid || !fresh(p.at))return false;
+		const auto input=controller_input::latest_interaction();
+		const auto* paused=game::Dvar_FindVar("cl_paused");
+		head_pose_bridge::spatial_frame body;
+		if(!admitted(p) ||
+			!input.focused || input.orientation_settling || !fresh(input.sampled_at) || input.reference_generation!=p.reference ||
+			!paused || paused->current.integer || *game::keyCatchers || !head_pose_bridge::get_spatial_frame(body) ||
+			!fresh(body.captured_at) || body.generation!=p.reference)return false;
+		auto* object=vr::h2::sp::client_entity_dobj(p.entity,0);const auto assembly=mounted_model(object);
+		if(assembly.profile!=&suburban || !owns_hands(object))return false;
+		const auto* model=assembly.gun;
+		struct binding {const game::XModel* model{};std::uint64_t epoch{};int muzzle{-1};};
+		static binding cached;const auto epoch=asset_epoch.load();
+		if(cached.model!=model || cached.epoch!=epoch)
+		{
+			cached={model,epoch,-1};
+			for(unsigned b=0;b<model->numBones;++b)
+			{
+				const auto* name=game::SL_ConvertToString(model->boneNames[b]);
+				if(name && std::string_view(name)=="tag_flash")
+				{if(cached.muzzle>=0){cached.muzzle=-1;break;}cached.muzzle=int(b);}
+			}
+		}
+		const auto muzzle=cached.muzzle;
+		if(muzzle<0)return false;
+		bone emitter{};
+		{
+			utils::hook::invoke<void>(0x140659010,object);
+			const auto unlock=gsl::finally([&]{utils::hook::invoke<void>(0x1406596C0,object);});
+			for(unsigned b=0;b<read<std::uint8_t>(object,0x10);++b)
+				if(!(read<std::uint32_t>(object,0x80+(b/32)*4)&(0x80000000u>>(b%32))))return false;
+			apply_pose(object,false);
+			const auto* matrices=read<const bone*>(object,0xa8);
+			if(!matrices || !(read<std::uint32_t>(object,0x80+(muzzle/32)*4)&(0x80000000u>>(muzzle%32))))return false;
+			emitter=matrices[muzzle];
+		}
+		const auto* view=*reinterpret_cast<const std::byte* const*>(0x141E39D30);
+		if(!view || !finite(emitter.position) || !finite(rotate(emitter.rotation,{1,0,0})))return false;
+		output.origin=add(emitter.position,read<vec>(view,0x58));
+		output.forward=rotate(emitter.rotation,{1,0,0});output.units=body.units_per_meter;
+		output.instance=p.instance;output.reference=p.reference;output.entity=p.entity;output.at=clock::now();
+		std::copy_n(game::refdef->org,3,output.camera.begin());
+		std::memcpy(output.camera.data()+3,game::refdef->axis,9*sizeof(float));
+		laser_ready=true;return true;
+	}
 	bool hands_active() noexcept {const auto p=latest();return admitted(p) && p.state.free_hands;}
 	game_view::camera_request camera_request() noexcept {return request_for_mount(latest());}
 	camera_view prepare_camera(float* origin,float (*axis)[3]) noexcept
@@ -672,7 +750,11 @@ namespace vr::gameplay::mounted
 			if (!verify(0x140534250,std::array<std::uint8_t,15>{0x48,0x89,0x5c,0x24,8,0x48,0x89,0x74,0x24,0x10,0x57,0x48,0x83,0xec,0x30}) ||
 				!verify(0x14053428A,std::array<std::uint8_t,8>{0xf3,0x0f,0x10,0xb3,0x08,0x01,0,0}) ||
 				!verify(0x1405342E4,std::array<std::uint8_t,8>{0xf3,0x0f,0x10,0xb3,0x0c,0x01,0,0}) ||
-				!call(0x140537669,0x140534250) || !call(0x1403ABDA7,0x140370FC0) || !call(0x1403ABD80,0x140370E10) ||
+				!call(0x140537669,0x140534250) || !call(0x140534A17,0x140534500) ||
+				!verify(0x140534500,std::array<std::uint8_t,20>{0x40,0x55,0x56,0x41,0x55,0x41,0x56,0x48,0x8d,0x6c,0x24,0xd8,0x48,0x81,0xec,0x28,0x01,0,0,0x48}) ||
+				!verify(0x1405345DC,std::array<std::uint8_t,7>{0x49,0x8b,0x8d,0x18,0x01,0,0}) ||
+				!call(0x140534618,0x140680AE0) || !call(0x1405346EC,0x14060FC70) ||
+				!call(0x1403ABDA7,0x140370FC0) || !call(0x1403ABD80,0x140370E10) ||
 				!call(0x14038D093,0x14038D100) || !call(0x1407763E9,0x140776F10) || !call(0x140776EF5,0x140776F10) ||
 				!call(0x14075ECF4,0x140659010) || !call(0x14075ED07,0x14038C9E0) || !call(0x14075ED12,0x1406596C0) ||
 				!verify(0x14038C9E0,std::array<std::uint8_t,10>{0x48,0x89,0x5c,0x24,8,0x48,0x89,0x74,0x24,0x10}) ||
@@ -687,9 +769,11 @@ namespace vr::gameplay::mounted
 			for (const auto target:{reinterpret_cast<void*>(origin_stub),reinterpret_cast<void*>(matrix_stub)})
 				if (utils::hook::is_relatively_far(reinterpret_cast<void*>(0x1403ABD80),target)) return;
 			if (utils::hook::is_relatively_far(reinterpret_cast<void*>(0x14038D093),reinterpret_cast<void*>(client_controller_stub))) return;
+			if (utils::hook::is_relatively_far(reinterpret_cast<void*>(0x140534A17),reinterpret_cast<void*>(fire_parameters_stub))) return;
 			if (utils::hook::is_relatively_far(reinterpret_cast<void*>(0x14075ED07),reinterpret_cast<void*>(render_pose_stub))) return;
 			aim_hook.create(0x140534250,aim_stub);
 			scene_hook.create(0x140776F10,scene_stub);
+			utils::hook::call(0x140534A17,fire_parameters_stub);
 			utils::hook::call(0x1403ABDA7,origin_stub);utils::hook::call(0x1403ABD80,matrix_stub);
 			utils::hook::call(0x14038D093,client_controller_stub);
 			utils::hook::call(0x14075ED07,render_pose_stub);
@@ -713,6 +797,7 @@ namespace vr::gameplay::mounted
 					<<" world_depth_submissions="<<world_depth_submissions.load()
 					<<" model_pose_updates="<<model_pose_updates.load()<<" shield_publications="<<shield_publications.load()
 					<<" render_preparations="<<render_preparations.load()
+					<<" fire_parameter_calls="<<fire_parameter_calls.load()<<" native_fire_parameters="<<native_fire_parameters.load()
 					<<" skin_preparations="<<skin_preparations.load()<<" skin_pose_changes="<<skin_pose_changes.load()<<" skin_rejections="<<skin_rejections.load()
 					<<" gripped="<<published.state.gripped<<" fire_armed="<<published.state.fire_armed<<" pitch="<<published.state.angles[0]<<" yaw="<<published.state.angles[1]
 					<<" requested_pitch="<<published.requested_angles[0]<<" requested_yaw="<<published.requested_angles[1]

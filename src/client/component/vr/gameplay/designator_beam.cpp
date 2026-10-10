@@ -1,5 +1,7 @@
 #include <std_include.hpp>
 #include "designator_visual.hpp"
+#include "weapon_laser.hpp"
+#include "mounted_turret_laser.hpp"
 #include "weapon_interaction.hpp"
 #include "weapon_carry_runtime.hpp"
 #include "weapon_render_pose.hpp"
@@ -37,9 +39,17 @@ namespace vr::gameplay::weapon_laser
 		std::mutex mutex;
 		std::array<sample, 16> samples{};
 		unsigned cursor{};
+		struct mounted_sample
+		{
+			mounted::laser_ray ray;
+			designator_visual::surface surface;
+		};
+		std::array<mounted_sample,16> mounted_samples{};
+		unsigned mounted_cursor{};
 		utils::hook::detour draw_hook;
 		bool installed{};
 		std::atomic_uint64_t traced{}, suppressed{}, pairs{}, drawn{}, missed{};
+		std::atomic_uint64_t mounted_traced{},mounted_pairs{};
 		struct pair_snapshot
 		{
 			std::uint64_t id{}, publication{}, device{};
@@ -48,6 +58,33 @@ namespace vr::gameplay::weapon_laser
 		};
 		thread_local pair_snapshot pair;
 		thread_local world_beam::renderer renderer;
+		bool trace_surface(vec origin,vec forward,float reach,unsigned short skip,int mask,
+			designator_visual::surface& surface)
+		{
+			const auto end=add(origin,scale(forward,reach));
+			game::trace_t hit{};game::Bounds point{};unsigned trace_flags{};
+			utils::hook::invoke<void>(0x1403C70D0,&hit,origin.data(),end.data(),&point,skip,mask,&trace_flags);
+			if(hit.startsolid || hit.allsolid || !std::isfinite(hit.fraction) || hit.fraction<0 || hit.fraction>1)return false;
+			const vec normal{hit.normal[0],hit.normal[1],hit.normal[2]};const bool contact=hit.fraction<1;
+			if(contact && (!std::isfinite(length(normal)) || std::abs(length(normal)-1)>.01f))return false;
+			surface={add(origin,scale(forward,reach*hit.fraction)),contact?normal:vec{0,0,1},reach,contact};
+			return true;
+		}
+		bool project(const eye_composition::event& event,vec start,vec forward,const designator_visual::surface& surface,
+			float units,spatial_panel::vec4 color)
+		{
+			vec end;if(!designator_visual::endpoint(start,forward,surface,units,end))return false;
+			const auto eye=scale(add(event.model_origins.eyes[0],event.model_origins.eyes[1]),.5f);
+			const auto world=designator_visual::geometry(start,end,surface.normal,eye,units);
+			for(unsigned i=0;i<2;++i)
+			{
+				spatial_panel::matrix vp;
+				std::memcpy(vp.data(),event.views.eyes[i].bytes.data()+engine_stereo_view::h2_current_view_projection_offset,sizeof(vp));
+				pair.eyes[i]=designator_visual::project(world,event.model_origins.eyes[i],vp,surface.hit);
+				pair.eyes[i].color=color;
+			}
+			pair.valid=true;++pairs;return true;
+		}
 		void draw(int client,
 		          const void* context,
 		          const void* entity,
@@ -154,37 +191,15 @@ namespace vr::gameplay::weapon_laser
 				++suppressed;
 				return;
 			}
-			const auto end = add(pose.position, scale(pose.axis[0], reach));
-			game::trace_t hit{};
-			game::Bounds point{};
-			unsigned trace_flags{};
 			// Exact native client query on its original frontend thread. No engine calls in eye composition.
-			utils::hook::invoke<void>(0x1403C70D0,
-			                          &hit,
-			                          pose.position.data(),
-			                          end.data(),
-			                          &point,
-			                          static_cast<unsigned short>(0),
-			                          context ? 0x280e821 : 0x280e861,
-			                          &trace_flags);
-			if (hit.startsolid || hit.allsolid || !std::isfinite(hit.fraction) || hit.fraction < 0 ||
-			    hit.fraction > 1)
-			{
-				++suppressed;
-				return;
-			}
-			const vec normal{hit.normal[0], hit.normal[1], hit.normal[2]};
-			const bool contact = hit.fraction < 1;
-			if (contact && (!std::isfinite(length(normal)) || std::abs(length(normal) - 1) > .01f))
+			designator_visual::surface surface;
+			if (!trace_surface(pose.position,pose.axis[0],reach,0,context?0x280e821:0x280e861,surface))
 			{
 				++suppressed;
 				return;
 			}
 			const sample value{pose,
-			                   {add(pose.position, scale(pose.axis[0], reach * hit.fraction)),
-			                    contact ? normal : vec{0, 0, 1},
-			                    reach,
-			                    contact},
+			                   surface,
 			                   now,
 			                   color,
 			                   receiver_tag,
@@ -202,6 +217,20 @@ namespace vr::gameplay::weapon_laser
 			pair.id = event.pair_id;
 			pair.publication = event.views.eyes[0].publication;
 			pair.device = event.device_generation;
+			if(!event.model_origins.valid)return;
+			mounted_sample turret;
+			const auto now = controller_input::clock::now();
+			{
+				const std::lock_guard lock(mutex);
+				for(const auto& value:mounted_samples)
+					if(mounted::laser_matches_scene(value.ray,event.views,now) && value.ray.at>turret.ray.at)turret=value;
+			}
+			if(turret.ray.instance && mounted::laser_current(turret.ray.instance,turret.ray.reference))
+			{
+				if(project(event,turret.ray.origin,turret.ray.forward,turret.surface,turret.ray.units,{1,.002f,.001f,1}))++mounted_pairs;
+				return;
+			}
+			if(!weapons::carry::active())return;
 			const auto held = weapons::carry::current_hold();
 			weapon_render_pose::snapshot rendered;
 			if (!event.model_origins.valid || !valid_hand(held.holding_hand()) ||
@@ -212,7 +241,6 @@ namespace vr::gameplay::weapon_laser
 			    !weapons::valid_model_anchor(pose.model))
 				return;
 			sample trace;
-			const auto now = controller_input::clock::now();
 			{
 				const std::lock_guard lock(mutex);
 				for (const auto& value : samples)
@@ -237,32 +265,14 @@ namespace vr::gameplay::weapon_laser
 					return;
 			}
 			const auto start = weapons::place_model_anchor(pose.model, event.model_origins.placement);
-			vec end;
-			if (!designator_visual::endpoint(start, pose.axis[0], trace.surface, pose.units_per_meter, end))
-				return;
-			const auto eye = scale(add(event.model_origins.eyes[0], event.model_origins.eyes[1]), .5f);
-			const auto world =
-			    designator_visual::geometry(start, end, trace.surface.normal, eye, pose.units_per_meter);
-			for (unsigned i = 0; i < 2; ++i)
-			{
-				spatial_panel::matrix vp;
-				std::memcpy(vp.data(),
-				            event.views.eyes[i].bytes.data() +
-				                engine_stereo_view::h2_current_view_projection_offset,
-				            sizeof(vp));
-				pair.eyes[i] =
-				    designator_visual::project(world, event.model_origins.eyes[i], vp, trace.surface.hit);
-				pair.eyes[i].color = trace.color;
-			}
-			pair.valid = true;
-			++pairs;
+			project(event,start,pose.axis[0],trace.surface,pose.units_per_meter,trace.color);
 		}
 		void compose(const eye_composition::event& event,
 		             ID3D11DeviceContext* context,
 		             ID3D11ShaderResourceView*,
 		             ID3D11RenderTargetView* target) noexcept
 		{
-			if (!installed || event.eye > 1 || !weapons::carry::active())
+			if (!installed || event.eye > 1)
 				return;
 			if (pair.id != event.pair_id || pair.publication != event.views.eyes[0].publication ||
 			    pair.device != event.device_generation)
@@ -275,6 +285,18 @@ namespace vr::gameplay::weapon_laser
 			else
 				++missed;
 		}
+	}
+	void prepare_mounted() noexcept
+	{
+		if(!installed)return;
+		mounted::laser_ray ray;if(!mounted::prepare_laser(ray))return;
+		// Same native frontend trace and shared world-depth renderer as carried
+		// lasers. The muzzle is outside the gun; ignore the owning turret itself.
+		designator_visual::surface surface;
+		if(!trace_surface(ray.origin,ray.forward,20000.f,static_cast<unsigned short>(ray.entity),0x280e861,surface))
+		{++suppressed;return;}
+		const std::lock_guard lock(mutex);
+		mounted_samples[mounted_cursor++%mounted_samples.size()]={ray,surface};++mounted_traced;
 	}
 	class component final : public component_interface
 	{
@@ -319,14 +341,18 @@ namespace vr::gameplay::weapon_laser
 					    const std::lock_guard lock(mutex);
 					    samples = {};
 					    cursor = 0;
+					    mounted_samples = {};
+					    mounted_cursor = 0;
 				    }
 			    });
 			const auto status = []
 			{
 				console::info(
-				    "[VR weapon laser] installed=%d traces=%llu suppressed=%llu scene_pairs=%llu eye_draws=%llu depth_failures=%llu\n",
+				    "[VR weapon laser] installed=%d traces=%llu mounted_traces=%llu mounted_pairs=%llu suppressed=%llu scene_pairs=%llu eye_draws=%llu depth_failures=%llu\n",
 				    installed,
 				    traced.load(),
+				    mounted_traced.load(),
+				    mounted_pairs.load(),
 				    suppressed.load(),
 				    pairs.load(),
 				    drawn.load(),

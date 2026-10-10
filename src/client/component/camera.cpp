@@ -4,6 +4,7 @@
 #include "vr/gameplay/scripted_camera_reference.hpp"
 #include "vr/gameplay/fixed_sniper.hpp"
 #include "vr/gameplay/mounted_turret.hpp"
+#include "vr/gameplay/weapon_laser.hpp"
 #include "vr/gameplay/javelin_screen.hpp"
 #include "vr/gameplay/ladder_runtime.hpp"
 #include "loader/component_loader.hpp"
@@ -218,6 +219,7 @@ namespace camera
 				vr::engine_stereo_renderer::camera_observation_stage::after_mod,
 				a1, nullptr, 0.0f, caller);
 			utils::hook::invoke<void>(0x1403B07C0, a1);
+			vr::gameplay::weapon_laser::prepare_mounted();
 			vr::engine_stereo_renderer::observe_camera_state(
 				vr::engine_stereo_renderer::camera_observation_source::set_viewpos_now,
 				vr::engine_stereo_renderer::camera_observation_stage::leave,

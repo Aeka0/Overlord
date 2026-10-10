@@ -3,6 +3,8 @@
 #include "component/vr/gameplay/mounted_turret_policy.hpp"
 #include "component/vr/gameplay/mounted_turret_pose.hpp"
 
+#include "component/vr/gameplay/mounted_turret_laser.hpp"
+
 namespace mounted_turret_tests
 {
 	struct fixture
@@ -35,6 +37,27 @@ namespace mounted_turret_tests
 	template<class Check> void run(Check&& check)
 	{
 		using namespace vr::gameplay::mounted;
+		{
+			laser_ray ray;ray.instance=7;ray.reference=3;ray.entity=1232;ray.units=40;
+			ray.origin={10,20,30};ray.forward={1,0,0};ray.camera[0]=10;
+			ray.at=vr::controller_input::clock::time_point{std::chrono::seconds(1)};
+			vr::engine_stereo_view::slot_pair scene;scene.natural_camera=ray.camera;scene.camera_sampled_at=ray.at+std::chrono::milliseconds(1);
+			const auto now=scene.camera_sampled_at+std::chrono::milliseconds(5);
+			check(laser_matches_scene(ray,scene,now),"mounted laser selects the completed gun from the exact scene camera");
+			auto other=scene;other.natural_camera[0]+=1;
+			check(!laser_matches_scene(ray,other,now),"another camera cannot consume a latest mounted muzzle");
+			other=scene;other.camera_sampled_at=ray.at-std::chrono::milliseconds(1);
+			check(!laser_matches_scene(ray,other,now),"a future gun sample cannot leak into an older stereo pair");
+			check(!laser_matches_scene(ray,scene,ray.at+std::chrono::milliseconds(151)),"stale collision and gun geometry expire together");
+			auto invalid=ray;invalid.instance=0;
+			check(!laser_matches_scene(invalid,scene,now),"an unowned mounted sample cannot draw a laser");
+			invalid=ray;invalid.reference=0;
+			check(!laser_matches_scene(invalid,scene,now),"uninitialized tracking cannot draw a mounted laser");
+			invalid=ray;invalid.forward={2,0,0};
+			check(!laser_matches_scene(invalid,scene,now),"invalid muzzle rotation cannot expand the collision ray");
+			invalid=ray;invalid.origin[0]=std::numeric_limits<float>::quiet_NaN();
+			check(!laser_matches_scene(invalid,scene,now),"non-finite mounted geometry is omitted");
+		}
 		{
 			const std::array<std::string_view,3> models{"h2_vehicle_blackhawk_minigun_hero_exterior","h2_vehicle_blackhawk_minigun_hero_interior_low","viewhands_player_us_army"};
 			check(matches(blackhawk,models) && !matches(suburban,models),"Blackhawk three-model assembly cannot enter the Suburban presentation profile");
