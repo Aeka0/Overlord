@@ -111,6 +111,8 @@
   "settings.snapAngle": "分段角度",
   "settings.degreesStep": "度／次",
   "settings.aiming": "瞄準",
+  "settings.adsSprint": "瞄準時允許衝刺",
+  "settings.adsSprintHint": "保持 ADS 瞄準時，也可開始或繼續衝刺。仍受體力、姿態和任務限制。預設開啟。",
   "settings.adsComfort": "近眼瞄具吸附",
   "settings.adsComfortHint": "雙手舉槍瞄準時，讓支援的瞄具平滑靠近眼睛。關閉後保持武器的追蹤位置，自動 ADS 與瞄準鏡放大仍可使用。預設開啟。",
   "settings.aimHint": "將射擊方向輕微引導至槍口附近的可見敵人。0 為關閉輔助；50 對應 5 度，100 對應 10 度。",

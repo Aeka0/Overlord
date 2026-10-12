@@ -130,6 +130,15 @@ return function()
 		minhook.import()
 		links {"common"}
 
+	test_executable("vr-ads-sprint-tests", "ads-sprint")
+		files {"./tests/vr/ads_sprint_tests.cpp", "./src/client/component/vr/gameplay/ads_sprint_bridge.hpp"}
+		includedirs {"./tests/vr", "./src/client", "./src/common"}
+		flags {"NoPCH"}
+		gsl.import()
+		asmjit.import()
+		minhook.import()
+		links {"common"}
+
 	test_executable("vr-native-menu-hook-tests", "native-menu-hook")
 		files {"./tests/vr/native_menu_hook_tests.cpp", "./src/client/component/vr/native_menu_hook.hpp",
 			"./src/client/component/vr/native_ui_dispatch_bridge.hpp"}

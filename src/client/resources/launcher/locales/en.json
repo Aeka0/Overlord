@@ -111,6 +111,8 @@
   "settings.snapAngle": "Snap angle",
   "settings.degreesStep": "Degrees per step",
   "settings.aiming": "Aiming",
+  "settings.adsSprint": "Allow sprint while aiming",
+  "settings.adsSprintHint": "Keep aiming down sights when starting or continuing a sprint. Stamina, stance and mission restrictions still apply. On by default.",
   "settings.adsComfort": "Near-eye sight attraction",
   "settings.adsComfortHint": "Move compatible sights smoothly toward your eye when aiming with both hands. Turn off to keep the tracked weapon position. Automatic ADS and scope zoom remain available. On by default.",
   "settings.aimHint": "Gently guide shots toward visible enemies near your barrel direction. 0 turns assistance off; 50 allows 5 degrees, 100 allows 10 degrees.",

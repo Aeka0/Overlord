@@ -7,6 +7,7 @@
 #include "game/scripting/script_value.hpp"
 
 #include "gsc/script_extension.hpp"
+#include "vr/gameplay/ads_sprint.hpp"
 
 #include <utils/hook.hpp>
 
@@ -692,12 +693,14 @@ namespace movement
 			return std::sqrt(ps->velocity[0] * ps->velocity[0] + ps->velocity[1] * ps->velocity[1]);
 		}
 
-		bool movement_blocked(const game::pmove_t* pm)
+		bool movement_blocked(const game::pmove_t* pm, const bool sprint_policy = false)
 		{
 			const auto buttons = pm->cmd.buttons;
+			const auto ads = (buttons & game::BUTTON_ADS) != 0 &&
+				(!sprint_policy || !vr::gameplay::ads_sprint::allowed(pm->ps));
 			return (pm->ps->pm_flags & (game::PMF_MANTLE | game::PMF_LADDER)) != 0 ||
 				(buttons & (game::BUTTON_ATTACK | game::BUTTON_MELEE | game::BUTTON_RELOAD |
-					game::BUTTON_USE_RELOAD | game::BUTTON_ADS)) != 0;
+					game::BUTTON_USE_RELOAD)) != 0 || ads;
 		}
 
 		void apply_stance(game::playerState_s* ps, const stance value)
@@ -941,7 +944,7 @@ namespace movement
 			{
 				runtime.input_requested = true;
 			}
-			if (!moving || movement_blocked(pm))
+			if (!moving || movement_blocked(pm, policy.active_flag == state_flag::sprinting))
 			{
 				runtime.input_requested = false;
 				runtime.stance_requested = false;
@@ -1000,7 +1003,7 @@ namespace movement
 				try_required_stance(pm, runtime, configuration.input_projection.required_stance);
 			const auto projection_active = configuration.input_projection.configured &&
 				runtime.input_requested && required_stance_ready;
-			const auto sprinting = moving && required_stance_ready && !movement_blocked(pm) &&
+			const auto sprinting = moving && required_stance_ready && !movement_blocked(pm, true) &&
 				((projection_active && configuration.input_projection.active_flag == state_flag::sprinting) ||
 					(pm->ps->pm_flags & game::PMF_SPRINTING) != 0);
 			if (sprinting)

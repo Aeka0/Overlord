@@ -1,0 +1,132 @@
+#include <std_include.hpp>
+#include "component/vr/gameplay/ads_sprint_bridge.hpp"
+#include <utils/hook.hpp>
+#include <asmjit/core/jitruntime.h>
+#include <iostream>
+#include <stdexcept>
+
+namespace
+{
+	using namespace vr::gameplay::ads_sprint;
+	bool enabled{};
+	const void* expected_ps{};
+	bool arguments_valid{true};
+	std::uint32_t policy(const void* ps, std::uint32_t mask, std::uint32_t value, boundary point)
+	{
+		arguments_valid = arguments_valid && ps == expected_ps && static_cast<unsigned>(point) < 4;
+		return filter_mask(mask, point, enabled) & value;
+	}
+	struct sample { std::uint32_t mask{}, value{}; };
+	struct result
+	{
+		std::array<std::uint64_t, 7> registers{};
+		std::uint64_t flags{};
+		std::array<std::array<std::uint32_t, 4>, 6> xmm{};
+		std::uint64_t route{};
+		bool operator==(const result&) const = default;
+	};
+}
+
+int main()
+{
+	try
+	{
+		const auto check = [](bool ok, const char* why) { if (!ok) throw std::runtime_error(why); };
+		using namespace asmjit::x86;
+		asmjit::JitRuntime runtime;
+		const auto jit = [&](auto emit) {
+			asmjit::CodeHolder code; code.init(runtime.environment());
+			Assembler a(&code); emit(a); void* fn{};
+			check(runtime.add(&fn, &code) == asmjit::kErrorOk, "JIT allocation"); return fn;
+		};
+		std::uint64_t alignment{};
+		auto* hostile = jit([&](auto& a) {
+			a.mov(rax, reinterpret_cast<std::uintptr_t>(&alignment));
+			a.mov(r10, rsp); a.and_(r10, 15); a.mov(qword_ptr(rax), r10);
+			a.sub(rsp, 0x28); a.mov(rax, reinterpret_cast<std::uintptr_t>(policy)); a.call(rax); a.add(rsp, 0x28);
+			for (const auto reg : {rcx, rdx, r8, r9, r10, r11}) a.xor_(reg, reg);
+			for (int i = 0; i < 6; ++i) a.pxor(xmm(i), xmm(i));
+			a.stc(); a.ret();
+		});
+		const std::array<std::uint32_t, 4> seed{0x40400000, 0x11223344, 0x55667788, 0xaabbccdd};
+		std::array<std::byte, 0x300> ps{};
+		const int weapon_state = 27; std::memcpy(ps.data() + 0x2c0, &weapon_state, sizeof(weapon_state));
+		expected_ps = ps.data();
+		std::array<void*, 3> exits{};
+		for (unsigned route = 0; route < exits.size(); ++route) exits[route] = jit([&](auto& a) {
+			const Gp regs[]{rax, rcx, rdx, r8, r9, r10, r11};
+			for (int i = 0; i < 7; ++i) a.mov(qword_ptr(rsi, i * 8), regs[i]);
+			a.pushfq(); a.pop(qword_ptr(rsi, 56));
+			for (int i = 0; i < 6; ++i) a.movdqu(xmmword_ptr(rsi, 64 + i * 16), xmm(i));
+			a.mov(qword_ptr(rsi, offsetof(result, route)), route);
+			a.lea(rsp, ptr(rsp, 8)); a.ret();
+		});
+		unsigned cases{};
+		for (unsigned index = 0; index < sites.size(); ++index)
+		{
+			const auto point = static_cast<boundary>(index);
+			auto* bridge = jit([&](auto& a) { emit_bridge(a, point, reinterpret_cast<std::uintptr_t>(hostile),
+				reinterpret_cast<std::uintptr_t>(exits[0]), reinterpret_cast<std::uintptr_t>(exits[1]),
+				reinterpret_cast<std::uintptr_t>(exits[2])); });
+			// Execute the native TEST/branch/displaced instructions as the oracle.
+			auto* original = jit([&](auto& a) {
+				const auto blocked = a.new_label(), other = a.new_label();
+				if (point == boundary::sustain_flags) a.test(ecx, r9d);
+				if (point == boundary::sustain_buttons) a.test(edi, edx);
+				if (point == boundary::start_buttons) a.test(edi, ecx);
+				if (point == boundary::start_flags) a.test(ecx, edx);
+				a.jnz(blocked);
+				if (point == boundary::sustain_buttons) a.mov(ecx, dword_ptr(rbx, 0x2c0));
+				if (point == boundary::start_buttons) a.mov(ecx, 0x8018);
+				if (point == boundary::start_flags) { a.bt(edx, 13); a.jnc(other); }
+				const auto jump = [&](void* to) { const auto label = a.new_label(); a.jmp(qword_ptr(label)); a.bind(label); a.embed_uint64(reinterpret_cast<std::uintptr_t>(to)); };
+				jump(exits[0]); a.bind(blocked); jump(exits[1]);
+				if (point == boundary::start_flags) { a.bind(other); jump(exits[2]); }
+			});
+			auto* relay = utils::hook::create_preserving_near_jump(0x140000000, bridge);
+			auto* site = static_cast<std::uint8_t*>(utils::memory::allocate_near(0x140000000, 0x1000, PAGE_EXECUTE_READWRITE));
+			check(relay && site, "Installed native JMP/relay allocation");
+			utils::hook::jump(site, relay);
+			auto* harness = jit([&](auto& a) {
+				a.push(rbx); a.push(rdi); a.push(rsi); a.sub(rsp, 0x30);
+				a.mov(qword_ptr(rsp, 0x20), rcx); a.mov(rsi, r8);
+				a.mov(rbx, reinterpret_cast<std::uintptr_t>(ps.data()));
+				a.mov(r11, reinterpret_cast<std::uintptr_t>(seed.data()));
+				for (int i = 0; i < 6; ++i) a.movdqu(xmm(i), xmmword_ptr(r11));
+				a.mov(edi, dword_ptr(rdx, 4)); a.mov(ecx, dword_ptr(rdx));
+				a.mov(edx, point == boundary::sustain_buttons ? ecx : edi);
+				a.mov(r9d, edi); a.mov(rax, 111); a.mov(r8, 222); a.mov(r10, 333); a.mov(r11, 444);
+				// Emulate a native aligned instruction boundary reached through JMP.
+				const auto continuation = a.new_label(); a.lea(rdi, ptr(continuation)); a.push(rdi);
+				a.mov(edi, r9d); a.lea(rsp, ptr(rsp, -8)); a.jmp(qword_ptr(rsp, 0x30));
+				a.bind(continuation); a.add(rsp, 0x30); a.pop(rsi); a.pop(rdi); a.pop(rbx); a.ret();
+			});
+			using invoke_type = void(*)(void*, const sample*, result*);
+			const auto invoke = reinterpret_cast<invoke_type>(harness);
+			const auto ads = button_boundary(point) ? ads_button : ads_flag;
+			const auto mask = button_boundary(point) ? (point == boundary::start_buttons ? 0x4c3du : 0xcf3du) : 0x8018u;
+			for (bool on : {false, true}) for (unsigned bit = 0; bit < 32; ++bit) for (bool with_ads : {false, true})
+			{
+				enabled = on;
+				const sample actual{mask, (1u << bit) | (with_ads ? ads : 0u)};
+				const sample filtered{filter_mask(mask, point, on), actual.value};
+				result expected{}, observed{};
+				invoke(original, &filtered, &expected); invoke(site, &actual, &observed);
+				// The oracle's incoming mask was filtered; the installed hook must
+				// preserve the real register unless native continuation overwrites it.
+				if (point == boundary::sustain_buttons) expected.registers[2] = mask;
+				else if (point != boundary::start_buttons || expected.route == 1) expected.registers[1] = mask;
+				if (point == boundary::sustain_buttons) expected.registers[1] = expected.route == 1 ? mask : weapon_state;
+				expected.flags &= ~0x10ull; observed.flags &= ~0x10ull; // TEST leaves AF undefined.
+				check(expected == observed, "Native predicates, branch paths and full volatile ABI must match");
+				check(alignment == 8 && arguments_valid, "Win64 callback alignment and arguments");
+				++cases;
+			}
+			VirtualFree(site, 0, MEM_RELEASE); VirtualFree(relay, 0, MEM_RELEASE);
+			runtime.release(harness); runtime.release(original); runtime.release(bridge);
+		}
+		std::cout << cases << " ADS sprint cases passed: four native branches, on/off, other blockers, installed relay and hostile callback ABI\n";
+		return 0;
+	}
+	catch (const std::exception& error) { std::cerr << error.what() << '\n'; return 1; }
+}

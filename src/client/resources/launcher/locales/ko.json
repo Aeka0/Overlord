@@ -111,6 +111,8 @@
   "settings.snapAngle": "단계 회전 각도",
   "settings.degreesStep": "단계당 각도",
   "settings.aiming": "조준",
+  "settings.adsSprint": "조준 중 전력 질주 허용",
+  "settings.adsSprintHint": "정조준을 유지하면서 전력 질주를 시작하거나 계속할 수 있습니다. 지구력, 자세 및 임무 제한은 그대로 적용됩니다. 기본값은 켜짐입니다.",
   "settings.adsComfort": "조준기를 눈 가까이 당기기",
   "settings.adsComfortHint": "양손으로 조준할 때 지원되는 조준기를 눈 쪽으로 부드럽게 당깁니다. 끄면 추적된 무기 위치를 유지합니다. 자동 ADS와 조준경 확대는 계속 사용할 수 있습니다. 기본값은 켜짐입니다.",
   "settings.aimHint": "총구 방향 근처의 보이는 적을 향해 사격을 약하게 보정합니다. 0은 끄기, 50은 5도, 100은 10도까지 허용합니다.",

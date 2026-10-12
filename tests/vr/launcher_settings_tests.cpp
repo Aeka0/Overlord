@@ -113,6 +113,17 @@ int main(int argc, char** argv)
 		}
 		require(initial[vr::settings::ads_comfort.name] == true,
 			"Near-eye sight attraction retains the existing enabled default");
+		require(initial[vr::settings::ads_sprint.name] == true,
+			"ADS sprint defaults on for existing and new configurations");
+		for (const bool enabled : {false, true})
+		{
+			auto selected = initial;
+			selected[vr::settings::ads_sprint.name] = enabled;
+			const auto saved = update_config("seta vr_autoAds 1\nseta vr_scopeZoom 1\n", selected);
+			require(read_values(saved) == selected && read_values(saved)[vr::settings::ads_comfort.name] == true &&
+				saved.find("seta vr_autoAds 1") != std::string::npos && saved.find("seta vr_scopeZoom 1") != std::string::npos,
+				"ADS sprint persists independently of comfort, automatic ADS and scope zoom");
+		}
 		for (const bool enabled : {false, true})
 		{
 			auto selected = initial;

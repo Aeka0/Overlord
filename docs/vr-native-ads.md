@@ -62,6 +62,37 @@ Single-handed alignment cannot enter ADS. Bullet weapons and the existing
 supported launcher aim/lock-on route share this automatic request policy. A
 weapon swap must match the final command's weapon token.
 
+## Sprint while aiming
+
+`vr_adsSprint 1` (default, saved) is **Gameplay > Aiming > Allow sprint while
+aiming** in the launcher. It permits both starting a sprint while ADS is held
+and raising the weapon into ADS during an existing sprint. Setting it to `0`
+restores the native ADS/sprint restrictions on subsequent movement checks.
+It is independent of `vr_autoAds`, `vr_adsComfort` and scope magnification.
+
+The shared policy applies to the local authoritative and predicted player only
+while VR is enabled. Four checked H2 SP instruction boundaries remove just
+`PMF_ADS (0x10)` or `BUTTON_ADS (0x800)` from the native start/continuation
+predicate masks. The optional scripted sprint projection uses the same policy.
+Other movement actions keep their original ADS restriction. Stamina, forward
+input, stance, ladder, mantle, lean, mission restrictions and native weapon
+state checks remain authoritative. Neither player state nor command buttons are
+temporarily cleared, and weapon definitions, ADS fraction and sprint speed are
+not overwritten. All four signatures must match before any hook is installed.
+
+`vr_ads_sprint_status` reports installation, the option and per-boundary relaxed
+checks. These counters do not prove that all other native sprint gates admitted
+the command. The native ADS fraction lives at player state `+0x3cc`; `+0x2ac`
+is lean and must not be patched as an ADS gate. Native sprint weapon states
+`0x1b`–`0x1d` remain on their existing ADS eligibility/transition path.
+
+The focused CPU suite executes all four bridges through preserving near relays,
+checks enabled/disabled behavior and other blocking bits against the displaced
+native instructions, and exercises a callback that clobbers volatile registers.
+Live gameplay/HMD acceptance remains pending: check both entry orders, actual
+speed and stamina, ordinary/sniper/thermal sights, launcher lock-on, shooting,
+reload, weapon changes and recovery after pause/death.
+
 ## ADS eye-distance assistance
 
 Eligible two-handed aiming adds a bounded translation toward the eye along the

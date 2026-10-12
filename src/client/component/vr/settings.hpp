@@ -110,6 +110,7 @@ namespace vr::settings
 	inline constexpr boolean_setting disable_blur{"vr_disableBlur", false};
 	inline constexpr boolean_setting disable_dog_pounce{"vr_disableDogPounce", true};
 	inline constexpr boolean_setting ads_comfort{"vr_adsComfort", true};
+	inline constexpr boolean_setting ads_sprint{"vr_adsSprint", true};
 	inline constexpr boolean_setting exo_punch{"vr_exoPunch", false};
 	inline constexpr auto toggles = []
 	{
@@ -123,6 +124,7 @@ namespace vr::settings
 		                              disable_blur,
 		                              disable_dog_pounce,
 		                              ads_comfort,
+		                              ads_sprint,
 		                              exo_punch,
 		                              boolean_setting{disable_lens_flare, false},
 		                              boolean_setting{camera_bob, true},

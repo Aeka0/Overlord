@@ -111,6 +111,8 @@
   "settings.snapAngle": "Ángulo de giro por pasos",
   "settings.degreesStep": "Grados por paso",
   "settings.aiming": "Apuntado",
+  "settings.adsSprint": "Permitir esprintar al apuntar",
+  "settings.adsSprintHint": "Mantén la mira al empezar o continuar un esprint. Siguen aplicándose las restricciones de resistencia, postura y misión. Activado por defecto.",
   "settings.adsComfort": "Acercar la mira al ojo",
   "settings.adsComfortHint": "Acerca suavemente las miras compatibles al ojo al apuntar con ambas manos. Desactívalo para conservar la posición rastreada del arma. El apuntado automático con la mira y el zoom siguen disponibles. Activado por defecto.",
   "settings.aimHint": "Dirige suavemente los disparos hacia enemigos visibles cerca de la dirección del cañón. 0 desactiva la ayuda; 50 permite 5 grados y 100 permite 10.",

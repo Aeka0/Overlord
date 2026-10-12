@@ -111,6 +111,8 @@
   "settings.snapAngle": "Angle de rotation par crans",
   "settings.degreesStep": "Degrés par cran",
   "settings.aiming": "Visée",
+  "settings.adsSprint": "Autoriser le sprint en visant",
+  "settings.adsSprintHint": "Gardez la visée en commençant ou en poursuivant un sprint. Les limites d’endurance, de posture et de mission restent applicables. Activé par défaut.",
   "settings.adsComfort": "Rapprochement du viseur",
   "settings.adsComfortHint": "Rapproche progressivement les viseurs compatibles de votre œil lorsque vous visez à deux mains. Désactivez pour conserver la position suivie de l’arme. La visée automatique et le zoom restent disponibles. Activé par défaut.",
   "settings.aimHint": "Oriente légèrement les tirs vers les ennemis visibles proches de la direction du canon. 0 désactive l’aide ; 50 autorise 5 degrés, 100 autorise 10 degrés.",

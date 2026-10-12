@@ -111,6 +111,8 @@
   "settings.snapAngle": "スナップ角度",
   "settings.degreesStep": "度／ステップ",
   "settings.aiming": "照準",
+  "settings.adsSprint": "照準中のダッシュを許可",
+  "settings.adsSprintHint": "サイトを覗いたままダッシュを開始・継続できます。スタミナ、姿勢、ミッションによる制限は適用されます。初期設定はオン。",
   "settings.adsComfort": "サイトを目に引き寄せる",
   "settings.adsComfortHint": "両手で構えて照準すると、対応サイトが目に向かって滑らかに近づきます。オフにすると追跡された武器位置を維持します。自動 ADS とスコープ拡大は引き続き利用できます。初期設定はオン。",
   "settings.aimHint": "銃口の向きに近い見えている敵へ、弾道を軽く補正します。0 で無効、50 で最大 5 度、100 で最大 10 度です。",

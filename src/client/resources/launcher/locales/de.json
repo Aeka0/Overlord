@@ -111,6 +111,8 @@
   "settings.snapAngle": "Winkel pro Schritt",
   "settings.degreesStep": "Grad pro Schritt",
   "settings.aiming": "Zielen",
+  "settings.adsSprint": "Sprinten beim Zielen erlauben",
+  "settings.adsSprintHint": "Beim Starten oder Fortsetzen eines Sprints weiter über das Visier zielen. Ausdauer-, Haltungs- und Missionsbeschränkungen gelten weiterhin. Standardmäßig an.",
   "settings.adsComfort": "Visier zum Auge ziehen",
   "settings.adsComfortHint": "Bewegt kompatible Visiere beim beidhändigen Zielen sanft zum Auge. Ausschalten, um die erfasste Waffenposition beizubehalten. Automatisches Zielen über Visier und Zielfernrohrzoom bleiben verfügbar. Standardmäßig an.",
   "settings.aimHint": "Lenkt Schüsse leicht auf sichtbare Gegner nahe der Laufrichtung. 0 schaltet die Hilfe aus; 50 erlaubt 5 Grad, 100 erlaubt 10 Grad.",

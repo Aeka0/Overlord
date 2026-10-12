@@ -155,6 +155,16 @@ test("turning follows the backend in Basics and sight attraction belongs to Aimi
   assert.equal(attraction.type, "toggle");
 });
 
+test("ADS sprint belongs to Aiming and saves independently of sight attraction", () => {
+  const field = fields.find((field) => field.name === "vr_adsSprint")!;
+  assert.equal(field.category, "gameplay");
+  assert.equal(field.group, "settings.aiming");
+  assert.equal(field.type, "toggle");
+  const fixture = { ...state, values: { vr_adsSprint: true, vr_adsComfort: true } } as SettingsState;
+  const draft = makeDraft(fixture.values, fixture.limits);
+  assert.deepEqual(collect({ ...draft, vr_adsSprint: false }, fixture), { vr_adsSprint: false, vr_adsComfort: true });
+});
+
 test("startup declaration is translated and retains the version and report details", () => {
   const keys = ["notice.title", "notice.maintenance", "notice.expectations", "notice.feedback", "notice.issues", "notice.close"];
   for (const [language, catalog] of Object.entries(catalogs)) {

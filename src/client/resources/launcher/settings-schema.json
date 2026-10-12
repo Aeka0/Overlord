@@ -290,6 +290,14 @@
     "description": "settings.adsComfortHint"
   },
   {
+    "name": "vr_adsSprint",
+    "category": "gameplay",
+    "group": "settings.aiming",
+    "label": "settings.adsSprint",
+    "type": "toggle",
+    "description": "settings.adsSprintHint"
+  },
+  {
     "name": "vr_aimAssistStrength",
     "category": "gameplay",
     "group": "settings.aiming",
