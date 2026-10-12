@@ -90,6 +90,14 @@ A sprint button alone is insufficient. Ordinary ADS walking, rejected sprint
 requests and the disabled option retain their original speed behavior. This is
 a final derived-flag correction, not a temporary clearing of ADS state.
 
+The producer's native leaf contract also matters: its PMove caller immediately
+calls the duck update without reloading RCX. The adapter calls a prepared native
+trampoline first, then preserves that leaf's outgoing GPRs, SIMD lanes and flags
+around the policy callback. A plain C++ detour can leave RCX pointing at player
+state instead of PMove and cause a load-time access violation at `0x14068717D`.
+The installed-hook replay suite checks these outgoing registers as well as the
+derived flag changes with a callback that deliberately clobbers volatile state.
+
 `vr_ads_sprint_status` reports installation, the option and per-boundary relaxed
 checks, plus `slow_walk_suppressed`. These counters do not prove that all other native sprint gates admitted
 the command. The native ADS fraction lives at player state `+0x3cc`; `+0x2ac`

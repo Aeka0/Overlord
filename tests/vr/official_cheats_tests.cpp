@@ -46,6 +46,17 @@ int main()
         const exo::impact_claim claim{1000,"usp"};
         const exo::death_evidence melee{1050,0,8,true,false,true,true,false,"usp","actor_enemy_soldier"};
         check(exo::admits(claim,melee),"EXO admits a lethal player VR melee claim");
+        auto body=melee;body.weapon="none";
+        check(exo::admits({1000,"none"},body),"empty-handed lethal melee uses native none attribution instead of the borrowed chest-knife definition");
+        check(!exo::admits({1000,"rpg_player"},body),"a borrowed damage provider is not the empty hand's native death identity");
+        body=melee;body.weapon="pp2000";
+        check(exo::admits({1000,"pp2000"},body),"a body melee strike can retain the native selected firearm attribution");
+        body.means_of_death=2;
+        check(!exo::admits({1000,"pp2000"},body),"matching native selection cannot turn a later bullet death into an EXO melee impact");
+        body=melee;body.weapon="none";body.health=1;
+        check(!exo::admits({1000,"none"},body),"empty-handed nonlethal contacts do not create death impulses");
+        body.health=0;body.official_ragdoll=true;
+        check(!exo::admits({1000,"none"},body),"official Ragdoll Impact still takes precedence for empty-handed kills");
         for(int mod:{0,1,2,3,4,5,6,7,9,10})
         {auto death=melee;death.means_of_death=mod;check(!exo::admits(claim,death),"bullets, explosions and other non-melee deaths never consume EXO impact");}
         auto death=melee;death.health=1;check(!exo::admits(claim,death),"nonlethal contacts cannot apply a death impulse");

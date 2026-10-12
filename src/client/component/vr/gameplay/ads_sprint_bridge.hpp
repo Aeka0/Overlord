@@ -21,6 +21,33 @@ namespace vr::gameplay::ads_sprint
 	inline constexpr std::uint32_t filter_mask(std::uint32_t mask, boundary point, bool enabled) noexcept
 	{ return enabled ? mask & ~(button_boundary(point) ? ads_button : ads_flag) : mask; }
 
+	// The native caller at 68FBA1 relies on this leaf preserving RCX: its next
+	// CALL to PM_CheckDuck does not reload pmove. A normal C++ detour only obeys
+	// the public Win64 ABI and can leave RCX pointing at PS instead. Preserve the
+	// original leaf's complete outgoing volatile state around our post-policy.
+	// The returned literal offset is filled with the prepared MinHook trampoline
+	// before enabling the detour; no original state is changed before that CALL.
+	inline std::size_t emit_slow_walk_bridge(asmjit::x86::Assembler& a,
+		std::uintptr_t policy, std::uintptr_t original = 0)
+	{
+		using namespace asmjit::x86;
+		const auto native = a.new_label();
+		a.sub(rsp, 0x28);
+		a.call(qword_ptr(native));
+		a.pushfq(); a.sub(rsp, 0xd8);
+		const Gp registers[]{rax, rcx, rdx, r8, r9, r10, r11};
+		for (int i = 0; i < 7; ++i) a.mov(qword_ptr(rsp, 0x20 + i * 8), registers[i]);
+		for (int i = 0; i < 6; ++i) a.movdqu(xmmword_ptr(rsp, 0x60 + i * 16), xmm(i));
+		a.mov(rax, policy); a.call(rax);
+		for (int i = 0; i < 6; ++i) a.movdqu(xmm(i), xmmword_ptr(rsp, 0x60 + i * 16));
+		for (int i = 0; i < 7; ++i) a.mov(registers[i], qword_ptr(rsp, 0x20 + i * 8));
+		a.push(qword_ptr(rsp, 0xd8)); a.popfq();
+		a.lea(rsp, ptr(rsp, 0x108)); a.ret();
+		a.bind(native);
+		const auto literal = a.offset(); a.embed_uint64(original);
+		return literal;
+	}
+
 	struct native_site
 	{
 		std::uintptr_t address, resume, blocked, alternate;

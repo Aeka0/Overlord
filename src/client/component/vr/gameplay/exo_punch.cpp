@@ -22,7 +22,8 @@ namespace vr::gameplay::cheats::exo_punch
     {
         struct pending_hit
         {
-            hit_ticket ticket;
+            weapons::native_carry::world_key target{};
+            std::uint64_t serial{};
             int time{};
             std::string weapon;
         };
@@ -56,7 +57,7 @@ namespace vr::gameplay::cheats::exo_punch
                 const auto ref=actor.get_entity_reference();
                 if(ref.classnum || !ref.entnum || ref.entnum>=pending.size())return false;
                 auto& hit=pending[ref.entnum];
-                if(!hit.ticket.serial || hit.ticket.target!=weapons::native_carry::entity_key(ref.entnum))return false;
+                if(!hit.serial || hit.target!=weapons::native_carry::entity_key(ref.entnum))return false;
                 int health{};
                 if(!utils::native_memory::read_at(&game::g_entities[ref.entnum],0x184,health))return false;
                 const auto attacker=actor.get(std::string("attacker"));
@@ -104,23 +105,26 @@ namespace vr::gameplay::cheats::exo_punch
     }
     bool active() noexcept
     {return scheduler::is_executing(scheduler::pipeline::server) && game::CL_IsCgameInitialized() && configured();}
-    hit_ticket begin_hit(weapons::native_carry::world_key target,std::string_view weapon) noexcept
+    void record_hit(weapons::native_carry::world_key target) noexcept
     {
         if(!active() || target.entity<=0 || target.entity>=int(pending.size()) ||
-            target!=weapons::native_carry::entity_key(target.entity) || weapon.empty() || weapon.size()>127)return {};
+            target!=weapons::native_carry::entity_key(target.entity))return;
         try
         {
-            const hit_ticket ticket{target,++serial};
-            pending[target.entity]={ticket,game::CG_GetGameTime(0),std::string(weapon)};
-            ++claims;return ticket;
+            const scripting::entity actor{game::scr_entref_t{static_cast<unsigned short>(target.entity),0}};
+            const auto weapon=actor.get(std::string("damageweapon"));
+            const auto mod=actor.get(std::string("damagemod"));
+            if(!weapon.is<std::string>() || !mod.is<std::string>() || mod.as<std::string>()!="MOD_MELEE")return;
+            auto name=weapon.as<std::string>();
+            if(name.empty() || name.size()>127)return;
+            // Actor death attribution follows native selection: empty-handed
+            // player melee is "none", not the chest knife's borrowed WeaponDef.
+            // Freeze the native result AFTER this accepted lethal transaction,
+            // then require the identical attribution at the deferred death hook.
+            pending[target.entity]={target,++serial,game::CG_GetGameTime(0),std::move(name)};
+            ++claims;
         }
-        catch(const std::exception&){return {};}
-    }
-    void finish_hit(hit_ticket ticket,bool lethal) noexcept
-    {
-        if(!ticket.serial || ticket.target.entity<=0 || ticket.target.entity>=int(pending.size()))return;
-        auto& hit=pending[ticket.target.entity];
-        if(hit.ticket.serial==ticket.serial && !lethal)hit={};
+        catch(const std::exception&){}
     }
     class component final:public component_interface
     {

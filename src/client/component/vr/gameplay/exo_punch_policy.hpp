@@ -15,7 +15,8 @@ namespace vr::gameplay::cheats::exo_punch
         bool enabled{}, official_ragdoll{}, ragdolls{}, player_attacker{}, forced_ragdoll{};
         std::string_view weapon, classname;
     };
-    // A claim comes only from the accepted VR melee transaction. Native death
+    // A claim comes only from accepted lethal VR melee and freezes its observed
+    // native attribution (including "none" for an empty-handed player). Death
     // evidence must still identify that same player melee, never a later bullet,
     // explosion, football impact or scripted death. Bound delayed/stale claims.
     inline constexpr bool admits(impact_claim claim, death_evidence death) noexcept

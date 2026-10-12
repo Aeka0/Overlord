@@ -18,9 +18,8 @@ namespace
 	}
 	struct sample { std::uint32_t mask{}, value{}; };
 	utils::hook::detour slow_walk_hook;
-	void slow_walk_stub(void* pm)
+	void slow_walk_policy(void* pm)
 	{
-		slow_walk_hook.invoke<void>(pm);
 		std::byte* ps{}; std::memcpy(&ps, pm, sizeof(ps));
 		std::uint32_t flags{}; std::memcpy(&flags, ps + 0x54, sizeof(flags));
 		flags = movement_flags(flags, enabled);
@@ -144,8 +143,35 @@ int main()
 			0x14,0xf7,0x82,0x90,0x1f,0x00,0x00,0x00,0x00,0x10,0x00,0x75,0x08,0x41,0x83,
 			0xc8,0x40,0x44,0x89,0x42,0x54,0xc3};
 		auto* native_slow_walk = jit([&](auto& a) { a.embed(slow_walk_code, sizeof(slow_walk_code)); });
-		using update_type = void(*)(void*);
-		const auto update = reinterpret_cast<update_type>(native_slow_walk);
+		// Reproduce the observed C++ policy aftermath: RCX becomes PS rather than
+		// pmove, and all other volatile lanes/flags may be destroyed by callees.
+		auto* hostile_slow_walk = jit([&](auto& a) {
+			a.sub(rsp, 0x38); a.mov(qword_ptr(rsp, 0x20), rcx);
+			a.mov(rax, reinterpret_cast<std::uintptr_t>(slow_walk_policy)); a.call(rax);
+			a.mov(rcx, qword_ptr(rsp, 0x20)); a.mov(rcx, qword_ptr(rcx));
+			for (const auto reg : {rax, rdx, r8, r9, r10, r11}) a.xor_(reg, reg);
+			for (int i = 0; i < 6; ++i) a.pxor(xmm(i), xmm(i));
+			a.stc(); a.lea(rsp, ptr(rsp, 0x38)); a.ret();
+		});
+		std::size_t slow_walk_slot{};
+		auto* protected_slow_walk = jit([&](auto& a) {
+			slow_walk_slot = emit_slow_walk_bridge(a, reinterpret_cast<std::uintptr_t>(hostile_slow_walk));
+		});
+		auto* leaf_harness = jit([&](auto& a) {
+			a.push(rsi); a.sub(rsp, 0x30);
+			a.mov(qword_ptr(rsp, 0x20), rcx); a.mov(rsi, r8); a.mov(rcx, rdx);
+			a.mov(r11, reinterpret_cast<std::uintptr_t>(seed.data()));
+			for (int i = 0; i < 6; ++i) a.movdqu(xmm(i), xmmword_ptr(r11));
+			a.mov(rax, 111); a.mov(rdx, 222); a.mov(r8, 333); a.mov(r9, 444); a.mov(r10, 555); a.mov(r11, 666);
+			a.call(qword_ptr(rsp, 0x20));
+			const Gp regs[]{rax, rcx, rdx, r8, r9, r10, r11};
+			for (int i = 0; i < 7; ++i) a.mov(qword_ptr(rsi, i * 8), regs[i]);
+			a.pushfq(); a.pop(qword_ptr(rsi, offsetof(result, flags)));
+			for (int i = 0; i < 6; ++i) a.movdqu(xmmword_ptr(rsi, offsetof(result, xmm) + i * 16), xmm(i));
+			a.add(rsp, 0x30); a.pop(rsi); a.ret();
+		});
+		using leaf_invoke_type = void(*)(void*, void*, result*);
+		const auto invoke_leaf = reinterpret_cast<leaf_invoke_type>(leaf_harness);
 		struct fixture
 		{
 			std::uint32_t flags, buttons, entity_flags, weapon_state, perks;
@@ -170,7 +196,7 @@ int main()
 			put(0x2c0, fixture.weapon_state); put(0x1f90, fixture.perks); put(0x3cc, 1.f);
 			struct { void* ps; int time; std::uint32_t buttons; } pm{player.data(), 1234, fixture.buttons};
 			const auto before = player;
-			update(&pm);
+			result native_out{}; invoke_leaf(native_slow_walk, &pm, &native_out);
 			std::uint32_t flags{}; std::memcpy(&flags, player.data() + 0x54, sizeof(flags));
 			check(bool(flags & 0x40) == fixture.native_slow, "Native replay reproduces independent ADS slow-walk flag");
 			auto expected = player;
@@ -179,13 +205,20 @@ int main()
 				flags &= ~0x40u; std::memcpy(expected.data() + 0x54, &flags, sizeof(flags));
 			}
 			player = before; enabled = on;
-			slow_walk_hook.create(native_slow_walk, slow_walk_stub);
-			update(&pm);
+			slow_walk_hook.create_disabled(native_slow_walk, protected_slow_walk);
+			utils::hook::set(reinterpret_cast<std::uintptr_t>(protected_slow_walk) + slow_walk_slot,
+				reinterpret_cast<std::uintptr_t>(slow_walk_hook.get_original()));
+			slow_walk_hook.enable();
+			result hooked_out{}; invoke_leaf(native_slow_walk, &pm, &hooked_out);
+			native_out.flags &= ~0x10ull; hooked_out.flags &= ~0x10ull;
+			check(native_out == hooked_out && hooked_out.registers[1] == reinterpret_cast<std::uintptr_t>(&pm),
+				"Installed slow-walk detour preserves the native leaf outputs and pmove RCX for the following duck update");
 			check(player == expected && pm.buttons == fixture.buttons,
 				"Installed producer hook only suppresses ADS speed during accepted sprint; ADS fraction and commands stay intact");
 			check(slow_walk_hook.clear(), "Restore native replay between cases");
 			++cases;
 		}
+		runtime.release(leaf_harness); runtime.release(protected_slow_walk); runtime.release(hostile_slow_walk);
 		runtime.release(native_slow_walk);
 		std::cout << cases << " ADS sprint cases passed: predicates, native slow-walk replay, installed hooks and ABI\n";
 		return 0;

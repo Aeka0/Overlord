@@ -21,9 +21,8 @@ namespace vr::gameplay::ads_sprint
 		std::array<std::atomic_uint64_t, 4> relaxed{};
 		utils::hook::detour slow_walk_hook;
 		std::atomic_uint64_t slow_walk_suppressed{};
-		void update_slow_walk(game::pmove_t* pm)
+		void finalize_slow_walk(game::pmove_t* pm)
 		{
-			slow_walk_hook.invoke<void>(pm);
 			// The original has already cleared/recomputed 0x40 from native ADS
 			// eligibility. Finalize this derived movement flag, not the ADS state,
 			// fraction, speed dvars, weapon assets or the user's input command.
@@ -98,7 +97,14 @@ namespace vr::gameplay::ads_sprint
 					return;
 				}
 			}
-			slow_walk_hook.create(0x14068D1C0, update_slow_walk);
+			std::size_t native_slot{};
+			const auto slow_walk_bridge = utils::hook::assemble([&](auto& a) {
+				native_slot = emit_slow_walk_bridge(a, reinterpret_cast<std::uintptr_t>(finalize_slow_walk));
+			});
+			slow_walk_hook.create_disabled(reinterpret_cast<void*>(0x14068D1C0), slow_walk_bridge);
+			utils::hook::set(reinterpret_cast<std::uintptr_t>(slow_walk_bridge) + native_slot,
+				reinterpret_cast<std::uintptr_t>(slow_walk_hook.get_original()));
+			slow_walk_hook.enable();
 			for (std::size_t i = 0; i < sites.size(); ++i)
 			{
 				utils::hook::nop(sites[i].address, sites[i].size);

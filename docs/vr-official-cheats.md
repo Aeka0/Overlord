@@ -143,7 +143,11 @@ explosions, or mark the campaign as having used an official intel cheat.
 Only a matching lethal player melee transaction can replace native
 `animscripts/death::specialdeath`. A bounded, generation-checked claim rejects
 nonlethal/rejected contacts, other attackers/weapons/damage types, stale or
-rewound time and recycled entities. The replacement supplies a temporary
+rewound time and recycled entities. Claims are recorded after accepted native
+damage and retain the actual actor `damageweapon`, rather than the WeaponDef
+borrowed to supply fist/body-knife damage. Native attribution may be `none`
+when empty-handed, or the selected firearm while another hand strikes.
+The replacement supplies a temporary
 per-victim impulse scale to the original `doimmediateragdolldeath` helper,
 then restores the original fields. Native direction-scale overrides, graphics
 ragdoll admission, civilian exclusions and earlier mission death handling stay
@@ -154,7 +158,7 @@ Official Ragdoll Impact takes precedence when enabled: the shared damage budget
 is selected once and EXO does not intercept that death or add another impulse.
 Turning either option off retains the other; with both off, ordinary damage and
 death handling resume. `vr_exo_punch_status` reports the option, native hook
-readiness, contact claims and death dispatches. Counts do not prove visible flight.
+readiness, accepted lethal claims and death dispatches. Counts do not prove visible flight.
 
 `vr_cheats_status` reports hook readiness, effective modes, transition state,
 capture/restore/pickup counts and the last failure reason, including the native
