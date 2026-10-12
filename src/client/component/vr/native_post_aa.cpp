@@ -132,7 +132,7 @@ namespace vr::native_post_aa
 			D3D11_SHADER_RESOURCE_VIEW_DESC input{};
 			target_view(target)->GetDesc(&output);
 			image->texture.shaderView->GetDesc(&input);
-			return owner.Get() == device && accepts_ldr(desc, output, input, expected.Width, expected.Height);
+			return owner.Get() == device && !target_rejection(target, desc, output, input, expected.Width, expected.Height);
 		}
 
 		diagnostics::post_aa::target observe_target(const std::uint32_t id)
@@ -165,10 +165,10 @@ namespace vr::native_post_aa
 						(native_display_contract::accepts(sample.failed.texture) ? nullptr : "display_descriptor") :
 						diagnostics::post_aa::rejection(sample.failed, sample.reference);
 				sample.detail = detail ? detail : "not_reproduced_at_capture";
-				if (target == 14 || target == 15)
+				if (target == smaa_edge_target || target == smaa_blend_target)
 				{
 					sample.peer_known = true;
-					sample.peer = observe_target(target == 14 ? 15 : 14);
+					sample.peer = observe_target(target == smaa_edge_target ? smaa_blend_target : smaa_edge_target);
 				}
 			}
 			validation_failures.record(sample);
@@ -217,7 +217,7 @@ namespace vr::native_post_aa
 		if (!matches_extent(display_input_target, desc, device.Get())) return fail("native_ldr_input", display_input_target);
 		if (selected >= mode::smaa && selected <= mode::filmic_smaa_t2x)
 		{
-			for (const auto target : {14u, 15u})
+			for (const auto target : {smaa_edge_target, smaa_blend_target})
 				if (!matches_extent(target, desc, device.Get())) return fail("smaa_scratch_extent", target);
 			if (filmic(selected) && !matches_extent(filmic_scratch_target, desc, device.Get()))
 				return fail("filmic_scratch_extent", filmic_scratch_target);

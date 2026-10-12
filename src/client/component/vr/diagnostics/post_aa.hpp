@@ -65,7 +65,7 @@ namespace vr::diagnostics::post_aa
 		if (const auto reason = identity_rejection(value)) return reason;
 		if (!reference.texture_known) return "reference_unavailable";
 		if (value.device != reference.device) return "device_mismatch";
-		return native_post_aa::ldr_rejection(value.texture, value.output, value.input,
+		return native_post_aa::target_rejection(value.id, value.texture, value.output, value.input,
 			reference.texture.Width, reference.texture.Height);
 	}
 
@@ -149,10 +149,15 @@ namespace vr::diagnostics::post_aa
 					<< " record=0x" << std::hex << f.record << std::dec << " targets_known=" << f.targets_known << '\n';
 				if (!f.targets_known) return;
 				if (f.failed.id != f.reference.id)
-					out << "      expected_ldr: extent_known=" << f.reference.texture_known
+				{
+					const auto role = native_post_aa::target_role(f.failed.id);
+					out << "      expected_post_aa: role=" << native_post_aa::role_name(role)
+						<< " extent_known=" << f.reference.texture_known
 						<< " size=" << f.reference.texture.Width << 'x' << f.reference.texture.Height
-						<< " texture_format=RGBA8_TYPELESS(27)/RGBA8_UNORM(28) view_format=RGBA8_UNORM(28)"
+						<< " texture_format=" << native_post_aa::texture_formats(role)
+						<< " view_format=" << native_post_aa::view_formats(role) << " views_match_storage_family=1"
 						<< " array=1 mips=1 samples=1:0 usage=0 required_bind=0x28 cpu=0 misc=0\n";
+				}
 				else out << "      expected_display: texture_format=R11G11B10_FLOAT(26) nonzero_extent=1"
 					<< " array=1 mips=1 samples=1:0 usage=0 exact_bind=0xa8 cpu=0 misc=0\n";
 				append_target("reference", f.reference); append_target("failed", f.failed);

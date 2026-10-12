@@ -771,11 +771,23 @@ int main()
 		const auto missing = diagnostic::observe(14, nullptr, nullptr, nullptr, nullptr);
 		const auto reason = [](const char* actual, const char* expected)
 		{ return actual && std::strcmp(actual, expected) == 0; };
-		if (!reason(diagnostic::rejection(captured, reference), "texture_format") ||
+		if (diagnostic::rejection(captured, reference) ||
 			captured.texture.Format != DXGI_FORMAT_R8G8_UNORM || captured.texture.Width != 16 ||
 			!reason(diagnostic::rejection(mismatch, reference), "rtv_srv_resource_mismatch") ||
 			!reason(diagnostic::rejection(missing, reference), "image_missing"))
-			return fail("AA diagnostics failed to distinguish format, identity and missing targets");
+			return fail("valid SMAA RG8 edge target rejected or invalid resource identity accepted");
+		// #68 uses RG8 for edges; NVIDIA can use RGBA8. Blend weights and
+		// final-color/history targets still require all four channels.
+		auto blend = captured;blend.id=15;
+		auto color = captured;color.id=13;
+		auto rgba_edges = reference;rgba_edges.id=14;
+		if (!reason(diagnostic::rejection(blend, reference), "texture_format") ||
+			!reason(diagnostic::rejection(color, reference), "texture_format") ||
+			diagnostic::rejection(rgba_edges, reference))
+			return fail("SMAA edge formats leaked into blend/color admission or rejected RGBA edges");
+		auto edge_view = captured;edge_view.input.Format=DXGI_FORMAT_R8G8B8A8_UNORM;
+		if (!reason(diagnostic::rejection(edge_view, reference), "srv_format"))
+			return fail("SMAA edge texture/view format mismatch accepted");
 		auto changed = reference;changed.texture.Width=8;
 		if (!reason(diagnostic::rejection(changed, reference), "texture_extent")) return fail("AA extent diagnostic");
 		changed=reference;changed.input=srgb;
@@ -783,7 +795,7 @@ int main()
 		changed=reference;changed.texture.BindFlags=D3D11_BIND_RENDER_TARGET;
 		if (!reason(diagnostic::rejection(changed, reference), "texture_bindings")) return fail("AA binding diagnostic");
 		scratch_srv.Reset();scratch_rtv.Reset();scratch.Reset();
-		if (!reason(diagnostic::rejection(captured, reference), "texture_format"))
+		if (diagnostic::rejection(captured, reference))
 			return fail("AA evidence depends on released GPU resources");
 	}
 	for (std::uint64_t pair_id : {100u, 101u})

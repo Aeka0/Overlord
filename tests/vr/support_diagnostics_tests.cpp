@@ -37,7 +37,7 @@ int main()
 		sample.tick=10;sample.stage="smaa_scratch_extent";sample.detail="texture_format";
 		sample.selected=vr::native_post_aa::mode::smaa_t2x;sample.view={42,3,1,false};
 		sample.route={5,4};sample.targets_known=true;sample.failed.id=14;
-		sample.failed.texture_known=true;sample.failed.texture.Format=DXGI_FORMAT_R8G8_UNORM;
+		sample.failed.texture_known=true;sample.failed.texture.Format=DXGI_FORMAT_R16G16_UNORM;
 		sample.reference.id=4;sample.reference.texture_known=true;
 		sample.reference.texture.Width=2064;sample.reference.texture.Height=2208;
 		validation.record(sample);
@@ -55,6 +55,10 @@ int main()
 			report.find("detail=texture_extent mode=filmic_smaa(4)")!=std::string::npos&&
 			report.find("target=14")!=std::string::npos&&report.find("target=15")!=std::string::npos,
 			"AA diagnostics retain bounded first/latest failure context across modes and generations");
+		check(report.find("expected_post_aa: role=smaa_edges")!=std::string::npos&&
+			report.find("texture_format=RG8_UNORM(49)/RGBA8_TYPELESS(27)/RGBA8_UNORM(28)")!=std::string::npos&&
+			report.find("expected_post_aa: role=smaa_blend")!=std::string::npos,
+			"SMAA diagnostics describe separate edge and blend format contracts");
 	}
 	{
 		namespace screen=vr::diagnostics::screen;
