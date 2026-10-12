@@ -184,3 +184,4 @@ node_modules/
 !.env.example
 *.pem
 *.key
+.feedback
