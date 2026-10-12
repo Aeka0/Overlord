@@ -1,19 +1,20 @@
 ---
-name: Feature request / 功能建议
-about: Suggest an improvement to Overlord / 提出改进建议
+name: Feature request
+about: 'Suggest an improvement to Overlord '
 title: ''
 labels: ''
 assignees: ''
+
 ---
 
-### Problem / 要解决的问题
+### Problem
 
 Describe one concrete gameplay or usability problem.
 
-### Proposed behavior / 建议的行为
+### Proposed behavior
 
 Describe how the interaction should work, including the mission, weapon or device.
 
-### Alternatives and evidence / 其他方案与依据
+### Alternatives and evidence
 
 Include native-game references or reproduction steps when available.
