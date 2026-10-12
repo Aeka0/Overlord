@@ -30,6 +30,8 @@
 #include "ui_scripting.hpp"
 #include "ui_script_modules.hpp"
 #include "product.hpp"
+#include "campaign_unlock_request.hpp"
+#include <utils/flags.hpp>
 
 #include <utils/string.hpp>
 #include <utils/hook.hpp>
@@ -41,6 +43,7 @@ namespace ui_scripting
 	{
 		const auto lui_common = utils::nt::load_resource(LUI_COMMON);
 		const auto lui_updater = utils::nt::load_resource(LUI_UPDATER);
+		const auto lui_campaign_unlock = utils::nt::load_resource(LUI_CAMPAIGN_UNLOCK);
 		const auto lua_json = utils::nt::load_resource(LUA_JSON);
 
 		using lua_function_t = std::function<arguments(const function_arguments& args)>;
@@ -290,6 +293,31 @@ namespace ui_scripting
 			using game = table;
 			auto game_type = game();
 			lua["game"] = game_type;
+
+			game_type["applycampaignunlock"] = [](const game&, const script_value& apply)
+			{
+				static campaign_unlock::request request([]
+				{
+					const auto value = utils::flags::get_flag("campaign-unlock").value_or("0");
+					try { campaign_unlock::parse(value); return value; }
+					catch (const std::exception& error)
+					{
+						console::error("[Campaign unlock] %s\n", error.what());
+						return std::string("0");
+					}
+				}());
+				if (!request.take(::game::Com_InFrontend())) return;
+				try
+				{
+					apply.as<function>()();
+					console::info("[Campaign unlock] Applied; native profile save requested.\n");
+				}
+				catch (const std::exception& error)
+				{
+					// A failed request must neither break the menu nor replay on VM reload.
+					console::error("[Campaign unlock] Failed: %s\n", error.what());
+				}
+			};
 
 			game_type["sharedset"] = [](const game&, const std::string& key, const std::string& value)
 			{
@@ -930,6 +958,7 @@ namespace ui_scripting
 			load_script("lua_json", lua_json);
 
 			load_scripts();
+			load_script("lui_campaign_unlock", lui_campaign_unlock);
 		}
 
 		void try_start()

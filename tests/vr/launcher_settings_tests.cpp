@@ -4,6 +4,7 @@
 #include "launcher/localization.hpp"
 #include "launcher/game_language_catalog.hpp"
 #include "launcher/bridge_protocol.hpp"
+#include "campaign_unlock_request.hpp"
 #include "launcher/preflight_policy.hpp"
 #include "component/game_data.hpp"
 #include <iostream>
@@ -25,6 +26,18 @@ int main(int argc, char** argv)
 	using namespace launcher_vr_settings;
 	try
 	{
+		campaign_unlock::request disabled_request("0");
+		require(!disabled_request.take(true), "Off never changes an existing campaign unlock");
+		campaign_unlock::request unlock_request("1");
+		require(!unlock_request.take(false), "Gameplay cannot consume a frontend profile request");
+		require(unlock_request.take(true), "On requests an explicit unlock");
+		require(!unlock_request.take(true), "Menu reopening or VM restart cannot replay the request, even after failure");
+		for (const auto action : {"", "true", "unlock;quit", "restore", "UNLOCK"})
+		{
+			bool rejected = false;
+			try { campaign_unlock::parse(action); } catch (const std::exception&) { rejected = true; }
+			require(rejected, "Only allowlisted campaign actions can become startup arguments");
+		}
 		const std::string chinese = "\xe7\xae\x80\xe4\xbd\x93\xe4\xb8\xad\xe6\x96\x87";
 		for (const auto& text : {std::string{}, std::string("English"), chinese, chinese + std::string("\0end", 4)})
 		{

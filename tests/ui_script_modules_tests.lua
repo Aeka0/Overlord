@@ -77,3 +77,5 @@ LUI = {}
 dofile('src/client/resources/ui_scripts/updater.lua')
 assert(type(LUI.tryupdating) == 'function', 'paused updater keeps a harmless compatibility entry')
 LUI.tryupdating(false) -- No backend access, timers, popup factories or event registration.
+
+dofile('tests/campaign_unlock_tests.lua')

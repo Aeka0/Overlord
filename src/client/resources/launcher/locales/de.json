@@ -31,8 +31,7 @@
   "settings.basics": "Grundlagen",
   "settings.gameplay": "Gameplay",
   "settings.cheats": "Cheats",
-  "settings.cheatsHint": "Alle Cheats sind standardmäßig aus. Speichern oder Starten übernimmt die Auswahl beim nächsten Spielstart.",
-  "settings.cheatsNotice": "Wir empfehlen, die Kampagne einmal ohne Cheats durchzuspielen.",
+  "settings.cheatsHint": "Wir empfehlen, die Kampagne einmal ohne Cheats durchzuspielen.",
   "settings.cheatHealth": "Unverwundbarkeit",
   "settings.cheatHealthHint": "Halbgott erlaubt Schaden, verhindert aber normale Tode. Gott verhindert normalen Schaden. Geskriptete Tode bleiben möglich.",
   "settings.cheatNotarget": "Von Gegnern ignoriert",
@@ -282,5 +281,7 @@
   "settings.killfeedStyleHint": "Treffer- und Abschussgeräusche auswählen. Standard: MW2019. Kampfgeräusche werden kurz leiser; Dialoge und Musik bleiben erhalten.",
   "choice.bocw": "Black Ops Cold War",
   "choice.mwClassic": "Modern Warfare Classic",
-  "choice.mw2019": "Modern Warfare (2019)"
+  "choice.mw2019": "Modern Warfare (2019)",
+  "settings.campaignUnlock": "Alle Missionen und Aufklärungsdaten freischalten",
+  "settings.campaignUnlockHint": "Wird einmal beim Spielstart aus diesem Fenster angewendet. Schaltet Missionen und Belohnungen frei, ohne Fortschritt oder Sammelobjekte als abgeschlossen zu markieren. Beim Schließen wird die Auswahl verworfen."
 }

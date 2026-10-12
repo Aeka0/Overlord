@@ -31,8 +31,7 @@
   "settings.basics": "Basics",
   "settings.gameplay": "Gameplay",
   "settings.cheats": "Cheats",
-  "settings.cheatsHint": "All cheats are disabled by default. Save or Launch applies your selection on the next game start.",
-  "settings.cheatsNotice": "We strongly recommend completing the campaign once before enabling cheats.",
+  "settings.cheatsHint": "We strongly recommend completing the campaign once before enabling cheats.",
   "settings.cheatHealth": "Invincibility mode",
   "settings.cheatHealthHint": "Demigod lets you take damage but prevents normal death. God mode prevents normal damage. Neither prevents scripted deaths.",
   "settings.cheatNotarget": "Invisibility mode",
@@ -282,5 +281,7 @@
   "settings.killfeedStyleHint": "Choose hit and kill sounds. MW2019 is the default. Combat audio briefly lowers during feedback; dialogue and music are preserved.",
   "choice.bocw": "Black Ops Cold War",
   "choice.mwClassic": "Modern Warfare Classic",
-  "choice.mw2019": "Modern Warfare (2019)"
+  "choice.mw2019": "Modern Warfare (2019)",
+  "settings.campaignUnlock": "Unlock all missions and intel",
+  "settings.campaignUnlockHint": "Applies once when you launch the game from this window. Unlocks missions and intel rewards without completing campaign or collectible records. Closing this window discards the selection."
 }

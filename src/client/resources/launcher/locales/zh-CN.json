@@ -31,8 +31,7 @@
   "settings.basics": "基础",
   "settings.gameplay": "玩法",
   "settings.cheats": "作弊",
-  "settings.cheatsHint": "所有作弊默认禁用。保存或启动后，将在下次进入游戏时应用。",
-  "settings.cheatsNotice": "我们强烈建议您完整通关一次后再启用。",
+  "settings.cheatsHint": "我们强烈建议您完整通关一次后再启用。",
   "settings.cheatHealth": "无敌模式",
   "settings.cheatHealthHint": "不死：仍会受伤，但不会因普通伤害死亡。无敌：免受普通伤害。两者均无法免除剧情杀。",
   "settings.cheatNotarget": "隐身模式",
@@ -282,5 +281,7 @@
   "settings.killfeedStyleHint": "选择命中与击杀音效，默认为 MW2019。反馈时短暂压低战斗音量，保留对白与音乐。",
   "choice.bocw": "Black Ops Cold War",
   "choice.mwClassic": "Modern Warfare Classic",
-  "choice.mw2019": "Modern Warfare (2019)"
+  "choice.mw2019": "Modern Warfare (2019)",
+  "settings.campaignUnlock": "解锁所有关卡和情报",
+  "settings.campaignUnlockHint": "从此窗口启动游戏时应用一次，开放关卡和情报奖励，不补齐通关或收集记录。关闭此窗口会丢弃尚未执行的选择。"
 }

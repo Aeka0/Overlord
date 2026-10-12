@@ -513,12 +513,8 @@ input[aria-invalid="true"] {
 }
 .guide-entry,
 .build-notice,
-.cheat-notice {
+.campaign-unlock {
   margin-bottom: 24px;
-}
-.cheat-notice {
-  font-size: 15px;
-  line-height: 1.7;
 }
 .guide-heading {
   display: flex;

@@ -2,5 +2,5 @@
 namespace launcher_process
 {
 	void use_executable_directory();
-	void start_game();
+	void start_game(bool unlock_campaign);
 }

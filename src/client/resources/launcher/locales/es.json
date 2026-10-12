@@ -31,8 +31,7 @@
   "settings.basics": "General",
   "settings.gameplay": "Jugabilidad",
   "settings.cheats": "Trucos",
-  "settings.cheatsHint": "Todos los trucos están desactivados por defecto. Guarda o inicia para aplicarlos en el próximo arranque.",
-  "settings.cheatsNotice": "Recomendamos completar la campaña una vez antes de activar trucos.",
+  "settings.cheatsHint": "Recomendamos completar la campaña una vez antes de activar trucos.",
   "settings.cheatHealth": "Modo de invencibilidad",
   "settings.cheatHealthHint": "Semidiós permite recibir daño, pero evita las muertes normales. Dios evita el daño normal. Ninguno impide las muertes del guion.",
   "settings.cheatNotarget": "Modo invisible",
@@ -282,5 +281,7 @@
   "settings.killfeedStyleHint": "Elige los sonidos de impacto y baja. MW2019 por defecto. El audio de combate baja brevemente; los diálogos y la música se mantienen.",
   "choice.bocw": "Black Ops Cold War",
   "choice.mwClassic": "Modern Warfare Classic",
-  "choice.mw2019": "Modern Warfare (2019)"
+  "choice.mw2019": "Modern Warfare (2019)",
+  "settings.campaignUnlock": "Desbloquear todas las misiones y la información",
+  "settings.campaignUnlockHint": "Se aplica una vez al iniciar desde esta ventana. Desbloquea misiones y recompensas de información sin completar el progreso ni los coleccionables. Cerrar la ventana descarta la selección."
 }

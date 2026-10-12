@@ -31,8 +31,7 @@
   "settings.basics": "기본",
   "settings.gameplay": "게임플레이",
   "settings.cheats": "치트",
-  "settings.cheatsHint": "모든 치트는 기본적으로 꺼져 있습니다. 저장하거나 게임을 실행하면 다음 게임 시작 시 적용됩니다.",
-  "settings.cheatsNotice": "치트를 사용하기 전에 캠페인을 한 번 완료하는 것을 권장합니다.",
+  "settings.cheatsHint": "치트를 사용하기 전에 캠페인을 한 번 완료하는 것을 권장합니다.",
   "settings.cheatHealth": "무적 모드",
   "settings.cheatHealthHint": "반무적은 피해를 받지만 일반적인 사망을 막습니다. 무적은 일반적인 피해를 막습니다. 두 모드 모두 각본에 따른 사망은 막지 못합니다.",
   "settings.cheatNotarget": "적 인식 무효화",
@@ -282,5 +281,7 @@
   "settings.killfeedStyleHint": "명중 및 처치 효과음을 선택합니다. 기본값은 MW2019입니다. 피드백 중 전투 소리가 잠시 줄어들며 대사와 음악은 유지됩니다.",
   "choice.bocw": "Black Ops Cold War",
   "choice.mwClassic": "Modern Warfare Classic",
-  "choice.mw2019": "Modern Warfare (2019)"
+  "choice.mw2019": "Modern Warfare (2019)",
+  "settings.campaignUnlock": "모든 임무와 정보 해제",
+  "settings.campaignUnlockHint": "이 창에서 게임을 시작할 때 한 번 적용됩니다. 임무와 정보 보상을 해제하며 클리어 및 수집 기록은 변경하지 않습니다. 창을 닫으면 아직 적용하지 않은 선택이 취소됩니다."
 }

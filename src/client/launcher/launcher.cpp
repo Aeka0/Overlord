@@ -21,6 +21,7 @@ struct launcher::impl
 	bool settings_loaded_{};
 	bool launched_{};
 	std::optional<int> pending_launch_;
+	bool pending_campaign_unlock_{};
 	std::optional<std::string> probe_path_ = utils::flags::get_flag("launcher-smoke");
 	ULONGLONG started_ = GetTickCount64();
 	bool probe_failed_{};
@@ -55,7 +56,7 @@ struct launcher::impl
 						{
 							try
 							{
-								launcher_process::start_game(); launched_ = true;
+								launcher_process::start_game(pending_campaign_unlock_); launched_ = true;
 								result = {{"ok", true}, {"launched", true}};
 							}
 							catch (const std::exception& error) { result = {{"ok", false}, {"error", error.what()}}; }
@@ -153,8 +154,10 @@ struct launcher::impl
 			else if (request.method == "game.launch")
 			{
 				if (probe_path_) throw std::runtime_error("Game startup is unavailable in renderer probe mode.");
-				if (params.size() != 1 || !params.contains("warnings") || !params.at("warnings").is_array() || params.at("warnings").size() > 2)
+				if (params.size() != 2 || !params.contains("campaignUnlock") || !params.at("campaignUnlock").is_boolean()
+					|| !params.contains("warnings") || !params.at("warnings").is_array() || params.at("warnings").size() > 2)
 					throw std::runtime_error("Invalid startup parameters.");
+				const auto unlock = params.at("campaignUnlock").get<bool>();
 				for (const auto& id : params.at("warnings"))
 					if (!id.is_string() || (id != "shaders" && id != "shadows")) throw std::runtime_error("Invalid startup acknowledgement.");
 				if (launched_ || !services_.idle() || !settings_loaded_) throw std::runtime_error("launcher.busy");
@@ -164,6 +167,7 @@ struct launcher::impl
 				// thread only spawns after approval and cannot enqueue mutations
 				// in between; closing/reloading the window discards that approval.
 				services_.enqueue(request);
+				pending_campaign_unlock_ = unlock;
 				pending_launch_ = request.id;
 				return;
 			}

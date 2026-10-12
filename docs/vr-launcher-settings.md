@@ -180,8 +180,18 @@ the last feedback and fades back over 180 ms.
 The selection is saved for the next game
 launch; Reset restores MW2019. There is no in-game settings menu for this feature.
 
-Cheats displays a recommendation to complete the campaign once before enabling
-it. Demigod/God cannot prevent scripted deaths. Infinite reserves locks carried
+Cheats uses the recommendation to complete the campaign once as its heading
+description. Its first row is a boolean switch, off by default, that requests a
+one-time unlock of all missions and intel rewards. Off does nothing; the launcher
+does not offer an action to reverse an existing unlock. The selection belongs to
+the current launcher window, is passed only on launch, and is discarded when the
+window closes. It is not a persistent VR setting and
+does not mark missions completed or intel collected. The game applies the explicit
+value after the campaign menu is created, using native profile setup, finish and
+save commands, then reads back the profile-backed menu value. The process-owned
+request is consumed once even if the menu or Lua VM is recreated. Failures are
+logged without interrupting the menu; readback does not prove a successful disk
+write, which still needs a restart check. Demigod/God cannot prevent scripted deaths. Infinite reserves locks carried
 reserve pools at 500 while retaining normal reload/chambering; Infinite ammo
 reuses the existing sustained-shot behavior. See [native cheat integration](vr-official-cheats.md).
 

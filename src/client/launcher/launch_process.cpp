@@ -21,7 +21,7 @@ namespace launcher_process
 		std::filesystem::current_path(executable_path().parent_path());
 	}
 
-	void start_game()
+	void start_game(bool unlock_campaign)
 	{
 		const auto executable = executable_path();
 		auto command = launcher_bridge::quote_argument(executable.wstring());
@@ -29,8 +29,18 @@ namespace launcher_process
 		auto* arguments = CommandLineToArgvW(GetCommandLineW(), &count);
 		if (!arguments) throw std::runtime_error("Could not read startup arguments.");
 		const auto release = gsl::finally([&] { LocalFree(arguments); });
-		for (int i = 1; i < count; ++i) command += L" " + launcher_bridge::quote_argument(arguments[i]);
+		for (int i = 1; i < count; ++i)
+		{
+			// This window owns the request; do not inherit a stale command-line value.
+			if (_wcsicmp(arguments[i], L"-campaign-unlock") == 0)
+			{
+				if (i + 1 < count && arguments[i + 1][0] != L'-') ++i;
+				continue;
+			}
+			command += L" " + launcher_bridge::quote_argument(arguments[i]);
+		}
 		command += L" -singleplayer -launcher-start";
+		command += unlock_campaign ? L" -campaign-unlock 1" : L" -campaign-unlock 0";
 		if (command.size() >= 32767) throw std::runtime_error("The startup command is too long.");
 		STARTUPINFOW startup{};
 		startup.cb = sizeof(startup);

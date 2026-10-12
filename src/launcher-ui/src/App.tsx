@@ -21,7 +21,7 @@ import {
   type SettingsState,
   type Values,
 } from "./model";
-import { FieldControl, SettingRow } from "./components/controls";
+import { FieldControl, SettingRow, Switch } from "./components/controls";
 import { WindowControls } from "./components/WindowControls";
 import { HomePage } from "./components/HomePage";
 import { MotionSurface } from "./components/MotionSurface";
@@ -34,6 +34,7 @@ import { initialHelpState } from "./helpState";
 import {
   inspectHomeLayout,
   inspectLauncherLayout,
+  inspectCampaignUnlock,
   inspectLauncherMotion,
   inspectLauncherSelect,
   inspectLaunchDialog,
@@ -186,6 +187,7 @@ function Launcher({ data }: { data: Bootstrap }) {
   const [preferenceBusy, setPreferenceBusy] = useState(false);
   const [riskBusy, setRiskBusy] = useState(false);
   const [launching, setLaunching] = useState(false);
+  const [campaignUnlock, setCampaignUnlock] = useState(false);
   const [checking, setChecking] = useState(false);
   const [preflight, setPreflight] = useState<PreflightReport | null>(null);
   const [fixing, setFixing] = useState<string | null>(null);
@@ -213,11 +215,13 @@ function Launcher({ data }: { data: Bootstrap }) {
           data.renderProbePage === "home"
             ? await inspectHomeLayout()
             : inspectLauncherLayout();
+        const campaignUnlock = data.renderProbePage === "home" ? { ok: true } : inspectCampaignUnlock();
         const preflight = await inspectLaunchDialog();
         return bridge!.request("renderer.ready", {
           ok:
             declaration.ok &&
             layout.ok &&
+            campaignUnlock.ok &&
             motion.ok &&
             selects.ok &&
             preflight.ok &&
@@ -234,6 +238,7 @@ function Launcher({ data }: { data: Bootstrap }) {
           controls: document.querySelectorAll('[id^="vr_"]').length,
           language: preferences.language,
           layout,
+          campaignUnlock,
           motion,
           selects,
           preflight,
@@ -461,6 +466,7 @@ function Launcher({ data }: { data: Bootstrap }) {
     setLaunching(true);
     try {
       const result = await bridge!.request<LaunchResult>("game.launch", {
+        campaignUnlock,
         warnings: report.issues
           .filter((issue) => issue.severity === "warning")
           .map((issue) => issue.id),
@@ -717,6 +723,7 @@ function Launcher({ data }: { data: Bootstrap }) {
                   disabled={controller.pending || disabled}
                   onClick={() => {
                     setNotice(null);
+                    setCampaignUnlock(false);
                     void controller.reset();
                   }}
                 >
@@ -754,7 +761,20 @@ function Launcher({ data }: { data: Bootstrap }) {
                 </div>
               )}
               {category === "cheats" && (
-                <p className="cheat-notice">{t("settings.cheatsNotice")}</p>
+                <div className="panel campaign-unlock">
+                  <SettingRow
+                    title={<label htmlFor="campaign-unlock">{t("settings.campaignUnlock")}</label>}
+                    description={<span id="campaign-unlock-hint">{t("settings.campaignUnlockHint")}</span>}
+                  >
+                    <Switch
+                      id="campaign-unlock"
+                      label={t("settings.campaignUnlock")}
+                      disabled={disabled || !controller.state.onboarding.gameAvailable}
+                      checked={campaignUnlock}
+                      onChange={setCampaignUnlock}
+                    />
+                  </SettingRow>
+                </div>
               )}
               {category === "debug" && (
                 <p className="hint build-notice">

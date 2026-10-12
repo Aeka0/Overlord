@@ -262,6 +262,28 @@ export function inspectLauncherLayout() {
       result.focusOutlineHidden,
   };
 }
+
+export function inspectCampaignUnlock() {
+  const navigation = document.querySelector(".settings-navigation");
+  const previous = navigation?.querySelector<HTMLButtonElement>('[aria-current="page"]');
+  const cheats = navigation?.querySelectorAll<HTMLButtonElement>("button")[3];
+  if (!previous || !cheats) throw new Error("Cheats navigation is unavailable");
+  flushSync(() => cheats.click());
+  for (const animation of document.getAnimations()) animation.finish();
+  const page = document.querySelector<HTMLElement>(".settings-page")!;
+  const control = page.querySelector<HTMLInputElement>("#campaign-unlock");
+  const bounds = control?.closest(".switch")?.getBoundingClientRect();
+  const result = {
+    first: page.querySelector(".setting-row input") === control && !!control,
+    defaultOff: control?.checked === false,
+    boolean: control?.type === "checkbox",
+    descriptionAtHeading: !!page.querySelector(".page-heading > .hint")?.textContent && !page.querySelector(".cheat-notice"),
+    fits: !!bounds && bounds.left >= 0 && bounds.right <= innerWidth && page.scrollWidth <= page.clientWidth + 1,
+  };
+  flushSync(() => previous.click());
+  for (const animation of document.getAnimations()) animation.finish();
+  return { ...result, ok: Object.values(result).every(Boolean) };
+}
 export async function inspectHomeLayout() {
   const image = document.querySelector<HTMLImageElement>("#home-background");
   const home = document.querySelector<HTMLElement>(".home-page");

@@ -31,8 +31,7 @@
   "settings.basics": "基本",
   "settings.gameplay": "ゲームプレイ",
   "settings.cheats": "チート",
-  "settings.cheatsHint": "チートはすべて初期状態で無効です。保存またはゲーム起動で、次回起動時に設定が反映されます。",
-  "settings.cheatsNotice": "チートを有効にする前に、一度キャンペーンをクリアすることを強くおすすめします。",
+  "settings.cheatsHint": "チートを有効にする前に、一度キャンペーンをクリアすることを強くおすすめします。",
   "settings.cheatHealth": "無敵モード",
   "settings.cheatHealthHint": "半無敵ではダメージを受けますが、通常の死亡を防ぎます。無敵では通常のダメージを防ぎます。どちらもイベントによる死亡は防ぎません。",
   "settings.cheatNotarget": "敵からの認識を無効化",
@@ -282,5 +281,7 @@
   "settings.killfeedStyleHint": "命中とキルの効果音を選択します。既定は MW2019。再生中は戦闘音が一時的に下がり、会話と音楽は維持されます。",
   "choice.bocw": "Black Ops Cold War",
   "choice.mwClassic": "Modern Warfare Classic",
-  "choice.mw2019": "Modern Warfare (2019)"
+  "choice.mw2019": "Modern Warfare (2019)",
+  "settings.campaignUnlock": "全ミッションと機密情報を解除",
+  "settings.campaignUnlockHint": "このウィンドウからゲームを起動するときに一度だけ適用します。ミッションと機密情報の報酬を解放し、クリアや収集の記録は変更しません。ウィンドウを閉じると未適用の選択は破棄されます。"
 }

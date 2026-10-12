@@ -31,8 +31,7 @@
   "settings.basics": "Général",
   "settings.gameplay": "Jouabilité",
   "settings.cheats": "Triches",
-  "settings.cheatsHint": "Toutes les triches sont désactivées par défaut. Enregistrer ou lancer le jeu applique vos choix au prochain démarrage.",
-  "settings.cheatsNotice": "Nous recommandons vivement de terminer la campagne une fois avant d’activer les triches.",
+  "settings.cheatsHint": "Nous recommandons vivement de terminer la campagne une fois avant d’activer les triches.",
   "settings.cheatHealth": "Mode d’invincibilité",
   "settings.cheatHealthHint": "Demi-dieu permet de subir des dégâts sans mourir normalement. Dieu empêche les dégâts normaux. Aucun n’empêche les morts scénarisées.",
   "settings.cheatNotarget": "Mode invisible aux ennemis",
@@ -282,5 +281,7 @@
   "settings.killfeedStyleHint": "Choisissez les sons de touche et d’élimination. MW2019 par défaut. Le volume des combats baisse brièvement ; les dialogues et la musique sont préservés.",
   "choice.bocw": "Black Ops Cold War",
   "choice.mwClassic": "Modern Warfare Classic",
-  "choice.mw2019": "Modern Warfare (2019)"
+  "choice.mw2019": "Modern Warfare (2019)",
+  "settings.campaignUnlock": "Débloquer toutes les missions et les renseignements",
+  "settings.campaignUnlockHint": "Appliqué une seule fois au lancement depuis cette fenêtre. Débloque les missions et les récompenses des renseignements sans compléter la progression ni la collecte. Fermer cette fenêtre annule la sélection."
 }
