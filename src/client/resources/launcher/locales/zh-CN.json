@@ -131,7 +131,7 @@
   "settings.throwSpeedRange": "0.1–4.0 倍 · 默认 1 倍",
   "settings.recoilHint": "调整单手射击时的额外后坐力。",
   "settings.noRecoil": "无后坐力",
-  "settings.noRecoilHint": "取消射击时的枪口后坐力。默认禁用。",
+  "settings.noRecoilHint": "取消射击时的枪口后坐力。",
   "settings.applyTo": "单手惩罚范围",
   "common.previewHint": "仅供预览，不会保存或应用到游戏。",
   "choice.longWeapons": "长枪",
@@ -283,5 +283,8 @@
   "choice.mwClassic": "Modern Warfare Classic",
   "choice.mw2019": "Modern Warfare (2019)",
   "settings.campaignUnlock": "解锁所有关卡和情报",
-  "settings.campaignUnlockHint": "从此窗口启动游戏时应用一次，开放关卡和情报奖励，不补齐通关或收集记录。关闭此窗口会丢弃尚未执行的选择。"
+  "settings.campaignUnlockHint": "从此窗口启动游戏时应用一次，开放关卡和情报奖励，不补齐通关或收集记录。关闭此窗口会丢弃尚未执行的选择。",
+  "settings.exoPunch": "外骨骼拳击",
+  "settings.exoPunchHint": "提高物理近战伤害，致死命中时击飞敌人。不影响子弹和爆炸伤害。需要在高级图形设置中启用布娃娃。",
+  "settings.funFeatures": "趣味功能"
 }

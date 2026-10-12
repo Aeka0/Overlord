@@ -160,6 +160,17 @@ int main(int argc, char** argv)
 			auto edited = initial; edited[backend_name] = invalid; require(!validate(edited), "Malformed backend payload cannot be saved");
 		}
 
+		const auto exo=vr::settings::exo_punch.name;
+		require(initial[exo]==false,"EXO punch defaults off");
+		for(bool enabled:{false,true})
+		{
+			auto selected=initial;selected[exo]=enabled;
+			const auto config=update_config("seta sf_use_ragdoll_mode 1\nseta ragdoll_enable 1\n",selected);
+			require(read_values(config)==selected && config.find("seta sf_use_ragdoll_mode 1")!=std::string::npos,
+				"EXO punch round trips without changing the independent native Ragdoll Impact request");
+		}
+		for(const auto& bad:{json(1),json("true"),json("on;quit"),json(nullptr)})
+		{auto selected=initial;selected[exo]=bad;require(!validate(selected),"EXO punch accepts only a Bool bridge value");}
 		for(const auto& field:{vr::settings::cheat_health,vr::settings::cheat_notarget,vr::settings::cheat_ammo})
 		{
 			require(initial[field.name]=="off","Launcher cheats default off");

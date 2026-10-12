@@ -2,6 +2,7 @@
 #include "native_melee.hpp"
 #include "native_melee_events.hpp"
 #include "official_cheats.hpp"
+#include "exo_punch.hpp"
 #include "native_weapon_read.hpp"
 #include "native_scripted_control.hpp"
 #include "trainer_policy.hpp"
@@ -99,12 +100,17 @@ namespace vr::gameplay::melee::native
 		if (contact.flesh ? !npc(contact.target.entity) : !training_target(contact.target.entity,kind)) return 0;
 		const auto native_amount=utils::hook::invoke<int>(0x1406a45d0,weapon,false);
         const bool impact=cheats::ragdoll_impact();
-        const auto knife_amount=impact && weapons::native_weapon_read::get(tactical_knife) ?
+        const bool exo=cheats::exo_punch::active();
+        const auto knife_amount=(impact || exo) && weapons::native_weapon_read::get(tactical_knife) ?
             utils::hook::invoke<int>(0x1406a45d0,tactical_knife,false):0;
-        const auto amount=scaled_damage(native_amount,kind,impact,knife_amount);if (!amount) return 0;
+        const auto amount=scaled_damage(native_amount,kind,impact || exo,knife_amount);if (!amount) return 0;
 		if(kind==tool::shield && definition.definition->weapType!=game::WEAPTYPE_RIOTSHIELD)return 0;
 		auto* target=&game::g_entities[contact.target.entity];auto* player=&game::g_entities[0];const int before=read<int>(target,0x184);
 		committing=true;const auto restore=gsl::finally([]{committing=false;});
+		const auto claim=contact.flesh && exo && !impact ?
+			cheats::exo_punch::begin_hit(contact.target,definition.name.data()):cheats::exo_punch::hit_ticket{};
+		bool lethal{};
+		const auto settle=gsl::finally([&]{cheats::exo_punch::finish_hit(claim,lethal);});
 		// Native melee sends a separate contact event before G_Damage. That
 		// event owns weapon-specific impact audio/FX; G_Damage alone never sends it.
 		// Use the physical contact, not the stock forward search/auto-lunge.
@@ -127,7 +133,8 @@ namespace vr::gameplay::melee::native
 		// loss. Their listener owns scoring, civilian penalties and target reset.
 		if (!contact.flesh) return amount;
 		if (weapons::native_carry::entity_key(contact.target.entity).generation!=contact.target.generation) return amount;
-		const int accepted=int(std::clamp<std::int64_t>(std::int64_t(before)-read<int>(target,0x184),0,amount));
+		const int after=read<int>(target,0x184);lethal=after<=0;
+		const int accepted=int(std::clamp<std::int64_t>(std::int64_t(before)-after,0,amount));
 		// Stock 0x14051d50f sends EV_MELEE_BLOOD only for player -> actor damage.
 		// Physical knife FX is queued by the equipment owner at its real socket.
 		// Stock EV_MELEE_BLOOD reselects the current firearm and requires a

@@ -202,6 +202,11 @@ return function()
 	test_executable("vr-official-cheats-tests", "official-cheats")
 		files {"./tests/vr/official_cheats_tests.cpp"}
 		includedirs {"./src/client"}
+		gsc_tool.import()
+		zlib.import()
+		filter "action:vs*"
+			buildoptions "/Zc:__cplusplus"
+		filter {}
 
 	test_executable("vr-rigid-part-tests", "rigid-part")
 		files {"./tests/vr/rigid_part_tests.cpp", "./src/client/component/scene_rigid_part.cpp",

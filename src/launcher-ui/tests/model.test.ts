@@ -128,6 +128,17 @@ test("every migrated field has translations in every existing locale", () => {
     );
 });
 
+test("EXO Punch is a Cheats toggle and saves independently of native intel cheats", () => {
+  const field = fields.find((field) => field.name === "vr_exoPunch")!;
+  assert.equal(field.category, "cheats");
+  assert.equal(field.group, "settings.funFeatures");
+  assert.equal(field.type, "toggle");
+  const fixture = { ...state, values: { vr_exoPunch: false } } as SettingsState;
+  const draft = makeDraft(fixture.values, fixture.limits);
+  assert.equal(draft.vr_exoPunch, false);
+  assert.deepEqual(collect({ ...draft, vr_exoPunch: true }, fixture), { vr_exoPunch: true });
+});
+
 test("turning follows the backend in Basics and sight attraction belongs to Aiming", () => {
   const basicsGroups = [...new Set(fields.filter((field) => field.category === "basics").map((field) => field.group))];
   assert.deepEqual(basicsGroups.slice(0, 2), ["settings.runtimeBackend", "settings.turning"]);

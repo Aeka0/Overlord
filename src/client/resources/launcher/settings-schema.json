@@ -401,6 +401,14 @@
     "description": "settings.cheatAmmoHint"
   },
   {
+    "name": "vr_exoPunch",
+    "category": "cheats",
+    "group": "settings.funFeatures",
+    "label": "settings.exoPunch",
+    "type": "toggle",
+    "description": "settings.exoPunchHint"
+  },
+  {
     "name": "vr_killfeedStyle",
     "category": "other",
     "group": "settings.weaponFeedback",

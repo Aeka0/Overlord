@@ -135,6 +135,27 @@ game/HMD acceptance.
 
 ## Verification and diagnostics
 
+Overlord **Cheats > Fun features > EXO Punch** (`vr_exoPunch`, default off) independently
+applies the same chest-knife damage policy to valid player VR physical melee.
+It does not set `sf_use_ragdoll_mode` or `level._id_AE66`, change bullets or
+explosions, or mark the campaign as having used an official intel cheat.
+
+Only a matching lethal player melee transaction can replace native
+`animscripts/death::specialdeath`. A bounded, generation-checked claim rejects
+nonlethal/rejected contacts, other attackers/weapons/damage types, stale or
+rewound time and recycled entities. The replacement supplies a temporary
+per-victim impulse scale to the original `doimmediateragdolldeath` helper,
+then restores the original fields. Native direction-scale overrides, graphics
+ragdoll admission, civilian exclusions and earlier mission death handling stay
+authoritative. Already-forced deaths and native football impacts are not boosted
+a second time. Deaths delayed beyond one second retain native handling.
+
+Official Ragdoll Impact takes precedence when enabled: the shared damage budget
+is selected once and EXO does not intercept that death or add another impulse.
+Turning either option off retains the other; with both off, ordinary damage and
+death handling resume. `vr_exo_punch_status` reports the option, native hook
+readiness, contact claims and death dispatches. Counts do not prove visible flight.
+
 `vr_cheats_status` reports hook readiness, effective modes, transition state,
 capture/restore/pickup counts and the last failure reason, including the native
 Ragdoll Impact state.

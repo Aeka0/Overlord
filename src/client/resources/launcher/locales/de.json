@@ -131,7 +131,7 @@
   "settings.throwSpeedRange": "0,1–4,0× · Standard: 1×",
   "settings.recoilHint": "Zusätzlichen Rückstoß beim einhändigen Schießen einstellen.",
   "settings.noRecoil": "Kein Rückstoß",
-  "settings.noRecoilHint": "Deaktiviert den Mündungsrückstoß beim Schießen. Standardmäßig aus.",
+  "settings.noRecoilHint": "Deaktiviert den Mündungsrückstoß beim Schießen.",
   "settings.applyTo": "Einhändiger Rückstoßzuschlag",
   "common.previewHint": "Nur Vorschau. Wird weder gespeichert noch im Spiel angewendet.",
   "choice.longWeapons": "Langwaffen",
@@ -283,5 +283,8 @@
   "choice.mwClassic": "Modern Warfare Classic",
   "choice.mw2019": "Modern Warfare (2019)",
   "settings.campaignUnlock": "Alle Missionen und Aufklärungsdaten freischalten",
-  "settings.campaignUnlockHint": "Wird einmal beim Spielstart aus diesem Fenster angewendet. Schaltet Missionen und Belohnungen frei, ohne Fortschritt oder Sammelobjekte als abgeschlossen zu markieren. Beim Schließen wird die Auswahl verworfen."
+  "settings.campaignUnlockHint": "Wird einmal beim Spielstart aus diesem Fenster angewendet. Schaltet Missionen und Belohnungen frei, ohne Fortschritt oder Sammelobjekte als abgeschlossen zu markieren. Beim Schließen wird die Auswahl verworfen.",
+  "settings.exoPunch": "Exoskelett-Schlag",
+  "settings.exoPunchHint": "Erhöht den Schaden deiner physischen Nahkampfangriffe und schleudert Gegner bei tödlichen Treffern weg. Kugeln und Explosionen bleiben unverändert. Erfordert Ragdolls in den erweiterten Grafikeinstellungen.",
+  "settings.funFeatures": "Spielspaß"
 }

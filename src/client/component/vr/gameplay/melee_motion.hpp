@@ -13,12 +13,13 @@ namespace vr::gameplay::melee
 	{return bladed(kind) ? 1.f : kind==tool::fist ? 2.8f : kind==tool::firearm ? 3.5f : 3.f;}
 	inline constexpr float minimum_travel(tool kind) noexcept
 	{return bladed(kind) ? .04f : kind==tool::fist ? .08f : kind==tool::firearm ? .12f : .10f;}
-	inline int scaled_damage(int native,tool kind,bool ragdoll_impact=false,int tactical_knife=0) noexcept
+	inline int scaled_damage(int native,tool kind,bool boosted=false,int tactical_knife=0) noexcept
 	{
 		if(native<=0 || native>100000)return 0;
-		// Use the actual chest knife's native budget for EVERY player melee tool.
+		// Ragdoll Impact and EXO punch share the actual chest knife's native budget
+		// for every player melee tool; enabling both never stacks damage.
 		// This per-hit policy never mutates WeaponDef or latches a boosted value.
-		if(ragdoll_impact && tactical_knife>0 && tactical_knife<=100000)return tactical_knife;
+		if(boosted && tactical_knife>0 && tactical_knife<=100000)return tactical_knife;
 		return (bladed(kind) || kind==tool::shield)?native:std::max(1,(native+1)/3);
 	}
 	struct sample

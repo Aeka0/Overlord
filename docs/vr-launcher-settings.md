@@ -286,6 +286,7 @@ and regression tests.
 | Invincibility mode | `vr_cheatHealth` | `off` | `off`, `demigod`, `god` |
 | Invisibility mode | `vr_cheatNotarget` | `off` | `off`, `on` |
 | Infinite ammo mode | `vr_cheatAmmo` | `off` | `off`, `reserve`, `infinite` |
+| EXO Punch (Cheats > Fun features) | `vr_exoPunch` | false | boolean |
 | Disable lens flares in VR | `vr_disableLensFlare` | false | boolean |
 | Movement camera bob | `vr_cameraBob` | true | boolean |
 | Live stream preview mode | `vr_recordingMode` | false | boolean |

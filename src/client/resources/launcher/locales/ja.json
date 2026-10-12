@@ -131,7 +131,7 @@
   "settings.throwSpeedRange": "0.1～4.0×・初期値：1×",
   "settings.recoilHint": "片手撃ちの追加反動を調整します。",
   "settings.noRecoil": "反動なし",
-  "settings.noRecoilHint": "発射時の銃口反動を無効化します。初期状態は無効です。",
+  "settings.noRecoilHint": "発射時の銃口反動を無効化します。",
   "settings.applyTo": "片手持ちペナルティ",
   "common.previewHint": "プレビューのみ。保存やゲームへの適用は行いません。",
   "choice.longWeapons": "長銃",
@@ -283,5 +283,8 @@
   "choice.mwClassic": "Modern Warfare Classic",
   "choice.mw2019": "Modern Warfare (2019)",
   "settings.campaignUnlock": "全ミッションと機密情報を解除",
-  "settings.campaignUnlockHint": "このウィンドウからゲームを起動するときに一度だけ適用します。ミッションと機密情報の報酬を解放し、クリアや収集の記録は変更しません。ウィンドウを閉じると未適用の選択は破棄されます。"
+  "settings.campaignUnlockHint": "このウィンドウからゲームを起動するときに一度だけ適用します。ミッションと機密情報の報酬を解放し、クリアや収集の記録は変更しません。ウィンドウを閉じると未適用の選択は破棄されます。",
+  "settings.exoPunch": "外骨格パンチ",
+  "settings.exoPunchHint": "物理的な近接攻撃のダメージを強化し、致死攻撃で敵を吹き飛ばします。弾丸と爆発には影響しません。詳細グラフィック設定でラグドールを有効にする必要があります。",
+  "settings.funFeatures": "お楽しみ機能"
 }

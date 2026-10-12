@@ -131,7 +131,7 @@
   "settings.throwSpeedRange": "0,1–4,0× · Par défaut : 1×",
   "settings.recoilHint": "Règle le recul supplémentaire des tirs à une main.",
   "settings.noRecoil": "Sans recul",
-  "settings.noRecoilHint": "Désactive le recul du canon au tir. Désactivé par défaut.",
+  "settings.noRecoilHint": "Désactive le recul du canon au tir.",
   "settings.applyTo": "Pénalité à une main",
   "common.previewHint": "Aperçu uniquement. Non enregistré ni appliqué au jeu.",
   "choice.longWeapons": "Armes longues",
@@ -283,5 +283,8 @@
   "choice.mwClassic": "Modern Warfare Classic",
   "choice.mw2019": "Modern Warfare (2019)",
   "settings.campaignUnlock": "Débloquer toutes les missions et les renseignements",
-  "settings.campaignUnlockHint": "Appliqué une seule fois au lancement depuis cette fenêtre. Débloque les missions et les récompenses des renseignements sans compléter la progression ni la collecte. Fermer cette fenêtre annule la sélection."
+  "settings.campaignUnlockHint": "Appliqué une seule fois au lancement depuis cette fenêtre. Débloque les missions et les récompenses des renseignements sans compléter la progression ni la collecte. Fermer cette fenêtre annule la sélection.",
+  "settings.exoPunch": "Coup de poing d’exosquelette",
+  "settings.exoPunchHint": "Augmente les dégâts de vos attaques physiques au corps à corps et projette les ennemis lors des coups mortels. Les balles et explosions restent inchangées. Nécessite les ragdolls dans les options graphiques avancées.",
+  "settings.funFeatures": "Fonctions amusantes"
 }

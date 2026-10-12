@@ -3,6 +3,9 @@
 #include "component/vr/gameplay/weapon_clip_projection.hpp"
 #include "component/vr/gameplay/official_cheats_policy.hpp"
 #include "component/vr/gameplay/launcher_cheats_policy.hpp"
+#include "component/vr/gameplay/exo_punch_policy.hpp"
+#include "component/vr/gameplay/exo_punch_script.hpp"
+#include "xsk/gsc/engine/h2.hpp"
 #include "component/vr/gameplay/special_melee.hpp"
 #include <any>
 #include <iostream>
@@ -24,6 +27,41 @@ struct archive
 int main()
 {
     int failures{};const auto check=[&](bool ok,const char* why){if(!ok){++failures;std::cerr<<"FAIL: "<<why<<'\n';}};
+    try
+    {
+        xsk::gsc::h2::context ctx(xsk::gsc::instance::server);
+        ctx.func_add("vrexopunchdeath",0x901);
+        ctx.init(xsk::gsc::build::prod,[](const xsk::gsc::context*,const std::string& name)->std::pair<xsk::gsc::buffer,std::vector<std::uint8_t>> {
+            throw std::runtime_error("Unexpected level-specific import "+name);
+        });
+        namespace exo=vr::gameplay::cheats::exo_punch;
+        std::vector<std::uint8_t> source(exo::script_source.begin(),exo::script_source.end());
+        const auto unit=ctx.compiler().compile(std::string(exo::script_name),source);
+        const auto [code,stack,map]=ctx.assembler().assemble(*unit);
+        check(code.size>0 && stack.size>0,"EXO death adapter compiles without frontend/mission-specific imports");
+    }
+    catch(const std::exception& e){check(false,e.what());}
+    {
+        namespace exo=vr::gameplay::cheats::exo_punch;
+        const exo::impact_claim claim{1000,"usp"};
+        const exo::death_evidence melee{1050,0,8,true,false,true,true,false,"usp","actor_enemy_soldier"};
+        check(exo::admits(claim,melee),"EXO admits a lethal player VR melee claim");
+        for(int mod:{0,1,2,3,4,5,6,7,9,10})
+        {auto death=melee;death.means_of_death=mod;check(!exo::admits(claim,death),"bullets, explosions and other non-melee deaths never consume EXO impact");}
+        auto death=melee;death.health=1;check(!exo::admits(claim,death),"nonlethal contacts cannot apply a death impulse");
+        death=melee;death.enabled=false;check(!exo::admits(claim,death),"disabled EXO preserves native death handling");
+        death=melee;death.official_ragdoll=true;check(!exo::admits(claim,death),"official Ragdoll Impact retains sole death authority when both options are enabled");
+        death=melee;death.player_attacker=false;check(!exo::admits(claim,death),"AI melee cannot inherit the player EXO claim");
+        death=melee;death.weapon="scar";check(!exo::admits(claim,death),"a different lethal weapon cannot inherit an earlier contact");
+        death=melee;death.ragdolls=false;check(!exo::admits(claim,death),"native ragdoll graphics admission is preserved");
+        death=melee;death.forced_ragdoll=true;check(!exo::admits(claim,death),"already forced immediate deaths cannot receive a second impulse");
+        death=melee;death.classname="actor_civilian_slum_male";check(!exo::admits(claim,death),"native civilian death exclusions remain intact");
+        death=melee;death.weapon="h2_cheatfootball";
+        check(!exo::admits({1000,"h2_cheatfootball"},death),"native football impact stays independently owned");
+        for(int time:{999,2001,std::numeric_limits<int>::max(),std::numeric_limits<int>::min()})
+        {death=melee;death.time=time;check(!exo::admits(claim,death),"rewound and expired death claims reject without timestamp overflow");}
+        check(!exo::admits({1000,{}},melee),"missing contact identity cannot boost a death");
+    }
     {
         namespace l=vr::gameplay::cheats::launcher;
         const unsigned native=0x80|l::notarget;

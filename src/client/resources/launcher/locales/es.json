@@ -131,7 +131,7 @@
   "settings.throwSpeedRange": "0,1–4,0× · Por defecto: 1×",
   "settings.recoilHint": "Controla el retroceso adicional al disparar con una mano.",
   "settings.noRecoil": "Sin retroceso",
-  "settings.noRecoilHint": "Desactiva el retroceso del cañón al disparar. Desactivado por defecto.",
+  "settings.noRecoilHint": "Desactiva el retroceso del cañón al disparar.",
   "settings.applyTo": "Penalización a una mano",
   "common.previewHint": "Solo vista previa. No se guarda ni se aplica al juego.",
   "choice.longWeapons": "Armas largas",
@@ -283,5 +283,8 @@
   "choice.mwClassic": "Modern Warfare Classic",
   "choice.mw2019": "Modern Warfare (2019)",
   "settings.campaignUnlock": "Desbloquear todas las misiones y la información",
-  "settings.campaignUnlockHint": "Se aplica una vez al iniciar desde esta ventana. Desbloquea misiones y recompensas de información sin completar el progreso ni los coleccionables. Cerrar la ventana descarta la selección."
+  "settings.campaignUnlockHint": "Se aplica una vez al iniciar desde esta ventana. Desbloquea misiones y recompensas de información sin completar el progreso ni los coleccionables. Cerrar la ventana descarta la selección.",
+  "settings.exoPunch": "Puñetazo de exoesqueleto",
+  "settings.exoPunchHint": "Aumenta el daño de tus ataques físicos cuerpo a cuerpo y lanza a los enemigos con golpes mortales. No afecta a balas ni explosiones. Requiere ragdolls en los ajustes gráficos avanzados.",
+  "settings.funFeatures": "Funciones divertidas"
 }
