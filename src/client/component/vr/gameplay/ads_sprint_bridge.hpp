@@ -7,6 +7,15 @@ namespace vr::gameplay::ads_sprint
 {
 	enum class boundary : std::uint32_t { sustain_flags, sustain_buttons, start_buttons, start_flags };
 	inline constexpr std::uint32_t ads_flag = 0x10, ads_button = 0x800;
+	inline constexpr std::uint32_t sprint_flag = 0x4000, ads_slow_walk_flag = 0x40;
+	// PM updates sprint before deriving the ADS slow-walk flag. Suppress only
+	// that derived penalty while native sprint is actually active; a sprint
+	// button alone must not bypass ordinary aiming speed or native eligibility.
+	inline constexpr std::uint32_t movement_flags(std::uint32_t native_flags, bool enabled) noexcept
+	{
+		return enabled && (native_flags & sprint_flag)
+			? native_flags & ~ads_slow_walk_flag : native_flags;
+	}
 	inline constexpr bool button_boundary(boundary point) noexcept
 	{ return point == boundary::sustain_buttons || point == boundary::start_buttons; }
 	inline constexpr std::uint32_t filter_mask(std::uint32_t mask, boundary point, bool enabled) noexcept

@@ -102,7 +102,25 @@ int main()
 			runtime.release(bridge);runtime.release(original);
 		}
 		runtime.release(harness);runtime.release(hostile);
-		std::cout<<"Camera bob tests passed: both native lanes, full rel32 relay route, old failure reproduced, hostile callback ABI and native tuning\n";
+		// Captured camera callers: two positional samples, two ordinary ADS
+		// angular samples and three overlay ADS samples (pitch/yaw/roll).
+		constexpr std::array<std::array<std::uint8_t,5>,7> native_calls{{
+			{0xe8,0x3b,0xd4,0x2f,0}, {0xe8,0xee,0xd2,0x2f,0},
+			{0xe8,0xf2,0x06,0,0}, {0xe8,0xa2,0x05,0,0},
+			{0xe8,0xa6,0x05,0,0}, {0xe8,0x5a,0x04,0,0}, {0xe8,0x28,0x04,0,0}}};
+		check(vr::camera_bob::camera_calls.size()==native_calls.size(),"Every positional and ADS angular camera sample is hooked");
+		for (std::size_t i=0;i<native_calls.size();++i)
+		{
+			check(vr::camera_bob::call_bytes(vr::camera_bob::camera_calls[i])==native_calls[i],"Original camera CALL target matches capture");
+			for (bool local:{false,true}) for (bool on:{false,true}) for (float amplitude:{-1.f,0.f,1.f})
+			{
+				int calls{};
+				const auto value=vr::camera_bob::sample_camera(local,on,[&]{++calls;return amplitude;});
+				check(value==(local && !on?0.f:amplitude) && calls==(local && !on?0:1),
+					"Camera option suppresses positional and ADS angular samples; flat camera and enabled amplitudes stay native");
+			}
+		}
+		std::cout<<"Camera bob tests passed: seven camera routes, on/off, ADS angles, native tuning and hostile callback ABI\n";
 		return 0;
 	}
 	catch(const std::exception& e){std::cerr<<e.what()<<'\n';return 1;}

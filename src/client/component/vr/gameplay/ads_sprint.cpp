@@ -19,6 +19,22 @@ namespace vr::gameplay::ads_sprint
 		game::dvar_t* enabled{};
 		std::atomic_bool installed{}, alive{true};
 		std::array<std::atomic_uint64_t, 4> relaxed{};
+		utils::hook::detour slow_walk_hook;
+		std::atomic_uint64_t slow_walk_suppressed{};
+		void update_slow_walk(game::pmove_t* pm)
+		{
+			slow_walk_hook.invoke<void>(pm);
+			// The original has already cleared/recomputed 0x40 from native ADS
+			// eligibility. Finalize this derived movement flag, not the ADS state,
+			// fraction, speed dvars, weapon assets or the user's input command.
+			const auto before = static_cast<std::uint32_t>(pm->ps->pm_flags);
+			const auto after = movement_flags(before, allowed(pm->ps));
+			if (after != before)
+			{
+				pm->ps->pm_flags = static_cast<int>(after);
+				slow_walk_suppressed.fetch_add(1, std::memory_order_relaxed);
+			}
+		}
 		std::uint32_t test(const game::playerState_s* ps, std::uint32_t mask,
 			std::uint32_t value, boundary point) noexcept
 		{
@@ -44,10 +60,21 @@ namespace vr::gameplay::ads_sprint
 				game::DVAR_FLAG_SAVED, "Allow native sprint while aiming down sights in VR");
 			command::add("vr_ads_sprint_status", [] {
 				console::info("[VR ADS sprint] installed=%d enabled=%d sustain_flags=%llu sustain_buttons=%llu "
-					"start_buttons=%llu start_flags=%llu (relaxed checks, not runtime acceptance)\n",
+					"start_buttons=%llu start_flags=%llu slow_walk_suppressed=%llu (relaxed checks, not runtime acceptance)\n",
 					installed.load(), enabled && enabled->current.enabled,
-					relaxed[0].load(), relaxed[1].load(), relaxed[2].load(), relaxed[3].load());
+					relaxed[0].load(), relaxed[1].load(), relaxed[2].load(), relaxed[3].load(), slow_walk_suppressed.load());
 			});
+			constexpr std::uint8_t slow_walk_entry[]{0x48,0x8b,0x11,0x83,0x62,0x54,0xbf,0x80,0x7a,0x02,0x05,0x44,0x8b,0x42,0x54};
+			constexpr std::uint8_t slow_walk_write[]{0x41,0x83,0xc8,0x40,0x44,0x89,0x42,0x54,0xc3};
+			std::array<std::uint8_t, sizeof(slow_walk_entry)> slow_mask{}; slow_mask.fill(255);
+			if (!utils::hook_validation::verify_masked_bytes(reinterpret_cast<void*>(0x14068D1C0),
+				{slow_walk_entry, slow_mask.data(), sizeof(slow_walk_entry)}) ||
+				!utils::hook_validation::verify_masked_bytes(reinterpret_cast<void*>(0x14068D209),
+					{slow_walk_write, slow_mask.data(), sizeof(slow_walk_write)}))
+			{
+				console::error("[VR ADS sprint] native slow-walk contract rejected; feature disabled\n");
+				return;
+			}
 			std::array<std::uint8_t, 10> exact{}; exact.fill(255);
 			for (const auto& site : sites)
 				if (!utils::hook_validation::verify_masked_bytes(reinterpret_cast<void*>(site.address),
@@ -71,6 +98,7 @@ namespace vr::gameplay::ads_sprint
 					return;
 				}
 			}
+			slow_walk_hook.create(0x14068D1C0, update_slow_walk);
 			for (std::size_t i = 0; i < sites.size(); ++i)
 			{
 				utils::hook::nop(sites[i].address, sites[i].size);

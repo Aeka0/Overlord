@@ -3,6 +3,7 @@
 `vr_cameraBob` is a saved boolean, enabled by default. The launcher exposes it
 under **VR Settings > Basics > Visual comfort** in English and Simplified Chinese.
 It controls horizontal and vertical native movement bob for the local VR camera,
+including positional motion and ADS pitch/yaw/roll contributions,
 including firearms, empty hands and the body-mounted tactical knife. Console
 changes apply on the next camera update. Headset tracking remains independent.
 
@@ -25,15 +26,26 @@ it neither invents a second movement oscillator nor supplies a fake weapon.
 
 ## Boundaries and native contracts
 
-`camera_bob.cpp` scopes the correction to the two local VR camera calls using
+`camera_bob.cpp` scopes the correction to seven local VR camera calls using
 thread-local state. Other consumers of the native routines retain their original
 results. The native dvars are never temporarily overwritten. Disabling the
-setting returns zero at both camera calls, for armed and unarmed movement alike.
+setting returns zero at every camera bob sample, for armed and unarmed movement alike.
+The original two-call policy covered position only: native ADS still called the
+same bob kernels from `0x1406AAC20` and `0x1406AAD20`, producing angular bob even
+with the option off. Their compositor `0x1406AABD0` is called by the camera at
+`0x1403ADEBC`. All seven sites now use one option policy and contract table.
+Idle sway, recoil, the viewmodel's separate bob path and physical head tracking
+retain their existing behavior. This correction is independent of ADS sprint.
 
 | Purpose | Address | Guarded original bytes |
 | --- | --- | --- |
 | Camera vertical call | `0x1403ADF80` | `E8 3B D4 2F 00` |
 | Camera horizontal call | `0x1403ADF9D` | `E8 EE D2 2F 00` |
+| ADS angular vertical | `0x1406AACC9` | `E8 F2 06 00 00` |
+| ADS angular horizontal | `0x1406AACE9` | `E8 A2 05 00 00` |
+| Overlay ADS vertical | `0x1406AAE15` | `E8 A6 05 00 00` |
+| Overlay ADS horizontal | `0x1406AAE31` | `E8 5A 04 00 00` |
+| Overlay ADS roll sample | `0x1406AAE63` | `E8 28 04 00 00` |
 | Horizontal weaponless multiply | `0x1406AB363` | `F3 0F 59 70 10` |
 | Vertical weaponless multiply | `0x1406AB49A` | `F3 0F 59 78 10` |
 
@@ -63,6 +75,9 @@ offsets to `0xae4` / `0xae8`; older struct offset comments are not authoritative
   invalid inputs, localization and preservation of unrelated config/bindings.
 - Retained native disassembly confirms the shared sprint/crouch/prone branches;
   these are not recreated in tests or application code.
+- All seven call contracts are checked against captured instruction witnesses;
+  the shared sample policy is checked on/off and outside local VR. Disabled
+  camera samples never invoke the native oscillator.
 
 Headset acceptance: with the option on, compare empty hands, knife-only and a
 firearm while walking, sprinting, crouch-walking and crawling. Check stationary

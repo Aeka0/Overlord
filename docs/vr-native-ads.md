@@ -78,10 +78,20 @@ Other movement actions keep their original ADS restriction. Stamina, forward
 input, stance, ladder, mantle, lean, mission restrictions and native weapon
 state checks remain authoritative. Neither player state nor command buttons are
 temporarily cleared, and weapon definitions, ADS fraction and sprint speed are
-not overwritten. All four signatures must match before any hook is installed.
+not overwritten. The ADS slow-walk producer and all four predicate signatures
+must match before any hook is installed.
+
+Native PMove updates sprint and then independently derives the ADS slow-walk
+flag (`0x40`, at `0x14068D1C0`). Leaving this second flag active multiplies sprint
+movement by the ADS speed penalties even after the sprint predicates admit it.
+The producer adapter retains the original calculation and removes only `0x40`
+when local VR ADS sprint is enabled and native `PMF_SPRINTING` is actually set.
+A sprint button alone is insufficient. Ordinary ADS walking, rejected sprint
+requests and the disabled option retain their original speed behavior. This is
+a final derived-flag correction, not a temporary clearing of ADS state.
 
 `vr_ads_sprint_status` reports installation, the option and per-boundary relaxed
-checks. These counters do not prove that all other native sprint gates admitted
+checks, plus `slow_walk_suppressed`. These counters do not prove that all other native sprint gates admitted
 the command. The native ADS fraction lives at player state `+0x3cc`; `+0x2ac`
 is lean and must not be patched as an ADS gate. Native sprint weapon states
 `0x1b`–`0x1d` remain on their existing ADS eligibility/transition path.
@@ -89,6 +99,11 @@ is lean and must not be patched as an ADS gate. Native sprint weapon states
 The focused CPU suite executes all four bridges through preserving near relays,
 checks enabled/disabled behavior and other blocking bits against the displaced
 native instructions, and exercises a callback that clobbers volatile registers.
+It also replays the complete native slow-walk producer through an installed
+detour, reproduces the original ADS+sprint penalty, and checks ordinary ADS,
+rejected sprint, disabled policy and native exclusions without changing the ADS
+fraction or command. Camera bob is controlled separately for positional and ADS
+angular motion; see [camera bob](vr-camera-bob.md).
 Live gameplay/HMD acceptance remains pending: check both entry orders, actual
 speed and stamina, ordinary/sniper/thermal sights, launcher lock-on, shooting,
 reload, weapon changes and recovery after pause/death.

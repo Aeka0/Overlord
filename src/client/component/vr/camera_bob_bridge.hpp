@@ -1,9 +1,30 @@
 #pragma once
 #include <asmjit/x86/x86assembler.h>
 #include <cstdint>
+#include <array>
 
 namespace vr::camera_bob
 {
+	inline constexpr std::uintptr_t horizontal = 0x1406AB290, vertical = 0x1406AB3C0;
+	struct camera_call { std::uintptr_t address, target; };
+	// The camera applies positional bob and two ADS angular contributions.
+	// All seven calls share the option; idle sway, recoil and viewmodel bob
+	// remain native. The angular compositor's only native caller is 3ADEBC.
+	inline constexpr std::array camera_calls{
+		camera_call{0x1403ADF80, vertical}, camera_call{0x1403ADF9D, horizontal},
+		camera_call{0x1406AACC9, vertical}, camera_call{0x1406AACE9, horizontal},
+		camera_call{0x1406AAE15, vertical}, camera_call{0x1406AAE31, horizontal},
+		camera_call{0x1406AAE63, horizontal}};
+	inline std::array<std::uint8_t, 5> call_bytes(camera_call site) noexcept
+	{
+		const auto relative = static_cast<std::uint32_t>(site.target - site.address - 5);
+		return {0xe8, static_cast<std::uint8_t>(relative), static_cast<std::uint8_t>(relative >> 8),
+			static_cast<std::uint8_t>(relative >> 16), static_cast<std::uint8_t>(relative >> 24)};
+	}
+	template <typename Native> float sample_camera(bool local_vr, bool enabled, Native&& native)
+	{
+		return local_vr && !enabled ? 0.f : native();
+	}
 	// The native weaponless factors default to zero. Preserve an explicit
 	// nonzero native tuning; only the camera call's neutral fallback becomes 1.
 	inline float weaponless_scale(float amplitude,float native_scale,bool camera_scope)noexcept

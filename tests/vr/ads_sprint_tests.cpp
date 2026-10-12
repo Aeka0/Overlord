@@ -17,6 +17,15 @@ namespace
 		return filter_mask(mask, point, enabled) & value;
 	}
 	struct sample { std::uint32_t mask{}, value{}; };
+	utils::hook::detour slow_walk_hook;
+	void slow_walk_stub(void* pm)
+	{
+		slow_walk_hook.invoke<void>(pm);
+		std::byte* ps{}; std::memcpy(&ps, pm, sizeof(ps));
+		std::uint32_t flags{}; std::memcpy(&flags, ps + 0x54, sizeof(flags));
+		flags = movement_flags(flags, enabled);
+		std::memcpy(ps + 0x54, &flags, sizeof(flags));
+	}
 	struct result
 	{
 		std::array<std::uint64_t, 7> registers{};
@@ -125,7 +134,60 @@ int main()
 			VirtualFree(site, 0, MEM_RELEASE); VirtualFree(relay, 0, MEM_RELEASE);
 			runtime.release(harness); runtime.release(original); runtime.release(bridge);
 		}
-		std::cout << cases << " ADS sprint cases passed: four native branches, on/off, other blockers, installed relay and hostile callback ABI\n";
+		// Full captured H2 slow-walk producer at 14068D1C0; it has no external
+		// references, so replay its actual ADS/stance/weapon/perk branches.
+		constexpr std::uint8_t slow_walk_code[]{
+			0x48,0x8b,0x11,0x83,0x62,0x54,0xbf,0x80,0x7a,0x02,0x05,0x44,0x8b,0x42,0x54,
+			0x73,0x40,0xf7,0x41,0x0c,0x00,0x08,0x00,0x00,0x74,0x37,0x41,0xf6,0xc0,0x01,
+			0x75,0x31,0x41,0xf6,0xc0,0x10,0x74,0x2b,0xf7,0x42,0x58,0x00,0x30,0x00,0x00,
+			0x75,0x22,0x8b,0x82,0xc0,0x02,0x00,0x00,0x83,0xe8,0x09,0x83,0xf8,0x04,0x76,
+			0x14,0xf7,0x82,0x90,0x1f,0x00,0x00,0x00,0x00,0x10,0x00,0x75,0x08,0x41,0x83,
+			0xc8,0x40,0x44,0x89,0x42,0x54,0xc3};
+		auto* native_slow_walk = jit([&](auto& a) { a.embed(slow_walk_code, sizeof(slow_walk_code)); });
+		using update_type = void(*)(void*);
+		const auto update = reinterpret_cast<update_type>(native_slow_walk);
+		struct fixture
+		{
+			std::uint32_t flags, buttons, entity_flags, weapon_state, perks;
+			std::uint8_t mode;
+			bool native_slow;
+		};
+		const fixture samples[]{
+			{0x4010, 0x802, 0, 27, 0, 0, true}, // ADS + real sprint: original defect
+			{0x10, 0x802, 0, 0, 0, 0, true},   // sprint requested but rejected: keep ADS speed
+			{0x10, 0x800, 0, 0, 0, 0, true},   // ordinary ADS walking
+			{0x4000, 2, 0, 27, 0, 0, false},
+			{0x4011, 0x802, 0, 27, 0, 0, false}, // prone / mounted / reload / perk / non-gameplay
+			{0x4010, 0x802, 0x3000, 27, 0, 0, false},
+			{0x4010, 0x802, 0, 9, 0, 0, false},
+			{0x4010, 0x802, 0, 27, 0x100000, 0, false},
+			{0x4010, 0x802, 0, 27, 0, 5, false}};
+		for (const auto& fixture : samples) for (bool on : {false, true})
+		{
+			std::array<std::byte, 0x2000> player{};
+			const auto put = [&](std::size_t at, auto value) { std::memcpy(player.data() + at, &value, sizeof(value)); };
+			put(2, fixture.mode); put(0x54, fixture.flags | 0x40u); put(0x58, fixture.entity_flags);
+			put(0x2c0, fixture.weapon_state); put(0x1f90, fixture.perks); put(0x3cc, 1.f);
+			struct { void* ps; int time; std::uint32_t buttons; } pm{player.data(), 1234, fixture.buttons};
+			const auto before = player;
+			update(&pm);
+			std::uint32_t flags{}; std::memcpy(&flags, player.data() + 0x54, sizeof(flags));
+			check(bool(flags & 0x40) == fixture.native_slow, "Native replay reproduces independent ADS slow-walk flag");
+			auto expected = player;
+			if (on && (fixture.flags & sprint_flag))
+			{
+				flags &= ~0x40u; std::memcpy(expected.data() + 0x54, &flags, sizeof(flags));
+			}
+			player = before; enabled = on;
+			slow_walk_hook.create(native_slow_walk, slow_walk_stub);
+			update(&pm);
+			check(player == expected && pm.buttons == fixture.buttons,
+				"Installed producer hook only suppresses ADS speed during accepted sprint; ADS fraction and commands stay intact");
+			check(slow_walk_hook.clear(), "Restore native replay between cases");
+			++cases;
+		}
+		runtime.release(native_slow_walk);
+		std::cout << cases << " ADS sprint cases passed: predicates, native slow-walk replay, installed hooks and ABI\n";
 		return 0;
 	}
 	catch (const std::exception& error) { std::cerr << error.what() << '\n'; return 1; }
