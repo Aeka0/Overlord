@@ -10,6 +10,8 @@ namespace vr::gameplay::equipment
 {
 	bool held_by(vr::hand) noexcept;
 	bool current_knife(vr::hand,std::uint64_t revision,std::uint64_t reference) noexcept;
+	// Nonzero only during the current closed, free-hand striking interval.
+	std::uint64_t fist_revision(vr::hand) noexcept;
 	void collect_interactions(const hand_interaction::frame&)noexcept;
 	void report_interactions()noexcept;
 	void suspend(bool return_knife=false) noexcept;

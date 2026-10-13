@@ -49,6 +49,8 @@ namespace vr::gameplay::equipment
 		};
 		state published;
 		std::array<melee::motion,2> motion;
+		std::array<std::atomic_uint64_t,2> fist_generation{};
+		std::array<std::atomic_uint64_t,2> fist_lease{}; // Publish token and eligibility in one atomic value.
 		std::array<hand_interaction::recipe,2> knife_motion_pose{};
 		melee::hit_gate hits;
 		grab_intent draw_intent;
@@ -72,7 +74,8 @@ namespace vr::gameplay::equipment
 			std::atomic_uint64_t sequence{},tracking_rejections{};
 		};
 		std::array<motion_status,2> motion_diagnostics;
-		void reset_motion(unsigned h) noexcept {motion[h].reset();motion_diagnostics[h].sequence=0;}
+		void end_fist(unsigned h) noexcept {fist_lease[h]=0;}
+		void reset_motion(unsigned h) noexcept {end_fist(h);motion[h].reset();motion_diagnostics[h].sequence=0;}
 		std::atomic<const char*> reason{"waiting for native knife resources"};
 		bool running() noexcept {return alive && enabled && enabled->current.enabled && !cheats::transitioning() && weapons::carry::active();}
 		bool fresh(clock::time_point at,clock::time_point now) noexcept {return now>=at && now-at<=150ms;}
@@ -172,6 +175,8 @@ namespace vr::gameplay::equipment
 		}
 	}
 	bool held_by(hand h) noexcept {return running() && hand_interaction::has(h,hand_interaction::domain::knife);}
+	std::uint64_t fist_revision(hand h) noexcept
+	{return vr::valid_hand(h) && running() ? fist_lease[unsigned(h)].load() : 0;}
 	bool current_knife(hand h,std::uint64_t revision,std::uint64_t reference) noexcept
 	{
 		if (!held_by(h) || cheats::waist_pickaxes()) return false;
@@ -349,9 +354,11 @@ namespace vr::gameplay::equipment
 					// Knife acquisition grants and empty-hand striking are separate
 					// permissions. A free fist does not acquire an equipment session.
 					if (!hand_interaction::free(hand(h)) || (claimed&(1u<<h)) || !input.squeeze[h].active || !input.squeeze[h].down) {reset_motion(h);hits.contact(h,0,false,input.sampled_at);continue;}
-					sample.kind=melee::tool::fist;sample.identity=1;object={wrists[h].position,wrists[h].rotation};start={1.5f,0,0};end={3.f,0,0};
+					if(!fist_lease[h])fist_lease[h]=++fist_generation[h];
+					sample.kind=melee::tool::fist;sample.identity=fist_lease[h].load();object={wrists[h].position,wrists[h].rotation};start={1.5f,0,0};end={3.f,0,0};
 				}
 			}
+			if(sample.kind!=melee::tool::fist)end_fist(h);
 			sample.count=9;sample.weapon=weapon;sample.pose_revision=striking_owner.revision;
 			for (unsigned n=0;n<9;++n) sample.points[n]=body_point(compose(object,{striking_pick ? special::cliffhanger::pickaxe_head(pick.side)[n] :
 				shield_contact ? shield_contact->melee_points[n] : add(start,scale(sub(end,start),float(n)/8)),{0,0,0,1}}).position);
@@ -386,6 +393,7 @@ namespace vr::gameplay::equipment
 						melee::feedback::knife(object,static_cast<hand>(h),striking_owner.weapon ? striking_owner.revision : s.knife.revision,
 							input.reference_generation,striking_owner.id());
 					if (sample.kind==melee::tool::firearm) weapons::feedback::melee_confirmation(striking_owner,input,hit.point);
+					if (sample.kind==melee::tool::fist) weapons::feedback::fist_confirmation(hand(h),sample.identity,input,hit.point);
 				}
 			}
 		}

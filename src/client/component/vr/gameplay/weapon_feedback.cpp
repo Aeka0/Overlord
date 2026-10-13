@@ -11,6 +11,10 @@
 #include "tube_runtime.hpp"
 #include "underbarrel_runtime.hpp"
 #include "weapon_carry_runtime.hpp"
+#include "equipment_runtime.hpp"
+#include "hand_interaction/runtime.hpp"
+#include "native_scripted_control.hpp"
+#include "component/fastfiles.hpp"
 #include "component/command.hpp"
 #include "component/console.hpp"
 #include "component/scheduler.hpp"
@@ -48,6 +52,16 @@ namespace vr::gameplay::weapons::feedback
 			for (size_t i = 0; i < size; ++i)
 			{
 				const auto& e = batch[i];
+				if(valid_hand(e.fist.actor))
+				{
+					if(!melee::fresh(e.fist,input,gameplay && carry::active() && scripted_control::predicted_allowed(),
+						hand_interaction::free(e.fist.actor),equipment::fist_revision(e.fist.actor),now)){++discarded;continue;}
+					if(sound_enabled && sound_enabled->current.enabled)
+					{
+						if(sound_ready && native_weapon_sound::play_fist_impact(e.fist.position))++played;else ++missing;
+					}
+					continue;
+				}
 				const auto owner=e.vehicle ? (vehicles::presentation_allowed()?vehicles::latest().owner:hold{}) : carry::active() ? carry::held(e.owner.id()) : current_hold();
 				if (!fresh(e, owner, input, gameplay, now)) { ++discarded; continue; }
 				if(e.secondary_definition)
@@ -157,6 +171,12 @@ namespace vr::gameplay::weapons::feedback
 		event value;value.owner=owner;value.reference=input.reference_generation;value.at=input.sampled_at;
 		value.position=position;value.melee_impact=true;publish(value);
 	}
+	void fist_confirmation(hand actor,std::uint64_t revision,const controller_input::frame& input,const std::array<float,3>& position) noexcept
+	{
+		if(!scheduler::is_executing(scheduler::pipeline::server) || !valid_hand(actor) || !revision)return;
+		event value;value.fist={actor,revision,input.reference_generation,input.continuity_generation,input.sequence,
+			input.squeeze[unsigned(actor)],input.sampled_at,position};publish(value);
+	}
 	class component final : public component_interface
 	{
 	public:
@@ -168,6 +188,7 @@ namespace vr::gameplay::weapons::feedback
 				"Controller weapon feedback strength; zero disables vibration");
 			sound_ready = native_weapon_sound::initialize();
 			native_weapon_fx::initialize();
+			fastfiles::on_pre_unload([]{const std::lock_guard lock(mutex);discarded+=count;count=0;});
 			command::add("vr_weapon_fx_status",[] {
 				const auto text=native_weapon_fx::status();console::info("%s",text.c_str());
 				scheduler::once([text]{utils::io::write_file_atomic("minidumps/overlord-weapon-fx.txt",text);},scheduler::pipeline::async);

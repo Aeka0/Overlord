@@ -290,6 +290,17 @@ namespace vr::gameplay::weapons::native_weapon_sound
 		// shared stock alias on this owner thread; retain no sound asset pointers.
 		return utils::hook::invoke<int>(play_address,entity,origin.data(),"melee_hit")!=-1;
 	}
+	bool play_fist_impact(const std::array<float,3>& origin)
+	{
+		if(!verified || !scheduler::is_executing(scheduler::pipeline::main) || !game::CL_IsCgameInitialized())return false;
+		for(float value:origin)if(!std::isfinite(value) || std::abs(value)>1e7f)return false;
+		const short entity=*reinterpret_cast<const signed char*>(0x141BB3C30);if(entity<0)return false;
+		// Native alias selection owns all five supplied variants. Never retain an
+		// asset pointer across zone unloads or borrow the chest knife's sound map.
+		const auto* alias=game::DB_FindXAssetHeader(game::ASSET_TYPE_SOUND,"vr_fist_hit",0).sound;
+		if(!alias || !alias->aliasName || std::strcmp(alias->aliasName,"vr_fist_hit") || alias->count!=5 || !alias->head)return false;
+		return utils::hook::invoke<int>(play_address,entity,origin.data(),"vr_fist_hit")!=-1;
+	}
 	bool play_quick_reload_start(std::uint32_t weapon,const std::array<float,3>& origin)
 	{
 		return verified && scheduler::is_executing(scheduler::pipeline::main) && game::CL_IsCgameInitialized() && weapon && weapon<512 &&

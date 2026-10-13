@@ -17,6 +17,7 @@ namespace vr::gameplay::weapons::native_weapon_sound
 	bool play_module(std::uint32_t host,std::uint32_t module,sound_reference sound,const std::array<float,3>& origin);
 	bool play_module_shot(std::uint32_t host,std::uint32_t module,const std::array<float,3>& origin);
 	bool play_melee_impact(const std::array<float,3>& origin);
+	bool play_fist_impact(const std::array<float,3>& origin);
 	bool play_quick_reload_start(std::uint32_t weapon,const std::array<float,3>& origin);
 	bool play_quick_reload_start_at(const std::array<float,3>& origin);
 	bool play_vehicle(std::uint32_t weapon,sound_reference sound,const std::array<float,3>& origin);

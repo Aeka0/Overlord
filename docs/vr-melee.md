@@ -71,6 +71,20 @@ acceptance for the added models remains pending.
   squeeze; held firearms can strike with their receiver/stock/barrel span.
   A two-handed firearm has one melee source at its controlling hand.
 
+Confirmed empty-hand damage plays the positional `vr_fist_hit` alias from
+`h2_vr_sounds.ff`; the native mixer selects among five supplied punch recordings.
+Each recording starts at sample zero. H2 alias flag `0x20` enables random
+recording offsets, despite the inherited struct naming it `is3d`; it must stay
+clear for punch impacts so the attack transient is preserved.
+Misses and rejected damage do not submit sound. `vr_weaponInteractionSound`
+controls this feedback independently of the selected hit/kill style. The copied
+request uses the free-hand interval, tracking reference/continuity and grip
+history rather than the borrowed knife damage definition. Pause, focus/tracking
+loss, release/reclose, equipment acquisition, calibration changes and zone
+unload discard pending audio. Playback runs on the main pipeline through the
+existing validated positional sound wrapper; no source pointers survive unload.
+Build and asset readback do not replace in-game/headset listening acceptance.
+
 ### Knife and pistol magazine co-grasp ( candidate)
 
 USP (including its already admitted suppressor), M9, M1911 and Desert Eagle

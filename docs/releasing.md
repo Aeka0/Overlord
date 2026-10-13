@@ -39,10 +39,22 @@ input bindings, artwork, loose project scripts, the Khronos OpenXR loader and
 license notices. It excludes PDBs, user settings, logs, original game files and
 raw ZoneTool assets. Retain matching PDBs privately; they can contain local source paths.
 
-The supplied `h2_killfeed_sounds.ff` is bundled with the client, alongside its
-feedback and ducking scripts. Its editable aliases, FLAC sources and ZoneTool
-manifest live under `data/zonetool/h2_killfeed_sounds` and `data/zone_source`;
-rebuild this sound-only zone with a compatible H2 ZoneTool when changing audio.
+The compiled `h2_vr_sounds.ff` bundles the eleven hit/kill recordings and five
+fist-impact recordings, alongside the existing feedback and ducking scripts.
+Editable aliases and normalized FLAC inputs live in the Git-ignored
+`.local/Sounds/h2_vr_sounds/`; original supplied punch files stay under
+`.local/Sounds/`. Only the compiled sound zone and its manifest are tracked.
+Ordinary client builds do not need the private sources or ZoneTool. After
+changing audio, rebuild and read back the combined zone with:
+
+~~~bat
+python tools/build_sound_zone.py --h2-root "<MW2CR directory>" --zone-tool "<H2 ZoneTool executable>"
+~~~
+
+The asset build uses an isolated workspace directory with Windows junctions
+(symbolic links on other hosts), and checks every compiled recording. H2 requires FLAC inputs with
+constant 1024-sample blocks; re-encode new inputs losslessly before compiling.
+
 
 The overlay requires a legally owned game and the base H2-Mod data required by
 the installation. The client build does not compile data/zone_source/ and
@@ -52,7 +64,7 @@ redistribution rights and tested on a clean game installation.
 
 For a local candidate from an uncommitted working tree, use
 `--staging-directory release`; the candidate goes into `release/<version-name>/`
-(currently `release/Beta 4/`). Add `--base-data <installed-cdata-directory>` to
+(currently `release/Beta 5/`). Add `--base-data <installed-cdata-directory>` to
 include the explicitly selected base H2-Mod fastfiles. The packager admits only
 zone names present in `data/zone_source`, checks the official-language resource
 set, and uses the current repository's scripts and sound patches. It does not

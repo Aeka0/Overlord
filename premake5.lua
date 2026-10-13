@@ -211,7 +211,7 @@ local function copy_client_resources(destination)
 		'{MKDIR} "' .. path.join(destination, "h2-mod/scripts") .. '"',
 		'{COPYFILE} "%{wks.location}/../data/cdata/scripts/killfeed_ducking.gsc" "' .. path.join(destination, "h2-mod/scripts/killfeed_ducking.gsc") .. '"',
 		'{MKDIR} "' .. path.join(destination, "h2-mod/zone") .. '"',
-		'{COPYFILE} "%{wks.location}/../data/zone/h2_killfeed_sounds.ff" "' .. path.join(destination, "h2-mod/zone/h2_killfeed_sounds.ff") .. '"',
+			'{COPYFILE} "%{wks.location}/../data/zone/h2_vr_sounds.ff" "' .. path.join(destination, "h2-mod/zone/h2_vr_sounds.ff") .. '"',
 		'{MKDIR} "' .. path.join(destination, "steamvr") .. '"',
 		'{COPYFILE} "%{wks.location}/../assets/steamvr/cover.png" "' .. path.join(destination, "steamvr/cover.png") .. '"',
 		'{COPYFILE} "%{wks.location}/../assets/steamvr/cover-small.png" "' .. path.join(destination, "steamvr/cover-small.png") .. '"',

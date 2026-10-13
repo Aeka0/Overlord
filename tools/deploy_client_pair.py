@@ -1,12 +1,14 @@
 """Deploy optimized/Debug clients and SteamVR resources, with backups and hashes.
 
 Build both configurations from the same checkout first. This updates only the
-four binaries, application manifests, covers and matching vr_input package;
+four binaries, application manifests, covers, matching vr_input package and
+compiled VR sound zone with its feedback scripts;
 user profiles stay put.
 """
 from __future__ import annotations
 
 import argparse
+import filecmp
 from datetime import datetime, timezone
 import hashlib
 import json
@@ -14,6 +16,10 @@ import os
 from pathlib import Path
 import shutil
 import uuid
+
+SOUND_RESOURCES = ('h2-mod/zone/h2_vr_sounds.ff',
+                   'h2-mod/scripts/killfeed/__init__.lua',
+                   'h2-mod/scripts/killfeed_ducking.gsc')
 
 
 def digest(path: Path) -> str:
@@ -69,6 +75,11 @@ def deploy(build_root: Path, destination: Path, backup_root: Path) -> dict:
                for suffix in ('.exe', '.pdb')}
     sources.update(input_sources(build_root))
     sources.update(application_sources(build_root))
+    for name in SOUND_RESOURCES:
+        paths = [build_root / config / name for config in ('RelWithDebInfo', 'Debug')]
+        if not filecmp.cmp(*paths, shallow=False):
+            raise ValueError(f'Optimized/Debug sound resources differ: {name}')
+        sources[name] = paths[0]
     # Validate the whole pair before changing any installed file.
     for name, source in sources.items():
         if not source.is_file() or source.stat().st_size == 0:

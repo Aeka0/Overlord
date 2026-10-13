@@ -190,6 +190,8 @@ In addition to the executable, the client's post-build steps copy these resource
 | Generated pinned SDK loader (`openxr-loader` target) | `openxr_loader.dll` beside either EXE |
 | `data/vr_input/` | `vr_input/` |
 | `data/ui_scripts/vr_gameplay/` | `h2-mod/ui_scripts/vr_gameplay/` |
+| `data/zone/h2_vr_sounds.ff` | `h2-mod/zone/h2_vr_sounds.ff` |
+| `data/cdata/scripts/killfeed/`, `killfeed_ducking.gsc` | `h2-mod/scripts/killfeed/`, `h2-mod/scripts/killfeed_ducking.gsc` |
 | `assets/steamvr/cover.png`, `cover-small.png`, `cover-capsule.png` | `steamvr/` |
 | `assets/steamvr/<client-name>.vrmanifest` | `<client-name>.vrmanifest` beside the EXE |
 
@@ -223,7 +225,8 @@ python tools\deploy_client_pair.py "<game-directory>"
 ```
 
 The Python helper requires both EXE/PDB pairs, application manifests, matching
-SteamVR covers and matching `vr_input` packages before modifying the destination.
+SteamVR covers, matching `vr_input` packages and matching compiled VR sound/feedback
+resources before modifying the destination. 
 It stages and hashes the four binaries, application manifests, covers, action
 manifest and every declared default binding, preserves replaced files in a unique
 directory under `output/deployments/`, and writes a deployment manifest.

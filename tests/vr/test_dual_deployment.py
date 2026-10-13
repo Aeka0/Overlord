@@ -56,6 +56,29 @@ class DeploymentTests(unittest.TestCase):
                 (self.build / config / 'steamvr').mkdir(exist_ok=True)
                 (self.build / config / relative).write_bytes(self.new[relative])
 
+        for relative in module.SOUND_RESOURCES:
+            self.old[relative], self.new[relative] = b'old sound resource', b'new sound resource'
+            (self.game / relative).parent.mkdir(parents=True, exist_ok=True)
+            (self.game / relative).write_bytes(self.old[relative])
+            for config in ('RelWithDebInfo', 'Debug'):
+                path = self.build / config / relative
+                path.parent.mkdir(parents=True, exist_ok=True)
+                path.write_bytes(self.new[relative])
+
+    def test_missing_sound_zone_leaves_installation_untouched(self):
+        (self.build / 'Debug/h2-mod/zone/h2_vr_sounds.ff').unlink()
+        with self.assertRaises(FileNotFoundError):
+            module.deploy(self.build, self.game, self.backup)
+        for name in self.old:
+            self.assertEqual((self.game / name).read_bytes(), self.old[name])
+        self.assertFalse(self.backup.exists())
+
+    def test_mismatched_sound_zones_rejected_before_replacement(self):
+        (self.build / 'Debug/h2-mod/zone/h2_vr_sounds.ff').write_bytes(b'different zone')
+        with self.assertRaises(ValueError):
+            module.deploy(self.build, self.game, self.backup)
+        self.assertFalse(self.backup.exists())
+
     def test_both_pairs_and_backups(self):
         record = module.deploy(self.build, self.game, self.backup)
         self.assertTrue(record['deployed'])

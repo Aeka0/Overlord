@@ -43,6 +43,7 @@ FEATURES = {
     'scripted body arm filtering': 'vr::gameplay::sequences::body::apply',
     'independent hand skin visibility': '*viewmodel_visibility::*skin_stub',
     'rigid action partition assets': 'vr::gameplay::weapons::physical_reload::partition_assets::refresh',
+    'empty-hand impact sound': 'vr::gameplay::weapons::native_weapon_sound::play_fist_impact',
     'cover push judgement view': 'vr::gameplay::weapons::physical_reload::debug::component::post_unpack',
 }
 

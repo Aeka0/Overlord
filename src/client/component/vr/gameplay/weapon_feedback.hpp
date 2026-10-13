@@ -3,6 +3,7 @@
 #include "../controller_haptics.hpp"
 #include "physical_reload_profile.hpp"
 #include "weapon_sound_reference.hpp"
+#include "fist_feedback.hpp"
 
 namespace vr::gameplay::weapons::feedback
 {
@@ -28,6 +29,7 @@ namespace vr::gameplay::weapons::feedback
 		const launcher_profile* launcher_definition{};
 		bool quick_reload_start{};
 		bool vehicle{}; // Driver gun uses script ownership instead of carried inventory.
+		melee::fist_contact fist{}; // Accepted empty-hand strike; no borrowed firearm lease.
 	};
 	inline bool fresh(const event& e, const hold& owner, const controller_input::frame& input,
 		bool gameplay, clock::time_point now) noexcept
@@ -79,4 +81,5 @@ namespace vr::gameplay::weapons::feedback
 	// hand-owned, not validated against a weapon's continuing held lease.
 	void carry_confirmation(hand actor,const controller_input::frame& input) noexcept;
 	void melee_confirmation(const hold& owner,const controller_input::frame& input,const std::array<float,3>& position) noexcept;
+	void fist_confirmation(hand actor,std::uint64_t revision,const controller_input::frame& input,const std::array<float,3>& position) noexcept;
 }
