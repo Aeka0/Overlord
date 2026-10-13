@@ -1,5 +1,6 @@
 #pragma once
 #include "component/vr/settings.hpp"
+#include "game/dvar_hash.hpp"
 #include <json.hpp>
 #include <cmath>
 #include <algorithm>
@@ -135,11 +136,32 @@ namespace launcher_vr_settings
 		return true;
 	}
 
+	inline bool native_name(std::string_view saved, const char* name)
+	{
+		if (same_name(saved, name)) return true;
+		if (saved.size() <= 2 || saved.substr(0, 2) != "0x") return false;
+		std::uint32_t hash{};
+		const auto parsed = std::from_chars(saved.data() + 2, saved.data() + saved.size(), hash, 16);
+		return parsed.ec == std::errc{} && parsed.ptr == saved.data() + saved.size() &&
+			hash == static_cast<std::uint32_t>(dvars::generate_hash(name));
+	}
+
+	inline std::optional<int> toggle_level(const vr::settings::boolean_setting& field, std::string_view text)
+	{
+		if (field.max_enabled_value == 1 && text != "0" && text != "1") return {};
+		int level{};
+		const auto parsed = std::from_chars(text.data(), text.data() + text.size(), level);
+		if (parsed.ec != std::errc{} || parsed.ptr != text.data() + text.size() ||
+			level < 0 || level > field.max_enabled_value) return {};
+		return level;
+	}
+
 	inline std::string setting_name(const std::vector<std::string>& parts)
 	{
 		if (parts.size() != 3 || (!same_name(parts[0], "seta") && !same_name(parts[0], "set"))) return {};
 		for(const auto& field:vr::settings::choices)if(same_name(field.name,parts[1]))return field.name;
-		for(const auto& field:vr::settings::toggles)if(same_name(field.name,parts[1]))return field.name;
+		for(const auto& field:vr::settings::toggles)
+			if(field.max_enabled_value > 1 ? native_name(parts[1], field.name) : same_name(field.name, parts[1]))return field.name;
 		for (const auto& field : vr::settings::numbers)
 			if (same_name(field.name, parts[1])) return field.name;
 		return {};
@@ -180,9 +202,9 @@ namespace launcher_vr_settings
 					for(std::size_t i=0;i<choice->values.size() && choice->values[i];++i)
 						if(parts[2]==std::to_string(i))candidate[name]=choice->values[i];
 				}
-				else if (std::any_of(vr::settings::toggles.begin(),vr::settings::toggles.end(),[&](const auto& field){return name==field.name;}))
+				else if (const auto toggle = std::find_if(vr::settings::toggles.begin(),vr::settings::toggles.end(),[&](const auto& field){return name==field.name;}); toggle != vr::settings::toggles.end())
 				{
-					if (parts[2] == "0" || parts[2] == "1") candidate[name] = parts[2] == "1";
+					if (const auto level = toggle_level(*toggle, parts[2])) candidate[name] = *level != 0;
 				}
 				else
 				{
@@ -224,12 +246,38 @@ namespace launcher_vr_settings
 	inline std::string update_config(std::string_view config, const json& values)
 	{
 		if (!validate(values)) throw std::runtime_error("Invalid VR settings.");
+		// Read quality once before merging. Ordinary VR edits must not turn an
+		// already enabled Low/Medium native effect into High quality.
+		std::array<std::optional<int>, vr::settings::toggles.size()> levels{};
+		auto remaining = config;
+		if (remaining.substr(0, 3) == "\xef\xbb\xbf") remaining.remove_prefix(3);
+		while (!remaining.empty())
+		{
+			const auto end = remaining.find('\n');
+			const auto parts = tokens(remaining.substr(0, end));
+			if (parts.size() == 3 && (same_name(parts[0], "set") || same_name(parts[0], "seta")))
+				for (std::size_t i{}; i < levels.size(); ++i)
+				{
+					const auto& field = vr::settings::toggles[i];
+					if (field.max_enabled_value > 1 && native_name(parts[1], field.name))
+						if (const auto level = toggle_level(field, parts[2])) levels[i] = level;
+				}
+			if (end == std::string_view::npos) break;
+			remaining.remove_prefix(end + 1);
+		}
 		auto result = remove_config_assignments(config,
 			[](const auto& parts) { return !setting_name(parts).empty(); });
 		for (auto it = values.begin(); it != values.end(); ++it)
 		{
-			const auto value = it->is_string() ? it->get<std::string>() :
+			auto value = it->is_string() ? it->get<std::string>() :
 				it->is_boolean() ? (it->get<bool>() ? std::string("1") : std::string("0")) : it->dump();
+			if (it->is_boolean() && it->get<bool>())
+				for (std::size_t i{}; i < levels.size(); ++i)
+				{
+					const auto& field = vr::settings::toggles[i];
+					if (field.max_enabled_value > 1 && it.key() == field.name)
+						value = std::to_string(levels[i].value_or(0) > 0 ? *levels[i] : field.max_enabled_value);
+				}
 			result += "seta " + it.key() + " \"" + value + "\"\r\n";
 		}
 		return result;

@@ -105,6 +105,7 @@ ID_ICON               ICON   "../../assets/icon/Icon.ico"
 LUI_COMMON            RCDATA "resources/ui_scripts/common.lua"
 LUI_UPDATER           RCDATA "resources/ui_scripts/updater.lua"
 LUI_CAMPAIGN_UNLOCK   RCDATA "resources/ui_scripts/campaign_unlock.lua"
+LUI_SUBTITLES         RCDATA "resources/ui_scripts/subtitles.lua"
 
 LUA_JSON              RCDATA "resources/json.lua"
 

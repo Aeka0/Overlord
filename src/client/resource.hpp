@@ -28,6 +28,7 @@
 #define LUI_COMMON            303
 #define LUI_UPDATER           304
 #define LUI_CAMPAIGN_UNLOCK   323
+#define LUI_SUBTITLES         324
 
 #define LUA_JSON              305
 

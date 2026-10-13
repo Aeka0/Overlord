@@ -31,6 +31,7 @@
 #include "ui_script_modules.hpp"
 #include "product.hpp"
 #include "campaign_unlock_request.hpp"
+#include "vr/settings.hpp"
 #include <utils/flags.hpp>
 
 #include <utils/string.hpp>
@@ -44,6 +45,7 @@ namespace ui_scripting
 		const auto lui_common = utils::nt::load_resource(LUI_COMMON);
 		const auto lui_updater = utils::nt::load_resource(LUI_UPDATER);
 		const auto lui_campaign_unlock = utils::nt::load_resource(LUI_CAMPAIGN_UNLOCK);
+		const auto lui_subtitles = utils::nt::load_resource(LUI_SUBTITLES);
 		const auto lua_json = utils::nt::load_resource(LUA_JSON);
 
 		using lua_function_t = std::function<arguments(const function_arguments& args)>;
@@ -316,6 +318,26 @@ namespace ui_scripting
 				{
 					// A failed request must neither break the menu nor replay on VM reload.
 					console::error("[Campaign unlock] Failed: %s\n", error.what());
+				}
+			};
+
+			game_type["applysubtitles"] = [](const game&, const script_value& apply)
+			{
+				// Process-owned, so a VM reload or returning from Audio cannot
+				// overwrite a subtitle choice made later in the current session.
+				static bool applied{};
+				if (applied || !::game::Com_InFrontend()) return;
+				const auto* option = ::game::Dvar_FindVar(vr::settings::subtitles.name);
+				if (!option || option->type != ::game::dvar_type::boolean) return;
+				applied = true;
+				try
+				{
+					apply.as<function>()(option->current.enabled);
+					console::info("[Subtitles] Applied launcher preference: %s.\n", option->current.enabled ? "enabled" : "disabled");
+				}
+				catch (const std::exception& error)
+				{
+					console::error("[Subtitles] Failed to apply launcher preference: %s\n", error.what());
 				}
 			};
 
@@ -959,6 +981,7 @@ namespace ui_scripting
 
 			load_scripts();
 			load_script("lui_campaign_unlock", lui_campaign_unlock);
+			load_script("lui_subtitles", lui_subtitles);
 		}
 
 		void try_start()

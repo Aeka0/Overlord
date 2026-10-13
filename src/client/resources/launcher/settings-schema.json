@@ -102,6 +102,22 @@
     "description": "settings.disableBlurHint"
   },
   {
+    "name": "r_dof_limit",
+    "category": "basics",
+    "group": "settings.comfort",
+    "label": "settings.depthOfField",
+    "type": "toggle",
+    "description": "settings.depthOfFieldHint"
+  },
+  {
+    "name": "r_mbLimit",
+    "category": "basics",
+    "group": "settings.comfort",
+    "label": "settings.motionBlur",
+    "type": "toggle",
+    "description": "settings.motionBlurHint"
+  },
+  {
     "name": "vr_disableLensFlare",
     "category": "basics",
     "group": "settings.comfort",
@@ -423,6 +439,14 @@
     "label": "settings.killfeedStyle",
     "type": "choice",
     "description": "settings.killfeedStyleHint"
+  },
+  {
+    "name": "vr_subtitles",
+    "category": "other",
+    "group": "settings.subtitles",
+    "label": "settings.subtitles",
+    "type": "toggle",
+    "description": "settings.subtitlesHint"
   },
   {
     "name": "vr_recordingMode",

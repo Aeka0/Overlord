@@ -95,6 +95,45 @@ int main(int argc, char** argv)
 				require(catalog[field.name][i]["value"]==field.values[i] && catalog[field.name][i]["labelKey"]==field.label_keys[i], "Frontend choices preserve native ordering and localized labels");
 		const auto initial = defaults();
 		require(validate(initial), "Shared defaults must be valid");
+		require(initial[vr::settings::subtitles.name] == true, "Dialogue subtitles default on");
+		for (bool enabled : {false, true})
+		{
+			auto selected = initial;
+			selected[vr::settings::subtitles.name] = enabled;
+			require(read_values(update_config("bind F10 togglemenu\n", selected)) == selected,
+				"Subtitle preference round trips independently of native profile initialization");
+		}
+		for (const auto& field : {vr::settings::depth_of_field, vr::settings::motion_blur})
+		{
+			require(initial[field.name] == false, "Native comfort effects default off");
+			std::ostringstream alias;
+			alias << "0x" << std::hex << static_cast<std::uint32_t>(dvars::generate_hash(field.name));
+			const std::string other = "bind F10 togglemenu\nseta r_dof_enable 1\nseta r_mbFastEnable 1\n";
+			for (int quality = 0; quality <= field.max_enabled_value; ++quality)
+			{
+				const auto profile = "\xef\xbb\xbf" + other + "seta " + field.name + " 3\nseta " + alias.str() + " " + std::to_string(quality) + "\n";
+				const auto loaded = read_values(profile);
+				require(loaded[field.name] == (quality != 0), "Last hashed quality limit controls the launcher switch");
+				const auto merged = update_config(profile, loaded);
+				require(merged.starts_with("\xef\xbb\xbf" + other) && merged.find(alias.str()) == std::string::npos,
+					"Comfort saves preserve BOM, bindings and subordinate renderer settings, and remove aliases");
+				require(merged.find(std::string("seta ") + field.name + " \"" + std::to_string(quality) + "\"") != std::string::npos,
+					"Unrelated saves preserve native Low/Medium/High quality exactly");
+				require(read_values(merged) == loaded && update_config(merged, loaded) == merged,
+					"Native comfort settings round trip and repeated saves are stable");
+				auto selected = loaded;
+				selected[field.name] = false;
+				const auto disabled = update_config(profile, selected);
+				require(disabled.find(std::string("seta ") + field.name + " \"0\"") != std::string::npos,
+					"Disabling any native effect quality writes Off");
+				selected[field.name] = true;
+				require(update_config(disabled, selected).find(std::string("seta ") + field.name + " \"3\"") != std::string::npos,
+					"Enabling an Off native effect selects High quality");
+			}
+			for (const auto text : {"-1", "4", "true", "1.5", "999999999999999999999", "1;quit"})
+				require(read_values(std::string("seta ") + field.name + " " + text)[field.name] == false,
+					"Malformed or out-of-range native quality remains disabled");
+		}
 		const auto* killfeed_name = vr::settings::killfeed_style.name;
 		require(initial[killfeed_name] == "mw2019", "Hit and kill audio defaults to MW2019");
 		for (std::size_t i{}; i < vr::settings::killfeed_style.values.size() && vr::settings::killfeed_style.values[i]; ++i)

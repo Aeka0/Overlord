@@ -3,11 +3,33 @@
 The launcher saves two opt-in booleans, both off by default:
 
 - `vr_hideHud`: Other > Hide all HUD.
-- `vr_disableBlur`: Basics > Visual comfort > Disable blur.
+- `vr_disableBlur`: Basics > Visual comfort > Disable UI blur.
 
-`presentation_options.cpp` publishes these choices from the main pipeline when
-`vr_enable` is on. Render consumers use atomic flags without native dvar lookup,
-cross-thread waits, or changes to native configuration. Flat play is unchanged.
+The same Visual comfort group and quick guide also expose independent Depth of
+field (`r_dof_limit`) and Motion blur (`r_mbLimit`) switches. These edit the native
+PC graphics quality limits in the existing profile: 0 means Off, and 1–3 mean
+enabled quality. Both default to Off when absent. Existing enabled Low/Medium/High
+values are retained when saving other settings; enabling an Off effect selects
+High (3). Named and hexadecimal-hash assignments are merged without duplicates.
+The next game start reads these settings through its normal configuration path;
+they affect native graphics in both VR and flat play. No renderer hook or per-frame
+dvar write is needed. Reset disables both effects.
+
+For `vr_hideHud` and `vr_disableBlur`, `presentation_options.cpp` publishes the
+choices from the main pipeline when `vr_enable` is on. Render consumers use atomic
+flags without native dvar lookup, cross-thread waits, or changes to native
+configuration. These two options leave flat play unchanged.
+
+## Subtitles
+
+Other's second option is Subtitles (`vr_subtitles`, default On). It saves through
+the normal launcher Bool catalog, then the embedded `subtitles.lua` applies it
+once per game process when `main_campaign` opens after profile loading. The
+native `Engine.SetSubtitlesEnabled(controller, bool)` API updates the same
+profile field as Audio's subtitle toggle; `Engine.SubtitlesEnabled` verifies it,
+and `updategamerprofile` requests the native save only when the value changed.
+Later in-game subtitle edits survive menu returns and Lua VM reloads. This is
+independent of Hide all HUD and does not filter titles, fades or mission prompts.
 
 ## HUD boundary
 
@@ -31,9 +53,9 @@ physical equipment, scene fades, damage-screen effects, recording guides and
 explicit debug diagnostics keep their own presentation policy. Hiding HUD does
 not suspend native scripts, ammunition updates, interactions or gameplay.
 
-## Blur boundary
+## UI blur boundary
 
-Disable blur skips the per-eye native fullscreen Gaussian pass, weapon HUD blur,
+Disable UI blur skips the per-eye native fullscreen Gaussian pass, weapon HUD blur,
 narrative hint backdrops, and spatial menu background blur. Sharp foreground ink,
 scene fades and menu input remain intact. It does not change depth of field,
 texture filtering, scope optics or authored translucent materials.

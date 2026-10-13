@@ -54,6 +54,8 @@ namespace vr::presentation_options
 				"Hide native and spatial gameplay HUD while preserving menus");
 			blur_option=dvars::register_bool(settings::disable_blur.name,settings::disable_blur.default_value,game::DVAR_FLAG_SAVED,
 				"Disable fullscreen and spatial UI background blur in VR");
+			dvars::register_bool(settings::subtitles.name,settings::subtitles.default_value,game::DVAR_FLAG_SAVED,
+				"Enable native dialogue subtitles when the player profile loads");
 			if(!install_hud_reads())console::error("[VR HUD] visibility read signatures rejected; native HUD gates preserved\n");
 			scheduler::loop([] {
 				const auto* enabled=game::Dvar_FindVar("vr_enable");

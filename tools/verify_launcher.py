@@ -58,6 +58,8 @@ def main() -> None:
         if args.page == 'settings' and (not data.get('presetFields') or
                 not set(data['presetFields']).issubset(data.get('controlNames', []))):
             raise RuntimeError('The controller preset edits fields that are not displayed by the launcher')
+        if args.page == 'settings' and not data.get('nativeComfort', {}).get('ok'):
+            raise RuntimeError('Comfort switches or the second Other subtitle option did not render correctly')
         print(f"Launcher renderer passed ({args.page}, {args.size}): {data['settings']} settings, page layout, borderless frame and embedded assets")
         print(f"Report: {report}")
     finally:

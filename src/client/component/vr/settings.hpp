@@ -98,6 +98,9 @@ namespace vr::settings
 	{
 		const char* name;
 		bool default_value;
+		// Native quality limits use 0 for Off and 1..max for enabled quality.
+		// The launcher exposes a Bool and retains an existing nonzero quality.
+		int max_enabled_value{1};
 	};
 	inline constexpr boolean_setting recording_mode{"vr_recordingMode", false};
 	inline constexpr number_setting recording_dim{"vr_recordingDim", 65.f, 0.f, 100.f, 1.f};
@@ -108,6 +111,9 @@ namespace vr::settings
 	inline constexpr boolean_setting discard_ammo_penalty{"vr_discardAmmoPenalty", false};
 	inline constexpr boolean_setting hide_hud{"vr_hideHud", false};
 	inline constexpr boolean_setting disable_blur{"vr_disableBlur", false};
+	inline constexpr boolean_setting depth_of_field{"r_dof_limit", false, 3};
+	inline constexpr boolean_setting motion_blur{"r_mbLimit", false, 3};
+	inline constexpr boolean_setting subtitles{"vr_subtitles", true};
 	inline constexpr boolean_setting disable_dog_pounce{"vr_disableDogPounce", true};
 	inline constexpr boolean_setting ads_comfort{"vr_adsComfort", true};
 	inline constexpr boolean_setting ads_sprint{"vr_adsSprint", true};
@@ -122,6 +128,9 @@ namespace vr::settings
 		                              discard_ammo_penalty,
 		                              hide_hud,
 		                              disable_blur,
+		                              depth_of_field,
+		                              motion_blur,
+		                              subtitles,
 		                              disable_dog_pounce,
 		                              ads_comfort,
 		                              ads_sprint,

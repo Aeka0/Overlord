@@ -128,6 +128,31 @@ test("every migrated field has translations in every existing locale", () => {
     );
 });
 
+test("native comfort effects are independent switches beside background blur", () => {
+  const names = ["r_dof_limit", "r_mbLimit", "vr_disableBlur"];
+  for (const name of names) {
+    const field = fields.find((field) => field.name === name)!;
+    assert.equal(field.category, "basics");
+    assert.equal(field.group, "settings.comfort");
+    assert.equal(field.type, "toggle");
+  }
+  const fixture = { ...state, values: { r_dof_limit: true, r_mbLimit: false, vr_disableBlur: true } } as SettingsState;
+  const draft = makeDraft(fixture.values, fixture.limits);
+  assert.deepEqual(collect({ ...draft, r_dof_limit: false, r_mbLimit: true }, fixture), {
+    r_dof_limit: false, r_mbLimit: true, vr_disableBlur: true,
+  });
+});
+
+test("subtitles are the second Other option and save independently of hiding HUD", () => {
+  const other = fields.filter((field) => field.category === "other");
+  assert.equal(other[1].name, "vr_subtitles");
+  assert.equal(other[1].type, "toggle");
+  assert.equal([...new Set(other.map((field) => field.group))][1], "settings.subtitles");
+  const fixture = { ...state, values: { vr_subtitles: true, vr_hideHud: false } } as SettingsState;
+  const draft = makeDraft(fixture.values, fixture.limits);
+  assert.deepEqual(collect({ ...draft, vr_subtitles: false }, fixture), { vr_subtitles: false, vr_hideHud: false });
+});
+
 test("EXO Punch is a Cheats toggle and saves independently of native intel cheats", () => {
   const field = fields.find((field) => field.name === "vr_exoPunch")!;
   assert.equal(field.category, "cheats");

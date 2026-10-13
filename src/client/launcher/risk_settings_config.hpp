@@ -30,12 +30,7 @@ namespace launcher_vr_settings
 
 	inline bool risk_name(std::string_view saved, const char* name)
 	{
-		if (same_name(saved, name)) return true;
-		if (saved.size() <= 2 || saved.substr(0, 2) != "0x") return false;
-		std::uint32_t hash{};
-		const auto parsed = std::from_chars(saved.data() + 2, saved.data() + saved.size(), hash, 16);
-		return parsed.ec == std::errc{} && parsed.ptr == saved.data() + saved.size() &&
-			hash == static_cast<std::uint32_t>(dvars::generate_hash(name));
+		return native_name(saved, name);
 	}
 
 	inline std::array<std::optional<std::string>, risk_settings.size()> read_risk_settings(std::string_view config)

@@ -35,6 +35,7 @@ import {
   inspectHomeLayout,
   inspectLauncherLayout,
   inspectCampaignUnlock,
+  inspectNativeComfort,
   inspectLauncherMotion,
   inspectLauncherSelect,
   inspectLaunchDialog,
@@ -78,6 +79,8 @@ const guideFields = [
     "vr_handStabilization",
     "vr_disableLensFlare",
     "vr_disableBlur",
+    "r_dof_limit",
+    "r_mbLimit",
     "vr_cameraBob",
   ],
   ["vr_chamberingGuide", "vr_quickReload", "vr_aimAssistStrength"],
@@ -92,6 +95,8 @@ const guideDescriptions: Record<string, string> = {
   vr_handStabilization: "oobe.handHelp",
   vr_disableLensFlare: "oobe.flareHelp",
   vr_disableBlur: "oobe.blurHelp",
+  r_dof_limit: "settings.depthOfFieldHint",
+  r_mbLimit: "settings.motionBlurHint",
   vr_cameraBob: "oobe.bobHelp",
   vr_chamberingGuide: "oobe.chamberHelp",
   vr_quickReload: "oobe.reloadHelp",
@@ -216,12 +221,14 @@ function Launcher({ data }: { data: Bootstrap }) {
             ? await inspectHomeLayout()
             : inspectLauncherLayout();
         const campaignUnlock = data.renderProbePage === "home" ? { ok: true } : inspectCampaignUnlock();
+        const nativeComfort = data.renderProbePage === "home" ? { ok: true } : inspectNativeComfort();
         const preflight = await inspectLaunchDialog();
         return bridge!.request("renderer.ready", {
           ok:
             declaration.ok &&
             layout.ok &&
             campaignUnlock.ok &&
+            nativeComfort.ok &&
             motion.ok &&
             selects.ok &&
             preflight.ok &&
@@ -239,6 +246,7 @@ function Launcher({ data }: { data: Bootstrap }) {
           language: preferences.language,
           layout,
           campaignUnlock,
+          nativeComfort,
           motion,
           selects,
           preflight,

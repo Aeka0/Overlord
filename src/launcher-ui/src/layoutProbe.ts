@@ -284,6 +284,47 @@ export function inspectCampaignUnlock() {
   for (const animation of document.getAnimations()) animation.finish();
   return { ...result, ok: Object.values(result).every(Boolean) };
 }
+
+export function inspectNativeComfort() {
+  const navigation = document.querySelector(".settings-navigation");
+  const previous = navigation?.querySelector<HTMLButtonElement>('[aria-current="page"]');
+  const basics = navigation?.querySelector<HTMLButtonElement>("button");
+  if (!previous || !basics) throw new Error("Basics navigation is unavailable");
+  flushSync(() => basics.click());
+  for (const animation of document.getAnimations()) animation.finish();
+  const names = ["r_dof_limit", "r_mbLimit"];
+  const result = {
+    controls: names.every((name) => {
+      const control = document.getElementById(name) as HTMLInputElement | null;
+      return control?.type === "checkbox" && !control.checked && !control.disabled;
+    }),
+    descriptions: names.every((name) => {
+      const hint = document.getElementById(`hint-${name}`)?.textContent;
+      return !!hint && !hint.startsWith("settings.");
+    }),
+    fits: names.every((name) => {
+      const row = document.getElementById(name)?.closest(".setting-row");
+      const bounds = row?.getBoundingClientRect();
+      return !!bounds && bounds.left >= 0 && bounds.right <= innerWidth &&
+        row!.scrollWidth <= row!.clientWidth + 1;
+    }),
+    subtitleSecond: false,
+    subtitleDefaultOn: false,
+    subtitleDescription: false,
+  };
+  const other = navigation!.querySelectorAll<HTMLButtonElement>("button")[4];
+  flushSync(() => other.click());
+  for (const animation of document.getAnimations()) animation.finish();
+  const subtitle = document.getElementById("vr_subtitles") as HTMLInputElement | null;
+  const controls = document.querySelectorAll<HTMLInputElement | HTMLSelectElement>(".setting-row input, .setting-row select");
+  result.subtitleSecond = !!subtitle && controls[1] === subtitle;
+  result.subtitleDefaultOn = subtitle?.type === "checkbox" && subtitle.checked && !subtitle.disabled;
+  const hint = document.getElementById("hint-vr_subtitles")?.textContent;
+  result.subtitleDescription = !!hint && !hint.startsWith("settings.");
+  flushSync(() => previous.click());
+  for (const animation of document.getAnimations()) animation.finish();
+  return { ...result, ok: Object.values(result).every(Boolean) };
+}
 export async function inspectHomeLayout() {
   const image = document.querySelector<HTMLImageElement>("#home-background");
   const home = document.querySelector<HTMLElement>(".home-page");
