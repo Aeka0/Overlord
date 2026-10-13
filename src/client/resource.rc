@@ -77,7 +77,7 @@ BEGIN
             VALUE "InternalName", "overlord"
             VALUE "LegalCopyright", "Copyright (C) 2026 Aeka0 and Overlord contributors; original H2-Mod authors."
             VALUE "Licence", "GPLv3"
-            VALUE "Info", "https://github.com/Aeka0/h2-mod-vr"
+            VALUE "Info", "https://github.com/Aeka0/Overlord"
 #ifdef _DEBUG
             VALUE "OriginalFilename", "overlord-debug.exe"
 #else

@@ -101,7 +101,7 @@
   "settings.yaw": "ヨー",
   "settings.roll": "ロール",
   "settings.rotationRange": "各軸の調整範囲：-180～180 度。",
-  "settings.gameplayHint": "照準と武器の操作。",
+  "settings.gameplayHint": "照準、武器の操作、ゲームの仕組み。",
   "settings.turning": "旋回",
   "settings.turningHint": "コントローラーで視点を旋回させる方法を選びます。",
   "settings.turnStyle": "旋回方式",

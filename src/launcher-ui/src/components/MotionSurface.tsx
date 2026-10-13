@@ -5,10 +5,12 @@ import { useLayoutEffect, useRef, type HTMLAttributes } from "react";
 export function MotionSurface({
   as: Tag = "section",
   motionKey,
+  motion = "up",
   ...props
 }: HTMLAttributes<HTMLDivElement> & {
   as?: "div" | "section";
   motionKey?: string | number;
+  motion?: "up" | "fade" | "from-left" | "from-right";
 }) {
   const ref = useRef<HTMLDivElement>(null);
 
@@ -19,10 +21,13 @@ export function MotionSurface({
     // Production CSS may normalize ms to s; Web Animations always takes ms.
     const time = style.getPropertyValue("--motion-enter-duration").trim();
     const duration = parseFloat(time) * (time.endsWith("ms") ? 1 : 1000);
+    const offset = motion === "from-left" ? "translateX(-18px)" :
+      motion === "from-right" ? "translateX(18px)" :
+      motion === "up" ? "translateY(10px)" : "none";
     const animation = element.animate(
       [
-        { opacity: 0, transform: "translateY(10px)" },
-        { opacity: 1, transform: "translateY(0)" },
+        { opacity: 0, transform: offset },
+        { opacity: 1, transform: "none" },
       ],
       {
         id: "launcher-enter",
@@ -31,7 +36,7 @@ export function MotionSurface({
       },
     );
     return () => animation.cancel();
-  }, [motionKey]);
+  }, [motionKey, motion]);
 
   return <Tag ref={ref} {...props} />;
 }

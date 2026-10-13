@@ -25,6 +25,7 @@ import { FieldControl, SettingRow, Switch } from "./components/controls";
 import { WindowControls } from "./components/WindowControls";
 import { HomePage } from "./components/HomePage";
 import { MotionSurface } from "./components/MotionSurface";
+import { DecodedText } from "./components/DecodedText";
 import { LaunchDialog } from "./components/LaunchDialog";
 import { StartupNotice } from "./components/StartupNotice";
 import type { PreflightReport, LaunchResult } from "./preflight";
@@ -40,6 +41,7 @@ import {
   inspectLauncherSelect,
   inspectLaunchDialog,
   inspectStartupNotice,
+  inspectPageTransitions,
 } from "./layoutProbe";
 import "./styles.css";
 import "./select.css";
@@ -189,6 +191,7 @@ function Launcher({ data }: { data: Bootstrap }) {
   );
   const [guideAutomatic, setGuideAutomatic] = useState(guide);
   const [guideStep, setGuideStep] = useState(0);
+  const [guideDirection, setGuideDirection] = useState<"from-left" | "from-right">("from-right");
   const [preferenceBusy, setPreferenceBusy] = useState(false);
   const [riskBusy, setRiskBusy] = useState(false);
   const [launching, setLaunching] = useState(false);
@@ -222,6 +225,7 @@ function Launcher({ data }: { data: Bootstrap }) {
             : inspectLauncherLayout();
         const campaignUnlock = data.renderProbePage === "home" ? { ok: true } : inspectCampaignUnlock();
         const nativeComfort = data.renderProbePage === "home" ? { ok: true } : inspectNativeComfort();
+        const pageTransitions = await inspectPageTransitions();
         const preflight = await inspectLaunchDialog();
         return bridge!.request("renderer.ready", {
           ok:
@@ -229,6 +233,7 @@ function Launcher({ data }: { data: Bootstrap }) {
             layout.ok &&
             campaignUnlock.ok &&
             nativeComfort.ok &&
+            pageTransitions.ok &&
             motion.ok &&
             selects.ok &&
             preflight.ok &&
@@ -247,6 +252,7 @@ function Launcher({ data }: { data: Bootstrap }) {
           layout,
           campaignUnlock,
           nativeComfort,
+          pageTransitions,
           motion,
           selects,
           preflight,
@@ -416,6 +422,7 @@ function Launcher({ data }: { data: Bootstrap }) {
   async function openGuide() {
     if (!controller.prepareGuide()) return;
     setGuideAutomatic(false);
+    setGuideDirection("from-right");
     setGuideStep(0);
     setGuide(true);
     setNotice(null);
@@ -423,7 +430,10 @@ function Launcher({ data }: { data: Bootstrap }) {
   async function nextGuide() {
     controller.clearTimers();
     if (!(await controller.save(guideFields[guideStep]))) return;
-    if (guideStep < guideSteps.length - 1) setGuideStep((step) => step + 1);
+    if (guideStep < guideSteps.length - 1) {
+      setGuideDirection("from-right");
+      setGuideStep((step) => step + 1);
+    }
     else if (await controller.finishGuide(false)) {
       setGuide(false);
       setPage(guideAutomatic ? "play" : "settings");
@@ -610,10 +620,10 @@ function Launcher({ data }: { data: Bootstrap }) {
       )}
       <main className="workspace">
         {guide ? (
-          <MotionSurface className="page guide-page" motionKey={guideStep}>
+          <MotionSurface className="page guide-page" motionKey={guideStep} motion={guideDirection}>
             <div className="page-heading guide-heading">
               <div>
-                <h1>{t(`oobe.${guideSteps[guideStep]}`)}</h1>
+                <h1><DecodedText text={t(`oobe.${guideSteps[guideStep]}`)} glow={{}} /></h1>
                 <p className="hint">{t(`oobe.${guideSteps[guideStep]}Hint`)}</p>
               </div>
               <span className="hint">
@@ -655,6 +665,7 @@ function Launcher({ data }: { data: Bootstrap }) {
                   }
                   onClick={() => {
                     controller.clearTimers();
+                    setGuideDirection("from-left");
                     setGuideStep((step) => step - 1);
                   }}
                 >
@@ -679,6 +690,7 @@ function Launcher({ data }: { data: Bootstrap }) {
             t={t}
             product={data.product}
             version={data.version}
+            revealReady={!startupNotice}
             runtime={String(controller.draft.vr_runtimeBackend)}
             choices={controller.state.choices.vr_runtimeBackend}
             launching={launching}
@@ -745,7 +757,7 @@ function Launcher({ data }: { data: Bootstrap }) {
               motionKey={category}
             >
               <div className="page-heading">
-                <h1 className="display-heading">{t(`settings.${category}`)}</h1>
+                <h1 className="display-heading"><DecodedText text={t(`settings.${category}`)} glow={{}} /></h1>
                 <p className="hint">
                   {t(`settings.${category}Hint`) === `settings.${category}Hint`
                     ? t("settings.basicsHint")
@@ -832,7 +844,7 @@ function Launcher({ data }: { data: Bootstrap }) {
         ) : page === "language" ? (
           <MotionSurface className="page language-page" motionKey="language">
             <div className="page-heading">
-              <h1 className="display-heading">{t("nav.language")}</h1>
+              <h1 className="display-heading"><DecodedText text={t("nav.language")} glow={{}} /></h1>
               <p className="hint">{t("language.headingHint")}</p>
             </div>
             <div className="panel">
@@ -889,7 +901,7 @@ function Launcher({ data }: { data: Bootstrap }) {
         ) : (
           <MotionSurface className="page about-page" motionKey="about">
             <div className="page-heading">
-              <h1 className="display-heading">{data.product}</h1>
+              <h1 className="display-heading"><DecodedText text={data.product} glow={{}} /></h1>
               <p className="hint">
                 {t("about.stage", { version: data.version })}
               </p>
@@ -909,10 +921,10 @@ function Launcher({ data }: { data: Bootstrap }) {
             </button>
             {credits.map((group) => (
               <div className="credits-group" key={group.title}>
-                <h2>{t(group.title)}</h2>
+                <h2><DecodedText text={t(group.title)} /></h2>
                 <ul>
                   {group.people.map((person) => (
-                    <li key={person}>{person}</li>
+                    <li key={person}><DecodedText text={person} glow={{}} /></li>
                   ))}
                 </ul>
               </div>

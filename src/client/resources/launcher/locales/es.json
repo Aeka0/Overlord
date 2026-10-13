@@ -101,7 +101,7 @@
   "settings.yaw": "Guiñada",
   "settings.roll": "Alabeo",
   "settings.rotationRange": "Rango: de -180 a 180 grados por eje.",
-  "settings.gameplayHint": "Apuntado y manejo de armas.",
+  "settings.gameplayHint": "Apuntado, manejo de armas y mecánicas de juego.",
   "settings.turning": "Giro",
   "settings.turningHint": "Elige cómo el mando gira la vista.",
   "settings.turnStyle": "Tipo de giro",

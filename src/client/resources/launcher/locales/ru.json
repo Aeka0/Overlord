@@ -101,7 +101,7 @@
   "settings.yaw": "Рыскание",
   "settings.roll": "Крен",
   "settings.rotationRange": "Диапазон: от -180 до 180 градусов по каждой оси.",
-  "settings.gameplayHint": "Прицеливание и обращение с оружием.",
+  "settings.gameplayHint": "Прицеливание, обращение с оружием и игровые механики.",
   "settings.turning": "Повороты",
   "settings.turningHint": "Выберите способ поворота камеры контроллером.",
   "settings.turnStyle": "Способ поворота",

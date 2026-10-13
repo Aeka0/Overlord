@@ -101,7 +101,7 @@
   "settings.yaw": "Lacet",
   "settings.roll": "Roulis",
   "settings.rotationRange": "Plage : de -180 à 180 degrés par axe.",
-  "settings.gameplayHint": "Visée et manipulation des armes.",
+  "settings.gameplayHint": "Visée, manipulation des armes et mécaniques de jeu.",
   "settings.turning": "Rotation",
   "settings.turningHint": "Choisissez comment le contrôleur fait tourner la vue.",
   "settings.turnStyle": "Mode de rotation",

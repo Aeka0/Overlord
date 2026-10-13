@@ -101,7 +101,7 @@
   "settings.yaw": "Gieren",
   "settings.roll": "Rollen",
   "settings.rotationRange": "Bereich: -180 bis 180 Grad je Achse.",
-  "settings.gameplayHint": "Zielen und Waffenbedienung.",
+  "settings.gameplayHint": "Zielen, Waffenbedienung und Spielmechaniken.",
   "settings.turning": "Drehen",
   "settings.turningHint": "Festlegen, wie der Controller die Blickrichtung dreht.",
   "settings.turnStyle": "Drehart",

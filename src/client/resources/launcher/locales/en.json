@@ -101,7 +101,7 @@
   "settings.yaw": "Yaw",
   "settings.roll": "Roll",
   "settings.rotationRange": "Adjustment range: -180 to 180 degrees per axis.",
-  "settings.gameplayHint": "Aiming and weapon handling.",
+  "settings.gameplayHint": "Aiming, weapon handling, and game mechanics.",
   "settings.turning": "Turning",
   "settings.turningHint": "Choose how the controller turns your view.",
   "settings.turnStyle": "Turn style",

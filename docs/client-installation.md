@@ -18,16 +18,16 @@ the client build.
 
 Keep openxr_loader.dll, the application manifest, steamvr/, vr_input/ and h2-mod/ resources beside
 the executable. Install updates manually from
-[Overlord Releases](https://github.com/Aeka0/h2-mod-vr/releases).
+[Overlord Releases](https://github.com/Aeka0/Overlord/releases).
 Install Overlord updates from this project's release packages.
 
-See the [project documentation](https://github.com/Aeka0/h2-mod-vr/tree/main/docs)
+See the [project documentation](https://github.com/Aeka0/Overlord/tree/main/docs)
 for controls, settings, supported behavior and remaining compatibility work.
 Report reproducible problems in the
-[project issue tracker](https://github.com/Aeka0/h2-mod-vr/issues).
+[project issue tracker](https://github.com/Aeka0/Overlord/issues).
 
 The source and pinned dependencies are available from the
-[source repository](https://github.com/Aeka0/h2-mod-vr).
+[source repository](https://github.com/Aeka0/Overlord).
 Preserve LICENSE, THIRD_PARTY_NOTICES.md and licenses/ when redistributing.
 Review docs/source-provenance.md before public redistribution.
 
@@ -75,4 +75,4 @@ No automatic API-backend switch hides a startup or frame failure.
 
 `XR_RUNTIME_JSON` optionally overrides the runtime within OpenXR; it does not
 select OpenVR. The current native bridge explicitly rejects independent eye
-rotations. See [runtime contracts and acceptance](https://github.com/Aeka0/h2-mod-vr/blob/main/docs/vr-runtime-rendering.md#openxr-frame-and-lifecycle-contracts).
+rotations. See [runtime contracts and acceptance](https://github.com/Aeka0/Overlord/blob/main/docs/vr-runtime-rendering.md#openxr-frame-and-lifecycle-contracts).

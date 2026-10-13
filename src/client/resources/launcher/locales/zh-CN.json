@@ -101,7 +101,7 @@
   "settings.yaw": "偏航",
   "settings.roll": "翻滚",
   "settings.rotationRange": "调整范围：每个轴 -180 至 180 度。",
-  "settings.gameplayHint": "瞄准与武器操作。",
+  "settings.gameplayHint": "瞄准、武器操作与游戏机制。",
   "settings.turning": "转向",
   "settings.turningHint": "选择使用控制器转动视角的方式。",
   "settings.turnStyle": "转向方式",

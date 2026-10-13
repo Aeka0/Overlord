@@ -60,6 +60,14 @@ body,
 }
 body {
   overflow: hidden;
+  user-select: none;
+}
+/* Keep editable values and command examples available for selection/copying. */
+input,
+textarea,
+pre,
+code {
+  user-select: text;
 }
 button,
 input,
@@ -107,7 +115,6 @@ button {
   background: var(--chrome);
   app-region: drag;
   -webkit-app-region: drag;
-  user-select: none;
 }
 .window-controls {
   display: flex;
@@ -133,6 +140,50 @@ button {
   color: #fff;
   background: #c42b1c;
 }
+/* Transparent grips keep resizing usable without a thick visible frame. */
+.window-resize {
+  position: fixed;
+  z-index: 100;
+  width: 6px;
+  height: 6px;
+  app-region: no-drag;
+  -webkit-app-region: no-drag;
+  touch-action: none;
+}
+.window-resize-Top,
+.window-resize-Bottom {
+  left: 6px;
+  right: 6px;
+  width: auto;
+  cursor: ns-resize;
+}
+.window-resize-Left,
+.window-resize-Right {
+  top: 6px;
+  bottom: 6px;
+  height: auto;
+  cursor: ew-resize;
+}
+.window-resize-TopLeft,
+.window-resize-BottomRight {
+  cursor: nwse-resize;
+}
+.window-resize-TopRight,
+.window-resize-BottomLeft {
+  cursor: nesw-resize;
+}
+.window-resize-Top,
+.window-resize-TopLeft,
+.window-resize-TopRight { top: 0; }
+.window-resize-Bottom,
+.window-resize-BottomLeft,
+.window-resize-BottomRight { bottom: 0; }
+.window-resize-Left,
+.window-resize-TopLeft,
+.window-resize-BottomLeft { left: 0; }
+.window-resize-Right,
+.window-resize-TopRight,
+.window-resize-BottomRight { right: 0; }
 .brand,
 .display-heading {
   font-family: var(--display-font);
@@ -523,6 +574,12 @@ input[aria-invalid="true"] {
   gap: 18px;
 }
 .home-page {
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  padding: 8px;
+}
+.home-scene {
   position: relative;
   isolation: isolate;
   display: flex;
@@ -534,30 +591,36 @@ input[aria-invalid="true"] {
   min-height: 0;
   padding: 32px;
   overflow: hidden;
-  border-radius: 12px;
+  border-radius: 6px;
   background: #141414;
 }
 .home-artwork {
   position: absolute;
   z-index: -2;
-  inset: 0;
-  width: 100%;
-  height: 100%;
+  /* Overscan covers the bounded 4px parallax, including at the corners. */
+  inset: -6px;
+  width: calc(100% + 12px);
+  height: calc(100% + 12px);
   object-fit: cover;
   object-position: center;
   pointer-events: none;
-  border-radius: inherit;
+  transform: translate3d(var(--parallax-x, 0px), var(--parallax-y, 0px), 0);
+  transition: transform 180ms var(--motion-ease);
+  will-change: transform;
 }
 .home-identity {
   flex: 1;
   min-width: 0;
   color: #f2f2f2;
   text-shadow: 0 2px 6px rgba(0, 0, 0, 0.8);
+  /* Independent translation composes with the existing entrance transform. */
+  translate: calc(var(--parallax-x, 0px) * 1.5) calc(var(--parallax-y, 0px) * 1.5);
+  transition: translate 180ms var(--motion-ease);
 }
 .home-identity h1 {
   margin: 0 0 8px;
   font-family: var(--display-font);
-  font-size: clamp(28px, 3.8vw, 44px);
+  font-size: clamp(36px, 5.2vw, 62px);
   font-weight: 400;
   letter-spacing: 0.04em;
   text-transform: uppercase;
@@ -567,7 +630,7 @@ input[aria-invalid="true"] {
   font-size: 14px;
   color: #ddd;
 }
-.home-page:before {
+.home-scene:before {
   content: "";
   position: absolute;
   z-index: -1;
@@ -614,7 +677,7 @@ input[aria-invalid="true"] {
   color: var(--error);
 }
 @media (max-width: 620px) {
-  .home-page {
+  .home-scene {
     padding: 24px 20px;
   }
 }

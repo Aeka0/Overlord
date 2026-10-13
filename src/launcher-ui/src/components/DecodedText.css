@@ -1,0 +1,50 @@
+.decode-character {
+  position: relative;
+  display: inline-block;
+  white-space: pre;
+}
+.decode-measure {
+  visibility: hidden;
+}
+.decode-glyph {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  text-align: center;
+  isolation: isolate;
+}
+.decode-front {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+}
+.decode-glow {
+  position: absolute;
+  inset: -12px;
+  z-index: -1;
+  pointer-events: none;
+  opacity: calc(var(--decode-glow-intensity) * var(--decode-flicker, 1));
+  transition: opacity 45ms linear;
+}
+.decode-glow::before {
+  content: attr(data-glyph);
+  position: absolute;
+  inset: 12px;
+  color: var(--decode-glow-color);
+  text-shadow: 0 0 4px var(--decode-glow-color), 0 0 9px var(--decode-glow-color);
+  filter: blur(1px);
+}
+/* Mask the blurred layer only; the foreground stays crisp and unstriped. */
+.decode-glow[data-scanlines="true"] {
+  mask-image: repeating-linear-gradient(to bottom,
+    #000 0 var(--decode-stripe-half),
+    rgb(0 0 0 / var(--decode-stripe-gap)) var(--decode-stripe-half) var(--decode-stripe-spacing));
+  mask-size: 100% var(--decode-stripe-spacing);
+}
+.decode-glow[data-moving="true"] {
+  animation: decode-scan var(--decode-stripe-duration) linear infinite;
+  animation-direction: var(--decode-stripe-direction);
+}
+@keyframes decode-scan {
+  to { mask-position: 0 var(--decode-stripe-spacing); }
+}

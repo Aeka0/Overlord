@@ -101,7 +101,7 @@
   "settings.yaw": "요",
   "settings.roll": "롤",
   "settings.rotationRange": "조정 범위: 각 축 -180~180도.",
-  "settings.gameplayHint": "조준 및 무기 조작입니다.",
+  "settings.gameplayHint": "조준, 무기 조작 및 게임 메커니즘입니다.",
   "settings.turning": "회전",
   "settings.turningHint": "컨트롤러로 시점을 회전하는 방식을 선택하세요.",
   "settings.turnStyle": "회전 방식",

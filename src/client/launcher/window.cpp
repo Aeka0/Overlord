@@ -89,7 +89,8 @@ int window::resize_border() const { return is_maximized() ? 0 : std::max(1, MulD
 RECT window::content_bounds() const
 {
 	RECT bounds{}; GetClientRect(handle_, &bounds);
-	const auto inset = resize_border();
+	// Visible frame thickness is independent of the DPI-scaled resize target.
+	const auto inset = is_maximized() ? 0 : 1;
 	bounds.left += inset; bounds.top += inset;
 	bounds.right = std::max<LONG>(bounds.left, bounds.right - inset);
 	bounds.bottom = std::max<LONG>(bounds.top, bounds.bottom - inset);
@@ -97,6 +98,24 @@ RECT window::content_bounds() const
 }
 void window::request_control(const std::string& action) const
 {
+	static constexpr std::pair<std::string_view, int> resize_actions[] = {
+		{"resizeLeft", HTLEFT}, {"resizeRight", HTRIGHT},
+		{"resizeTop", HTTOP}, {"resizeBottom", HTBOTTOM},
+		{"resizeTopLeft", HTTOPLEFT}, {"resizeTopRight", HTTOPRIGHT},
+		{"resizeBottomLeft", HTBOTTOMLEFT}, {"resizeBottomRight", HTBOTTOMRIGHT}};
+	for (const auto& [name, hit] : resize_actions)
+	{
+		if (action != name) continue;
+		// Ignore a delayed gesture after release or a maximize transition.
+		POINT cursor{};
+		if (!is_maximized() && (GetAsyncKeyState(VK_LBUTTON) & 0x8000) && GetCursorPos(&cursor))
+		{
+			ReleaseCapture();
+			// Defer the native sizing loop until the WebView callback has returned.
+			PostMessageW(handle_, WM_NCLBUTTONDOWN, hit, MAKELPARAM(cursor.x, cursor.y));
+		}
+		return;
+	}
 	const auto command = action == "minimize" ? SC_MINIMIZE : action == "toggleMaximize" ?
 		(is_maximized() ? SC_RESTORE : SC_MAXIMIZE) : action == "close" ? SC_CLOSE : 0;
 	if (!command) throw std::runtime_error("Unsupported window control.");

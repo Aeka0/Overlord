@@ -1,8 +1,149 @@
+import { createElement } from "react";
+import { createRoot } from "react-dom/client";
 import { flushSync } from "react-dom";
+import { MotionSurface } from "./components/MotionSurface";
+
+function finishFiniteAnimations(animations = document.getAnimations()) {
+  for (const animation of animations)
+    if (Number.isFinite(animation.effect?.getComputedTiming().endTime)) animation.finish();
+}
+
+async function untilVisible(selector: string) {
+  if (document.querySelector(selector)) return;
+  await new Promise<void>((resolve, reject) => {
+    const observer = new MutationObserver(() => {
+      if (!document.querySelector(selector)) return;
+      clearTimeout(timer);
+      observer.disconnect();
+      resolve();
+    });
+    const timer = setTimeout(() => {
+      observer.disconnect();
+      reject(new Error(`Launcher page did not appear: ${selector}`));
+    }, 5000);
+    observer.observe(document.body, { childList: true, subtree: true });
+  });
+}
+
+export async function inspectPageTransitions() {
+  const buttons = [...document.querySelectorAll<HTMLButtonElement>(".main-navigation > button")];
+  if (buttons.length < 5) throw new Error("Launcher navigation is unavailable");
+  const previous = buttons.findIndex((button) => button.hasAttribute("aria-current"));
+  const select = (index: number) => flushSync(() => buttons[index].click());
+  select(2);
+  const languageTitle = !!document.querySelector(".language-page .page-heading h1 .decode-glow");
+  const titleAnimations = [...document.querySelectorAll(".language-page h1 .decode-glyph")]
+    .flatMap((glyph) => glyph.getAnimations().filter((animation) => animation.id === "launcher-decode"));
+  const pageTitleDurationMs = Math.max(...titleAnimations.map((animation) =>
+    Number(animation.effect!.getComputedTiming().endTime)));
+  select(4);
+  const aboutTitle = !!document.querySelector(".about-page .page-heading h1 .decode-glow");
+  const aboutRoles = [...document.querySelectorAll(".about-page .credits-group h2")].every((heading) =>
+    !!heading.querySelector(".decode-text") && !heading.querySelector(".decode-glow"));
+  const aboutIds = [...document.querySelectorAll(".about-page .credits-group li")].every((person) =>
+    !!person.querySelector(".decode-glow"));
+  select(3);
+  await untilVisible(".help-page .page-heading h1 .decode-glow");
+  const helpTitle = !!document.querySelector(".help-page .page-heading h1 .decode-glow");
+  const help = document.querySelector<HTMLElement>(".help-page")!;
+  finishFiniteAnimations();
+  const chrome = [".page-heading", ".help-search", ".sub-navigation"]
+    .map((selector) => help.querySelector<HTMLElement>(selector)!);
+  const chromeBounds = chrome.map((element) => element.getBoundingClientRect());
+  flushSync(() => document.querySelectorAll<HTMLButtonElement>(".help-page .sub-navigation button")[1].click());
+  const helpContent = help.querySelector<HTMLElement>(".help-content")!;
+  const fade = helpContent.getAnimations().find((animation) => animation.id === "launcher-enter");
+  if (!fade) throw new Error("Help category fade animation is unavailable");
+  fade.pause();
+  fade.currentTime = Number(fade.effect!.getTiming().duration) / 2;
+  const fadeStyle = getComputedStyle(helpContent);
+  const helpFadeOnly = Number(fadeStyle.opacity) > 0 && Number(fadeStyle.opacity) < 1 &&
+    new DOMMatrixReadOnly(fadeStyle.transform).m41 === 0 &&
+    new DOMMatrixReadOnly(fadeStyle.transform).m42 === 0;
+  const helpChromeStable = getComputedStyle(help).opacity === "1" &&
+    !help.getAnimations().some((animation) => animation.id === "launcher-enter") &&
+    chrome.every((element, index) => {
+      const bounds = element.getBoundingClientRect();
+      return element.isConnected && getComputedStyle(element).opacity === "1" &&
+        bounds.x === chromeBounds[index].x && bounds.y === chromeBounds[index].y;
+    });
+  fade.finish();
+  select(1);
+  const categories = [...document.querySelectorAll<HTMLButtonElement>(".settings-navigation button")];
+  const previousCategory = categories.findIndex((button) => button.hasAttribute("aria-current"));
+  flushSync(() => categories[0].click());
+  const settingsTitle = !!document.querySelector(".settings-page .page-heading h1 .decode-glow");
+  const fixture = document.createElement("div");
+  fixture.style.cssText = "position:fixed;visibility:hidden;pointer-events:none";
+  document.body.append(fixture);
+  const root = createRoot(fixture);
+  function direction(key: number, motion: "from-left" | "from-right") {
+    flushSync(() => root.render(createElement(MotionSurface, { as: "div", motionKey: key, motion }, "guide")));
+    const surface = fixture.firstElementChild!;
+    const animation = surface.getAnimations().find((item) => item.id === "launcher-enter");
+    if (!animation) throw new Error("Quick Guide direction animation is unavailable");
+    animation.pause();
+    animation.currentTime = Number(animation.effect!.getTiming().duration) / 2;
+    return new DOMMatrixReadOnly(getComputedStyle(surface).transform).m41;
+  }
+  let forwardX = 0, backX = 0;
+  try {
+    forwardX = direction(1, "from-right");
+    backX = direction(2, "from-left");
+  } finally {
+    flushSync(() => root.unmount());
+    fixture.remove();
+  }
+  if (previousCategory >= 0) flushSync(() => categories[previousCategory].click());
+  if (previous >= 0) select(previous);
+  finishFiniteAnimations();
+  const result = { languageTitle, pageTitleDurationMs, aboutTitle, aboutRoles, aboutIds, helpTitle, helpFadeOnly, helpChromeStable,
+    settingsTitle, forwardX, backX };
+  return { ...result, ok: languageTitle && Math.abs(pageTitleDurationMs - 600) < 0.1 &&
+    aboutTitle && aboutRoles && aboutIds && helpTitle && helpFadeOnly && helpChromeStable &&
+    settingsTitle && forwardX > 0 && backX < 0 };
+}
+
+function inspectTextGlow() {
+  const title = document.querySelector<HTMLElement>(".home-identity h1")!;
+  const glows = [...title.querySelectorAll<HTMLElement>(".decode-glow")];
+  const result = {
+    titleAndVersion: glows.length > 0 && !!document.querySelector(".home-identity p .decode-glow"),
+    green: glows.every((glow) => getComputedStyle(glow, "::before").color === "rgb(141, 255, 154)"),
+    synced: glows.every((glow) => glow.dataset.glyph === glow.previousElementSibling?.textContent),
+    foregroundClear: glows.every((glow) =>
+      getComputedStyle(glow.previousElementSibling!).maskImage === "none" &&
+      getComputedStyle(glow.parentElement!).maskImage === "none" &&
+      getComputedStyle(glow).maskImage !== "none"),
+    enlarged: parseFloat(getComputedStyle(title).fontSize) >= 36,
+    moving: false,
+    flickerIndependent: false,
+  };
+  const glow = glows[0];
+  const scan = glow?.getAnimations().find((animation) => animation instanceof CSSAnimation && animation.animationName === "decode-scan");
+  if (scan) {
+    scan.pause();
+    scan.currentTime = 0;
+    const start = getComputedStyle(glow).maskPosition;
+    scan.currentTime = Number(scan.effect!.getTiming().duration) / 2;
+    result.moving = getComputedStyle(glow).maskPosition !== start;
+    scan.play();
+    const label = glow.closest<HTMLElement>(".decode-text")!;
+    const previous = label.style.getPropertyValue("--decode-flicker");
+    const before = Number(getComputedStyle(glow).opacity);
+    label.style.setProperty("--decode-flicker", "0.5");
+    finishFiniteAnimations(glow.getAnimations());
+    result.flickerIndependent = Number(getComputedStyle(glow).opacity) < before &&
+      getComputedStyle(glow.previousElementSibling!).opacity === "1";
+    label.style.setProperty("--decode-flicker", previous);
+    finishFiniteAnimations(glow.getAnimations());
+  }
+  return { ...result, ok: Object.values(result).every(Boolean) };
+}
 
 export function inspectStartupNotice(version: string) {
   const dialog = document.querySelector<HTMLDialogElement>(".startup-notice")!;
-  for (const animation of document.getAnimations()) animation.finish();
+  finishFiniteAnimations();
   const bounds = dialog.getBoundingClientRect();
   const content = dialog.querySelector<HTMLElement>(".notice-content")!;
   const text = content.innerText;
@@ -34,6 +175,47 @@ function focusOutlineHidden() {
   return hidden;
 }
 
+async function inspectDecodedText() {
+  const labels = [...document.querySelectorAll<HTMLElement>(".home-identity .decode-text")];
+  const results = [];
+  for (const label of labels) {
+    const glyphs = [...label.querySelectorAll<HTMLElement>(".decode-glyph")];
+    const entries = glyphs.flatMap((glyph) => {
+      const animation = glyph.getAnimations().find((item) => item.id === "launcher-decode");
+      return animation ? [{ glyph, animation }] : [];
+    });
+    if (entries.length < 2) throw new Error("Text reveal animations are unavailable");
+    const original = (glyph: HTMLElement) => glyph.previousElementSibling!.textContent;
+    const width = label.getBoundingClientRect().width;
+    const [first, next] = entries;
+    const timing = first.animation.effect!.getTiming();
+    const duration = Number(timing.duration);
+    for (const { animation } of entries) {
+      animation.pause();
+      animation.currentTime = (timing.delay ?? 0) + duration / 2;
+    }
+    const opacity = Number(getComputedStyle(first.glyph).opacity);
+    const sequential = opacity > 0 && opacity < 1 &&
+      entries.slice(1).every(({ glyph }) => Number(getComputedStyle(glyph).opacity) === 0);
+    const scrambled = first.glyph.textContent !== original(first.glyph);
+    first.animation.finish();
+    await first.animation.finished;
+    next.animation.currentTime = (next.animation.effect!.getTiming().delay ?? 0) + duration / 2;
+    const settledBeforeNext = first.glyph.textContent === original(first.glyph) &&
+      Number(getComputedStyle(first.glyph).opacity) === 1 &&
+      Number(getComputedStyle(next.glyph).opacity) > 0 &&
+      Number(getComputedStyle(next.glyph).opacity) < 1;
+    for (const { animation } of entries) animation.finish();
+    await Promise.all(entries.map(({ animation }) => animation.finished));
+    const stable = glyphs.every((glyph) => glyph.textContent === original(glyph)) &&
+      label.getBoundingClientRect().width === width;
+    results.push({ sequential, scrambled, settledBeforeNext, stable,
+      durationMs: duration * entries.length, delayMs: timing.delay });
+  }
+  return { labels: results, ok: results.every((result) =>
+    result.sequential && result.scrambled && result.settledBeforeNext && result.stable) };
+}
+
 export async function inspectLauncherMotion() {
   const current = document.querySelector<HTMLButtonElement>(
     '.main-navigation button[aria-current="page"]',
@@ -47,7 +229,9 @@ export async function inspectLauncherMotion() {
     document
       .getAnimations()
       .filter((animation) => animation.id === "launcher-enter");
+  const previousText = document.getAnimations().filter((animation) => animation.id === "launcher-decode");
   flushSync(() => alternate.click());
+  const textCancelled = previousText.every((animation) => animation.playState === "idle");
   const entering = entries();
   const frames = entering.map((animation) => {
     const effect = animation.effect as KeyframeEffect;
@@ -65,9 +249,10 @@ export async function inspectLauncherMotion() {
   const interrupted = entering.every(
     (animation) => animation.playState === "idle",
   );
+  const textReveal = await inspectDecodedText();
   // A hidden WebView suspends animation frames. Finish the finite UI effects
   // explicitly so geometry is measured at rest without a wall-clock wait.
-  for (const animation of document.getAnimations()) animation.finish();
+  finishFiniteAnimations();
   const durations = getComputedStyle(current)
     .transitionDuration.split(",")
     .map(parseFloat);
@@ -85,6 +270,8 @@ export async function inspectLauncherMotion() {
       ),
     frames,
     interrupted,
+    textCancelled,
+    textReveal,
     controlTransitions: durations.some((value) => value > 0),
   };
   return {
@@ -93,6 +280,8 @@ export async function inspectLauncherMotion() {
       result.pageEnter &&
       result.visibleFrames &&
       result.interrupted &&
+      result.textCancelled &&
+      result.textReveal.ok &&
       result.controlTransitions,
   };
 }
@@ -154,7 +343,7 @@ export async function inspectLaunchDialog() {
   await until(() => !!document.querySelector(".preflight-dialog[open]"));
   const dialog =
     document.querySelector<HTMLDialogElement>(".preflight-dialog")!;
-  for (const animation of document.getAnimations()) animation.finish();
+  finishFiniteAnimations();
   const bounds = dialog.getBoundingClientRect();
   const result = {
     modal: dialog.matches(":modal"),
@@ -186,7 +375,7 @@ export async function inspectLaunchDialog() {
     dialog.querySelector<HTMLButtonElement>("[data-preflight-close]")!.click(),
   );
   flushSync(() => original.click());
-  for (const animation of document.getAnimations()) animation.finish();
+  finishFiniteAnimations();
   return { ...result, ok: Object.values(result).every(Boolean) };
 }
 
@@ -269,7 +458,7 @@ export function inspectCampaignUnlock() {
   const cheats = navigation?.querySelectorAll<HTMLButtonElement>("button")[3];
   if (!previous || !cheats) throw new Error("Cheats navigation is unavailable");
   flushSync(() => cheats.click());
-  for (const animation of document.getAnimations()) animation.finish();
+  finishFiniteAnimations();
   const page = document.querySelector<HTMLElement>(".settings-page")!;
   const control = page.querySelector<HTMLInputElement>("#campaign-unlock");
   const bounds = control?.closest(".switch")?.getBoundingClientRect();
@@ -281,7 +470,7 @@ export function inspectCampaignUnlock() {
     fits: !!bounds && bounds.left >= 0 && bounds.right <= innerWidth && page.scrollWidth <= page.clientWidth + 1,
   };
   flushSync(() => previous.click());
-  for (const animation of document.getAnimations()) animation.finish();
+  finishFiniteAnimations();
   return { ...result, ok: Object.values(result).every(Boolean) };
 }
 
@@ -291,7 +480,7 @@ export function inspectNativeComfort() {
   const basics = navigation?.querySelector<HTMLButtonElement>("button");
   if (!previous || !basics) throw new Error("Basics navigation is unavailable");
   flushSync(() => basics.click());
-  for (const animation of document.getAnimations()) animation.finish();
+  finishFiniteAnimations();
   const names = ["r_dof_limit", "r_mbLimit"];
   const result = {
     controls: names.every((name) => {
@@ -314,7 +503,7 @@ export function inspectNativeComfort() {
   };
   const other = navigation!.querySelectorAll<HTMLButtonElement>("button")[4];
   flushSync(() => other.click());
-  for (const animation of document.getAnimations()) animation.finish();
+  finishFiniteAnimations();
   const subtitle = document.getElementById("vr_subtitles") as HTMLInputElement | null;
   const controls = document.querySelectorAll<HTMLInputElement | HTMLSelectElement>(".setting-row input, .setting-row select");
   result.subtitleSecond = !!subtitle && controls[1] === subtitle;
@@ -322,18 +511,62 @@ export function inspectNativeComfort() {
   const hint = document.getElementById("hint-vr_subtitles")?.textContent;
   result.subtitleDescription = !!hint && !hint.startsWith("settings.");
   flushSync(() => previous.click());
-  for (const animation of document.getAnimations()) animation.finish();
+  finishFiniteAnimations();
   return { ...result, ok: Object.values(result).every(Boolean) };
 }
+function inspectHomeParallax(scene: HTMLElement, image: HTMLImageElement) {
+  const bounds = scene.getBoundingClientRect();
+  const controls = scene.querySelector<HTMLElement>(".home-controls")!;
+  const identity = scene.querySelector<HTMLElement>(".home-identity")!;
+  const before = controls.getBoundingClientRect();
+  let moved = true;
+  let covered = true;
+  let foregroundMoved = true;
+  for (const direction of [-1, 1]) {
+    scene.dispatchEvent(new PointerEvent("pointermove", {
+      pointerType: "mouse",
+      clientX: direction < 0 ? bounds.left : bounds.right,
+      clientY: direction < 0 ? bounds.top : bounds.bottom,
+    }));
+    for (const animation of image.getAnimations()) animation.finish();
+    for (const animation of identity.getAnimations()) animation.finish();
+    const transform = new DOMMatrixReadOnly(getComputedStyle(image).transform);
+    moved &&= transform.m41 * direction > 0 && transform.m42 * direction > 0 &&
+      Math.abs(transform.m41) <= 4 && Math.abs(transform.m42) <= 4;
+    const foreground = getComputedStyle(identity).translate.split(" ").map(parseFloat);
+    foregroundMoved &&= foreground.length === 2 && foreground.every((offset) =>
+      offset * direction > 4 && Math.abs(offset) <= 6);
+    const artwork = image.getBoundingClientRect();
+    covered &&= artwork.left <= bounds.left && artwork.top <= bounds.top &&
+      artwork.right >= bounds.right && artwork.bottom >= bounds.bottom;
+  }
+  const lastImage = getComputedStyle(image).transform;
+  const lastIdentity = getComputedStyle(identity).translate;
+  scene.dispatchEvent(new PointerEvent("pointerleave", { pointerType: "mouse" }));
+  for (const animation of image.getAnimations()) animation.finish();
+  for (const animation of identity.getAnimations()) animation.finish();
+  const after = controls.getBoundingClientRect();
+  return {
+    moved, covered, foregroundMoved,
+    retained: getComputedStyle(image).transform === lastImage &&
+      getComputedStyle(identity).translate === lastIdentity,
+    controlsStable: before.x === after.x && before.y === after.y,
+  };
+}
+
 export async function inspectHomeLayout() {
   const image = document.querySelector<HTMLImageElement>("#home-background");
   const home = document.querySelector<HTMLElement>(".home-page");
-  if (!image || !home) throw new Error("Home background is unavailable");
+  const scene = home?.querySelector<HTMLElement>(".home-scene");
+  if (!image || !home || !scene) throw new Error("Home background is unavailable");
   await image.decode();
   const content = home
     .querySelector<HTMLElement>(".home-controls")!
     .getBoundingClientRect();
-  const bounds = home.getBoundingClientRect();
+  const bounds = scene.getBoundingClientRect();
+  const pageBounds = home.getBoundingClientRect();
+  const parallax = inspectHomeParallax(scene, image);
+  const glow = inspectTextGlow();
   const identity = home
     .querySelector<HTMLElement>(".home-identity")!
     .getBoundingClientRect();
@@ -347,7 +580,30 @@ export async function inspectHomeLayout() {
       identity.left >= bounds.left &&
       identity.bottom <= bounds.bottom &&
       identity.right <= content.left,
-    imageRounded: parseFloat(getComputedStyle(image).borderTopLeftRadius) > 0,
+    imageRounded: getComputedStyle(scene).borderTopLeftRadius === "6px" &&
+      getComputedStyle(scene).overflow === "hidden",
+    imageInset: [bounds.left - pageBounds.left, bounds.top - pageBounds.top,
+      pageBounds.right - bounds.right, pageBounds.bottom - bounds.bottom]
+      .every((inset) => Math.abs(inset - 8) < 0.1),
+    parallax,
+    glow,
+    resizeGrips: (() => {
+      const grips = [...document.querySelectorAll<HTMLElement>(".window-resize")];
+      // The WebView viewport can be fractional CSS pixels at non-integer DPI.
+      const viewport = document.body.getBoundingClientRect();
+      return grips.length === 8 && grips.every((grip) => {
+        const rect = grip.getBoundingClientRect();
+        return rect.width >= 6 && rect.height >= 6 &&
+          rect.left >= 0 && rect.top >= 0 &&
+          rect.right <= viewport.right && rect.bottom <= viewport.bottom &&
+          document.elementFromPoint(rect.left + rect.width / 2, rect.top + rect.height / 2) === grip;
+      });
+    })(),
+    resizeGripDetails: [...document.querySelectorAll<HTMLElement>(".window-resize")].map((grip) => {
+      const rect = grip.getBoundingClientRect();
+      return { edge: grip.className, bounds: rect.toJSON(),
+        target: document.elementFromPoint(rect.left + rect.width / 2, rect.top + rect.height / 2)?.className };
+    }),
     controlsFit:
       content.left >= bounds.left &&
       content.right <= bounds.right &&
@@ -361,11 +617,15 @@ export async function inspectHomeLayout() {
     ...result,
     ok:
       result.image &&
+      result.resizeGrips &&
       result.launch &&
       result.runtime &&
       result.footerHidden &&
       result.identityFits &&
       result.imageRounded &&
+      result.imageInset &&
+      Object.values(result.parallax).every(Boolean) &&
+      result.glow.ok &&
       result.controlsFit &&
       result.dark &&
       result.controls &&

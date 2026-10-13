@@ -112,10 +112,13 @@ struct launcher::impl
 				RECT outer{}, client{};
 				GetWindowRect(window_, &outer); GetClientRect(window_, &client);
 				const bool borderless = outer.right - outer.left == client.right && outer.bottom - outer.top == client.bottom;
+				const auto content = window_.content_bounds();
+				const bool thin_frame = content.left == 1 && content.top == 1
+					&& client.right - content.right == 1 && client.bottom - content.bottom == 1;
 				const auto hit = SendMessageW(window_, WM_NCHITTEST, 0, MAKELPARAM(outer.left + 1, outer.top + 1));
 				auto report = params;
-				report["frame"] = {{"borderless", borderless}, {"resizeCorner", hit == HTTOPLEFT}};
-				report["ok"] = params.value("ok", false) && borderless && hit == HTTOPLEFT;
+				report["frame"] = {{"borderless", borderless}, {"thinFrame", thin_frame}, {"resizeCorner", hit == HTTOPLEFT}};
+				report["ok"] = params.value("ok", false) && borderless && thin_frame && hit == HTTOPLEFT;
 				probe_complete_ = true;
 				probe_failed_ = !report.value("ok", false);
 				if (!utils::io::write_file_atomic(*probe_path_, report.dump(2))) probe_failed_ = true;

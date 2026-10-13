@@ -3,6 +3,11 @@ import { useEffect, useState } from "react";
 import { bridge } from "../bridge";
 import type { Translate } from "../i18n";
 
+const resizeEdges = [
+  "Top", "Bottom", "Left", "Right",
+  "TopLeft", "TopRight", "BottomLeft", "BottomRight",
+] as const;
+
 export function WindowControls({
   t,
   onError,
@@ -32,6 +37,18 @@ export function WindowControls({
   };
   return (
     <div className="window-controls">
+      {!maximized && resizeEdges.map((edge) => (
+        <div
+          key={edge}
+          className={`window-resize window-resize-${edge}`}
+          aria-hidden="true"
+          onPointerDown={(event) => {
+            if (event.button !== 0 || !event.isPrimary) return;
+            event.preventDefault();
+            action(`resize${edge}`);
+          }}
+        />
+      ))}
       <button
         type="button"
         className="window-control"

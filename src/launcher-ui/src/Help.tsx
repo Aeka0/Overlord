@@ -2,6 +2,7 @@ import { useMemo, type ReactNode } from "react";
 import { ChevronRight } from "lucide-react";
 import type { Translate } from "./i18n";
 import { MotionSurface } from "./components/MotionSurface";
+import { DecodedText } from "./components/DecodedText";
 import {
   articles,
   instruction,
@@ -44,9 +45,9 @@ export function Help({
     );
   }
   return (
-    <MotionSurface className="page help-page" motionKey={state.category}>
+    <MotionSurface className="page help-page" motionKey="help" motion="fade">
       <div className="page-heading">
-        <h1 className="display-heading">{t("nav.help")}</h1>
+        <h1 className="display-heading"><DecodedText text={t("nav.help")} glow={{}} /></h1>
         <p className="hint">{t("help.searchHint")}</p>
       </div>
       <input
@@ -72,78 +73,80 @@ export function Help({
           </button>
         ))}
       </nav>
-      {state.category === "story" && !state.storyAccepted ? (
-        <div className="panel spoiler">
-          <p>{t("help.storyWarning")}</p>
-          <button
-            className="button primary"
-            onClick={() => onChange({ ...state, storyAccepted: true })}
-          >
-            {t("help.storyUnderstood")}
-          </button>
-        </div>
-      ) : (
-        <div className="help-articles">
-          {visible.map((article) => {
-            const text = instruction(article, language);
-            return (
-              <details
-                className="help-article"
-                id={"help-article-" + article.id}
-                key={article.id}
-                open={state.expanded === article.id}
-                onToggle={(event) => {
-                  const open = event.currentTarget.open;
-                  if (open && state.expanded !== article.id)
-                    onChange({ ...state, expanded: article.id });
-                  else if (!open && state.expanded === article.id)
-                    onChange({ ...state, expanded: "" });
-                }}
-              >
-                <summary>
-                  <ChevronRight
-                    className="help-chevron"
-                    size={16}
-                    aria-hidden="true"
-                  />
-                  <span>{text.title}</span>
-                </summary>
-                <div className="help-body">
-                  {text.intro && <p>{highlighted(text.intro)}</p>}
-                  <ol>
-                    {text.steps.map((step, index) => (
-                      <li key={index}>{highlighted(step)}</li>
-                    ))}
-                  </ol>
-                  {text.note && <p>{highlighted(text.note)}</p>}
-                  {!!article.related?.length && (
-                    <div className="help-related">
-                      <span className="hint">{t("help.related")}</span>
-                      {article.related.map((id) => {
-                        const target = articles.find(
-                          (article) => article.id === id,
-                        );
-                        return target &&
-                          (target.category !== "story" ||
-                            state.storyAccepted) ? (
-                          <button
-                            className="button ghost"
-                            key={id}
-                            onClick={() => openArticle(id)}
-                          >
-                            {instruction(target, language).title}
-                          </button>
-                        ) : null;
-                      })}
-                    </div>
-                  )}
-                </div>
-              </details>
-            );
-          })}
-          {!visible.length && <p className="hint">{t("help.noResults")}</p>}
-        </div>
-      )}
+      <MotionSurface as="div" className="help-content" motionKey={state.category} motion="fade">
+        {state.category === "story" && !state.storyAccepted ? (
+          <div className="panel spoiler">
+            <p>{t("help.storyWarning")}</p>
+            <button
+              className="button primary"
+              onClick={() => onChange({ ...state, storyAccepted: true })}
+            >
+              {t("help.storyUnderstood")}
+            </button>
+          </div>
+        ) : (
+          <div className="help-articles">
+            {visible.map((article) => {
+              const text = instruction(article, language);
+              return (
+                <details
+                  className="help-article"
+                  id={"help-article-" + article.id}
+                  key={article.id}
+                  open={state.expanded === article.id}
+                  onToggle={(event) => {
+                    const open = event.currentTarget.open;
+                    if (open && state.expanded !== article.id)
+                      onChange({ ...state, expanded: article.id });
+                    else if (!open && state.expanded === article.id)
+                      onChange({ ...state, expanded: "" });
+                  }}
+                >
+                  <summary>
+                    <ChevronRight
+                      className="help-chevron"
+                      size={16}
+                      aria-hidden="true"
+                    />
+                    <span>{text.title}</span>
+                  </summary>
+                  <div className="help-body">
+                    {text.intro && <p>{highlighted(text.intro)}</p>}
+                    <ol>
+                      {text.steps.map((step, index) => (
+                        <li key={index}>{highlighted(step)}</li>
+                      ))}
+                    </ol>
+                    {text.note && <p>{highlighted(text.note)}</p>}
+                    {!!article.related?.length && (
+                      <div className="help-related">
+                        <span className="hint">{t("help.related")}</span>
+                        {article.related.map((id) => {
+                          const target = articles.find(
+                            (article) => article.id === id,
+                          );
+                          return target &&
+                            (target.category !== "story" ||
+                              state.storyAccepted) ? (
+                            <button
+                              className="button ghost"
+                              key={id}
+                              onClick={() => openArticle(id)}
+                            >
+                              {instruction(target, language).title}
+                            </button>
+                          ) : null;
+                        })}
+                      </div>
+                    )}
+                  </div>
+                </details>
+              );
+            })}
+            {!visible.length && <p className="hint">{t("help.noResults")}</p>}
+          </div>
+        )}
+      </MotionSurface>
     </MotionSurface>
   );
 }
