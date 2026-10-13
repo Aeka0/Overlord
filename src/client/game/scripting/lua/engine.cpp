@@ -45,7 +45,9 @@ namespace scripting::lua::engine
 
 	void start()
 	{
-		get_scripts().clear();
+		// Spawn/save-load can restart without a preceding shutdown. Retire Lua
+		// callbacks and hooks while their states are still alive, as stop() does.
+		stop();
 
 		load_generic_script();
 

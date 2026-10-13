@@ -97,6 +97,7 @@ Script tests can run directly from the repository root:
 
 ```bat
 python tests/config_validation_tests.py
+python tests/lua_restart_tests.py
 python tests/background_update_tests.py
 python tests/native_bindings_tests.py
 python tools/native_bindings/cli.py check --target h2-sp --repo .
