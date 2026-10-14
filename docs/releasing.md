@@ -64,7 +64,7 @@ redistribution rights and tested on a clean game installation.
 
 For a local candidate from an uncommitted working tree, use
 `--staging-directory release`; the candidate goes into `release/<version-name>/`
-(currently `release/Beta 5/`). Add `--base-data <installed-cdata-directory>` to
+(currently `release/Beta 6/`). Add `--base-data <installed-cdata-directory>` to
 include the explicitly selected base H2-Mod fastfiles. The packager admits only
 zone names present in `data/zone_source`, checks the official-language resource
 set, and uses the current repository's scripts and sound patches. It does not
