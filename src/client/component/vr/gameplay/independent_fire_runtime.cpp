@@ -30,7 +30,7 @@ namespace vr::gameplay::weapons::independent_fire
 		struct instance_clock
 		{
 			carry::identity id{};shot_clock clock{};int consecutive{},last_shot{};
-			std::uint64_t attempts{},shots{};const char* reason{"waiting for neutral trigger"};
+			std::uint64_t attempts{},shots{},notifications{};const char* reason{"waiting for neutral trigger"};
 			native_ballistics::outcome outcome{};int before{},after{};
 		};
 		instance_cache<instance_clock,carry::inventory::capacity+128> instances;
@@ -132,9 +132,10 @@ namespace vr::gameplay::weapons::independent_fire
 			const auto posture=controller_input::native_posture(ps->pm_flags);
 			const auto fired=native_ballistics::fire_owned(item.id,geometry,command_time,settle);
 			const bool emitted=fired.status==native_ballistics::outcome::emitted;
+			if (fired.notified) ++value.notifications;
 			value.clock.settled(command_time,t,emitted);value.outcome=fired.status;
 			value.before=fired.before.loaded;value.after=fired.after.loaded;
-			value.reason=emitted ? "independent native shot committed" : "native shot rejected";
+			value.reason=emitted ? "independent native shot committed" : fired.notified ? "shot context changed after notification" : "native shot rejected";
 			if (!emitted) continue;
 			recoil::confirmed_shot(owner,input.reference_generation,now,posture);
 			++value.shots;++emitted_this_tick;value.consecutive=command_time-value.last_shot>150 ? 1 : std::min(value.consecutive+1,31);value.last_shot=command_time;
@@ -169,7 +170,7 @@ namespace vr::gameplay::weapons::independent_fire
 			command::add("vr_dual_fire_status",[] {scheduler::once([] {
 				std::ostringstream out;out << "initialized=" << initialized << " dual=" << dual() << " command_time=" << last_command << " same_tick_pairs=" << same_tick_pairs << '\n';
 				for (const auto& entry:instances.entries()) if (const auto& v=entry.value;v.id) out << "weapon=" << v.id.weapon << " instance=" << v.id.generation << " attempts=" << v.attempts
-					<< " shots=" << v.shots << " last_command=" << v.last_shot << " ammo=" << v.before << "->" << v.after << " outcome=" << int(v.outcome) << " reason=" << v.reason << '\n';
+					<< " shots=" << v.shots << " notifications=" << v.notifications << " last_command=" << v.last_shot << " ammo=" << v.before << "->" << v.after << " outcome=" << int(v.outcome) << " reason=" << v.reason << '\n';
 				out<<aim_assist::status();
 				const auto text=out.str();console::info("%s",text.c_str());scheduler::once([text] {
 					utils::io::write_file_atomic("minidumps/overlord-dual-fire.txt",text);},scheduler::pipeline::async);

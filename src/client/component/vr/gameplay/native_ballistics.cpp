@@ -8,6 +8,7 @@
 #include "weapon_carry_runtime.hpp"
 #include "component/scheduler_context.hpp"
 #include "game/game.hpp"
+#include "game/scripting/execution.hpp"
 #include <utils/hook.hpp>
 #include <utils/hook_validation.hpp>
 
@@ -44,9 +45,18 @@ namespace vr::gameplay::weapons::native_ballistics
 		constexpr std::uint8_t type_entry[]{0x40,0x53,0x48,0x83,0xec,0x50,0x48,0x8b,0x05,0x13,0xff,0x56,0x00};
 		constexpr std::uint8_t trace[]{0x40,0x53,0x55,0x56,0x57,0x48,0x83,0xec,0x78};
 		constexpr std::uint8_t player_gate[]{0x41,0xf7,0x46,0x58,0x00,0x30,0x10,0x00};
+		// G_FireWeapon resolves a primary weapon name, pushes one string and
+		// sends weapon_fired BEFORE entering ballistics. The name wrapper calls
+		// the existing BG_GetWeaponNameComplete binding with alternate=false.
+		constexpr std::uint8_t name_wrapper[]{0x48,0x83,0xec,0x28,0x45,0x8b,0xc8,0x4c,0x8b,0xc2,
+			0x33,0xd2,0xe8,0x0f,0x00,0x00,0x00,0x48,0x83,0xc4,0x28,0xc3};
+		constexpr std::uint8_t fire_notify[]{0xe8,0x92,0x7c,0x18,0x00,0x48,0x8b,0xc8,
+			0xe8,0x2a,0xdf,0x0a,0x00,0x8b,0x15,0xcc,0x4e,0xf0,0x05,0x41,0xb8,0x01,0x00,0x00,0x00,
+			0x48,0x8b,0xce,0xe8,0xd6,0x92,0xff,0xff};
 		verified=verify(bullet_address,wrapper) && verify(0x1404AAE27,descriptor) &&
 			verify(ads_spread_address,spread) && verify(vr::h2::sp::weapon_type.address(),type_entry) &&
-			verify(0x1404CBFE0,trace) && verify(0x140518A7F,player_gate) && native_ammunition::initialize();
+			verify(0x1404CBFE0,trace) && verify(0x140518A7F,player_gate) &&
+			verify(0x1406A07E0,name_wrapper) && verify(0x140518B49,fire_notify) && native_ammunition::initialize();
 		return verified;
 	}
 	bool firing_timing(std::uint32_t weapon,int shot_count,independent_fire::timing& out)
@@ -75,6 +85,10 @@ namespace vr::gameplay::weapons::native_ballistics
 		out.status=outcome::invalid_context;
 		if (emitting || cheats::transitioning() || !scheduler::is_executing(scheduler::pipeline::server) ||
 			!game::CL_IsCgameInitialized()) return out;
+		// Cover the complete transaction, including mechanical settlement and
+		// the script notification. No reentrant callback may debit a second shot.
+		emitting=true;
+		const auto restore=gsl::finally([] {emitting=false;});
 		auto* entity=&game::g_entities[0];
 		auto* ps=reinterpret_cast<game::playerState_s*>(entity->client);
 		if (!ps || ps->commandTime!=command_time || (ps->e_flags & 0x103000) || !scripted_control::firing_allowed(ps)) return out;
@@ -105,6 +119,18 @@ namespace vr::gameplay::weapons::native_ballistics
 		const auto spread=utils::hook::invoke<float>(ads_spread_address,ps,weapon,false,0);
 		out.status=outcome::unsupported_weapon;
 		if (!packet.definition || !std::isfinite(spread) || spread<0 || spread>90) return out;
+		// Freeze the ACTUAL firing weapon, including its native variant name.
+		// Prepare script references/arguments before the irreversible ammo debit;
+		// native selection can belong to the other hand and must not be borrowed.
+		std::array<char,1024> fired_name{};
+		game::Weapon native_weapon{};
+		native_weapon.data=weapon; // Preserve the full token; do not initialize SDK bitfields.
+		game::BG_GetWeaponNameComplete(native_weapon,false,fired_name.data(),static_cast<unsigned>(fired_name.size()));
+		const auto name_size=strnlen_s(fired_name.data(),fired_name.size());
+		if (!name_size || name_size==fired_name.size()) return out;
+		const scripting::entity script_player{game::scr_entref_t{entity->s.entityNum,0}};
+		const std::vector<scripting::script_value> fire_arguments{std::string(fired_name.data(),name_size)};
+		const auto timeline=native_ammunition::timeline();
 		const auto previous=native_ammunition::projected_identity(weapon);
 		if (id && !native_ammunition::project(id)) return out;
 		const auto restore_projection=gsl::finally([&]{if (previous) native_ammunition::project(previous);});
@@ -116,9 +142,14 @@ namespace vr::gameplay::weapons::native_ballistics
 		// Settle the existing mechanical owner before ballistics can run damage
 		// or script callbacks. The observer never writes native ammunition.
 		if (settled && !settled(out.before,debited,sustained)) {out.status=outcome::mechanical_changed;return out;}
-		// Never refund after entry: damage/scripts may have committed effects.
-		emitting=true;
-		const auto restore=gsl::finally([] {emitting=false;});
+		// Restore the event skipped by direct bullet dispatch. Existing notify
+		// isolates the VM stack and preserves native GSC/Lua notification routing.
+		// Never refund/retry after this boundary: scripts may have observed it.
+		scripting::notify(script_player,"weapon_fired",fire_arguments);
+		out.notified=true;
+		if (entity->client!=reinterpret_cast<game::gclient_s*>(ps) ||
+			native_ammunition::timeline()!=timeline || !game::CL_IsCgameInitialized() || ps->commandTime!=command_time)
+		{out.status=outcome::context_changed;return out;}
 		utils::hook::invoke<void>(bullet_address,entity,spread,&packet,entity,command_time,-1.f);
 		out.status=outcome::emitted;
 		if (entity->client==reinterpret_cast<game::gclient_s*>(ps))

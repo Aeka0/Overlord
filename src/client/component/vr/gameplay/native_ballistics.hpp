@@ -24,18 +24,20 @@ namespace vr::gameplay::weapons::native_ballistics
 	inline constexpr std::uintptr_t ads_spread_address = 0x1406A1670;
 
 	enum class outcome { unavailable, invalid_context, invalid_geometry, unsupported_weapon,
-		empty, obstruction, ammunition_changed, emitted, mechanical_changed };
+		empty, obstruction, ammunition_changed, emitted, mechanical_changed, context_changed };
 	struct result
 	{
 		outcome status{outcome::unavailable};
 		native_ammunition::snapshot before{}, after{};
+		bool notified{}; // Accepted weapon_fired; distinct from completed ballistics.
 	};
 	bool initialize();
 	bool firing_timing(std::uint32_t weapon,int shot_count,independent_fire::timing& out);
 	using debit_observer=bool(*)(const native_ammunition::snapshot&,const native_ammunition::snapshot&,bool sustained) noexcept;
 	// One synchronous native bullet transaction. Caller owns cadence, physical
 	// chamber state and trigger admission. No selected weapon, akimbo state,
-	// native +attack event, animation or feedback is synthesized here.
+	// native +attack event, animation or feedback is synthesized here. An accepted
+	// shot sends weapon_fired(actual native weapon name) once, before ballistics.
 	// Requires the current server scheduler scope and exact commandTime.
 	result fire_owned(std::uint32_t weapon, const shot_geometry& geometry, int command_time,debit_observer settled=nullptr);
 	result fire_owned(weapon_identity, const shot_geometry& geometry, int command_time,debit_observer settled=nullptr);

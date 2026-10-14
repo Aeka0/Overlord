@@ -17,6 +17,29 @@ owns the selected bullet weapon, including a single held gun. Native projectile
 weapons retain the selected native attack route described below. The legacy rendering path
 retains its existing single-gun route when independent presentation is unavailable.
 
+Accepted independent bullet shots also send the native player `weapon_fired`
+notification once, with the actual firing weapon's complete native name. The
+adapter prepares that payload before the compared debit, settles mechanics, then
+notifies before entering ballistics, matching `G_FireWeapon`'s event order. Empty,
+obstructed and rejected shots do not notify. Both hands may notify independently
+in one command, including two instances of the same definition. Reentrant calls
+are rejected throughout the transaction; a player/time/timeline change during
+notification prevents dispatch through the stale context without refund or retry.
+
+This restores the shared event consumed by Contingency's ambush waiters and
+Cliffhanger's first/second encounter interruption paths. No mission script or
+NPC flags are patched. Just Like Old Times (`af_caves`) has a separate opening
+coordination path: `_id_CA8A` waits for `player_shot_someone_in_group1` (emitted by
+the target's player-damage observer `_id_D0B1`) or `countdown_kill_dialogue_done`.
+Its damage/countdown behavior remains native; restoring `weapon_fired` alone
+does not establish acceptance of that encounter.
+
+`vr_dual_fire_status` reports per-instance `notifications` separately from
+completed `shots`. The production adapter regression is run with
+`python tests/vr/native_ballistics_adapter_tests.py`; it covers event/debit order,
+actual weapon payload, same-command instances, rejection, reentry and lifecycle
+changes. Native mission playback and HMD acceptance remain required.
+
 The native descriptor supplies firing mode, interval, initial delay and burst
 cooldown. Each shot validates an exclusive loaded-feed key, fresh instance pose,
 the existing physical magazine/cylinder readiness, current player/context and
@@ -114,8 +137,9 @@ pairs. Both most recent shots used commandTime 18212 and each debited one round
 (3 to 2, 4 to 3); selected-route applied/rejected counters stayed zero. Native
 carry invariants and the current hand solve passed. This verifies controller
 routing and native calls/debits; it does not prove character damage, headset
-pose quality or feedback audibility. Projectile/alternate modules, native firing notifications,
-statistics remain outside the proven primary-bullet adapter. The new articulated
+pose quality or feedback audibility. Projectile/alternate modules and statistics
+remain outside the proven primary-bullet adapter. The notification integration
+above still requires native mission acceptance. The new articulated
 instance presentation has passed headset acceptance within its tested scope.
 The sections below retain the
 original feasibility evidence and the wider completion gates.
@@ -247,7 +271,8 @@ matching command time, a primary base bullet weapon with an unambiguous owned
 ammo record, a valid orthonormal muzzle frame, a clear eye-to-muzzle sweep and a
 successful compared ammo debit. It then invokes one native bullet operation with
 the real player as attacker. The probe uses native ADS baseline dispersion.
-No native shot event or second debit is generated. Reentry is rejected; an
+No native PM attack event or second debit is generated; accepted shots now send
+the script notification described above. Reentry is rejected; an
 entered native call is never automatically retried or refunded.
 
 This is the execution boundary, not the completed shot scheduler. Before wiring
