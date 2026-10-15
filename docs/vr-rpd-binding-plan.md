@@ -105,6 +105,10 @@ Authored hand frames are handle 236, cover 30, drum 56 and belt 140. Bridge
 release uses frame 17 at `j_rail_release`; manual return uses frame 201 at
 `j_rail`. These replace the earlier incorrectly shared frame-14 bridge pose.
 Both hands retain the original handle grasp and gain index/pinky hook styles.
+Handle acquisition keeps the standard 11 cm contact assistance, with the shared
+right-receiver half-space boundary limiting its leftward reach through the
+receiver toward the drum. Both skins share this policy; outward, vertical and
+longitudinal assistance, held stroke mechanics and authored poses are unchanged.
 Tests cover the exported hierarchy with optics/default grip/bipod, all 20 belt
 links, both hands across hinge travel, bad parent relationships, all handle
 styles, empty/nonempty reloads, four cocking orders, bridge/cover interlocks,

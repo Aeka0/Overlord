@@ -1,6 +1,7 @@
 #pragma once
 #include "component/vr/gameplay/weapons/rpd/profile.hpp"
 #include "component/vr/gameplay/weapons/rpd/reload_profile.hpp"
+#include "component/vr/gameplay/physical_reload_contact_sample.hpp"
 
 namespace rpd_reload_tests
 {
@@ -8,6 +9,55 @@ namespace rpd_reload_tests
  {
   namespace w=vr::gameplay::weapons;namespace m=w::mechanics;using vr::hand;
   const auto* p=&w::rpd::physical;
+  // Sample real tracked wrists, not synthetic slide/magazine distances: the
+  // handle's assisted hook contact used to overlap a seated drum grasp.
+  for(const auto* definition:{&w::rpd::physical,&w::rpd::digital_physical})for(int actor=0;actor<2;++actor)
+  {
+   using namespace vr::gameplay::hands;using namespace vr::gameplay::hands::pose_math;
+   namespace pr=w::physical_reload;
+   constexpr float units=39.37007874f;const quat mirror{1,0,0,0};
+   const auto grasp=w::select_magazine_grip(*definition,{0,0,0,1},actor,mirror,false,false,0,std::nullopt,true);
+   const auto seated=compose(definition->magazine_rest,inverse(grasp.in_wrist));
+   for(const auto gun:{anchor{{},{0,0,0,1}},anchor{{120,-37,91},normalize({.2f,.5f,-.1f,.7f})}})
+   for(const auto delta:{vec{},vec{.03f,0,0},vec{-.03f,0,0},vec{0,.03f,0},vec{0,-.03f,0},vec{0,0,-.03f}})
+   {
+    Fixture f(definition);f.owner.rear=hand(1-actor);auto open=f.state;open.belt.bridge=open.belt.cover=1;f.adopt(open);f.step();
+    const auto total=m::total_rounds(f.state);
+    pr::presentation view;view.active=true;view.definition=definition;view.owner=f.owner;view.ammo=f.state;
+    pr::scene_frame scene;scene.owner=f.owner;scene.definition=definition;scene.assembly=1;scene.binding.valid=true;scene.binding.mirror=mirror;
+    vr::gameplay::hand_interaction::frame frame;frame.valid_hands=3;frame.input=f.input;frame.body.units_per_meter=units;
+    frame.objects[0].owner=f.owner;frame.objects[0].assembly=1;frame.objects[0].gun=gun;
+    auto wrist=seated;wrist.position=add(wrist.position,scale(delta,units));frame.wrists[actor]=compose(gun,wrist);
+    check(pr::sample_contact(scene,view,frame) && pr::attached_magazine_contact(definition->interaction,f.state,scene.contact),
+     "RPD seated drum and nearby extraction grasps remain reachable through current-frame sampling");
+    check(scene.contact.slide_distance>definition->interaction.slide_radius,
+     "RPD charging handle cannot capture a seated drum grasp or its nearby extraction approach");
+    f.geometry=scene.contact;f.trigger(true);
+    check(f.control.magazine_grabbed() && !f.control.slide_held(),"RPD drum grasp acquires the drum instead of the charging handle");
+    f.geometry.hand_in_gun[2]-=definition->interaction.manual_magazine->pull_travel+.001f;f.step();
+    check(!f.state.magazine_inserted && f.state.magazine_hand==hand(actor) && m::total_rounds(f.state)==total,
+     "RPD drum extraction preserves payload with either hand and skin");
+   }
+   std::array<w::part_grip_pose,2> grips{};
+   for(size_t i=0;i<grips.size();++i)grips[i]=actor?pose_mirror::part(definition->slide_grips[i],mirror):definition->slide_grips[i];
+   for(float travel:{0.f,definition->interaction.slide_stroke})for(const auto& grip:grips)
+   {
+    const auto offset=scale(definition->interaction.slide_axis,travel*units);auto wrist=grip.wrist;wrist.position=add(wrist.position,offset);
+    check(w::choose_part_grip(grips,wrist,offset,definition->slide_grab_low,definition->slide_grab_high,units,definition->slide_capture,actor).distance_meters<definition->interaction.slide_radius,
+     "RPD index and pinky handle grasps remain reachable at both travel limits with either hand and skin");
+    for(const auto delta:{vec{.09f,0,0},vec{-.09f,0,0},vec{0,-.09f,0},vec{0,0,.09f},vec{0,0,-.09f}})
+    {
+     auto assisted=wrist;assisted.position=add(assisted.position,scale(delta,units));
+     const auto before=w::choose_part_grip(grips,assisted,offset,definition->slide_grab_low,definition->slide_grab_high,units,nullptr,actor);
+     const auto after=w::choose_part_grip(grips,assisted,offset,definition->slide_grab_low,definition->slide_grab_high,units,definition->slide_capture,actor);
+     check(after.pose==before.pose && after.distance_meters==before.distance_meters && after.distance_meters<definition->interaction.slide_radius,
+      "RPD keeps its original rightward, forward, rearward, upward and downward handle assistance");
+    }
+    wrist.position[1]=definition->slide_grab_high[1]+.01f;
+    check(w::choose_part_grip(grips,wrist,offset,definition->slide_grab_low,definition->slide_grab_high,units,definition->slide_capture,actor).pose==w::no_part_grip,
+     "RPD handle assistance cannot reach through the receiver wall");
+   }
+  }
   for(const auto* definition:{&w::rpd::physical,&w::rpd::digital_physical})for(auto rear:{hand::left,hand::right})
   {
    Fixture f(definition);f.owner.rear=rear;f.step();const auto total=m::total_rounds(f.state);

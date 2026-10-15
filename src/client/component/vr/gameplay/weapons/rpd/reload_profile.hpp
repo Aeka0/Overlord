@@ -9,6 +9,9 @@ namespace vr::gameplay::weapons::rpd
 		return native_weapon_family(n, "rpd");
 	}
 	inline const auto handle_grips = hand_poses::edge_handle::at(handle_contact);
+	// Keep assisted hook acquisition outside the right receiver wall, clear of
+	// the drum. Use the same receiver-side boundary as the M240/M82 handles.
+	inline constexpr part_capture_halfspace handle_capture{{0, 1, 0}, action_grab_high[1]};
 	inline const auto feed_interaction = []
 	{
 		auto p = belt;
@@ -112,6 +115,7 @@ namespace vr::gameplay::weapons::rpd
 		                     .magazine_contacts = &contacts,
 		                     .rigid_magazine_source = "h2_viewmodel_rpd_base"};
 		    p.bolt = &internal_bolt;
+		    p.slide_capture = &handle_capture;
 		    p.handle_child_of_bolt = true;
 		    p.magazine_body_bones = drum_children;
 		    return p;
