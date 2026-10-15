@@ -7,6 +7,7 @@ export interface NumberLimit {
   max: number;
   step: number;
   displayScale: number;
+  displayReciprocal?: boolean;
 }
 export interface SettingsState {
   ok: boolean;
@@ -50,12 +51,16 @@ export class SettingError extends Error {
   }
 }
 const rounded = (value: number) => Math.round(value * 1e6) / 1e6;
+function displayNumber(value: number, limit?: NumberLimit) {
+  const scale = limit?.displayScale || 1;
+  return rounded(limit?.displayReciprocal ? 100 * scale / value : value / scale);
+}
 export function displayLimit(limit: NumberLimit) {
   const scale = limit.displayScale || 1;
   return {
-    min: rounded(limit.min / scale),
-    max: rounded(limit.max / scale),
-    step: rounded(limit.step / scale),
+    min: displayNumber(limit.displayReciprocal ? limit.max : limit.min, limit),
+    max: displayNumber(limit.displayReciprocal ? limit.min : limit.max, limit),
+    step: limit.displayReciprocal ? limit.step : rounded(limit.step / scale),
     scale,
   };
 }
@@ -73,7 +78,7 @@ export function makeDraft(
             ? !value
             : value
           : typeof value === "number"
-            ? String(rounded(value / (limits[key]?.displayScale || 1)))
+            ? String(displayNumber(value, limits[key]))
             : value,
       ];
     }),
@@ -105,7 +110,14 @@ export function collect(
         number > limit.max
       )
         throw new SettingError(key, { min: limit.min, max: limit.max });
-      values[key] = rounded(number * limit.scale);
+      const nativeLimit = state.limits[key];
+      // Preserve console precision on unrelated saves. Reciprocal display
+      // rounding must not repeatedly change the underlying spatial scale.
+      values[key] = nativeLimit.displayReciprocal
+        ? number === displayNumber(Number(base[key]), nativeLimit)
+          ? base[key]
+          : Math.min(nativeLimit.max, Math.max(nativeLimit.min, rounded(100 * limit.scale / number)))
+        : rounded(number * limit.scale);
     } else {
       if (
         typeof value !== "string" ||

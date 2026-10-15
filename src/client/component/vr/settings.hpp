@@ -12,6 +12,9 @@ namespace vr::settings
 		const char* name;
 		float default_value, min, max, step;
 		float display_scale{1.f}; // Native units per launcher unit.
+		// Reciprocal display uses 100 * display_scale / native value;
+		// step is then expressed in displayed percentage points.
+		bool display_reciprocal{};
 	};
 
 	inline constexpr const char* turn_mode = "vr_turnMode";
@@ -148,6 +151,9 @@ namespace vr::settings
 		return result;
 	}();
 	inline constexpr number_setting turn_speed{"vr_turnSpeed", 90.f, 15.f, 360.f, 5.f};
+	inline constexpr float default_world_scale = 39.3700787f;
+	inline constexpr number_setting world_scale{
+		"vr_worldScale", default_world_scale, .01f, 10000.f, 1.f, default_world_scale, true};
 	inline constexpr number_setting snap_angle{"vr_snapAngle", 30.f, 5.f, 90.f, 5.f};
 	inline constexpr number_setting aim_assist_strength{"vr_aimAssistStrength", 0.f, 0.f, 100.f, 1.f};
 	inline constexpr number_setting enemy_melee_damage{"vr_enemyMeleeDamageScale", .5f, .1f, 2.f, .1f};
@@ -202,7 +208,7 @@ namespace vr::settings
 		return controller_pose_pipeline::selected() == controller_pose_pipeline::mode::standard
 			? standard_hand_alignment : hand_alignment;
 	}
-	inline constexpr std::array numbers{turn_speed,
+	inline constexpr std::array numbers{turn_speed, world_scale,
 										standard_hand_alignment[0], standard_hand_alignment[1],
 										standard_hand_alignment[2], standard_hand_alignment[3],
 										standard_hand_alignment[4], standard_hand_alignment[5],

@@ -429,7 +429,10 @@ export function inspectLauncherLayout() {
           bounds.left >= viewport.left && bounds.right <= viewport.right);
       });
     })(),
-    pipelineFirst: content.querySelector('[id^="vr_"]')?.id === "vr_controllerPoseMode",
+    worldSizeFirst: content.querySelector('[id^="vr_"]')?.id === "vr_worldScale" &&
+      content.querySelector<HTMLInputElement>("#vr_worldScale")?.value === "100" &&
+      content.querySelector<HTMLInputElement>("#vr_worldScale")?.validity.valid &&
+      !!content.querySelector("#vr_controllerPoseMode"),
     calibrationCommands: [...content.querySelectorAll(".calibration-command code")].length === 6,
     focusOutlineHidden: focusOutlineHidden(),
   };
@@ -446,7 +449,7 @@ export function inspectLauncherLayout() {
       result.dark &&
       result.controls &&
       result.calibrationRows &&
-      result.pipelineFirst &&
+      result.worldSizeFirst &&
       result.calibrationCommands &&
       result.focusOutlineHidden,
   };

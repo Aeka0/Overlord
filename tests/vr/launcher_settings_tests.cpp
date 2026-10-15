@@ -287,6 +287,17 @@ int main(int argc, char** argv)
 				"Enemy combat settings persist independently at all boundaries");
 		}
 		const auto* throw_name=vr::settings::grenade_throw_speed.name;
+		const auto* world_name = vr::settings::world_scale.name;
+		require(initial[world_name] == setting_number(vr::settings::world_scale.default_value),
+			"World size defaults to the existing native spatial scale");
+		for (const double scale : {.01, 32.8083989167, 39.370079, 10000.})
+		{
+			auto edited = initial;
+			edited[world_name] = scale;
+			const auto saved = update_config("seta vr_worldScale 40\nseta VR_WORLDSCALE 50\nseta unrelated 7\n", edited);
+			require(read_values(saved) == edited && saved.find("seta unrelated 7\n") == 0,
+				"World scale persists native precision and replaces duplicates without changing other settings");
+		}
 		require(initial[throw_name]==2.5 && !initial.contains(vr::settings::football_throw_speed.name),
 			"Launcher exposes general throw gain while leaving football tuning private");
 		const std::string private_gain="seta vr_footballThrowSpeedScale \"1.8\"\n";
@@ -436,7 +447,7 @@ int main(int argc, char** argv)
 
 		for (const auto& field : vr::settings::numbers)
 		{
-			for (double value : {double(field.min), double(field.max)})
+			for (double value : {setting_number(field.min), setting_number(field.max)})
 			{
 				auto candidate = initial;
 				candidate[field.name] = value;

@@ -2,6 +2,20 @@
 
 The desktop launcher exposes **Play / Language / VR Settings / Help / About**.
 
+## World size calibration
+
+Calibration starts with World size, displayed as a percentage (100% by default).
+Larger percentages make the world appear larger. The launcher converts this to
+the existing `vr_worldScale` using `100 * default_world_scale / percentage`.
+The native default and supported range (0.01 to 10000 game units per metre) are
+unchanged; native config values remain in game units per metre. Fractional
+percentages are supported, and unchanged drafts retain saved native precision.
+
+Changes use the shared validated auto-save and reset path and apply on the next
+game launch. This changes the shared head/stereo/controller spatial scale,
+including tracked displacement and interaction reach. It does not add a player
+height offset. In-game console changes still require `vr_reinit`.
+
 ## Disable risk settings before launch
 
 Clicking **Launch game** runs a fresh check beside the launcher executable.

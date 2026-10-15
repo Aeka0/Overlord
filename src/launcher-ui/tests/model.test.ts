@@ -3,6 +3,7 @@ import preflightLocales from "../../client/resources/launcher/preflight-locales.
 import test from "node:test";
 import {
   collect,
+  displayLimit,
   makeDraft,
   fields,
   categories,
@@ -94,6 +95,34 @@ test("invalid and unfinished numeric text never becomes a saved number", () => {
       SettingError,
     );
   assert.throws(() => collect({ ...draft, vr_turnMode: "unsupported" }, state));
+});
+test("world size percentages invert native scale without drifting saved precision", () => {
+  const scale = 39.370079;
+  const fixture = {
+    ...state,
+    values: { vr_worldScale: scale },
+    limits: { vr_worldScale: { min: 0.01, max: 10000, step: 1, displayScale: scale, displayReciprocal: true } },
+  } as SettingsState;
+  const draft = makeDraft(fixture.values, fixture.limits);
+  assert.equal(draft.vr_worldScale, "100");
+  assert.equal(displayLimit(fixture.limits.vr_worldScale).step, 1);
+  for (const percent of [50, 80, 100, 120, 200]) {
+    const saved = collect({ vr_worldScale: String(percent) }, fixture);
+    assert.ok(Math.abs(Number(saved.vr_worldScale) - scale * 100 / percent) < 1e-6);
+    const loaded = { ...fixture, values: saved };
+    assert.deepEqual(collect(makeDraft(saved, fixture.limits), loaded), saved);
+  }
+  for (const value of [0.01, 32.8083989167, 10000]) {
+    const loaded = { ...fixture, values: { vr_worldScale: value } };
+    assert.deepEqual(collect(makeDraft(loaded.values, fixture.limits), loaded), loaded.values);
+  }
+  const bounds = displayLimit(fixture.limits.vr_worldScale);
+  for (const percent of [bounds.min, bounds.max]) {
+    const saved = Number(collect({ vr_worldScale: String(percent) }, fixture).vr_worldScale);
+    assert.ok(saved >= 0.01 && saved <= 10000);
+  }
+  for (const value of ["", "0", "-1", "NaN", "Infinity", String(bounds.max + 1), "1".repeat(1000)])
+    assert.throws(() => collect({ vr_worldScale: value }, fixture), SettingError);
 });
 test("guide changes leave unrelated incomplete draft text untouched", () => {
   const draft = {

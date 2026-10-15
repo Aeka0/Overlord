@@ -43,7 +43,8 @@ namespace launcher_vr_settings
 			json limits = json::object();
 			for (const auto& field : vr::settings::numbers)
 				limits[field.name] = {{"min", setting_number(field.min)}, {"max", setting_number(field.max)},
-					{"step", setting_number(field.step)}, {"displayScale", setting_number(field.display_scale)}};
+					{"step", setting_number(field.step)}, {"displayScale", setting_number(field.display_scale)},
+					{"displayReciprocal", field.display_reciprocal}};
 			return json{{"ok", true}, {"values", values}, {"defaults", defaults()}, {"limits", limits},
 				{"onboarding", {{"gameAvailable", game_data::is_game_directory_available()}, {"hasVRConfig", has_vr_config}}},
 				{"controllerPresets",controller_presets(values.at(vr::settings::controller_pose_mode.name) == "standard") },

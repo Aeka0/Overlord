@@ -119,7 +119,9 @@ export function FieldControl({
             disabled={disabled}
             min={limits?.min}
             max={limits?.max}
-            step={limits?.step || "any"}
+            // Reciprocal bounds are fractional: a fixed HTML step would
+            // offset every increment from that bound and invalidate 100%.
+            step={state.limits[field.name]?.displayReciprocal ? "any" : limits?.step || "any"}
             value={String(draft[field.name])}
             onChange={(event) =>
               onChange(field.name, event.currentTarget.value, true)

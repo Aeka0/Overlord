@@ -134,6 +134,15 @@
     "description": "settings.cameraBobHint"
   },
   {
+    "name": "vr_worldScale",
+    "category": "calibration",
+    "group": "settings.worldScale",
+    "label": "settings.worldSize",
+    "type": "number",
+    "unit": "unit.percent",
+    "description": "settings.worldSizeHint"
+  },
+  {
     "name": "vr_controllerPoseMode",
     "category": "calibration",
     "group": "settings.controllerCompatibility",

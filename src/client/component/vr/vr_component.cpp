@@ -826,8 +826,8 @@ namespace vr
 				"Capture fixed-size engine stereo probe trace events");
 			vr_head_tracking = dvars::register_bool("vr_headTracking", true, game::DVAR_FLAG_SAVED,
 				"Apply HMD rotation and room-scale translation to the final game camera; apply with vr_reinit");
-			vr_world_scale = dvars::register_float("vr_worldScale", 39.3700787f,
-				0.01f, 10000.0f, game::DVAR_FLAG_SAVED,
+			vr_world_scale = dvars::register_float(settings::world_scale.name, settings::world_scale.default_value,
+				settings::world_scale.min, settings::world_scale.max, game::DVAR_FLAG_SAVED,
 				"Game units per VR meter for head tracking and stereo; apply with vr_reinit");
 			vr_engine_swap_eyes = dvars::register_bool("vr_engineSwapEyes", false, game::DVAR_FLAG_SAVED,
 				"Swap the engine stereo left and right eye assignment; apply with vr_reinit");
