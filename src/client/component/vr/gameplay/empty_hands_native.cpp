@@ -33,6 +33,7 @@ namespace vr::gameplay::hands::empty_native
 		constexpr std::uintptr_t calc_pose = 0x14038C9E0, submit_viewmodel = 0x140776E10;
 		constexpr std::uintptr_t lock_object = 0x140659010, unlock_object = 0x1406596C0;
 		constexpr std::uintptr_t config_string = 0x1403C9D60;
+		constexpr std::uintptr_t hide_emp_reticles = 0x1403BC890;
 		constexpr std::uintptr_t predicted_state = 0x141BB3C30;
 		// The native primary viewmodel's scene identity, used only while it is
 		// absent. This is not a client DObj handle or inventory slot allocation.
@@ -316,6 +317,11 @@ namespace vr::gameplay::hands::empty_native
 				// All hand-model bones precede the receiver in these owned DObjs.
 				if(stowed)for(unsigned b=0;b<hands->numBones;++b)hidden[b/32]|=0x80000000u>>(b%32);
 				std::memcpy(v.object.bytes.data()+0xb8,hidden.data(),sizeof(hidden));
+				// Native viewmodel assembly applies campaign EMP visibility after
+				// WeaponDef hide tags. Reuse its current state and per-object tag
+				// lookup for held AND stored weapons, before any skin submission.
+				// Resetting the base mask above also restores reticles after EMP.
+				utils::hook::invoke<void>(hide_emp_reticles,0,&v.object);
 				const auto* matrices=utils::hook::invoke<const bone*>(calc_pose,&v.pose,&v.object,bits.data());
 				std::uint32_t epoch{}; std::memcpy(&epoch,v.object.bytes.data()+0xb0,sizeof(epoch));
 				const bool solved=matrices && v.matrices.load()==matrices && v.epoch.load()==epoch;
@@ -459,6 +465,8 @@ namespace vr::gameplay::hands::empty_native
 				!check(create_object,std::array<std::uint8_t,9>{0x40,0x53,0x55,0x56,0x57,0x41,0x54,0x41,0x55}) ||
 				!check(free_object,std::array<std::uint8_t,9>{0x40,0x53,0x48,0x83,0xec,0x20,0x48,0x8b,0xd9}) ||
 				!check(config_string,std::array<std::uint8_t,10>{0x48,0x63,0xc1,0x48,0x8d,0x0d,0x3a,0xfc,0xc6,0x01}) ||
+				!check(hide_emp_reticles,std::array<std::uint8_t,6>{0x40,0x53,0x48,0x83,0xec,0x50}) ||
+				!check(0x1403BC8A5,std::array<std::uint8_t,16>{0x80,0x3d,0x6c,0x61,0x85,0x01,0,0x48,0x8b,0xda,0x0f,0x84,0x9e,0,0,0}) ||
 				!check(submit_viewmodel,std::array<std::uint8_t,10>{0x48,0x89,0x5c,0x24,0x08,0x48,0x89,0x6c,0x24,0x10}) ||
 				!check(lock_object,std::array<std::uint8_t,10>{0x48,0x89,0x5c,0x24,0x08,0x57,0x48,0x83,0xec,0x20}) ||
 				!check(unlock_object,std::array<std::uint8_t,8>{0xc7,0x41,0x18,0,0,0,0,0xc3}) ||
