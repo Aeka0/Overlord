@@ -8,6 +8,15 @@ inherit the driver policy. Flat mode retains native script execution.
 
 ## Interaction
 
+Snowmobile driving, firing/reload and reverse reminders enter through the
+shared [HUD prompt registry](game-text-i18n.md) with all seven native binding
+aliases. The approved instructions describe controller driving with handlebar
+fine adjustment, drawing the gun from the chest rig and holding it at the chest
+after removing the magazine for automatic reload, and backward stick input for
+reverse. Native scripts still own reminder timing and completion. These texts
+replace the unused legacy vehicle tutorial entries; they add no independent
+instruction renderer or gameplay behavior.
+
 - Head rotation remains independent, while native vehicle yaw changes rotate the
   tracking-frame heading by the same relative amount. Entry, recenter, heading
   wrap and checkpoint rollback preserve the scripted camera contract. HMD angles

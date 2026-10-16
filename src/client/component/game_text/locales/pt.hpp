@@ -4,6 +4,10 @@
 namespace game_text::locales
 {
 	inline constexpr catalog portuguese=make_catalog({
+		{key::button_menu_recenter,u8"X no controle esquerdo"},
+		{key::knuckles_button_menu_recenter,u8"A no controle esquerdo"},
+		{key::trainer_objectives,u8"Pressione {button} para abrir o menu"},
+		{key::trainer_recenter,u8"Mantenha {button} pressionado para redefinir a visão"},
 		{key::weapon_needs_chamber,u8"Carregue a câmara"},
 		{key::right_stick_down,u8"Analógico direito para baixo"},
 		{key::vehicle_duck,u8"Mova {button} para se abaixar"},
@@ -47,8 +51,8 @@ namespace game_text::locales
 		{key::fixed_sniper_controls,u8"Use o <em>analógico esquerdo</em> para mirar; pressione <em>B/Y</em> para sair da posição"},
 		{key::heartbeat_fold,u8"Com a mão livre, segure <em>Grip</em> na <em>carcaça do sensor</em>; abra para consultar e feche para guardar"},
 		{key::snowmobile_board,u8"Quando o <em>snowmobile</em> parar, aproxime-se para subir automaticamente"},
-		{key::vehicle_drive,u8"Use o <em>analógico</em> para dirigir; pegue a arma no <em>peito</em> e aperte o <em>gatilho</em> para atirar; solte <em>Grip</em> para devolvê-la ao <em>peito</em>"},
-		{key::vehicle_reload,u8"Pressione <em>B/Y da mão da arma</em> para ejetar; segure o <em>gatilho</em> com a outra mão no <em>peito</em> para pegar um carregador novo e inseri-lo na <em>arma</em>"},
+		{key::snowmobile_drive,u8"Dirija com o <em>controle</em> e segure o <em>guidão</em> para ajustar a direção com precisão"},
+		{key::snowmobile_fire,u8"Pegue a arma no <em>colete peitoral</em> e aperte o <em>gatilho da mão da arma</em> para atirar\nRemova o <em>carregador</em> e mantenha a arma junto ao <em>peito</em> para recarregar automaticamente"},
 		{key::museum_warning,u8"NÃO segure {button}"},
 		{key::trainer_fire,u8"Aperte o <em>gatilho da mão da arma</em> para atirar"},
 		{key::trainer_hip_fire,u8"Atire com o <em>gatilho da mão da arma</em>; atire do quadril sem olhar pela mira"},
@@ -66,11 +70,12 @@ namespace game_text::locales
 		{key::trainer_mantle,u8"Chegue perto do <em>obstáculo</em> e clique no <em>analógico direito</em> para ultrapassar"},
 		{key::trainer_sprint,u8"Mova o <em>analógico esquerdo para frente</em> para andar e clique no <em>analógico esquerdo</em> para correr"},
 		{key::trainer_frag,u8"Primeiro guarde o fuzil <em>nas costas</em>\nPegue uma granada no <em>peito</em>, tire o <em>pino</em> com a outra mão e solte <em>Grip</em> para lançar"},
-		{key::trainer_flash,u8"Pegue uma granada de luz no <em>peito</em>, tire o <em>pino</em> com a outra mão e solte <em>Grip</em> para lançar"},
+		{key::trainer_flash,u8"Pegue uma granada de luz no <em>colete peitoral</em>, segure o <em>gatilho</em> da outra mão para tirar o <em>pino</em> e solte <em>Grip</em> para lançar"},
+		{key::grenade_cook,u8"Após retirar o <em>pino</em>, pressione o <em>botão frontal mais distante no controle da mão com a granada</em> ou o <em>gatilho dessa mão</em> para soltar a alavanca de segurança"},
 		{key::trainer_menu,u8"Pressione <em>X no controle esquerdo</em> para abrir o menu e ajustar a inversão vertical"},
 		{key::m203_reload,u8"Após atirar, pegue o <em>cano</em> com <em>Grip</em> e <em>empurre para frente</em> para abrir\nSegure <em>Grip e gatilho</em> na <em>cintura</em> para pegar uma granada; mantenha o <em>gatilho</em> e insira na <em>câmara</em>\nPegue o <em>cano</em> novamente com <em>Grip</em> e <em>puxe para trás</em> para fechar"},
 		{key::knuckles_trainer_menu,u8"Pressione <em>A no controle esquerdo</em> para abrir o menu e ajustar a inversão vertical"},
 		{key::knuckles_fixed_sniper_controls,u8"Use o <em>analógico esquerdo</em> para mirar; pressione <em>B</em> para sair da posição"},
-		{key::knuckles_vehicle_reload,u8"Pressione <em>B da mão da arma</em> para ejetar; segure o <em>gatilho</em> com a outra mão no <em>peito</em> para pegar um carregador novo e inseri-lo na <em>arma</em>"},
+		{key::snowmobile_reverse,u8"Mova o <em>analógico</em> para trás para dar ré"},
 	});
 }

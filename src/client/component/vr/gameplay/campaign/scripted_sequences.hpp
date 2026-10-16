@@ -2,10 +2,8 @@
 #include "scripted_sequence_policy.hpp"
 #include "../scripted_arms_policy.hpp"
 #include "../vehicles/policy.hpp"
-#include "component/game_text.hpp"
 #include "../../scripted_camera.hpp"
 #include "sequences/camera_policies.hpp"
-#include <optional>
 #include <string>
 
 namespace vr::gameplay::sequences
@@ -32,7 +30,6 @@ namespace vr::gameplay::sequences
 		melee_delivery melee_mode{};
         bool independent_hands{},block_carry{},hide_chest_equipment{};
 		std::array<int,4> hidden_entities{{-1,-1,-1,-1}};
-		std::optional<game_text::key> instruction{};
 	};
 	inline bool same_position_owner(const view& previous,const view& next,std::uintptr_t player,int time,bool same_level) noexcept
 	{
@@ -89,5 +86,4 @@ namespace vr::gameplay::sequences
 	bool owns_arms(const void* player_state) noexcept;
     bool independent_hands(const void* player_state) noexcept;
     bool chest_equipment_visible() noexcept;
-	std::string prompt_status();
 }

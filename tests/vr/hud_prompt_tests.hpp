@@ -7,11 +7,11 @@ template<class Check>void hud_prompt_tests(Check& check)
 	const auto en=locale::english,zh=locale::simplified_chinese;
 	for(const auto language:{locale::english,locale::simplified_chinese,locale::french})
 	{
-		for(const auto id:{key::trainer_menu,key::fixed_sniper_controls,key::vehicle_reload})
+		for(const auto id:{key::trainer_menu,key::fixed_sniper_controls,key::trainer_objectives,key::trainer_recenter})
 		{
 			const auto touch=compose(id,language);
 			const auto index=compose(id,language,{},true);
-			check(touch && index && text(*touch)!=text(*index),"only the three Index face-button instructions have variants");
+			check(touch && index && text(*touch)!=text(*index),"controller-specific face-button instructions follow the active profile");
 		}
 	}
 	const auto menu_index=compose(key::trainer_menu,en,{},true);
@@ -19,7 +19,7 @@ template<class Check>void hud_prompt_tests(Check& check)
 		"Index menu preserves the Touch sentence and substitutes only A for X");
 	for(const auto& entry:definitions)
 	{
-		if(entry.message==key::trainer_menu || entry.message==key::fixed_sniper_controls || entry.message==key::vehicle_reload)continue;
+		if(uses_controller_profile(entry.message))continue;
 		const auto touch=compose(entry.message,en,{0,false,"weapon"});
 		const auto index=compose(entry.message,en,{0,false,"weapon"},true);
 		check(touch && index && text(*touch)==text(*index),"all other Index instructions preserve original text including skip");
@@ -28,6 +28,28 @@ template<class Check>void hud_prompt_tests(Check& check)
 	const auto boarding = compose(key::snowmobile_board, zh);
 	check(boarding && text(*boarding) == game_text::utf8(u8"雪地摩托停稳后，靠近即可自动上车"),
 		"snowmobile boarding explains the story stop and proximity without a hand or button argument");
+	const context snowmobile{true,"cliffhanger",feature::snowmobile};
+	for(const auto* name:{"SCRIPT_PLATFORM_SNOWMOBILE_DRIVE","SCRIPT_PLATFORM_SNOWMOBILE_DRIVE_KEYBOARD"})
+		check(replace(source::script_hud,name,snowmobile,zh)==
+			game_text::utf8(u8"用^3手柄^7驾驶，握住^3车把^7微调方向"),
+			"snowmobile drive aliases explain controller driving and handlebar fine adjustment");
+	for(const auto* name:{"SCRIPT_PLATFORM_SNOWMOBILE_ATTACK","SCRIPT_PLATFORM_SNOWMOBILE_ATTACK_KEYBOARD"})
+		check(replace(source::script_hud,name,snowmobile,zh)==game_text::utf8(
+			u8"从^3胸挂^7取出武器，扣动^3持枪手扳机^7开火\n卸下^3弹匣^7后，将武器停留在^3胸前^7自动装弹"),
+			"snowmobile attack aliases combine chest-rig draw and empty-well chest auto reload in two lines");
+	for(const auto* name:{"SCRIPT_PLATFORM_SNOWMOBILE_REVERSE","SCRIPT_PLATFORM_SNOWMOBILE_REVERSE_KEYBOARD",
+		"SCRIPT_PLATFORM_SNOWMOBILE_REVERSE_BUTTON_INVERSED"})
+		check(replace(source::script_hud,name,snowmobile,zh)==game_text::utf8(u8"向后推动^3摇杆^7倒车"),
+			"every snowmobile reverse binding variant uses the approved backward stick instruction");
+	for(const auto* name:{"SCRIPT_PLATFORM_SNOWMOBILE_DRIVE","SCRIPT_PLATFORM_SNOWMOBILE_DRIVE_KEYBOARD",
+		"SCRIPT_PLATFORM_SNOWMOBILE_ATTACK","SCRIPT_PLATFORM_SNOWMOBILE_ATTACK_KEYBOARD",
+		"SCRIPT_PLATFORM_SNOWMOBILE_REVERSE","SCRIPT_PLATFORM_SNOWMOBILE_REVERSE_KEYBOARD",
+		"SCRIPT_PLATFORM_SNOWMOBILE_REVERSE_BUTTON_INVERSED"})
+		check(!replace(source::script_hud,name,{true,"cliffhanger"},zh) &&
+			!replace(source::script_hud,name,{false,"cliffhanger",feature::snowmobile},zh) &&
+			!replace(source::script_hud,name,{true,"af_chase",feature::snowmobile},zh) &&
+			!replace(source::world,name,snowmobile,zh) && !replace(source::script_hud,name,snowmobile,locale::czech),
+			"snowmobile reminders require their physical driver, map, VR and script HUD producer and preserve native fallback");
 	const context estate{true,"estate"},favela{true,"favela"},flare{true,"dc_whitehouse",feature::signal_flare};
 	for(const auto* name:{"ESTATE_LEARN_PRONE","ESTATE_LEARN_PRONE_TOGGLE","ESTATE_LEARN_PRONE_HOLDDOWN"})
 	{
@@ -44,6 +66,17 @@ template<class Check>void hud_prompt_tests(Check& check)
 		const auto french=replace(source::script_hud,name,favela,locale::french);
 		check(french && french->find("Stick droit vers le bas")!=std::string::npos && french->find("Right Stick")==std::string::npos,
 			"translated action and translated sentence are composed in the same locale");
+	}
+	for(const auto* name:{"FAVELA_ESCAPE_HINT_SPRINT","FAVELA_ESCAPE_HINT_SPRINT_PC"})
+	{
+		check(replace(source::script_hud,name,{true,"favela_escape"},zh)==
+			game_text::utf8(u8"前推^3左摇杆^7移动，按下^3左摇杆^7冲刺"),
+			"Hornet's Nest native sprint aliases reuse the localized locomotion instruction without weapon carry");
+		check(!replace(source::script_hud,name,favela,zh) &&
+			!replace(source::script_hud,name,{false,"favela_escape"},zh) &&
+			!replace(source::lui,name,{true,"favela_escape"},zh) &&
+			!replace(source::script_hud,name,{true,"favela_escape"},locale::czech),
+			"sprint hints retain mission, VR, producer and exact-locale boundaries");
 	}
 	for(const auto* name:{"SCRIPT_PLATFORM_HINTSTR_POPFLARE","SCRIPT_PLATFORM_HINTSTR_POPFLARE_KEYBOARD"})
 	{
@@ -119,6 +152,25 @@ template<class Check>void hud_prompt_tests(Check& check)
 		game_text::utf8(u8"按下^3扳机键^7刺杀哨兵") &&
 		!resolve(source::script_hud,"SCRIPT_PLATFORM_OILRIG_HINT_STEALTH_KILL",estate),
 		"Oilrig native guard hint uses the old text in its original lifecycle and cannot escape the mission");
+	const context rappel{true,"af_caves",feature::rappel};
+	check(replace(source::script_hud,"AF_CAVES_DESCEND",rappel,zh)==game_text::utf8(u8"按住^3扳机键^7减速") &&
+		replace(source::script_hud,"SCRIPT_PLATFORM_OILRIG_HINT_STEALTH_KILL",rappel,zh)==
+			game_text::utf8(u8"按下^3扳机键^7刺杀哨兵"),
+		"af_caves native descent and reused guard keys preserve the existing VR sentences through the shared producer");
+	const auto* rappel_guard=identify(source::script_hud,"SCRIPT_PLATFORM_OILRIG_HINT_STEALTH_KILL","af_caves");
+	const auto* oilrig_guard=identify(source::script_hud,"SCRIPT_PLATFORM_OILRIG_HINT_STEALTH_KILL","oilrig");
+	check(rappel_guard && oilrig_guard && rappel_guard->required==feature::rappel && oilrig_guard->required==feature::none &&
+		!identify(source::script_hud,"SCRIPT_PLATFORM_OILRIG_HINT_STEALTH_KILL","estate"),
+		"shared native key selects the matching disjoint mission scope instead of the first registry row");
+	for(const auto* name:{"AF_CAVES_DESCEND","SCRIPT_PLATFORM_OILRIG_HINT_STEALTH_KILL"})
+		check(!replace(source::script_hud,name,{true,"af_caves"},zh) &&
+			!replace(source::script_hud,name,{false,"af_caves",feature::rappel},zh) &&
+			!replace(source::world,name,rappel,zh) && !replace(source::lui,name,rappel,zh) &&
+			!replace(source::script_hud,name,rappel,locale::czech),
+			"rappel override requires its adapter, VR and script HUD identity, with exact-locale native fallthrough");
+	check(!replace(source::script_hud,"AF_CAVES_DESCEND",oilrig,zh) &&
+		!replace(source::script_hud,"SCRIPT_PLATFORM_OILRIG_HINT_STEALTH_KILL",{true,"estate",feature::rappel},zh),
+		"rappel feature cannot grant a hint on an unrelated map or change Oilrig descent instructions");
 	check(resolve(source::script_hud,"OILRIG_HINT_C4_SWITCH",oilrig)==key::c4_draw &&
 		resolve(source::script_hud,"OILRIG_HINT_C4_DETONATE",oilrig)==key::c4_detonate &&
 		!resolve(source::script_hud,"OILRIG_HINT_C4_SWITCH",{true,"oilrig"}),
@@ -145,9 +197,48 @@ template<class Check>void hud_prompt_tests(Check& check)
 		"trainer storage instructions follow the VR action order without moving physical holsters");
 	const auto frag=replace(source::script_hud,"TRAINER_HINT_FRAG",trainer,zh);
 	check(frag&&frag->starts_with(game_text::utf8(u8"先将步枪收纳至^3背后^7\n从^3胸前^7")),"grenade instruction first frees hands by stowing the rifle on its own line");
+	const context physical_grenades{true,"roadkill",feature::grenades};
+	check(replace(source::script_hud,"SCRIPT_PLATFORM_HINT_FLASH",physical_grenades,zh)==
+		game_text::utf8(u8"从^3胸挂^7取出闪光弹，用另一只手按住^3扳机键^7拔出^3拉环^7，再松开^3握持键^7投出") &&
+		resolve(source::script_hud,"SCRIPT_PLATFORM_HINT_FLASH",physical_grenades)==key::trainer_flash,
+		"Team Player reuses the chest-rig flash instruction with emphasized pin-pull and release controls");
+	check(!replace(source::script_hud,"SCRIPT_PLATFORM_HINT_FLASH",{true,"roadkill",feature::carry},zh) &&
+		!replace(source::script_hud,"SCRIPT_PLATFORM_HINT_FLASH",{true,"trainer",feature::grenades},zh) &&
+		!replace(source::world,"SCRIPT_PLATFORM_HINT_FLASH",physical_grenades,zh),
+		"Team Player flash override requires its exact mission, script producer and physical grenade capability");
+	const auto cooking=replace(source::script_hud,"SCRIPT_GRENADE_SUICIDE_LINE2",physical_grenades,zh);
+	check(cooking==game_text::utf8(u8"拔出^3拉环^7后，按下^3持雷手柄上较远的按键^7或^3同手扳机键^7解除保险") &&
+		replace(source::script_hud,"SCRIPT_GRENADE_SUICIDE_LINE2",{true,"trainer",feature::grenades},zh)==cooking &&
+		replace(source::script_hud,"SCRIPT_GRENADE_SUICIDE_LINE2",physical_grenades,zh,true)==cooking,
+		"shared grenade death instruction preserves the approved future-trigger wording without face-button names or a held weapon dependency");
+	check(!replace(source::script_hud,"SCRIPT_GRENADE_SUICIDE_LINE2",{true,"roadkill"},zh) &&
+		!replace(source::script_hud,"SCRIPT_GRENADE_SUICIDE_LINE2",{false,"roadkill",feature::grenades},zh) &&
+		!replace(source::script_hud,"SCRIPT_GRENADE_SUICIDE_LINE2",physical_grenades,locale::czech) &&
+		!identify(source::script_hud,"SCRIPT_GRENADE_SUICIDE_LINE1"),
+		"grenade replacement retains native fallback and leaves the original death-reason line alone");
 	const auto pause=replace(source::script_hud,"TRAINER_HINT_INVERT_CONTROL_PC",trainer,zh);
 	check(pause&&pause->find("ESC")==std::string::npos&&pause->find(game_text::utf8(u8"左手柄 X 键"))!=std::string::npos,
 		"trainer menu instruction names the actual left-controller pause key");
+	// Independently list the native producer aliases: iterating native_rules
+	// alone cannot catch an omitted keyboard/gamepad variant.
+	for(const auto* name:{"TRAINER_HINT_CHECK_OBJECTIVES_PAUSED","TRAINER_HINT_CHECK_OBJECTIVES_SCORES",
+		"TRAINER_HINT_WEAPON_INSPECT","TRAINER_HINT_WEAPON_INSPECT_PC"})
+	{
+		const bool objectives=std::string_view(name).starts_with("TRAINER_HINT_CHECK_OBJECTIVES_");
+		const auto id=objectives?key::trainer_objectives:key::trainer_recenter;
+		check(resolve(source::script_hud,name,{true,"trainer"})==id &&
+			replace(source::script_hud,name,{true,"trainer"},zh)==game_text::utf8(objectives?
+				u8"按下^3左手柄 X 键^7打开菜单":u8"按住^3左手柄 X 键^7重置视角"),
+			"trainer objective and inspect producers show the approved tap/hold instructions without a weapon dependency");
+		check(replace(source::script_hud,name,{true,"trainer"},zh,true)==game_text::utf8(objectives?
+				u8"按下^3左手柄 A 键^7打开菜单":u8"按住^3左手柄 A 键^7重置视角"),
+			"Index uses its shared left A menu/recenter binding for both trainer instructions");
+		check(!replace(source::script_hud,name,{false,"trainer"},zh) &&
+			!replace(source::script_hud,name,{true,"estate"},zh) &&
+			!replace(source::lui,name,{true,"trainer"},zh) &&
+			!replace(source::script_hud,name,{true,"trainer"},locale::czech),
+			"new trainer instructions retain VR, mission, producer and exact-locale boundaries");
+	}
 	check(replace(source::script_hud,"TRAINER_HINT_SIDEARM_SWAP",trainer,en).has_value() &&
 		!replace(source::script_hud,"TRAINER_HINT_SIDEARM_SWAP",{true,"trainer"},zh) &&
 		!replace(source::script_hud,"TRAINER_HINT_SIDEARM_SWAP",{true,"estate",feature::carry},zh),

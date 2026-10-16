@@ -4,6 +4,10 @@
 namespace game_text::locales
 {
 	inline constexpr catalog italian=make_catalog({
+		{key::button_menu_recenter,u8"X sul controller sinistro"},
+		{key::knuckles_button_menu_recenter,u8"A sul controller sinistro"},
+		{key::trainer_objectives,u8"Premi {button} per aprire il menu"},
+		{key::trainer_recenter,u8"Tieni premuto {button} per reimpostare la visuale"},
 		{key::weapon_needs_chamber,u8"Arma da armare"},
 		{key::right_stick_down,u8"Stick destro verso il basso"},
 		{key::vehicle_duck,u8"Spingi {button} per abbassarti"},
@@ -47,8 +51,8 @@ namespace game_text::locales
 		{key::fixed_sniper_controls,u8"Usa lo <em>stick sinistro</em> per mirare; premi <em>B/Y</em> per lasciare la postazione"},
 		{key::heartbeat_fold,u8"Con la mano libera tieni premuta la <em>presa</em> sull’<em>involucro del sensore</em>; aprilo per guardare e richiudilo per riporlo"},
 		{key::snowmobile_board,u8"Quando la <em>motoslitta</em> si ferma, avvicinati per salire automaticamente"},
-		{key::vehicle_drive,u8"Usa lo <em>stick</em> per guidare; prendi l’arma dal <em>petto</em> e premi il <em>grilletto</em> per sparare; rilascia la <em>presa</em> per riportarla al <em>petto</em>"},
-		{key::vehicle_reload,u8"Premi <em>B/Y della mano armata</em> per espellere il caricatore; con l’altra mano tieni premuto il <em>grilletto</em> al <em>petto</em> per prenderne uno nuovo e inserirlo nell’<em>arma</em>"},
+		{key::snowmobile_drive,u8"Guida con il <em>controller</em> e afferra il <em>manubrio</em> per regolare finemente la direzione"},
+		{key::snowmobile_fire,u8"Prendi l’arma dal <em>pettorale tattico</em> e premi il <em>grilletto della mano armata</em> per sparare\nRimuovi il <em>caricatore</em>, poi tieni l’arma davanti al <em>petto</em> per ricaricare automaticamente"},
 		{key::museum_warning,u8"NON tenere premuto {button}"},
 		{key::trainer_fire,u8"Premi il <em>grilletto della mano armata</em> per sparare"},
 		{key::trainer_hip_fire,u8"Spara con il <em>grilletto della mano armata</em>; spara dal fianco senza guardare nel mirino"},
@@ -66,11 +70,12 @@ namespace game_text::locales
 		{key::trainer_mantle,u8"Avvicinati all’<em>ostacolo</em> e premi lo <em>stick destro</em> per scavalcarlo"},
 		{key::trainer_sprint,u8"Spingi lo <em>stick sinistro in avanti</em> per muoverti e premi lo <em>stick sinistro</em> per scattare"},
 		{key::trainer_frag,u8"Riponi prima il fucile <em>dietro la schiena</em>\nPrendi una granata dal <em>petto</em>, estrai la <em>anello di sicurezza</em> con l’altra mano e rilascia la <em>presa</em> per lanciarla"},
-		{key::trainer_flash,u8"Prendi una granata accecante dal <em>petto</em>, estrai la <em>anello di sicurezza</em> con l’altra mano e rilascia la <em>presa</em> per lanciarla"},
+		{key::trainer_flash,u8"Prendi una granata accecante dal <em>pettorale tattico</em>, tieni premuto il <em>grilletto</em> dell’altra mano per estrarre l’<em>anello di sicurezza</em>, poi rilascia la <em>presa</em> per lanciarla"},
+		{key::grenade_cook,u8"Dopo aver estratto l’<em>anello di sicurezza</em>, premi il <em>pulsante frontale più lontano sul controller che tiene la granata</em> o il <em>grilletto della stessa mano</em> per rilasciare la leva di sicurezza"},
 		{key::trainer_menu,u8"Premi <em>X sul controller sinistro</em> per aprire il menu e impostare l’inversione verticale"},
 		{key::m203_reload,u8"Dopo il tiro afferra la <em>canna</em> con la <em>presa</em> e <em>spingi in avanti</em> per aprire\nTieni premuti <em>presa e grilletto</em> alla <em>vita</em> per prendere una granata; mantieni il <em>grilletto</em> e inseriscila nella <em>camera</em>\nAfferra di nuovo la <em>canna</em> con la <em>presa</em> e <em>tira indietro</em> per chiudere"},
 		{key::knuckles_trainer_menu,u8"Premi <em>A sul controller sinistro</em> per aprire il menu e impostare l’inversione verticale"},
 		{key::knuckles_fixed_sniper_controls,u8"Usa lo <em>stick sinistro</em> per mirare; premi <em>B</em> per lasciare la postazione"},
-		{key::knuckles_vehicle_reload,u8"Premi <em>B della mano armata</em> per espellere il caricatore; con l’altra mano tieni premuto il <em>grilletto</em> al <em>petto</em> per prenderne uno nuovo e inserirlo nell’<em>arma</em>"},
+		{key::snowmobile_reverse,u8"Sposta lo <em>stick</em> indietro per fare retromarcia"},
 	});
 }

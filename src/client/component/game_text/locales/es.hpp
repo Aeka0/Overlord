@@ -4,6 +4,10 @@
 namespace game_text::locales
 {
 	inline constexpr catalog spanish=make_catalog({
+		{key::button_menu_recenter,u8"X en el mando izquierdo"},
+		{key::knuckles_button_menu_recenter,u8"A en el mando izquierdo"},
+		{key::trainer_objectives,u8"Pulsa {button} para abrir el menú"},
+		{key::trainer_recenter,u8"Mantén pulsado {button} para restablecer la vista"},
 		{key::weapon_needs_chamber,u8"Monta el arma"},
 		{key::right_stick_down,u8"Stick derecho hacia abajo"},
 		{key::vehicle_duck,u8"Empuja el {button} para agacharte."},
@@ -47,8 +51,8 @@ namespace game_text::locales
 		{key::fixed_sniper_controls,u8"Usa el <em>stick izquierdo</em> para apuntar; pulsa <em>B/Y</em> para dejar el puesto"},
 		{key::heartbeat_fold,u8"Con la mano libre mantén <em>agarre</em> en la <em>carcasa del sensor</em>; ábrelo para verlo y ciérralo para guardarlo"},
 		{key::snowmobile_board,u8"Cuando la <em>moto de nieve</em> se detenga, acércate para subir automáticamente"},
-		{key::vehicle_drive,u8"Conduce con el <em>stick</em>; saca el arma del <em>pecho</em> y dispara con <em>gatillo</em>; suelta <em>agarre</em> para devolverla al <em>pecho</em>"},
-		{key::vehicle_reload,u8"Pulsa <em>B/Y de la mano del arma</em> para expulsar el cargador; mantén <em>gatillo</em> con la otra mano en el <em>pecho</em> para sacar otro e insertarlo en el <em>arma</em>"},
+		{key::snowmobile_drive,u8"Conduce con el <em>mando</em> y sujeta el <em>manillar</em> para ajustar la dirección con precisión"},
+		{key::snowmobile_fire,u8"Saca el arma del <em>chaleco portaequipo</em> y pulsa el <em>gatillo de la mano del arma</em> para disparar\nRetira el <em>cargador</em> y mantén el arma frente al <em>pecho</em> para recargar automáticamente"},
 		{key::museum_warning,u8"NO mantengas {button}"},
 		{key::trainer_fire,u8"Pulsa el <em>gatillo de la mano del arma</em> para disparar"},
 		{key::trainer_hip_fire,u8"Dispara con el <em>gatillo de la mano del arma</em>; dispara desde la cadera sin mirar por la mira"},
@@ -66,11 +70,12 @@ namespace game_text::locales
 		{key::trainer_mantle,u8"Acércate al <em>obstáculo</em> y pulsa el <em>stick derecho</em> para superarlo"},
 		{key::trainer_sprint,u8"Empuja el <em>stick izquierdo adelante</em> para moverte y púlsalo para <em>esprintar</em>"},
 		{key::trainer_frag,u8"Primero guarda el fusil <em>a la espalda</em>\nSaca una granada del <em>pecho</em>, quita la <em>anilla</em> con la otra mano y suelta <em>agarre</em> para lanzarla"},
-		{key::trainer_flash,u8"Saca una cegadora del <em>pecho</em>, quita la <em>anilla</em> con la otra mano y suelta <em>agarre</em> para lanzarla"},
+		{key::trainer_flash,u8"Saca una cegadora del <em>chaleco portaequipo</em>, mantén pulsado el <em>gatillo</em> de la otra mano para quitar la <em>anilla</em> y suelta <em>agarre</em> para lanzarla"},
+		{key::grenade_cook,u8"Tras quitar la <em>anilla</em>, pulsa el <em>botón frontal más alejado del mando que sostiene la granada</em> o el <em>gatillo de esa mano</em> para soltar la palanca de seguridad"},
 		{key::trainer_menu,u8"Pulsa <em>X en el mando izquierdo</em> para abrir el menú y configurar la inversión vertical"},
 		{key::m203_reload,u8"Tras disparar, sujeta el <em>cañón</em> con <em>agarre</em> y <em>empuja adelante</em> para abrir\nMantén <em>agarre y gatillo</em> en la <em>cintura</em> para sacar una granada; mantén <em>gatillo</em> e insértala en la <em>recámara</em>\nSujeta otra vez el <em>cañón</em> con <em>agarre</em> y <em>tira atrás</em> para cerrar"},
 		{key::knuckles_trainer_menu,u8"Pulsa <em>A en el mando izquierdo</em> para abrir el menú y configurar la inversión vertical"},
 		{key::knuckles_fixed_sniper_controls,u8"Usa el <em>stick izquierdo</em> para apuntar; pulsa <em>B</em> para dejar el puesto"},
-		{key::knuckles_vehicle_reload,u8"Pulsa <em>B de la mano del arma</em> para expulsar el cargador; mantén <em>gatillo</em> con la otra mano en el <em>pecho</em> para sacar otro e insertarlo en el <em>arma</em>"},
+		{key::snowmobile_reverse,u8"Mueve el <em>stick</em> hacia atrás para dar marcha atrás"},
 	});
 }

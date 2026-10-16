@@ -38,7 +38,7 @@ adapters. Linked breach cameras use native yaw with tracked HMD orientation,
 discarding native pitch/roll; they publish spatial coordinates during combat.
 
 `gameplay/scripted_sequences` owns lifecycle/publication; `sequences/rappel`
-owns only the af_caves native phase predicates and instruction keys. Each
+owns only the af_caves native phase predicates. Each
 server tick reads saved native flags, alive and linked predicates. No script
 asset is modified and no mission flag is forced. Other maps and later linked
 segments after the completed rappel do not enter the rappel-specific adapter.
@@ -61,21 +61,21 @@ segments after the completed rappel do not enter the rappel-specific adapter.
   loss and input carried across phases or reference generations. Commands are
   appended at CreateCmd return before native command-history insertion, including
   scripted branches that skip normal locomotion. Ordinary VR movement is suspended.
-- Action prompts use the shared [game text i18n catalog](game-text-i18n.md),
-  currently English and Simplified Chinese, and native
-  font measurement/shadow rendering. They are visible throughout the relevant action
-  phase rather than waiting for the native delayed reminder. They do not reproduce
-  the flat HUD background. A missing complete translation omits the custom
-  instruction and retains the original game-language script reminder and its
-  original timing. Exact authored text ranges reuse the existing native
-  allocator/fingerprint registry and narrative canvas; arbitrary plain HUD text
-  remains excluded. These rendering facilities are available in optimized and
-  Debug builds. Since , exact native script-HUD ranges also admit plain
-  hints across maps; see [estate and common hint handling](vr-estate-scripted-scenes.md).
+- Action prompts use the shared [HUD prompt registry](game-text-i18n.md) and
+  locale catalogs through the original script HUD bridge. `AF_CAVES_DESCEND`
+  selects the existing Trigger brake sentence; the shared native
+  `SCRIPT_PLATFORM_OILRIG_HINT_STEALTH_KILL` selects the existing guard sentence
+  under a separate af_caves scope. Native scripts retain the six-second descent
+  reminder delay, four-second post-descent melee reminder delay, completion
+  predicates, timeout, background and fade. Missing exact-locale translations
+  retain the original reminder. The earlier always-visible phase drawer and
+  instruction publication have been removed. Exact native text allocations
+  still reuse the allocator/fingerprint registry and narrative canvas; see
+  [estate and common hint handling](vr-estate-scripted-scenes.md).
 
 `vr_sequence_status` prints phase, epoch, native time and observation failures and
-saves `minidumps/overlord-sequence.txt`, including instruction range admission
-counters. `vr_input_status` reports
+saves `minidumps/overlord-sequence.txt`. The removed standalone prompt drawer no
+longer supplies private instruction counters. `vr_input_status` reports
 `story_brake_commands` and `story_melee_commands`; these count requests, not accepted
 script outcomes. The new observer uses the existing server scheduler and passes
 value snapshots to camera/input/HUD consumers. It adds no polling thread or VM

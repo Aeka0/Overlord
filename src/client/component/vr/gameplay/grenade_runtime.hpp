@@ -4,6 +4,8 @@
 
 namespace vr::gameplay::grenades
 {
+	// Capability only: death instructions outlive active hand/weapon ownership.
+	bool available()noexcept;
 	void collect_interactions(const hand_interaction::frame&)noexcept;
 	void update_interactions()noexcept;
 	void report_interactions()noexcept;

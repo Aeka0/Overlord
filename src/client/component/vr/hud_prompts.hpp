@@ -9,11 +9,11 @@ namespace vr::hud_prompts
 {
 	using game_text::key;
 	enum class source { script_hud, lui, world };
-	enum class control { none, trigger, right_stick_down, grip };
+	enum class control { none, trigger, right_stick_down, grip, menu_recenter };
 	enum class feature : unsigned
 	{
 		none=0, signal_flare=1, carry=2, world=4, special=8,
-		nightvision=16, designator=32, notebook=64, fixed_sniper=128, heartbeat=256, museum=512, notebook_device=1024, m203=2048
+		nightvision=16, designator=32, notebook=64, fixed_sniper=128, heartbeat=256, museum=512, notebook_device=1024, m203=2048, grenades=4096, rappel=8192, snowmobile=16384
 	};
 	constexpr feature operator|(feature a,feature b) noexcept {return feature(unsigned(a)|unsigned(b));}
 	constexpr bool includes(feature available,feature required) noexcept
@@ -50,8 +50,9 @@ namespace vr::hud_prompts
 		definition{key::fixed_sniper_controls,control::none},
 		definition{key::heartbeat_fold,control::none},
 		definition{key::snowmobile_board,control::none},
-		definition{key::vehicle_drive,control::none},
-		definition{key::vehicle_reload,control::none},
+		definition{key::snowmobile_drive,control::none},
+		definition{key::snowmobile_fire,control::none},
+		definition{key::snowmobile_reverse,control::none},
 		definition{key::museum_warning,control::grip},
 		definition{key::trainer_fire,control::none},
 		definition{key::trainer_hip_fire,control::none},
@@ -71,6 +72,9 @@ namespace vr::hud_prompts
 		definition{key::trainer_frag,control::none},
 		definition{key::trainer_flash,control::none},
 		definition{key::trainer_menu,control::none},
+		definition{key::trainer_objectives,control::menu_recenter},
+		definition{key::trainer_recenter,control::menu_recenter},
+		definition{key::grenade_cook,control::none},
 		definition{key::m203_reload,control::none},
 		definition{key::c4_draw,control::none},
 		definition{key::c4_detonate,control::none},
@@ -78,6 +82,12 @@ namespace vr::hud_prompts
 	};
 	constexpr const definition* describe(key id) noexcept
 	{for(const auto& entry:definitions)if(entry.message==id)return &entry;return nullptr;}
+	constexpr bool uses_controller_profile(key id) noexcept
+	{
+		const auto* entry=describe(id);
+		return (entry && entry->operation==control::menu_recenter) || id==key::trainer_menu ||
+			id==key::fixed_sniper_controls;
+	}
 
 	struct native_rule
 	{
@@ -88,6 +98,10 @@ namespace vr::hud_prompts
 	// substring matching against subtitles, glyphs, bindings or localized prose.
 	inline constexpr std::array native_rules{
 		native_rule{source::script_hud,"SCRIPT_PLATFORM_OILRIG_HINT_STEALTH_KILL",key::story_melee,"oilrig"},
+		// af_caves reuses Oilrig's native key. Distinct map scopes preserve each
+		// producer's lifetime without a second, phase-driven VR text renderer.
+		native_rule{source::script_hud,"SCRIPT_PLATFORM_OILRIG_HINT_STEALTH_KILL",key::story_melee,"af_caves",feature::rappel},
+		native_rule{source::script_hud,"AF_CAVES_DESCEND",key::rappel_brake,"af_caves",feature::rappel},
 		native_rule{source::script_hud,"OILRIG_HINT_C4_SWITCH",key::c4_draw,"oilrig",feature::special},
 		native_rule{source::script_hud,"OILRIG_HINT_C4_DETONATE",key::c4_detonate,"oilrig",feature::special},
 		native_rule{source::script_hud,"ESTATE_LEARN_PRONE",key::mine_prone,"estate"},
@@ -95,6 +109,10 @@ namespace vr::hud_prompts
 		native_rule{source::script_hud,"ESTATE_LEARN_PRONE_HOLDDOWN",key::mine_prone,"estate"},
 		native_rule{source::script_hud,"FAVELA_DUCK_HINT",key::vehicle_duck,"favela"},
 		native_rule{source::script_hud,"FAVELA_DUCK_HINT_KEYBOARD",key::vehicle_duck,"favela"},
+		// favela_escape's solo rooftop run is a separate mission from favela.
+		// Sprint is a locomotion control, independent of physical weapon carry.
+		native_rule{source::script_hud,"FAVELA_ESCAPE_HINT_SPRINT",key::trainer_sprint,"favela_escape"},
+		native_rule{source::script_hud,"FAVELA_ESCAPE_HINT_SPRINT_PC",key::trainer_sprint,"favela_escape"},
 		native_rule{source::script_hud,"SCRIPT_PLATFORM_HINTSTR_POPFLARE",key::signal_flare,"dc_whitehouse",feature::signal_flare},
 		native_rule{source::script_hud,"SCRIPT_PLATFORM_HINTSTR_POPFLARE_KEYBOARD",key::signal_flare,"dc_whitehouse",feature::signal_flare},
 		native_rule{source::script_hud,"SCRIPT_NIGHTVISION_USE",key::nightvision_on,"",feature::nightvision},
@@ -149,6 +167,14 @@ namespace vr::hud_prompts
 		native_rule{source::world,"CLIFFHANGER_BOARD",key::snowmobile_board,"cliffhanger",feature::world},
 		native_rule{source::script_hud,"CLIFFHANGER_BOARD_PRESS",key::snowmobile_board,"cliffhanger",feature::world},
 		native_rule{source::world,"CLIFFHANGER_BOARD_PRESS",key::snowmobile_board,"cliffhanger",feature::world},
+		// Native snowmobile reminders own the delay, completion checks and fade.
+		native_rule{source::script_hud,"SCRIPT_PLATFORM_SNOWMOBILE_DRIVE",key::snowmobile_drive,"cliffhanger",feature::snowmobile},
+		native_rule{source::script_hud,"SCRIPT_PLATFORM_SNOWMOBILE_DRIVE_KEYBOARD",key::snowmobile_drive,"cliffhanger",feature::snowmobile},
+		native_rule{source::script_hud,"SCRIPT_PLATFORM_SNOWMOBILE_ATTACK",key::snowmobile_fire,"cliffhanger",feature::snowmobile},
+		native_rule{source::script_hud,"SCRIPT_PLATFORM_SNOWMOBILE_ATTACK_KEYBOARD",key::snowmobile_fire,"cliffhanger",feature::snowmobile},
+		native_rule{source::script_hud,"SCRIPT_PLATFORM_SNOWMOBILE_REVERSE",key::snowmobile_reverse,"cliffhanger",feature::snowmobile},
+		native_rule{source::script_hud,"SCRIPT_PLATFORM_SNOWMOBILE_REVERSE_KEYBOARD",key::snowmobile_reverse,"cliffhanger",feature::snowmobile},
+		native_rule{source::script_hud,"SCRIPT_PLATFORM_SNOWMOBILE_REVERSE_BUTTON_INVERSED",key::snowmobile_reverse,"cliffhanger",feature::snowmobile},
 		native_rule{source::script_hud,"CHAR_MUSEUM_DO_NOT",key::museum_warning,"ending",feature::museum},
 		native_rule{source::world,"CHAR_MUSEUM_DO_NOT",key::museum_warning,"ending",feature::museum},
 		native_rule{source::script_hud,"CHAR_MUSEUM_DO_NOT_PC",key::museum_warning,"ending",feature::museum},
@@ -160,6 +186,12 @@ namespace vr::hud_prompts
 		native_rule{source::script_hud,"TRAINER_HINT_ATTACK",key::trainer_fire,"trainer",feature::carry},
 		native_rule{source::script_hud,"TRAINER_HINT_INVERT_CONTROL",key::trainer_menu,"trainer"},
 		native_rule{source::script_hud,"TRAINER_HINT_INVERT_CONTROL_PC",key::trainer_menu,"trainer"},
+		// maps/trainer::_id_AF44 and h2_weapon_inspect_tutorial select these
+		// aliases through _id_CED3. Preserve their native display lifetimes.
+		native_rule{source::script_hud,"TRAINER_HINT_CHECK_OBJECTIVES_PAUSED",key::trainer_objectives,"trainer"},
+		native_rule{source::script_hud,"TRAINER_HINT_CHECK_OBJECTIVES_SCORES",key::trainer_objectives,"trainer"},
+		native_rule{source::script_hud,"TRAINER_HINT_WEAPON_INSPECT",key::trainer_recenter,"trainer"},
+		native_rule{source::script_hud,"TRAINER_HINT_WEAPON_INSPECT_PC",key::trainer_recenter,"trainer"},
 		native_rule{source::script_hud,"TRAINER_HINT_ATTACK_PC",key::trainer_fire,"trainer",feature::carry},
 		native_rule{source::script_hud,"TRAINER_HINT_HIP_ATTACK",key::trainer_hip_fire,"trainer",feature::carry},
 		native_rule{source::script_hud,"TRAINER_HINT_HIP_ATTACK_PC",key::trainer_hip_fire,"trainer",feature::carry},
@@ -210,21 +242,28 @@ namespace vr::hud_prompts
 		native_rule{source::script_hud,"TRAINER_HINT_FRAG",key::trainer_frag,"trainer",feature::carry},
 		native_rule{source::script_hud,"TRAINER_HINT_FLASH",key::trainer_flash,"trainer",feature::carry},
 		native_rule{source::script_hud,"SCRIPT_LEARN_GRENADE_LAUNCHER",key::m203_reload,"roadkill",feature::m203},
+		// Reuse the physical flash instruction; maps/roadkill_code::_id_ACAE
+		// retains its native stock/room completion checks and hint timeout.
+		native_rule{source::script_hud,"SCRIPT_PLATFORM_HINT_FLASH",key::trainer_flash,"roadkill",feature::grenades},
+		// Shared death instruction must remain available after held items clear.
+		native_rule{source::script_hud,"SCRIPT_GRENADE_SUICIDE_LINE2",key::grenade_cook,{},feature::grenades},
 		native_rule{source::lui,"PLATFORM_HOLD_TO_SKIP",key::cinematic_skip,{}},
 		native_rule{source::lui,"PLATFORM_HOLD_TO_SKIP_KEYBOARD",key::cinematic_skip,{}},
 	};
 	struct context {bool vr{};std::string_view map;feature available{};};
-	constexpr const native_rule* identify(source producer,std::string_view name) noexcept
+	constexpr const native_rule* identify(source producer,std::string_view name,std::optional<std::string_view> map={}) noexcept
 	{
 		if(name.size()>128 || name.find('\0')!=name.npos)return nullptr;
 		if(producer==source::lui && name.starts_with('@'))name.remove_prefix(1);
-		for(const auto& rule:native_rules)if(rule.producer==producer && rule.native_key==name)return &rule;
+		for(const auto& rule:native_rules)
+			if(rule.producer==producer && rule.native_key==name &&
+				(!map || rule.map.empty() || rule.map==*map))return &rule;
 		return nullptr;
 	}
 	constexpr std::optional<key> resolve(source producer,std::string_view name,const context& state) noexcept
 	{
-		const auto* rule=identify(producer,name);
-		if(!state.vr || !rule || (!rule->map.empty() && rule->map!=state.map) ||
+		const auto* rule=identify(producer,name,state.map);
+		if(!state.vr || !rule ||
 			!includes(state.available,rule->required))return {};
 		return rule->message;
 	}
@@ -241,6 +280,8 @@ namespace vr::hud_prompts
 		case control::none:break;
 		case control::trigger:button=key::button_trigger;break;
 		case control::right_stick_down:button=key::right_stick_down;break;
+		case control::menu_recenter:
+			button=knuckles?key::knuckles_button_menu_recenter:key::button_menu_recenter;break;
 		case control::grip:
 			if(!args.shared && args.hand!=0 && args.hand!=1)return {};
 			button=game_text::grip_key(args.hand,args.shared);break;
@@ -252,7 +293,6 @@ namespace vr::hud_prompts
 		{
 			if(id==key::trainer_menu)sentence_id=key::knuckles_trainer_menu;
 			else if(id==key::fixed_sniper_controls)sentence_id=key::knuckles_fixed_sniper_controls;
-			else if(id==key::vehicle_reload)sentence_id=key::knuckles_vehicle_reload;
 		}
 		auto sentence=game_text::translation(sentence_id,requested);
 		if(!sentence && sentence_id!=id)sentence=game_text::translation(id,requested);
@@ -319,8 +359,10 @@ namespace vr::hud_prompts
 		{
 			const auto& rule=native_rules[i];const auto* entry=describe(rule.message);
 			if(!entry || rule.native_key.empty() || rule.native_key.size()>128)return false;
-			for(std::size_t j=0;j<i;++j)if(native_rules[j].producer==rule.producer && native_rules[j].native_key==rule.native_key)return false;
+			for(std::size_t j=0;j<i;++j)
+				if(native_rules[j].producer==rule.producer && native_rules[j].native_key==rule.native_key &&
+					(native_rules[j].map.empty() || rule.map.empty() || native_rules[j].map==rule.map))return false;
 		}
 		return true;
-	}(),"HUD prompt rules must be unique and provide their complete argument contract");
+	}(),"HUD prompt rules must have non-overlapping scopes and provide their complete argument contract");
 }

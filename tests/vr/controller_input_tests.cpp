@@ -246,6 +246,12 @@ int main()
 		"released short jump tap still reaches script notification path");
 	check(read_buttons() == 0, "completed taps consumed only once");
 	check(button_result.pressed == 0, "rereading short jump tap cannot replay its notification");
+	sample_buttons(true, false);
+	sample_buttons(false, false);
+	check(read_buttons() == sprint_button && button_result.pressed == sprint_button,
+		"completed sprint tap reaches the same accepted-edge notification contract as jump");
+	check(read_buttons() == 0 && button_result.pressed == 0,
+		"completed sprint tap cannot notify again on a repeated native command read");
 	sample_buttons(false, true);
 	sample_buttons(false, false);
 	check(read_buttons() == jump_button && button_result.pressed == jump_button,

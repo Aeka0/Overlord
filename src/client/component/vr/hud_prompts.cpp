@@ -11,6 +11,9 @@
 #include "gameplay/fixed_sniper.hpp"
 #include "gameplay/heartbeat_runtime.hpp"
 #include "gameplay/underbarrel_runtime.hpp"
+#include "gameplay/grenade_runtime.hpp"
+#include "gameplay/campaign/scripted_sequences.hpp"
+#include "gameplay/vehicles/runtime.hpp"
 #include <utils/native_memory.hpp>
 #include "game/game.hpp"
 #include <utils/hook.hpp>
@@ -26,6 +29,12 @@ namespace vr::hud_prompts
 			const auto* value=game::Dvar_FindVar(name);if(!value || !value->current.string)return {};
 			const auto length=strnlen(value->current.string,64);
 			return length<64?std::string_view(value->current.string,length):std::string_view{};
+		}
+		const native_rule* current_rule(source producer,std::string_view name)
+		{
+			const auto* rule=identify(producer,name);if(!rule || rule->map.empty())return rule;
+			if(!game::CL_IsCgameInitialized())return nullptr;
+			return identify(producer,name,setting("mapname"));
 		}
 		context snapshot(const native_rule& rule)
 		{
@@ -45,6 +54,17 @@ namespace vr::hud_prompts
 			case feature::carry:available=gameplay::weapons::carry::active();break;
 			case feature::world:available=enabled("vr_worldInteraction") && gameplay::interaction::native::ready() && gameplay::weapons::carry::active();break;
 			case feature::special:available=gameplay::equipment::special::active();break;
+			case feature::grenades:available=enabled("vr_physicalCarry") && gameplay::grenades::available();break;
+			case feature::snowmobile:
+				available=gameplay::vehicles::current().type==gameplay::vehicles::kind::snowmobile &&
+					gameplay::vehicles::presentation_allowed();break;
+			case feature::rappel:
+			{
+				const auto sequence=gameplay::sequences::latest();
+				// Native hints own their delay and fade, including execution/release.
+				available=sequence.epoch && sequence.scene==gameplay::sequences::scenario::rappel;
+				break;
+			}
 			case feature::nightvision:available=gameplay::equipment::nightvision::available();break;
 			case feature::designator:available=gameplay::equipment::special::active() && gameplay::equipment::special::designator_events::ready();break;
 			case feature::notebook:available=gameplay::equipment::special::notebook::controlling();break;
@@ -94,15 +114,13 @@ namespace vr::hud_prompts
 	}
 	std::optional<std::string> replace(source producer,std::string_view name)
 	{
-		const auto* rule=identify(producer,name);if(!rule)return {};
-		const bool controller_text=rule->message==key::trainer_menu ||
-			rule->message==key::fixed_sniper_controls || rule->message==key::vehicle_reload;
-		const bool knuckles=controller_text && hud_controller::knuckles(controller_input::latest().source.backend);
+		const auto* rule=current_rule(producer,name);if(!rule)return {};
+		const bool knuckles=uses_controller_profile(rule->message) && hud_controller::knuckles(controller_input::latest().source.backend);
 		return replace(producer,name,snapshot(*rule),game_text::current(),knuckles);
 	}
 	std::optional<key> world_message(unsigned hint)
 	{
-		const auto name=hint_key(hint);const auto* rule=identify(source::world,name.data());if(!rule)return {};
+		const auto name=hint_key(hint);const auto* rule=current_rule(source::world,name.data());if(!rule)return {};
 		return resolve(source::world,name.data(),snapshot(*rule));
 	}
 	bool native_cursor_required()

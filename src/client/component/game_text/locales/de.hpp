@@ -4,6 +4,10 @@
 namespace game_text::locales
 {
 	inline constexpr catalog german=make_catalog({
+		{key::button_menu_recenter,u8"X am linken Controller"},
+		{key::knuckles_button_menu_recenter,u8"A am linken Controller"},
+		{key::trainer_objectives,u8"{button} drücken, um das Menü zu öffnen"},
+		{key::trainer_recenter,u8"{button} gedrückt halten, um die Ansicht zurückzusetzen"},
 		{key::weapon_needs_chamber,u8"Durchladen nötig"},
 		{key::right_stick_down,u8"Rechten Stick nach unten"},
 		{key::vehicle_duck,u8"{button} drücken, um sich zu ducken."},
@@ -47,8 +51,8 @@ namespace game_text::locales
 		{key::fixed_sniper_controls,u8"Mit dem <em>linken Stick</em> zielen; <em>B/Y</em> drücken, um den Scharfschützenposten zu verlassen"},
 		{key::heartbeat_fold,u8"Mit der freien Hand per <em>Greiftaste</em> das <em>Sensorgehäuse</em> greifen; zum Ablesen aufklappen, zum Verstauen zuklappen"},
 		{key::snowmobile_board,u8"Sobald das <em>Schneemobil</em> steht, nähere dich, um automatisch aufzusteigen"},
-		{key::vehicle_drive,u8"Mit dem <em>Stick</em> fahren; Waffe von der <em>Brust</em> ziehen und per <em>Abzug</em> feuern; <em>Greiftaste</em> loslassen, um sie an die <em>Brust</em> zurückzulegen"},
-		{key::vehicle_reload,u8"<em>B/Y der Waffenhand</em> zum Magazinauswurf drücken; mit der anderen Hand <em>Abzug</em> an der <em>Brust</em> halten, neues Magazin nehmen und in die <em>Waffe</em> einsetzen"},
+		{key::snowmobile_drive,u8"Mit dem <em>Controller</em> fahren und den <em>Lenker</em> zur Feinsteuerung halten"},
+		{key::snowmobile_fire,u8"Waffe aus dem <em>Brusttragegeschirr</em> ziehen und den <em>Abzug der Waffenhand</em> zum Feuern drücken\nDas <em>Magazin</em> entfernen und die Waffe dann an der <em>Brust</em> halten, um automatisch nachzuladen"},
 		{key::museum_warning,u8"Auf KEINEN FALL {button} halten"},
 		{key::trainer_fire,u8"Zum Feuern den <em>Abzug der Waffenhand</em> drücken"},
 		{key::trainer_hip_fire,u8"Mit dem <em>Abzug der Waffenhand</em> feuern; beim Hüftfeuer nicht durch das Visier schauen"},
@@ -66,11 +70,12 @@ namespace game_text::locales
 		{key::trainer_mantle,u8"An das <em>Hindernis</em> herangehen und den <em>rechten Stick</em> zum Übersteigen einklicken"},
 		{key::trainer_sprint,u8"<em>Linken Stick nach vorne</em> bewegen und den <em>linken Stick</em> zum Sprinten einklicken"},
 		{key::trainer_frag,u8"Zuerst das Gewehr <em>am Rücken</em> verstauen\nSplittergranate von der <em>Brust</em> nehmen, mit der anderen Hand den <em>Stift</em> ziehen und zum Werfen die <em>Greiftaste</em> loslassen"},
-		{key::trainer_flash,u8"Blendgranate von der <em>Brust</em> nehmen, mit der anderen Hand den <em>Stift</em> ziehen und zum Werfen die <em>Greiftaste</em> loslassen"},
+		{key::trainer_flash,u8"Blendgranate aus dem <em>Brusttragegeschirr</em> nehmen, mit der anderen Hand den <em>Abzug</em> halten und den <em>Stift</em> ziehen, dann zum Werfen die <em>Greiftaste</em> loslassen"},
+		{key::grenade_cook,u8"Nach dem Ziehen des <em>Stifts</em> die <em>weiter entfernte Fronttaste am Controller der Granatenhand</em> oder den <em>Abzug derselben Hand</em> drücken, um den Sicherungshebel zu lösen"},
 		{key::trainer_menu,u8"<em>X am linken Controller</em> drücken, um das Menü zu öffnen und die vertikale Blickachse umzukehren"},
 		{key::m203_reload,u8"Nach dem Schuss den <em>Lauf</em> mit der <em>Greiftaste</em> greifen und zum Öffnen <em>nach vorne schieben</em>\n<em>Greiftaste und Abzug</em> an der <em>Hüfte</em> halten, um eine Granate zu nehmen; <em>Abzug</em> halten und in die <em>Kammer</em> einsetzen\nDen <em>Lauf</em> wieder mit der <em>Greiftaste</em> greifen und zum Schließen <em>zurückziehen</em>"},
 		{key::knuckles_trainer_menu,u8"<em>A am linken Controller</em> drücken, um das Menü zu öffnen und die vertikale Blickachse umzukehren"},
 		{key::knuckles_fixed_sniper_controls,u8"Mit dem <em>linken Stick</em> zielen; <em>B</em> drücken, um den Scharfschützenposten zu verlassen"},
-		{key::knuckles_vehicle_reload,u8"<em>B der Waffenhand</em> zum Magazinauswurf drücken; mit der anderen Hand <em>Abzug</em> an der <em>Brust</em> halten, neues Magazin nehmen und in die <em>Waffe</em> einsetzen"},
+		{key::snowmobile_reverse,u8"Den <em>Stick</em> nach hinten ziehen, um rückwärts zu fahren"},
 	});
 }

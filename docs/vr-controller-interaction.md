@@ -47,6 +47,18 @@ Native sprint and jump are admitted through H2's existing command whitelist.
 Scripted command overrides remain authoritative in story scenes. A signature or
 identity mismatch rejects the adapter rather than installing a partial hook.
 
+Accepted new jump and sprint presses also use the existing native reliable
+command-notification queue at `0x1403D3A90`: whitelist 37 is `+gostand`, and 83
+is `+sprint`. Both identities are checked before installing the command hooks.
+These notices let native `notifyoncommand` consumers observe controller input;
+usercmd button bits alone do not satisfy those listeners. The existing button
+gate preserves a short tap, consumes it once, and rejects held input resumed
+after menus, lost focus, stale samples or a reference discontinuity. Held
+movement still writes command bits without resending the notice. Scripts that
+register `+sprint` and `+breath_sprint` for the same event receive one canonical
+`+sprint` notice. `vr_input_status` reports `sprint_notifies` beside
+`jump_notifies`; these count submissions, not confirmed script completions.
+
 ## Holding authority and firing
 
 OpenXR analog actions retain their value, availability and suggested source in

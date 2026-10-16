@@ -4,6 +4,10 @@
 namespace game_text::locales
 {
 	inline constexpr catalog polish=make_catalog({
+		{key::button_menu_recenter,u8"X na lewym kontrolerze"},
+		{key::knuckles_button_menu_recenter,u8"A na lewym kontrolerze"},
+		{key::trainer_objectives,u8"Naciśnij {button}, aby otworzyć menu"},
+		{key::trainer_recenter,u8"Przytrzymaj {button}, aby zresetować widok"},
 		{key::weapon_needs_chamber,u8"Wprowadź nabój do komory"},
 		{key::right_stick_down,u8"Prawy drążek w dół"},
 		{key::vehicle_duck,u8"Wychyl {button}, aby się schylić"},
@@ -47,8 +51,8 @@ namespace game_text::locales
 		{key::fixed_sniper_controls,u8"Celuj <em>lewym drążkiem</em>; naciśnij <em>B/Y</em>, aby opuścić stanowisko"},
 		{key::heartbeat_fold,u8"Wolną ręką przytrzymaj <em>chwyt</em> na <em>obudowie czujnika</em>; rozłóż, aby odczytać, i złóż, aby schować"},
 		{key::snowmobile_board,u8"Gdy <em>skuter śnieżny</em> się zatrzyma, podejdź, aby automatycznie wsiąść"},
-		{key::vehicle_drive,u8"Steruj <em>drążkiem</em>; wyjmij broń z <em>klatki piersiowej</em> i strzelaj <em>spustem</em>; zwolnij <em>chwyt</em>, aby odłożyć na <em>klatkę piersiową</em>"},
-		{key::vehicle_reload,u8"Naciśnij <em>B/Y ręki z bronią</em>, aby wyrzucić magazynek; drugą ręką przytrzymaj <em>spust</em> przy <em>klatce piersiowej</em>, weź nowy i włóż do <em>broni</em>"},
+		{key::snowmobile_drive,u8"Prowadź za pomocą <em>kontrolera</em> i chwyć <em>kierownicę</em>, aby precyzyjnie korygować kierunek"},
+		{key::snowmobile_fire,u8"Wyjmij broń z <em>oporządzenia na piersi</em> i naciśnij <em>spust ręki z bronią</em>, aby strzelać\nWyjmij <em>magazynek</em>, a następnie przytrzymaj broń przy <em>klatce piersiowej</em>, aby automatycznie przeładować"},
 		{key::museum_warning,u8"Pod żadnym pozorem NIE przytrzymuj {button}"},
 		{key::trainer_fire,u8"Naciśnij <em>spust ręki z bronią</em>, aby strzelić"},
 		{key::trainer_hip_fire,u8"Strzelaj <em>spustem ręki z bronią</em>; przy strzale z biodra nie patrz przez przyrządy"},
@@ -66,11 +70,12 @@ namespace game_text::locales
 		{key::trainer_mantle,u8"Podejdź do <em>przeszkody</em> i wciśnij <em>prawy drążek</em>, aby ją pokonać"},
 		{key::trainer_sprint,u8"Wychyl <em>lewy drążek do przodu</em>, aby iść, i wciśnij <em>lewy drążek</em>, aby biec sprintem"},
 		{key::trainer_frag,u8"Najpierw schowaj karabin <em>za plecami</em>\nWeź granat z <em>klatki piersiowej</em>, drugą ręką wyciągnij <em>zawleczkę</em> i zwolnij <em>chwyt</em>, aby rzucić"},
-		{key::trainer_flash,u8"Weź granat błyskowy z <em>klatki piersiowej</em>, drugą ręką wyciągnij <em>zawleczkę</em> i zwolnij <em>chwyt</em>, aby rzucić"},
+		{key::trainer_flash,u8"Weź granat błyskowy z <em>oporządzenia na piersi</em>, przytrzymaj <em>spust</em> drugiej ręki, aby wyciągnąć <em>zawleczkę</em>, a następnie zwolnij <em>chwyt</em>, aby rzucić"},
+		{key::grenade_cook,u8"Po wyciągnięciu <em>zawleczki</em> naciśnij <em>dalszy przycisk na przedniej części kontrolera ręki z granatem</em> lub <em>spust tej samej ręki</em>, aby zwolnić dźwignię zabezpieczającą"},
 		{key::trainer_menu,u8"Naciśnij <em>X na lewym kontrolerze</em>, aby otworzyć menu i ustawić odwrócenie pionowego widoku"},
 		{key::m203_reload,u8"Po strzale złap <em>lufę</em> przyciskiem <em>chwytu</em> i <em>pchnij do przodu</em>, aby otworzyć\nPrzytrzymaj <em>chwyt i spust</em> przy <em>pasie</em>, aby wyjąć granat; trzymaj <em>spust</em> i włóż go do <em>komory</em>\nPonownie złap <em>lufę</em> przyciskiem <em>chwytu</em> i <em>pociągnij do tyłu</em>, aby zamknąć"},
 		{key::knuckles_trainer_menu,u8"Naciśnij <em>A na lewym kontrolerze</em>, aby otworzyć menu i ustawić odwrócenie pionowego widoku"},
 		{key::knuckles_fixed_sniper_controls,u8"Celuj <em>lewym drążkiem</em>; naciśnij <em>B</em>, aby opuścić stanowisko"},
-		{key::knuckles_vehicle_reload,u8"Naciśnij <em>B ręki z bronią</em>, aby wyrzucić magazynek; drugą ręką przytrzymaj <em>spust</em> przy <em>klatce piersiowej</em>, weź nowy i włóż do <em>broni</em>"},
+		{key::snowmobile_reverse,u8"Wychyl <em>drążek</em> do tyłu, aby cofać"},
 	});
 }

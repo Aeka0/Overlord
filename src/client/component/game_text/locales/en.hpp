@@ -4,6 +4,10 @@
 namespace game_text::locales
 {
 	inline constexpr catalog english=make_catalog({
+		{key::button_menu_recenter,u8"X on the left controller"},
+		{key::knuckles_button_menu_recenter,u8"A on the left controller"},
+		{key::trainer_objectives,u8"Press {button} to open the menu"},
+		{key::trainer_recenter,u8"Hold {button} to reset your view"},
 		{key::button_trigger,u8"Trigger"},
 		{key::button_grip_left,u8"Left Grip"},
 		{key::button_grip_right,u8"Right Grip"},
@@ -47,8 +51,8 @@ namespace game_text::locales
 		{key::fixed_sniper_controls,u8"Use the <em>left stick</em> to aim; press <em>B/Y</em> to leave the sniper position"},
 		{key::heartbeat_fold,u8"Hold <em>Grip</em> with your free hand at the <em>sensor housing</em>; flip it open to view, then fold it shut to stow"},
 		{key::snowmobile_board,u8"Once the <em>snowmobile</em> has stopped, approach it to board automatically"},
-		{key::vehicle_drive,u8"Use the <em>stick</em> to drive; draw a weapon from your <em>chest</em> and pull <em>Trigger</em> to fire; release <em>Grip</em> to return it to your <em>chest</em>"},
-		{key::vehicle_reload,u8"Press the <em>weapon hand's B/Y</em> to eject the magazine; hold <em>Trigger</em> with the other hand at your <em>chest</em> to draw a fresh magazine and insert it into the <em>weapon</em>"},
+		{key::snowmobile_drive,u8"Use the <em>controller</em> to drive; hold the <em>handlebar</em> to fine-tune steering"},
+		{key::snowmobile_fire,u8"Draw your weapon from the <em>chest rig</em> and pull the <em>weapon hand's Trigger</em> to fire\nRemove the <em>magazine</em>, then hold the weapon at your <em>chest</em> to reload automatically"},
 		{key::museum_warning,u8"Do NOT hold {button}"},
 		{key::trainer_fire,u8"Pull the <em>weapon hand's Trigger</em> to fire"},
 		{key::trainer_hip_fire,u8"Pull the <em>weapon hand's Trigger</em> to fire; hip fire without looking through the sights"},
@@ -66,11 +70,12 @@ namespace game_text::locales
 		{key::trainer_mantle,u8"Approach the <em>obstacle</em> and click the <em>right stick</em> to climb over"},
 		{key::trainer_sprint,u8"Push the <em>left stick forward</em> to move and click the <em>left stick</em> to sprint"},
 		{key::trainer_frag,u8"First stow the rifle <em>behind your back</em>\nDraw a frag grenade from your <em>chest</em>, pull the <em>pin</em> with the other hand, then release <em>Grip</em> to throw"},
-		{key::trainer_flash,u8"Draw a flashbang from your <em>chest</em>, pull the <em>pin</em> with the other hand, then release <em>Grip</em> to throw"},
+		{key::trainer_flash,u8"Draw a flashbang from your <em>chest rig</em>, hold <em>Trigger</em> with the other hand to pull the <em>pin</em>, then release <em>Grip</em> to throw"},
+		{key::grenade_cook,u8"After pulling the <em>pin</em>, press the <em>farther face button on the grenade hand's controller</em> or <em>that hand's Trigger</em> to release the safety lever"},
 		{key::trainer_menu,u8"Press <em>X on the left controller</em> to open the menu and set vertical look inversion"},
 		{key::m203_reload,u8"After firing, grasp the <em>barrel</em> with <em>Grip</em> and <em>push forward</em> to open the breech\nHold <em>Grip and Trigger</em> at your <em>waist</em> to draw a grenade, keep <em>Trigger</em> held and insert it into the <em>breech</em>\nGrasp the <em>barrel</em> with <em>Grip</em> again and <em>pull back</em> to close the breech"},
 		{key::knuckles_trainer_menu,u8"Press <em>A on the left controller</em> to open the menu and set vertical look inversion"},
 		{key::knuckles_fixed_sniper_controls,u8"Use the <em>left stick</em> to aim; press <em>B</em> to leave the sniper position"},
-		{key::knuckles_vehicle_reload,u8"Press the <em>weapon hand's B</em> to eject the magazine; hold <em>Trigger</em> with the other hand at your <em>chest</em> to draw a fresh magazine and insert it into the <em>weapon</em>"},
+		{key::snowmobile_reverse,u8"Push the <em>stick</em> backward to reverse"},
 	});
 }

@@ -58,9 +58,10 @@ namespace vr::controllers
 		constexpr std::uintptr_t update_view_angles_address = 0x14068D7B0;
 		// CL_ExecuteKey sends the binding through this native reliable-command
 		// queue before updating movement keys. notifyoncommand waits on that
-		// route, not usercmd.buttons (favela_escape's playerjump is one example).
+		// route, not usercmd.buttons (favela_escape waits on jump and sprint).
 		constexpr std::uintptr_t notify_command_address = 0x1403D3A90;
 		constexpr int jump_binding = 37; // Native whitelist: +gostand.
+		constexpr int sprint_binding = 83; // Native whitelist: +sprint.
 		constexpr std::uintptr_t client_angles_address = 0x141E8A65C;
 		constexpr std::uintptr_t client_yaw_address = 0x141E8A660;
 		utils::hook::detour create_command_hook;
@@ -102,6 +103,7 @@ namespace vr::controllers
 		std::atomic<std::uint64_t> sprint_count{};
 		std::atomic<std::uint64_t> jump_count{};
 		std::atomic<std::uint64_t> jump_notify_count{};
+		std::atomic<std::uint64_t> sprint_notify_count{};
 		std::atomic<std::uint64_t> attack_count{};
 		std::atomic<std::uint64_t> story_brake_count{},story_melee_count{};
 		bool hooks_installed{};
@@ -309,6 +311,14 @@ namespace vr::controllers
 				utils::hook::invoke<void>(notify_command_address, building_client, jump_binding, 0);
 				++jump_notify_count;
 			}
+			if (button_state.pressed & controller_input::sprint_button)
+			{
+				// The admitted edge gate also preserves short taps and blocks held
+				// resume after menus/focus changes. One canonical +sprint notice is
+				// enough: scripts may register both +sprint/+breath_sprint for one event.
+				utils::hook::invoke<void>(notify_command_address, building_client, sprint_binding, 0);
+				++sprint_notify_count;
+			}
 			if (button_mask & controller_input::sprint_button)
 				++sprint_count;
 			if (button_mask & controller_input::jump_button)
@@ -468,10 +478,10 @@ namespace vr::controllers
 			console::info("[VR input] sample_available=%d head_pose=%d recenter_pending=%d recenter_count=%llu\n",
 			              sampled, head.pose_available, head.recenter_pending, head.recenter_count);
 			console::info("[VR input] sprint_active=%d down=%d presses=%llu jump_active=%d down=%d "
-						  "presses=%llu sprint_commands=%llu jump_commands=%llu jump_notifies=%llu\n",
+						  "presses=%llu sprint_commands=%llu jump_commands=%llu jump_notifies=%llu sprint_notifies=%llu\n",
 						  input.sprint.active, input.sprint.down, input.sprint.presses, input.jump.active,
 						  input.jump.down, input.jump.presses, sprint_count.load(), jump_count.load(),
-						  jump_notify_count.load());
+						  jump_notify_count.load(), sprint_notify_count.load());
 			console::info("[VR input] trigger_active/down L=%d/%d R=%d/%d attack_commands=%llu\n",
 						  input.trigger[0].active, input.trigger[0].down, input.trigger[1].active,
 						  input.trigger[1].down, attack_count.load());
@@ -611,7 +621,9 @@ namespace vr::controllers
 				!utils::hook_validation::verify_masked_bytes(reinterpret_cast<void*>(0x1403CF21C),
 					{notify_call, call_mask, sizeof(notify_call)}) ||
 				!game::command_whitelist[jump_binding] ||
-				std::strcmp(game::command_whitelist[jump_binding], "+gostand") != 0)
+				std::strcmp(game::command_whitelist[jump_binding], "+gostand") != 0 ||
+				!game::command_whitelist[sprint_binding] ||
+				std::strcmp(game::command_whitelist[sprint_binding], "+sprint") != 0)
 			{
 				console::error("[VR input] H2 command hook signature mismatch; native HMD view and controllers "
 							   "are not connected to gameplay\n");

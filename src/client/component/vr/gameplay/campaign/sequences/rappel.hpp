@@ -1,7 +1,5 @@
 #pragma once
 #include "../scripted_sequence_policy.hpp"
-#include "component/game_text.hpp"
-#include <optional>
 
 namespace vr::gameplay::sequences::rappel
 {
@@ -21,14 +19,6 @@ namespace vr::gameplay::sequences::rappel
 		if (e.at_bottom)
 			return phase::melee;
 		return e.descending ? phase::descent : phase::hookup;
-	}
-	inline std::optional<game_text::key> instruction_key(phase stage) noexcept
-	{
-		if (stage == phase::descent)
-			return game_text::key::rappel_brake;
-		if (stage == phase::melee)
-			return game_text::key::story_melee;
-		return {};
 	}
 	// Server pipeline only; no script references escape the adapter.
 	bool supported();

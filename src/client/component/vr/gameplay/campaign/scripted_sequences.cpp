@@ -98,7 +98,7 @@ namespace vr::gameplay::sequences
 						{
 							next.scene=scenario::rappel;
 							next.stage=rappel::observe(previous.epoch!=0 && previous.scene==scenario::rappel && observed_generation==generation.load() && ps->commandTime>=last_time);
-							next.camera=scene_cameras::rappel;next.instruction=rappel::instruction_key(next.stage);
+							next.camera=scene_cameras::rappel;
 							next.suspend_weapons=next.stage!=phase::none;
 						}
 						else if(next.stage==phase::none && oilrig::supported())
@@ -180,7 +180,7 @@ namespace vr::gameplay::sequences
 						// Loss of a script observation cannot grant weapons or a QTE.
 						next=latest();if(next.epoch) {next.stage=phase::release;next.command_time=ps->commandTime;
 								next.allow_movement=next.allow_turn=next.allow_world_use=false;next.suspend_weapons=true;next.hide_body_arms=next.retain_weapon=false;next.arms.mode=scripted_arms::control::authored;
-								next.independent_hands=false;next.hidden_entities.fill(-1);next.instruction.reset();}
+								next.independent_hands=false;next.hidden_entities.fill(-1);}
 					}
 				}
 			}
@@ -245,7 +245,7 @@ namespace vr::gameplay::sequences
 						v.camera.limits.maximum[0],v.camera.limits.maximum[1],v.camera.limits.maximum[2])+
 					std::format("body_arms_profile={} body_entity={} arms_control={} hands={}\n",int(v.arms.profile),v.arms.entity,int(v.arms.mode),v.arms.hands)+
 					std::format("scripted_load_recenters={}\n",load_recenters.load())+
-					camera_reference::status()+prompt_status()+oilrig::angle_status();
+					camera_reference::status()+oilrig::angle_status();
 				console::info("[VR sequence] %s",report.c_str());
 				utils::io::write_file_atomic("minidumps/overlord-sequence.txt",report);
 			});

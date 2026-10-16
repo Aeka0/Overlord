@@ -4,6 +4,10 @@
 namespace game_text::locales
 {
 	inline constexpr catalog japanese=make_catalog({
+		{key::button_menu_recenter,u8"左コントローラーの X"},
+		{key::knuckles_button_menu_recenter,u8"左コントローラーの A"},
+		{key::trainer_objectives,u8"{button} を押してメニューを開く"},
+		{key::trainer_recenter,u8"{button} を長押しして視点をリセット"},
 		{key::weapon_needs_chamber,u8"装填操作が必要"},
 		{key::right_stick_down,u8"右スティックを下へ"},
 		{key::vehicle_duck,u8"{button}倒して身をかがめる"},
@@ -47,8 +51,8 @@ namespace game_text::locales
 		{key::fixed_sniper_controls,u8"<em>左スティック</em>で照準方向を調整。<em>B／Y</em> で狙撃位置から離れる"},
 		{key::heartbeat_fold,u8"空いた手で<em>グリップ</em>を押して<em>センサー外装</em>をつかみ、開いて確認、閉じて収納"},
 		{key::snowmobile_board,u8"<em>スノーモービル</em>が完全に停止したら、近づくと自動で乗車します"},
-		{key::vehicle_drive,u8"<em>スティック</em>で運転。<em>胸元</em>から武器を取り、<em>トリガー</em>で射撃。<em>グリップ</em>を離すと<em>胸元</em>に戻る"},
-		{key::vehicle_reload,u8"<em>銃を持つ手の B／Y</em> でマガジンを外す。反対の手を<em>胸元</em>に伸ばして<em>トリガー</em>で新品を取り、<em>武器</em>に挿入"},
+		{key::snowmobile_drive,u8"<em>コントローラー</em>で運転し、<em>ハンドル</em>を握って方向を微調整"},
+		{key::snowmobile_fire,u8"<em>チェストリグ</em>から武器を取り、<em>武器を持つ手のトリガー</em>を引いて射撃\n<em>マガジン</em>を外し、武器を<em>胸元</em>に留めると自動でリロード"},
 		{key::museum_warning,u8"絶対に{button}を長押ししないこと"},
 		{key::trainer_fire,u8"<em>銃を持つ手のトリガー</em>で射撃"},
 		{key::trainer_hip_fire,u8"<em>銃を持つ手のトリガー</em>で射撃。腰だめ撃ちでは照準器を覗かない"},
@@ -66,11 +70,12 @@ namespace game_text::locales
 		{key::trainer_mantle,u8"<em>障害物</em>に近づき、<em>右スティック</em>を押し込んで乗り越える"},
 		{key::trainer_sprint,u8"<em>左スティックを前</em>に倒して移動し、<em>左スティック</em>を押し込んでダッシュ"},
 		{key::trainer_frag,u8"先にライフルを<em>背中</em>に収納\n<em>胸元</em>からフラグを取り、反対の手で<em>ピン</em>を抜き、<em>グリップ</em>を離して投げる"},
-		{key::trainer_flash,u8"<em>胸元</em>からフラッシュバンを取り、反対の手で<em>ピン</em>を抜き、<em>グリップ</em>を離して投げる"},
+		{key::trainer_flash,u8"<em>チェストリグ</em>からフラッシュバンを取り、反対の手の<em>トリガー</em>を押したまま<em>ピン</em>を抜き、<em>グリップ</em>を離して投げる"},
+		{key::grenade_cook,u8"<em>ピン</em>を抜いた後、<em>手榴弾を持つ手のコントローラーの奥側のフェイスボタン</em>または<em>同じ手のトリガー</em>を押して安全レバーを解除"},
 		{key::trainer_menu,u8"<em>左コントローラーの X</em> でメニューを開き、視点の上下反転を設定"},
 		{key::m203_reload,u8"発射後、<em>グリップ</em>で<em>銃身</em>をつかみ、<em>前に押して</em>薬室を開く\n<em>腰</em>で<em>グリップとトリガー</em>を押して榴弾を取り、<em>トリガー</em>を押したまま<em>薬室</em>に挿入\n再び<em>グリップ</em>で<em>銃身</em>をつかみ、<em>後ろに引いて</em>閉じる"},
 		{key::knuckles_trainer_menu,u8"<em>左コントローラーの A</em> でメニューを開き、視点の上下反転を設定"},
 		{key::knuckles_fixed_sniper_controls,u8"<em>左スティック</em>で照準方向を調整。<em>B</em> で狙撃位置から離れる"},
-		{key::knuckles_vehicle_reload,u8"<em>銃を持つ手の B</em> でマガジンを外す。反対の手を<em>胸元</em>に伸ばして<em>トリガー</em>で新品を取り、<em>武器</em>に挿入"},
+		{key::snowmobile_reverse,u8"<em>スティック</em>を後ろに倒して後退"},
 	});
 }

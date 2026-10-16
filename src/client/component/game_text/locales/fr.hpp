@@ -4,6 +4,10 @@
 namespace game_text::locales
 {
 	inline constexpr catalog french=make_catalog({
+		{key::button_menu_recenter,u8"X du contrôleur gauche"},
+		{key::knuckles_button_menu_recenter,u8"A du contrôleur gauche"},
+		{key::trainer_objectives,u8"Appuyez sur {button} pour ouvrir le menu"},
+		{key::trainer_recenter,u8"Maintenez {button} pour réinitialiser la vue"},
 		{key::weapon_needs_chamber,u8"Armer l’arme"},
 		{key::right_stick_down,u8"Stick droit vers le bas"},
 		{key::vehicle_duck,u8"Poussez le {button} pour vous baisser."},
@@ -47,8 +51,8 @@ namespace game_text::locales
 		{key::fixed_sniper_controls,u8"Visez avec le <em>stick gauche</em> ; appuyez sur <em>B/Y</em> pour quitter le poste"},
 		{key::heartbeat_fold,u8"Avec la main libre, maintenez la <em>prise</em> sur le <em>boîtier du capteur</em> ; ouvrez-le pour consulter, refermez pour ranger"},
 		{key::snowmobile_board,u8"Une fois la <em>motoneige</em> arrêtée, approchez-vous pour monter automatiquement"},
-		{key::vehicle_drive,u8"Pilotez au <em>stick</em> ; prenez l’arme sur la <em>poitrine</em> et tirez à la <em>gâchette</em> ; relâchez la <em>prise</em> pour la remettre sur la <em>poitrine</em>"},
-		{key::vehicle_reload,u8"Appuyez sur <em>B/Y de la main armée</em> pour éjecter le chargeur ; maintenez la <em>gâchette</em> de l’autre main à la <em>poitrine</em> pour en prendre un neuf et l’insérer dans l’<em>arme</em>"},
+		{key::snowmobile_drive,u8"Pilotez avec le <em>contrôleur</em> et tenez le <em>guidon</em> pour affiner la direction"},
+		{key::snowmobile_fire,u8"Prenez l’arme dans le <em>gilet de poitrine</em> et appuyez sur la <em>gâchette de la main armée</em> pour tirer\nRetirez le <em>chargeur</em>, puis maintenez l’arme devant la <em>poitrine</em> pour recharger automatiquement"},
 		{key::museum_warning,u8"Ne maintenez SURTOUT PAS {button}"},
 		{key::trainer_fire,u8"Pressez la <em>gâchette de la main armée</em> pour tirer"},
 		{key::trainer_hip_fire,u8"Tirez avec la <em>gâchette de la main armée</em> ; tirez à la hanche sans regarder dans le viseur"},
@@ -66,11 +70,12 @@ namespace game_text::locales
 		{key::trainer_mantle,u8"Approchez de l’<em>obstacle</em> et cliquez sur le <em>stick droit</em> pour le franchir"},
 		{key::trainer_sprint,u8"Avancez avec le <em>stick gauche</em> et cliquez sur le <em>stick gauche</em> pour sprinter"},
 		{key::trainer_frag,u8"Rangez d’abord le fusil <em>dans le dos</em>\nPrenez une grenade sur la <em>poitrine</em>, retirez la <em>goupille</em> de l’autre main, puis relâchez la <em>prise</em> pour lancer"},
-		{key::trainer_flash,u8"Prenez une grenade flash sur la <em>poitrine</em>, retirez la <em>goupille</em> de l’autre main, puis relâchez la <em>prise</em> pour lancer"},
+		{key::trainer_flash,u8"Prenez une grenade flash dans le <em>gilet de poitrine</em>, maintenez la <em>gâchette</em> de l’autre main pour retirer la <em>goupille</em>, puis relâchez la <em>prise</em> pour lancer"},
+		{key::grenade_cook,u8"Après avoir retiré la <em>goupille</em>, appuyez sur le <em>bouton de façade le plus éloigné du contrôleur tenant la grenade</em> ou sur <em>sa gâchette</em> pour libérer le levier de sécurité"},
 		{key::trainer_menu,u8"Appuyez sur <em>X du contrôleur gauche</em> pour ouvrir le menu et inverser la vue verticale"},
 		{key::m203_reload,u8"Après le tir, saisissez le <em>canon</em> avec la <em>prise</em> et <em>poussez vers l’avant</em> pour ouvrir\nMaintenez <em>prise et gâchette</em> à la <em>taille</em> pour prendre une grenade ; gardez la <em>gâchette</em> enfoncée et insérez-la dans la <em>chambre</em>\nReprenez le <em>canon</em> avec la <em>prise</em> et <em>tirez vers l’arrière</em> pour fermer"},
 		{key::knuckles_trainer_menu,u8"Appuyez sur <em>A du contrôleur gauche</em> pour ouvrir le menu et inverser la vue verticale"},
 		{key::knuckles_fixed_sniper_controls,u8"Visez avec le <em>stick gauche</em> ; appuyez sur <em>B</em> pour quitter le poste"},
-		{key::knuckles_vehicle_reload,u8"Appuyez sur <em>B de la main armée</em> pour éjecter le chargeur ; maintenez la <em>gâchette</em> de l’autre main à la <em>poitrine</em> pour en prendre un neuf et l’insérer dans l’<em>arme</em>"},
+		{key::snowmobile_reverse,u8"Tirez le <em>stick</em> vers l’arrière pour reculer"},
 	});
 }

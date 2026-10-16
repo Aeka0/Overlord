@@ -4,6 +4,10 @@
 namespace game_text::locales
 {
 	inline constexpr catalog traditional_chinese=make_catalog({
+		{key::button_menu_recenter,u8"左手柄 X 鍵"},
+		{key::knuckles_button_menu_recenter,u8"左手柄 A 鍵"},
+		{key::trainer_objectives,u8"按下{button}打開選單"},
+		{key::trainer_recenter,u8"按住{button}重設視角"},
 		{key::ending_knife_pull,u8"用<em>握把</em>握住<em>胸口的刀</em>拉出"},
 		{key::button_trigger,u8"扳機鍵"},
 		{key::button_grip_left,u8"左手握持鍵"},
@@ -47,8 +51,8 @@ namespace game_text::locales
 		{key::fixed_sniper_controls,u8"<em>左搖桿</em>調整瞄準方向；按 <em>B／Y 鍵</em>離開狙擊位"},
 		{key::heartbeat_fold,u8"用空閑手按住<em>握持鍵</em>抓住<em>感應器外殼</em>，掀開查看，合上收起"},
 		{key::snowmobile_board,u8"<em>雪地摩托</em>停穩後，靠近即可自動上車"},
-		{key::vehicle_drive,u8"推動<em>搖桿</em>駕駛；從<em>胸前</em>取出武器，扣動<em>扳機</em>開火；松開<em>握持鍵</em>可將武器放回<em>胸前</em>"},
-		{key::vehicle_reload,u8"按<em>持槍手 B／Y 鍵</em>卸下彈匣；另一只手在<em>胸前</em>按住<em>扳機鍵</em>取出新彈匣，再插入<em>武器</em>"},
+		{key::snowmobile_drive,u8"用<em>手柄</em>駕駛，握住<em>車把</em>微調方向"},
+		{key::snowmobile_fire,u8"從<em>胸掛</em>取出武器，扣動<em>持槍手扳機</em>開火\n卸下<em>彈匣</em>後，將武器停留在<em>胸前</em>自動裝彈"},
 		{key::museum_warning,u8"千萬別按住{button}"},
 		{key::trainer_fire,u8"扣動<em>持槍手的扳機</em>開火"},
 		{key::trainer_hip_fire,u8"扣動<em>持槍手的扳機</em>開火；腰際射擊時，不通過瞄具瞄準"},
@@ -67,10 +71,11 @@ namespace game_text::locales
 		{key::trainer_sprint,u8"前推<em>左搖桿</em>移動，按下<em>左搖桿</em>沖刺"},
 		{key::trainer_frag,u8"先將步槍收納至<em>背后</em>\n從<em>胸前</em>取出破片手雷，用另一只手拔出<em>拉環</em>，再松開<em>握持鍵</em>投出"},
 		{key::trainer_menu,u8"按<em>左手柄 X 鍵</em>打開菜單，設置垂直視角反轉"},
-		{key::trainer_flash,u8"從<em>胸前</em>取出閃光彈，用另一只手拔出<em>拉環</em>，再松開<em>握持鍵</em>投出"},
+		{key::trainer_flash,u8"從<em>胸掛</em>取出閃光彈，用另一隻手按住<em>扳機鍵</em>拔出<em>拉環</em>，再鬆開<em>握持鍵</em>投出"},
+		{key::grenade_cook,u8"拔出<em>拉環</em>後，按下<em>持雷手柄上較遠的按鍵</em>或<em>同手扳機鍵</em>解除保險"},
 		{key::m203_reload,u8"發射后，按住<em>握持鍵</em>抓住<em>槍管</em>，<em>向前推</em>打開膛室\n在<em>腰間</em>按住<em>握持鍵和扳機鍵</em>取出榴彈，保持<em>扳機鍵</em>按住裝入<em>膛室</em>\n再用<em>握持鍵</em>抓住<em>槍管</em>，<em>向后拉</em>關閉膛室"},
 		{key::knuckles_trainer_menu,u8"按<em>左手柄 A 鍵</em>打開菜單，設置垂直視角反轉"},
 		{key::knuckles_fixed_sniper_controls,u8"<em>左搖桿</em>調整瞄準方向；按 <em>B 鍵</em>離開狙擊位"},
-		{key::knuckles_vehicle_reload,u8"按<em>持槍手 B 鍵</em>卸下彈匣；另一只手在<em>胸前</em>按住<em>扳機鍵</em>取出新彈匣，再插入<em>武器</em>"},
+		{key::snowmobile_reverse,u8"向後推動<em>搖桿</em>倒車"},
 	});
 }

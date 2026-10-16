@@ -595,6 +595,8 @@ namespace vr::gameplay::grenades
 			}
 		}
 	}
+	bool available()noexcept
+	{return alive && ready && enabled && enabled->current.enabled;}
 	class component final:public component_interface
 	{
 		void post_unpack()override

@@ -4,6 +4,10 @@
 namespace game_text::locales
 {
 	inline constexpr catalog korean=make_catalog({
+		{key::button_menu_recenter,u8"왼쪽 컨트롤러 X"},
+		{key::knuckles_button_menu_recenter,u8"왼쪽 컨트롤러 A"},
+		{key::trainer_objectives,u8"{button}를 눌러 메뉴 열기"},
+		{key::trainer_recenter,u8"{button}를 길게 눌러 시점 초기화"},
 		{key::weapon_needs_chamber,u8"약실 장전 필요"},
 		{key::right_stick_down,u8"오른쪽 스틱 아래로"},
 		{key::vehicle_duck,u8"{button} 기울여 몸 숙이기"},
@@ -47,8 +51,8 @@ namespace game_text::locales
 		{key::fixed_sniper_controls,u8"<em>왼쪽 스틱</em>으로 조준 방향 조정. <em>B/Y</em>를 눌러 저격 위치에서 나가기"},
 		{key::heartbeat_fold,u8"빈손의 <em>그립</em>으로 <em>감지기 외장</em>을 잡고 펼쳐 확인한 뒤 접어 보관"},
 		{key::snowmobile_board,u8"<em>스노모빌</em>이 멈추면 가까이 다가가 자동으로 탑승하세요"},
-		{key::vehicle_drive,u8"<em>스틱</em>으로 운전. <em>가슴</em>에서 무기를 꺼내 <em>트리거</em>로 사격. <em>그립</em>을 놓으면 <em>가슴</em>에 보관"},
-		{key::vehicle_reload,u8"<em>총을 든 손의 B/Y</em>로 탄창 분리. 다른 손으로 <em>가슴</em>에서 <em>트리거</em>를 눌러 새 탄창을 꺼내 <em>무기</em>에 삽입"},
+		{key::snowmobile_drive,u8"<em>컨트롤러</em>로 운전하고 <em>핸들</em>을 잡아 방향 미세 조정"},
+		{key::snowmobile_fire,u8"<em>체스트 리그</em>에서 무기를 꺼내 <em>총을 든 손의 트리거</em>를 당겨 사격\n<em>탄창</em>을 분리한 뒤 무기를 <em>가슴 앞</em>에 유지하면 자동 재장전"},
 		{key::museum_warning,u8"절대로 {button}을 길게 누르지 마세요"},
 		{key::trainer_fire,u8"<em>총을 든 손의 트리거</em>를 당겨 사격"},
 		{key::trainer_hip_fire,u8"<em>총을 든 손의 트리거</em>로 사격. 지향 사격 시 조준기를 들여다보지 않기"},
@@ -66,11 +70,12 @@ namespace game_text::locales
 		{key::trainer_mantle,u8"<em>장애물</em>에 다가가 <em>오른쪽 스틱</em>을 눌러 넘어가기"},
 		{key::trainer_sprint,u8"<em>왼쪽 스틱을 앞으로</em> 기울여 이동하고 <em>왼쪽 스틱</em>을 눌러 전력 질주"},
 		{key::trainer_frag,u8"먼저 소총을 <em>등 뒤</em>에 보관\n<em>가슴</em>에서 세열 수류탄을 꺼내 다른 손으로 <em>안전핀</em>을 뽑고 <em>그립</em>을 놓아 투척"},
-		{key::trainer_flash,u8"<em>가슴</em>에서 섬광탄을 꺼내 다른 손으로 <em>안전핀</em>을 뽑고 <em>그립</em>을 놓아 투척"},
+		{key::trainer_flash,u8"<em>체스트 리그</em>에서 섬광탄을 꺼내 다른 손의 <em>트리거</em>를 누른 채 <em>안전핀</em>을 뽑고 <em>그립</em>을 놓아 투척"},
+		{key::grenade_cook,u8"<em>안전핀</em>을 뽑은 뒤 <em>수류탄을 든 손의 컨트롤러에서 더 먼 전면 버튼</em> 또는 <em>같은 손의 트리거</em>를 눌러 안전 레버 해제"},
 		{key::trainer_menu,u8"<em>왼쪽 컨트롤러 X</em>를 눌러 메뉴를 열고 수직 시점 반전 설정"},
 		{key::m203_reload,u8"발사 후 <em>그립</em>으로 <em>총열</em>을 잡고 <em>앞으로 밀어</em> 약실 열기\n<em>허리</em>에서 <em>그립과 트리거</em>를 눌러 유탄을 꺼내고 <em>트리거</em>를 누른 채 <em>약실</em>에 삽입\n다시 <em>그립</em>으로 <em>총열</em>을 잡고 <em>뒤로 당겨</em> 약실 닫기"},
 		{key::knuckles_trainer_menu,u8"<em>왼쪽 컨트롤러 A</em>를 눌러 메뉴를 열고 수직 시점 반전 설정"},
 		{key::knuckles_fixed_sniper_controls,u8"<em>왼쪽 스틱</em>으로 조준 방향 조정. <em>B</em>를 눌러 저격 위치에서 나가기"},
-		{key::knuckles_vehicle_reload,u8"<em>총을 든 손의 B</em>로 탄창 분리. 다른 손으로 <em>가슴</em>에서 <em>트리거</em>를 눌러 새 탄창을 꺼내 <em>무기</em>에 삽입"},
+		{key::snowmobile_reverse,u8"<em>스틱</em>을 뒤로 밀어 후진"},
 	});
 }
