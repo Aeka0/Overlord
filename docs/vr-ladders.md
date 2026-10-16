@@ -60,7 +60,8 @@ and ladder-adjacent script blockers remain authoritative.
   extraction uses bounded, incremental LOD0 indexed geometry reads and caches
   actual horizontal edges. It never divides a collision box into synthetic
   rungs. Supported asset families include ladder-named models, the sampled Mack
-  truck family and the sampled submarine bridge candidate. A family match alone
+  truck family, the airport baggage transport truck body and the sampled
+  submarine bridge candidate. A family match alone
   does not authorize a grasp.
 - Ladder-named mesh edges are reduced to the dominant repeated rung plane and
   collapsed into rung centres. Forward ledge rails and separate top/hook models
@@ -72,8 +73,11 @@ and ladder-adjacent script blockers remain authoritative.
   destructible pre/post state and nearby scripted blockers. Object leases change
   when a model or entity identity changes.
 - Static placement rotation and scale are applied to mesh contacts. Script
-  instances use current server origin/angles and unit scale, limited to the
-  witnessed single-root rigid form. Animated/multi-model geometry is rejected.
+  instances use current server origin/angles and unit scale. The sampled
+  multi-bone Mack body admits only rigid triangles owned by `tag_body`; its
+  current server tag transform is composed with the inverse source bind pose.
+  Wheels, glass and weighted triangles do not supply body contacts. Multi-model
+  objects and unverified multi-bone families remain rejected.
 - `ladder_runtime.cpp` is a provider in the existing hand coordinator. It owns
   no separate Grip edge history and cannot steal occupied hands. It uses native
   `playerlinktodelta`/ground-reference operations with an invisible non-solid
@@ -109,7 +113,7 @@ support and is not used to authorize that combination.
 move/fall/exit/block counts, top height, cache state and last reason.
 
 Meshes without usable horizontal indexed edges, the unresolved invisible world
-ladder sample, animated/multi-model assets and unverified script-model scaling do
+ladder sample, unsupported animated/multi-model assets and unverified script-model scaling do
 not receive invented anchors. The native option remains available for those
 cases. Some visible top rail/ledge geometry still needs in-game assessment; mesh
 edge contacts are not a substitute for checking wrist/finger fit in the headset.
@@ -120,3 +124,16 @@ blocked/invalid exit paths, hand ownership, launcher defaults and option
 persistence, captured trainer rail exclusion, bar contact placement and render
 translation continuity. Both native-mode switching and physical entry/top-out/bottom release
 still require gameplay acceptance on the captured representative ladders.
+
+## Airport capture coverage
+
+The 2026-10-16 read-only `airport` capture identified twelve ladder-flag brushes:
+one safety ladder, seven baggage transport steps, two static Mack rear ladders,
+and two destructible Mack candidates. The latter use a 26-bone model with the
+rear step geometry rigidly owned by `tag_body`. The existing native ladder-face
+and visibility queries still decide admission and refresh; model proximity alone
+is not proof that a ladder is currently enabled.
+
+Mesh edge limits count unique indexed edges during extraction. The captured
+static Mack has 10,244 horizontal triangle-edge occurrences but only 5,347 unique
+edges; it must not fail the 8,192-edge limit before deduplication.

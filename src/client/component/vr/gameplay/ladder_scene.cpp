@@ -1,7 +1,9 @@
 #include <std_include.hpp>
 #include "ladder_scene.hpp"
 #include "native_carry.hpp"
+#include "hands/pose_math.hpp"
 #include "game/game.hpp"
+#include "game/scripting/execution.hpp"
 #include <utils/native_memory.hpp>
 #include <unordered_map>
 
@@ -17,6 +19,8 @@ namespace vr::gameplay::ladders::scene
         {
             std::string name;std::vector<rung> edges;unsigned surface{},triangle{};
             std::vector<std::array<float,8>> vertices;std::vector<unsigned short> indices;
+            std::vector<rigid_part> rigid;edge_keys seen;
+            int bone{-1};anchor bind{};
             bool done{},failed{};
         };
         struct instance
@@ -38,14 +42,31 @@ namespace vr::gameplay::ladders::scene
             const std::string_view key(text.data());
             // Asset families, not map names or captured entity numbers. Native
             // surface admission below rejects decorative/disabled instances.
-            const bool trim=key.find("ladder_hooks")!=key.npos || key.ends_with("ladder_top");
-            const bool supported=!trim && (key.find("ladder")!=key.npos || key.find("vehicle_mack_truck_short")!=key.npos || key=="h2_con_submarine_bridge_01");
-            assets.emplace(model,mesh{supported?std::string(key):std::string{}});return supported;
+            mesh value;game::XModel header{};
+            if(supported_model(key) && read(model,header) && header.numBones && header.numRootBones==1)
+            {
+                if(header.numBones==1)value.name=key;
+                else if(key.find("vehicle_mack_truck_short")!=key.npos)
+                    for(unsigned b=1;b<header.numBones;++b)
+                    {
+                        game::scr_string_t id{};std::array<char,32> tag{};game::DObjAnimMat bind{};
+                        if(!header.boneNames || !read(header.boneNames+b,id))break;
+                        const auto* name=game::SL_ConvertToString(id);
+                        if(!name || !utils::native_memory::read_bytes(tag.data(),name,tag.size()-1) || std::string_view(tag.data())!="tag_body")continue;
+                        if(!header.baseMat || !read(header.baseMat+b,bind))break;
+                        value.bind={{bind.trans[0],bind.trans[1],bind.trans[2]},{bind.quat[0],bind.quat[1],bind.quat[2],bind.quat[3]}};
+                        if(free_climb::finite(value.bind.position) && free_climb::rotation_valid(value.bind.rotation))
+                        {value.name=key;value.bone=int(b);}
+                        break;
+                    }
+            }
+            const bool supported=!value.name.empty();assets.emplace(model,std::move(value));return supported;
         }
         void extract(game::XModel* model,mesh& cache,unsigned& budget)
         {
             game::XModel header{};
-            if(!read(model,header) || header.numBones!=1 || header.numRootBones!=1 || header.lodInfo[0].numsurfs>128)
+            if(!read(model,header) || !header.numBones || header.numRootBones!=1 ||
+                (header.numBones!=1 && (cache.bone<0 || cache.bone>=header.numBones)) || header.lodInfo[0].numsurfs>128)
             {cache.failed=true;return;}
             while(budget && !cache.done && !cache.failed)
             {
@@ -53,15 +74,26 @@ namespace vr::gameplay::ladders::scene
                 {
                     auto key=[](const rung& e){return std::array{e.a[0],e.a[1],e.a[2],e.b[0],e.b[1],e.b[2]};};
                     std::sort(cache.edges.begin(),cache.edges.end(),[&](const auto& a,const auto& b){return key(a)<key(b);});
-                    cache.edges.erase(std::unique(cache.edges.begin(),cache.edges.end(),[&](const auto& a,const auto& b){return key(a)==key(b);}),cache.edges.end());
                     if(cache.name.find("ladder")!=cache.name.npos)cache.edges=repeated_rungs(cache.edges);
-                    cache.done=true;break;
+                    cache.seen.clear();cache.done=true;break;
                 }
                 game::XSurface s{};
-                if(!read(header.lodInfo[0].surfs+cache.surface,s) || (s.flags&4) || !s.vertCount || !s.triCount)
+                if(!read(header.lodInfo[0].surfs+cache.surface,s) || !s.vertCount || !s.triCount)
                 {cache.failed=true;break;}
+                // Weighted skinning is not a rigid body contact. Other parts
+                // may be skinned; they do not invalidate the admitted body.
+                if(s.flags&4){--budget;++cache.surface;cache.triangle=0;continue;}
                 if(cache.vertices.empty())
                 {
+                    cache.rigid.clear();
+                    for(unsigned i=0;i<s.rigidVertListCount;++i)
+                    {
+                        game::XRigidVertList part{};
+                        if(!s.rigidVertLists || !read(s.rigidVertLists+i,part)){cache.failed=true;break;}
+                        cache.rigid.push_back({part.boneOffset,part.vertCount,part.triOffset,part.triCount});
+                    }
+                    if(cache.failed || !valid_rigid_parts(cache.rigid,header.numBones,s.vertCount,s.triCount))
+                    {cache.failed=true;break;}
                     const void* vp{};const void* ip{};
                     std::memcpy(&vp,reinterpret_cast<const std::byte*>(&s)+24,8);
                     std::memcpy(&ip,reinterpret_cast<const std::byte*>(&s)+32,8);
@@ -72,6 +104,7 @@ namespace vr::gameplay::ladders::scene
                 }
                 for(;budget && cache.triangle<s.triCount;++cache.triangle,--budget)
                 {
+                    if(cache.bone>=0 && !triangle_on_bone(cache.rigid,cache.triangle,unsigned(cache.bone)))continue;
                     const auto* face=cache.indices.data()+cache.triangle*3;
                     for(unsigned side=0;side<3;++side)
                     {
@@ -79,20 +112,19 @@ namespace vr::gameplay::ladders::scene
                         const auto& av=cache.vertices[face[side]];const auto& bv=cache.vertices[face[(side+1)%3]];
                         vec a{av[0],av[1],av[2]},b{bv[0],bv[1],bv[2]};
                         if(!horizontal_edge(a,b))continue;
-                        if(b<a)std::swap(a,b);
-                        if(cache.edges.size()==max_edges){cache.failed=true;break;}
-                        cache.edges.push_back({a,b});
+                        if(!append_edge(cache.edges,cache.seen,a,b,max_edges)){cache.failed=true;break;}
                     }
                     if(cache.failed)break;
                 }
                 if(cache.triangle==s.triCount){++cache.surface;cache.triangle=0;cache.vertices.clear();cache.indices.clear();}
             }
-            if(cache.failed){cache.edges.clear();cache.vertices.clear();cache.indices.clear();++rejected;}
+            if(cache.failed){cache.edges.clear();cache.seen.clear();cache.rigid.clear();cache.vertices.clear();cache.indices.clear();++rejected;}
         }
         bool refresh_instance(instance& item)
         {
             if(item.entity<0)
             {
+                if(assets.at(item.model).bone>=0)return false;
                 game::GfxStaticModelDrawInst value{};
                 if(!world || item.static_index>=world->dpvs.smodelCount || !read(world->dpvs.smodelDrawInsts+item.static_index,value) || value.model!=item.model)return false;
                 std::memcpy(item.transform.origin.data(),value.placement.origin,12);std::memcpy(item.transform.axis.data(),value.placement.axis,36);item.transform.size=value.placement.scale;
@@ -110,6 +142,22 @@ namespace vr::gameplay::ladders::scene
                 const float sp=std::sin(p),cp=std::cos(p),sy=std::sin(y),cy=std::cos(y),sr=std::sin(r),cr=std::cos(r);
                 item.transform.axis={vec{cp*cy,cp*sy,-sp},vec{sr*sp*cy-cr*sy,sr*sp*sy+cr*cy,sr*cp},vec{cr*sp*cy+sr*sy,cr*sp*sy-sr*cy,cr*cp}};
                 item.transform.size=1;
+                const auto& mesh=assets.at(item.model);
+                if(mesh.bone>=0)
+                {
+                    // The sampled Mack rear ladder is rigid to tag_body. The
+                    // same current-tag * inverse-bind composition is used by
+                    // scripted-use geometry; never freeze a rendered bone pose.
+                    const scripting::entity actor{game::scr_entref_t{static_cast<unsigned short>(item.entity),0}};
+                    const auto p=actor.call("gettagorigin",{"tag_body"}).as<scripting::vector>();
+                    const auto a=actor.call("gettagangles",{"tag_body"}).as<scripting::vector>();
+                    if(!free_climb::finite({p[0],p[1],p[2]}) || !free_climb::finite({a[0],a[1],a[2]}))return false;
+                    const float euler[]{a[0],a[1],a[2]};float axis[3][3]{};game::AnglesToAxis(euler,axis);
+                    std::array<vec,3> rotation;std::memcpy(rotation.data(),axis,sizeof(axis));
+                    const auto pose=pose_math::rigid_delta(anchor{{p[0],p[1],p[2]},from_axis(rotation)},mesh.bind);
+                    item.transform.origin=pose.position;
+                    item.transform.axis={rotate(pose.rotation,{1,0,0}),rotate(pose.rotation,{0,1,0}),rotate(pose.rotation,{0,0,1})};
+                }
             }
             return free_climb::finite(item.transform.origin) && std::isfinite(item.transform.size) && item.transform.size>.01f && item.transform.size<100;
         }

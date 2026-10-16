@@ -1,5 +1,6 @@
 #pragma once
 #include "free_climb.hpp"
+#include "rigid_part_visibility.hpp"
 #include <vector>
 #include <utility>
 #include <map>
@@ -9,6 +10,33 @@ namespace vr::gameplay::ladders
 {
     using namespace hands;
     struct rung {vec a{},b{};float radius{.75f};};
+    inline bool supported_model(std::string_view name)noexcept
+    {
+        return name.find("ladder_hooks")==name.npos && !name.ends_with("ladder_top") &&
+            (name.find("ladder")!=name.npos || name.find("vehicle_mack_truck_short")!=name.npos ||
+             name=="h2_con_submarine_bridge_01" || name=="h2_airport_tarmac_bag_transport_truck");
+    }
+    using rigid_part=weapons::rigid_group_range;
+    inline bool valid_rigid_parts(std::span<const rigid_part> parts,unsigned bones,unsigned vertices,unsigned triangles)noexcept
+    {
+        return weapons::plan_rigid_visibility(parts,0,vertices,triangles,{}).valid &&
+            std::all_of(parts.begin(),parts.end(),[bones](const auto& p){return p.bone_offset/64u<bones;});
+    }
+    inline bool triangle_on_bone(std::span<const rigid_part> parts,unsigned triangle,unsigned bone)noexcept
+    {
+        for(const auto& p:parts)if(triangle>=p.first_triangle && triangle-p.first_triangle<p.triangles)
+            return p.bone_offset/64u==bone;
+        return false;
+    }
+    using edge_keys=std::set<std::array<float,6>>;
+    inline bool append_edge(std::vector<rung>& edges,edge_keys& seen,vec a,vec b,size_t limit)
+    {
+        if(b<a)std::swap(a,b);
+        const std::array key{a[0],a[1],a[2],b[0],b[1],b[2]};
+        if(seen.contains(key))return true;
+        if(edges.size()>=limit)return false;
+        seen.insert(key);edges.push_back({a,b});return true;
+    }
     struct placement
     {
         vec origin{};std::array<vec,3> axis{{{1,0,0},{0,1,0},{0,0,1}}};float size{1};

@@ -11,6 +11,23 @@ namespace ladder_tests
     {
         using namespace vr::gameplay::ladders;
         const auto near=[](vec a,vec b){return length(sub(a,b))<.001f;};
+        check(supported_model("h2_airport_tarmac_bag_transport_truck") &&
+            supported_model("vehicle_mack_truck_short_white_destructible") &&
+            !supported_model("h2_airport_tarmac_bag_transport_truck_tug") && !supported_model("safety_ladder_top"),
+            "airport profiles admit captured step bodies without unrelated tugs or top rails");
+        // Airport destructible Mack surface 1: two wheel groups followed by body.
+        const std::array<rigid_part,3> parts{{{704,1716,0,2044},{384,2039,2044,2481},{64,736,4525,833}}};
+        check(valid_rigid_parts(parts,26,4491,5358) && triangle_on_bone(parts,4525,1) &&
+            triangle_on_bone(parts,5357,1) && !triangle_on_bone(parts,4524,1),
+            "captured mixed rigid surface selects body triangles and excludes the moving wheels");
+        auto malformed=parts;malformed[2].first_triangle=4524;
+        check(!valid_rigid_parts(malformed,26,4491,5358) && !valid_rigid_parts(parts,1,4491,5358),
+            "overlapping groups and out-of-model bone offsets cannot authorize rung geometry");
+        std::vector<rung> unique;edge_keys keys;
+        check(append_edge(unique,keys,{0,0,0},{0,12,0},1) &&
+            append_edge(unique,keys,{0,12,0},{0,0,0},1) && unique.size()==1 &&
+            !append_edge(unique,keys,{0,0,8},{0,12,8},1),
+            "duplicate triangle edges do not exhaust the rung budget and distinct overflow stays bounded");
         placement transformed{{10,20,30},{{{0,1,0},{-1,0,0},{0,0,1}}},.7f};
         check(near(transformed.local(transformed.world({2,4,6})),{2,4,6}),"scaled rotated oilrig rung round-trip uses model coordinates");
         check(horizontal_edge({0,-12,0},{0,12,0}) && !horizontal_edge({0,0,0},{0,0,24}),"visual horizontal rungs admitted, vertical rails excluded");
