@@ -1644,100 +1644,127 @@
       "text": {
         "zh-CN": {
           "title": "手雷、闪光弹与烟雾弹",
-          "intro": "胸前中央是战术装备，右侧是致命装备。用 Grip 拿取，用另一只手 Trigger 拉保险。",
+          "intro": "胸前中央是战术装备，右侧是致命装备。用 Grip 拿取，用另一只手或牙齿拔环。",
           "steps": [
             "空闲手靠近胸前对应物品，按住 Grip 取出。未拉保险前松开 Grip 会安全放回，不消耗弹药。",
             "另一只手靠近拉环，按住 Trigger 并沿保险销方向拉出约 8 厘米。拉到位才完成拔销；提前松开会取消。",
+            "将拉环送到嘴边，按住持雷手 Trigger 尝试咬住；成功时立即震动。每次按下只判定一次，失败需松开再按。",
+            "咬住后保持 Trigger，向前、两侧、上方或下方移动手雷约 8 厘米拔环。方向以头部为准；松开 Trigger 或向后超过约 2 厘米会取消。",
             "拔销后挥手并松开持有手 Grip 投掷。已经拔销的手雷不能放回，也不能退还弹药。",
-            "破片手雷拔销后，重新按持有手 B/Y 可开始捏雷计时。再次按不会重置引信；一直拿着会在手边爆炸。闪光弹和烟雾弹不支持捏雷计时。",
+            "破片手雷拔销后，重新按持雷手 Trigger 或 B/Y 可开始预煮。嘴拔使用的 Trigger 必须先松开再按，持续按住不会自动预煮。",
+            "预煮开始后，再次按键不会重置引信；一直拿着会在手边爆炸。闪光弹和烟雾弹不支持预煮。",
             "另一只空闲手用 Grip 接触弹体可换手。正在拉保险时不能换手。"
           ]
         },
         "en": {
           "title": "Grenades, flashbangs and smoke",
-          "intro": "Tactical equipment sits at the chest centre and lethal equipment on the right. Grip holds it; the other hand’s Trigger pulls the pin.",
+          "intro": "Tactical equipment sits at the chest centre and lethal equipment on the right. Use Grip to hold it, then pull the pin with the other hand or your teeth.",
           "steps": [
             "Approach the chest item with a free hand and hold Grip to take it. Releasing Grip before pin removal safely returns it without spending ammunition.",
             "Bring the other hand to the ring, hold Trigger and pull about 8 cm along the pin. Finish the pull to remove it; releasing early cancels.",
+            "Bring the ring to your mouth and press and hold the holding hand’s Trigger to try biting it. Success gives immediate haptic feedback. Each press checks once; release and press again after a miss.",
+            "Keep Trigger held and move the grenade about 8 cm forward, sideways, up or down to pull the pin. Directions follow your head. Releasing Trigger or moving more than about 2 cm backward cancels the bite.",
             "After pin removal, swing and release the holding Grip to throw. An armed grenade cannot be stowed or refunded.",
-            "A fresh B/Y press in the holding hand cooks a pinned-out frag. Further presses do not reset the fuse; holding too long explodes it beside your hand. Flash and smoke cannot be cooked.",
+            "After removing a frag’s pin, a fresh Trigger or B/Y press in the holding hand starts cooking. Release the Trigger used for biting before pressing again; keeping it held cannot start cooking automatically.",
+            "Further presses do not reset a cooking fuse. Holding too long makes it explode beside your hand. Flash and smoke cannot be cooked.",
             "Touch the body with the other free hand and press Grip to transfer it. Handoffs are blocked during an unfinished pin pull."
           ]
         },
         "zh-TW": {
           "title": "手雷、閃光彈與煙霧彈",
-          "intro": "胸前中央是戰術裝備，右側是致命裝備。用 Grip 拿取，用另一只手 Trigger 拉保險。",
+          "intro": "胸前中央是戰術裝備，右側是致命裝備。用 Grip 拿取，用另一隻手或牙齒拔環。",
           "steps": [
             "空閑手靠近胸前對應物品，按住 Grip 取出。未拉保險前松開 Grip 會安全放回，不消耗彈藥。",
             "另一只手靠近拉環，按住 Trigger 并沿保險銷方向拉出約 8 厘米。拉到位才完成拔銷；提前松開會取消。",
+            "將拉環送到嘴邊，按住持雷手 Trigger 嘗試咬住；成功時立即震動。每次按下只判定一次，失敗需放開再按。",
+            "咬住後保持 Trigger，向前、兩側、上方或下方移動手雷約 8 公分拔環。方向以頭部為準；放開 Trigger 或向後超過約 2 公分會取消。",
             "拔銷后揮手并松開持有手 Grip 投擲。已經拔銷的手雷不能放回，也不能退還彈藥。",
-            "破片手雷拔銷后，重新按持有手 B/Y 可開始捏雷計時。再次按不會重置引信；一直拿著會在手邊爆炸。閃光彈和煙霧彈不支持捏雷計時。",
+            "破片手雷拔銷後，重新按持雷手 Trigger 或 B/Y 可開始預煮。嘴拔使用的 Trigger 必須先放開再按，持續按住不會自動預煮。",
+            "預煮開始後，再次按鍵不會重設引信；一直拿著會在手邊爆炸。閃光彈和煙霧彈不支援預煮。",
             "另一只空閑手用 Grip 接觸彈體可換手。正在拉保險時不能換手。"
           ]
         },
         "fr": {
           "title": "Grenades, flash et fumigènes",
-          "intro": "L’équipement tactique est au centre de la poitrine, le létal à droite. Grip le tient ; Trigger de l’autre main retire la goupille.",
+          "intro": "L’équipement tactique est au centre de la poitrine, le létal à droite. Grip le tient ; retirez la goupille avec l’autre main ou les dents.",
           "steps": [
             "Approchez la main libre et maintenez Grip pour prendre l’objet. Relâcher avant de retirer la goupille le range sans dépenser de munition.",
             "Placez l’autre main sur l’anneau, maintenez Trigger et tirez environ 8 cm dans l’axe. Allez au bout ; relâcher tôt annule.",
+            "Approchez l’anneau de la bouche et maintenez Trigger de la main tenant la grenade pour tenter de le mordre. Une vibration confirme immédiatement la réussite. Chaque pression ne vérifie qu’une fois ; après un échec, relâchez puis réessayez.",
+            "Gardez Trigger enfoncé et déplacez la grenade d’environ 8 cm vers l’avant, sur le côté, vers le haut ou le bas. Les directions suivent la tête. Relâcher Trigger ou reculer de plus de 2 cm environ annule la prise.",
             "Goupille retirée, balancez et relâchez Grip pour lancer. Une grenade armée ne peut plus être rangée ni remboursée.",
-            "Une nouvelle pression de B/Y dans la main tenant une grenade à fragmentation dégoupillée lance la mèche. Réappuyer ne la réinitialise pas ; trop attendre la fait exploser près de la main. Pas de cuisson pour flash et fumigènes.",
+            "Après avoir dégoupillé une grenade à fragmentation, une nouvelle pression de Trigger ou B/Y de la main qui la tient lance la mèche. Relâchez d’abord le Trigger utilisé pour mordre ; le maintenir ne lance pas automatiquement la mèche.",
+            "Réappuyer ne réinitialise pas la mèche. Trop attendre fait exploser la grenade près de la main. Cette préparation est impossible avec les flashs et fumigènes.",
             "Touchez le corps avec l’autre main libre et pressez Grip pour transférer. Le transfert est bloqué pendant un retrait de goupille inachevé."
           ]
         },
         "de": {
           "title": "Granaten, Blend- und Rauchgranaten",
-          "intro": "Taktische Ausrüstung liegt mittig an der Brust, tödliche rechts. Grip hält sie; Trigger der anderen Hand zieht den Stift.",
+          "intro": "Taktische Ausrüstung liegt mittig an der Brust, tödliche rechts. Mit Grip halten und den Stift mit der anderen Hand oder den Zähnen ziehen.",
           "steps": [
             "Mit freier Hand annähern und Grip halten. Vor dem Stiftziehen loslassen verstaut ohne Munitionsverbrauch.",
             "Andere Hand an den Ring führen, Trigger halten und etwa 8 cm entlang des Stifts ziehen. Ganz herausziehen; frühes Loslassen bricht ab.",
+            "Den Ring an den Mund führen und Trigger der Haltehand gedrückt halten, um ihn zu beißen. Erfolg wird sofort durch Vibration bestätigt. Pro Druck gibt es einen Versuch; bei Fehlschlag loslassen und erneut drücken.",
+            "Trigger halten und die Granate etwa 8 cm nach vorn, zur Seite, nach oben oder unten bewegen. Die Richtungen beziehen sich auf den Kopf. Trigger loslassen oder mehr als etwa 2 cm nach hinten bewegen bricht den Biss ab.",
             "Nach dem Stiftziehen schwingen und Grip zum Werfen lösen. Scharfe Granaten können nicht verstaut oder zurückerstattet werden.",
-            "Neues B/Y an der Haltehand startet bei entsicherter Splittergranate den Zünder. Erneutes Drücken setzt ihn nicht zurück; zu langes Halten explodiert an der Hand. Blend- und Rauchgranaten lassen sich nicht vorkochen.",
+            "Nach dem Entsichern einer Splittergranate startet ein neuer Druck auf Trigger oder B/Y der Haltehand den Zünder. Den zum Beißen benutzten Trigger zuerst loslassen und erneut drücken; bloßes Gedrückthalten startet den Zünder nicht.",
+            "Erneutes Drücken setzt den laufenden Zünder nicht zurück. Zu langes Halten lässt die Granate an der Hand explodieren. Blend- und Rauchgranaten lassen sich nicht vorkochen.",
             "Mit anderer freier Hand den Körper berühren und Grip zur Übergabe drücken. Während eines unvollständigen Stiftzugs ist die Übergabe gesperrt."
           ]
         },
         "es": {
           "title": "Granadas, cegadoras y humo",
-          "intro": "El equipo táctico va al centro del pecho y el letal a la derecha. Grip sujeta; Trigger de la otra mano saca la anilla.",
+          "intro": "El equipo táctico va al centro del pecho y el letal a la derecha. Sujeta con Grip y extrae la anilla con la otra mano o los dientes.",
           "steps": [
             "Acerca una mano libre y mantén Grip para tomarlo. Soltar antes de sacar la anilla lo guarda sin consumir munición.",
             "Lleva la otra mano a la anilla, mantén Trigger y tira unos 8 cm en su eje. Completa el recorrido; soltar antes cancela.",
+            "Acerca la anilla a la boca y mantén Trigger de la mano que sostiene la granada para intentar morderla. Una vibración confirma el éxito al instante. Cada pulsación comprueba una vez; si falla, suelta y vuelve a pulsar.",
+            "Mantén Trigger y mueve la granada unos 8 cm hacia delante, a los lados, arriba o abajo. Las direcciones siguen la cabeza. Soltar Trigger o moverla más de unos 2 cm hacia atrás cancela el agarre.",
             "Con la anilla fuera, mueve el brazo y suelta Grip para lanzar. Una granada armada no se guarda ni devuelve.",
-            "Una nueva pulsación B/Y en la mano que sostiene una fragmentaria sin anilla inicia la mecha. No se reinicia al pulsar otra vez; esperar demasiado la hace explotar junto a la mano. No funciona con flash ni humo.",
+            "Tras sacar la anilla de una fragmentaria, una nueva pulsación de Trigger o B/Y en la mano que la sostiene inicia la mecha. Suelta primero el Trigger usado para morder y vuelve a pulsarlo; mantenerlo no inicia la mecha automáticamente.",
+            "Volver a pulsar no reinicia la mecha. Esperar demasiado hace que explote junto a la mano. Las cegadoras y las de humo no admiten esta preparación.",
             "Toca el cuerpo con la otra mano libre y pulsa Grip para transferir. No se puede durante una extracción de anilla incompleta."
           ]
         },
         "ru": {
           "title": "Гранаты, светошумовые и дымовые",
-          "intro": "Тактическое снаряжение в центре груди, летальное справа. Grip удерживает, Trigger другой руки вытягивает чеку.",
+          "intro": "Тактическое снаряжение в центре груди, летальное справа. Grip удерживает предмет; чеку можно вытянуть другой рукой или зубами.",
           "steps": [
             "Свободной рукой зажмите Grip у предмета. Отпускание до извлечения чеки безопасно возвращает его без расхода.",
             "Поднесите другую руку к кольцу, удерживайте Trigger и вытяните примерно на 8 см вдоль чеки. Раннее отпускание отменяет.",
+            "Поднесите кольцо ко рту и зажмите Trigger держащей руки, чтобы попробовать закусить его. Успех сразу подтверждается вибрацией. Каждое нажатие даёт одну попытку; при неудаче отпустите и нажмите снова.",
+            "Удерживая Trigger, переместите гранату примерно на 8 см вперёд, вбок, вверх или вниз относительно головы. Отпускание Trigger или движение назад более чем примерно на 2 см отменяет захват.",
             "После извлечения чеки размахнитесь и отпустите Grip. Взведённую гранату нельзя убрать или вернуть в запас.",
-            "Новое B/Y держащей руки запускает запал осколочной гранаты без чеки. Повтор не сбрасывает время; передержка взрывает у руки. Светошумовые и дымовые так не готовятся.",
+            "После извлечения чеки осколочной гранаты новое нажатие Trigger или B/Y держащей руки запускает запал. Сначала отпустите Trigger, которым закусили кольцо, и нажмите снова: удержание не запускает запал автоматически.",
+            "Повторные нажатия не сбрасывают запал. Если передержать гранату, она взорвётся у руки. Светошумовые и дымовые гранаты так не готовятся.",
             "Коснитесь корпуса другой свободной рукой и нажмите Grip для передачи. При незавершённом вытягивании чеки передача заблокирована."
           ]
         },
         "ja": {
           "title": "手榴弾・フラッシュ・スモーク",
-          "intro": "戦術装備は胸の中央、致死装備は右側です。Grip で持ち、反対の手の Trigger でピンを抜きます。",
+          "intro": "戦術装備は胸の中央、致死装備は右側です。Grip で持ち、反対の手または歯でピンを抜きます。",
           "steps": [
             "空いた手で近づき Grip を押して取ります。ピンを抜く前に離すと弾薬を使わず安全に戻せます。",
             "反対の手をリングへ伸ばし、Trigger を保持してピンの方向へ約 8 cm 引きます。最後まで抜き、途中で離すと中止します。",
+            "リングを口元に近づけ、持っている手の Trigger を押し続けると噛む判定を一度行います。成功するとすぐに振動します。失敗したら一度離して押し直してください。",
+            "噛んだら Trigger を保持し、頭を基準に前・左右・上下へ手榴弾を約 8 cm 動かしてピンを抜きます。Trigger を離すか、後ろへ約 2 cm を超えて動かすと中止します。",
             "ピンを抜いたら腕を振って Grip を離し、投げます。作動状態の手榴弾は収納や返却ができません。",
-            "ピンを抜いたフラグを持つ手で B／Y を新たに押すと信管が進みます。押し直してもリセットされず、待ちすぎると手元で爆発します。フラッシュとスモークはこの操作に非対応です。",
+            "フラグのピンを抜いた後、持っている手の Trigger または B／Y を新たに押すと信管が進みます。口で抜くときに使った Trigger は一度離して押し直してください。押し続けるだけでは信管は始まりません。",
+            "押し直しても作動中の信管はリセットされず、待ちすぎると手元で爆発します。フラッシュとスモークはこの操作に非対応です。",
             "空いた反対の手で本体に触れ Grip を押すと持ち替えます。ピンを抜く途中は持ち替えできません。"
           ]
         },
         "ko": {
           "title": "수류탄, 섬광탄 및 연막탄",
-          "intro": "전술 장비는 가슴 중앙, 살상 장비는 오른쪽입니다. Grip으로 들고 다른 손의 Trigger로 안전핀을 뽑습니다.",
+          "intro": "전술 장비는 가슴 중앙, 살상 장비는 오른쪽입니다. Grip으로 들고 다른 손이나 이로 안전핀을 뽑습니다.",
           "steps": [
             "빈손을 가까이 대고 Grip을 길게 눌러 꺼냅니다. 핀을 뽑기 전에 놓으면 탄약 소모 없이 안전하게 보관됩니다.",
             "다른 손을 고리에 대고 Trigger를 누른 채 핀 방향으로 약 8cm 당깁니다. 끝까지 뽑아야 하며 일찍 놓으면 취소됩니다.",
+            "고리를 입가로 가져가고 수류탄을 든 손의 Trigger를 길게 눌러 물기를 시도합니다. 성공하면 즉시 진동합니다. 누를 때마다 한 번만 판정하므로 실패하면 놓았다가 다시 누르세요.",
+            "고리를 문 뒤 Trigger를 유지하며 머리 기준 앞, 양옆, 위 또는 아래로 수류탄을 약 8cm 움직여 핀을 뽑습니다. Trigger를 놓거나 뒤로 약 2cm 넘게 움직이면 취소됩니다.",
             "핀을 뽑은 뒤 팔을 휘두르며 Grip을 놓아 던집니다. 활성화된 수류탄은 보관하거나 되돌릴 수 없습니다.",
-            "핀이 빠진 세열 수류탄을 든 손에서 B/Y를 새로 누르면 지연 신관이 시작됩니다. 다시 눌러도 초기화되지 않으며 오래 들면 손 옆에서 폭발합니다. 섬광탄과 연막탄에는 적용되지 않습니다.",
+            "세열 수류탄의 핀을 뽑은 뒤 든 손의 Trigger 또는 B/Y를 새로 누르면 지연 신관이 시작됩니다. 입으로 뽑을 때 쓴 Trigger는 놓았다가 다시 눌러야 하며 계속 누르고 있어도 자동으로 시작되지 않습니다.",
+            "다시 눌러도 작동 중인 신관은 초기화되지 않습니다. 너무 오래 들고 있으면 손 옆에서 폭발합니다. 섬광탄과 연막탄에는 적용되지 않습니다.",
             "다른 빈손으로 본체를 만지고 Grip을 누르면 옮겨 잡습니다. 핀을 뽑는 도중에는 손 바꾸기가 차단됩니다."
           ]
         }
@@ -2043,7 +2070,7 @@
           "title": "特殊投掷物",
           "intro": "任务或已启用的特殊模式提供石榴手雷、足球时，沿用胸前装备位。",
           "steps": [
-            "石榴手雷沿用破片手雷的双手拉保险和 B/Y 捏雷操作；接触点在果实顶部附近，不会显示额外的拉环模型。",
+            "石榴手雷沿用破片手雷的双手或嘴拔操作，拔销后用 Trigger 或 B/Y 预煮；接触点在果实顶部附近，不会显示额外的拉环模型。",
             "足球没有保险或引信。用 Grip 取出，挥动后松开 Grip 即可投出。",
             "未投出的足球可把持有手移回它原来的胸前位置，再松开 Grip 放回。"
           ]
@@ -2052,7 +2079,7 @@
           "title": "Special throwables",
           "intro": "When supplied by the mission or an enabled special mode, the pomegranate and football use the chest slots.",
           "steps": [
-            "The pomegranate uses frag-style two-hand pin gestures and B/Y cooking. Its interaction point is near the crown; there is no added ring model.",
+            "The pomegranate uses frag-style two-hand or mouth pin removal, followed by Trigger or B/Y cooking. Its interaction point is near the crown; there is no added ring model.",
             "The football has no pin or fuse. Take it with Grip, swing and release Grip to throw.",
             "To stow an unthrown ball, return the holding hand to its original chest slot before releasing Grip."
           ]
@@ -2061,7 +2088,7 @@
           "title": "特殊投擲物",
           "intro": "任務或已啟用的特殊模式提供石榴手雷、足球時，沿用胸前裝備位。",
           "steps": [
-            "石榴手雷沿用破片手雷的雙手拉保險和 B/Y 捏雷操作；接觸點在果實頂部附近，不會顯示額外的拉環模型。",
+            "石榴手雷沿用破片手雷的雙手或嘴拔操作，拔銷後用 Trigger 或 B/Y 預煮；接觸點在果實頂部附近，不會顯示額外的拉環模型。",
             "足球沒有保險或引信。用 Grip 取出，揮動后松開 Grip 即可投出。",
             "未投出的足球可把持有手移回它原來的胸前位置，再松開 Grip 放回。"
           ]
@@ -2070,7 +2097,7 @@
           "title": "Projectiles spéciaux",
           "intro": "La grenade-fruit et le ballon occupent les emplacements de poitrine lorsqu’une mission ou un mode spécial activé les fournit.",
           "steps": [
-            "La grenade-fruit utilise les gestes à deux mains et B/Y de la grenade normale. Le point d’action est près de la couronne ; aucun anneau n’est ajouté.",
+            "La grenade-fruit reprend le dégoupillage à deux mains ou avec les dents, puis l’amorçage par Trigger ou B/Y de la grenade à fragmentation. Le point d’action est près de la couronne ; aucun anneau n’est ajouté.",
             "Le ballon n’a ni goupille ni mèche. Prenez-le avec Grip, balancez et relâchez pour lancer.",
             "Pour ranger un ballon non lancé, ramenez la main à son emplacement de poitrine d’origine puis relâchez Grip."
           ]
@@ -2079,7 +2106,7 @@
           "title": "Besondere Wurfobjekte",
           "intro": "Granatapfel und Football nutzen Brustplätze, wenn die Mission oder ein aktivierter Spezialmodus sie bereitstellt.",
           "steps": [
-            "Der Granatapfel nutzt beidhändiges Stiftziehen und B/Y-Vorzünden wie die Splittergranate. Interaktionspunkt nahe der Krone, ohne zusätzliches Ringmodell.",
+            "Der Granatapfel nutzt wie die Splittergranate beidhändiges Stiftziehen oder Ziehen mit den Zähnen und anschließend Trigger oder B/Y zum Vorzünden. Interaktionspunkt nahe der Krone, ohne zusätzliches Ringmodell.",
             "Der Football hat weder Stift noch Zünder. Mit Grip nehmen, schwingen und loslassen.",
             "Zum Verstauen des ungeworfenen Balls die Hand an seinen ursprünglichen Brustplatz bringen und Grip lösen."
           ]
@@ -2088,7 +2115,7 @@
           "title": "Objetos arrojadizos especiales",
           "intro": "La granada de fruta y el balón usan espacios del pecho cuando la misión o un modo especial activado los proporciona.",
           "steps": [
-            "La granada de fruta usa extracción a dos manos y B/Y como la fragmentaria. El punto está cerca de la corona; no se añade modelo de anilla.",
+            "La granada de fruta permite sacar la anilla con ambas manos o los dientes e iniciar la mecha con Trigger o B/Y, como la fragmentaria. El punto está cerca de la corona; no se añade modelo de anilla.",
             "El balón no tiene anilla ni mecha. Tómalo con Grip, mueve el brazo y suelta.",
             "Para guardar un balón sin lanzar, lleva la mano a su espacio original del pecho y suelta Grip."
           ]
@@ -2097,7 +2124,7 @@
           "title": "Особые метательные предметы",
           "intro": "Гранат-фрукт и мяч занимают грудные слоты, если их даёт миссия или включённый особый режим.",
           "steps": [
-            "Гранат-фрукт использует двуручное извлечение чеки и B/Y как осколочная граната. Точка возле верхушки; отдельного кольца нет.",
+            "Гранат-фрукт использует извлечение чеки двумя руками или зубами и запуск запала через Trigger или B/Y, как осколочная граната. Точка возле верхушки; отдельного кольца нет.",
             "У мяча нет чеки или запала. Возьмите Grip, размахнитесь и отпустите для броска.",
             "Чтобы убрать неброшенный мяч, верните руку к исходному грудному слоту и отпустите Grip."
           ]
@@ -2106,7 +2133,7 @@
           "title": "特殊な投擲物",
           "intro": "ミッションや有効な特殊モードで支給されるザクロとフットボールは、胸のスロットを使います。",
           "steps": [
-            "ザクロはフラグ同様に両手でピンを抜く動作と B／Y の信管操作を使います。操作位置は冠部付近で、リングモデルは追加されていません。",
+            "ザクロはフラグ同様に両手または口でピンを抜く動作と、その後の Trigger または B／Y による信管操作を使います。操作位置は冠部付近で、リングモデルは追加されていません。",
             "ボールにはピンや信管はありません。Grip で持ち、振って離すと投げます。",
             "投げる前に収納するには、保持する手を元の胸スロットに戻して Grip を離します。"
           ]
@@ -2115,7 +2142,7 @@
           "title": "특수 투척물",
           "intro": "임무나 활성화된 특수 모드에서 제공하는 석류와 미식축구공은 가슴 슬롯을 사용합니다.",
           "steps": [
-            "석류는 세열 수류탄처럼 양손 핀 뽑기와 B/Y 신관 조작을 사용합니다. 조작점은 꼭지 근처이며 별도 고리 모델은 없습니다.",
+            "석류는 세열 수류탄처럼 양손이나 입으로 핀을 뽑은 뒤 Trigger 또는 B/Y로 신관을 작동합니다. 조작점은 꼭지 근처이며 별도 고리 모델은 없습니다.",
             "공에는 핀이나 신관이 없습니다. Grip으로 잡고 휘두르다 놓으면 던집니다.",
             "던지지 않은 공을 보관하려면 잡은 손을 원래 가슴 슬롯으로 돌린 뒤 Grip을 놓습니다."
           ]

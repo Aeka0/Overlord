@@ -3,6 +3,7 @@
 #include "grenade_profile.hpp"
 #include "grenade_contact.hpp"
 #include "grenade_mouth.hpp"
+#include "grenade_controls.hpp"
 #include "part_hand_constraint.hpp"
 #include "knife_profile.hpp"
 #include "native_grenade.hpp"
@@ -48,6 +49,7 @@ namespace vr::gameplay::grenades
 			int grasp_started{},pin_started{};clock::time_point grasp_at{},pin_at{};quat pull_rotation{0,0,0,1};
 			release_motion motion;std::uint64_t button_generation{},button_presses{},motion_continuity{};
 			mouth_pin_pull mouth;
+			holder_trigger trigger;
 			throwback::candidate source{};
 		};
 		struct pin_debris {bool active{};kind type{};anchor root{};vec velocity{};int started{};std::uint64_t reference{};unsigned mask{};};
@@ -237,6 +239,7 @@ namespace vr::gameplay::grenades
 		{
 			item.mouth.reset();
 			item.value.mouth_puller = false;
+			item.trigger.reset();
 			item.motion.reset();item.grasp_started=now;item.grasp_at=f.input.sampled_at;item.pull_delta={};
 			const auto& secondary=f.input.secondary[unsigned(actor)];item.button_generation=secondary.generation;item.button_presses=secondary.presses;
 			weapons::feedback::carry_confirmation(actor,f.input);
@@ -372,13 +375,11 @@ namespace vr::gameplay::grenades
 						}
 						else if (item.value.mouth_puller)
 						{
-							const auto mouth = mouth_point(
+							const auto mouth = mouth_pose(
 							    add(pose.head, origin), pose.head_forward, pose.head_up, pose.units);
 							if (!mouth)
 								return result::omit;
-							travel = pin_slide(item.mouth.start(),
-							                   compose(inverse(root), {*mouth, {0, 0, 0, 1}}).position,
-							                   pose.units);
+							travel = mouth_pin_offset(item.mouth, *mouth, root, a->pin, pose.units);
 						}
 						local.position=add(local.position,travel);
 					}
@@ -479,7 +480,7 @@ namespace vr::gameplay::grenades
 				break;
 			}
 		const auto mouth =
-		    mouth_point(f.body.head_position, f.body.head_forward, f.body.head_up, f.body.units_per_meter);
+		    mouth_pose(f.body.head_position, f.body.head_forward, f.body.head_up, f.body.units_per_meter);
 		const bool mouth_valid = mouth && f.input.focused && fresh(f.input.sampled_at) &&
 		                         f.body.generation == f.input.reference_generation &&
 		                         fresh(f.body.captured_at);
@@ -517,6 +518,7 @@ namespace vr::gameplay::grenades
 				hi::completed(next, handoff_target);
 				item.motion.reset();
 				item.mouth.reset();
+				item.trigger.reset();
 				item.pull_delta = {};
 				item.grasp_started = now;
 				item.grasp_at = f.input.sampled_at;
@@ -528,6 +530,7 @@ namespace vr::gameplay::grenades
 			{
 				item.motion.reset();
 				item.mouth.reset();
+				item.trigger.reset();
 				s.mouth_puller = false;
 				item.pull_delta = {};
 				item.motion_continuity = f.input.continuity_generation;
@@ -542,6 +545,7 @@ namespace vr::gameplay::grenades
 			{
 				item.motion.reset();
 				item.mouth.reset();
+				item.trigger.reset();
 				s.mouth_puller = false;
 				item.pull_delta = {};
 			} // Missing/inferred geometry cannot retain an old impulse or bite.
@@ -559,6 +563,11 @@ namespace vr::gameplay::grenades
 				if(s.stage!=phase::safe){last_raw_speed=length(raw)/f.body.units_per_meter;last_throw_speed=length(velocity)/f.body.units_per_meter;}
 				release(item,now,velocity);emit(item,now);continue;
 			}
+			const auto before = s.stage;
+			const auto trigger = hi::input(s.holder, hi::button::trigger);
+			const auto action = item.trigger.consume(before, f.input.trigger[h].active, trigger);
+			const bool trigger_held =
+			    f.input.trigger[h].active && trigger.armed && trigger.down && !trigger.release;
 			if(s.stage==phase::safe && behaviors[unsigned(s.type)].pin_gesture)
 			{
 				const unsigned other=1-h;
@@ -589,26 +598,27 @@ namespace vr::gameplay::grenades
 				{
 					const bool was_bitten = item.mouth.bitten();
 					const auto a = pub.assets[unsigned(s.type)];
-					const auto local = compose(inverse(item.root), {*mouth, {0, 0, 0, 1}}).position;
-					s.mouth_puller = a && item.mouth.advance(local,
-					                                         a->pin,
+					s.mouth_puller = a && item.mouth.advance(mouth_pin_position(*mouth, item.root, a->pin),
 					                                         f.body.units_per_meter,
 					                                         f.input.sampled_at,
 					                                         f.input.reference_generation,
-					                                         f.input.continuity_generation);
+					                                         f.input.continuity_generation,
+					                                         action == trigger_action::bite,
+					                                         trigger_held);
 					if (item.mouth.engaged())
 						mouth_owner = i;
 					if (s.mouth_puller)
 					{
-						item.pull_delta = item.mouth.travel();
+						item.pull_delta =
+						    mouth_pin_offset(item.mouth, *mouth, item.root, a->pin, f.body.units_per_meter);
 						if (!was_bitten)
 						{
 							item.pin_started = now;
 							++mouth_bites;
 							weapons::feedback::carry_confirmation(s.holder, f.input);
-							reason = "pin held at mouth; pull grenade away along pin axis";
+							reason = "pin held at mouth; hold trigger and pull grenade away";
 						}
-						if (item.pull_delta[1] / f.body.units_per_meter >= pin_stroke_meters - .0001f &&
+						if (length(item.pull_delta) / f.body.units_per_meter >= pin_stroke_meters - .0001f &&
 						    finish_pin(item, i, now, f, *a, s.holder))
 							++mouth_pins;
 					}
@@ -626,7 +636,8 @@ namespace vr::gameplay::grenades
 			const auto& button=f.input.secondary[h];
 			const bool pressed=button.active && button.generation==item.button_generation && button.presses>item.button_presses;
 			item.button_generation=button.generation;item.button_presses=button.presses;
-			if(i<chest_count && pressed && s.cook(now))
+			if (i < chest_count && before == phase::prepared && (pressed || action == trigger_action::cook) &&
+			    s.cook(now))
 			{
 				queue_sound(item,false);++cooks;weapons::feedback::carry_confirmation(s.holder,f.input);reason="frag cooking";
 				const auto a=pub.assets[unsigned(s.type)];
@@ -645,6 +656,7 @@ namespace vr::gameplay::grenades
 			{
 				item.mouth.reset();
 				item.value.mouth_puller = false;
+				item.trigger.reset();
 				if (!vr::valid_hand(item.value.puller))
 					item.pull_delta = {};
 			}
@@ -667,6 +679,7 @@ namespace vr::gameplay::grenades
 			{
 				item.mouth.reset();
 				s.mouth_puller = false;
+				item.trigger.reset();
 				if(!s.spent){s.stow();item.motion.reset();continue;}
 				const auto* state=reinterpret_cast<const game::playerState_s*>(ps);
 				item.root.position={state->origin[0],state->origin[1],state->origin[2]+state->viewHeightCurrent-10};

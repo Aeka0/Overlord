@@ -13,14 +13,18 @@ animation. `vr_physicalGrenades` enables the interaction (default true).
 - Hold the other free hand's **trigger** near the pin and pull 8 cm relative to the
   grenade. This commits one native ammo debit, removes the pin assembly and
   frees the pulling hand. Releasing the trigger too early cancels the pull.
-- Alternatively, hold the ring at the mouth for 150 ms to bite it, then move the
-  grenade away along its pin axis by the same 8 cm. No extra button or free hand
-  is needed. A short holding-hand haptic confirms the bite. Teeth are estimated
+- Alternatively, bring the ring to the mouth and press and hold the holding
+  hand's Trigger. Each press attempts acquisition once, with immediate haptic
+  confirmation on success and no dwell requirement. A miss requires release and
+  another press; holding Trigger while moving into range does not retry.
+  Keep Trigger held and move the grenade 8 cm forward, sideways, up or down.
+  Direction is relative to the head, independently of grenade orientation.
+  Movement more than 2 cm backward cancels the bite. Teeth are estimated
   7 cm forward and 7 cm below the center eye, following full head pitch/roll;
   acquisition has a 4.5 cm radius. Passing across the face does not remove a pin.
-  The mouth owns at most one ring. A hand pin pull or handoff cancels a pending
-  bite. A bitten ring blocks handoff and hand pin acquisition until extraction
-  or sideways/backward breakaway. Tracking/focus loss, pause, recenter or changed
+  The mouth owns at most one ring. A bitten ring blocks handoff and hand pin
+  acquisition until extraction, Trigger release or backward breakaway.
+  Tracking/focus loss, pause, recenter or changed
   tracking continuity discard the bite.
   Moving head and grenade together cannot extract it. Mouth and hand extraction
   share the ammo debit, pin debris, native sound and unchanged cook/release rules.
@@ -32,7 +36,11 @@ animation. `vr_physicalGrenades` enables the interaction (default true).
   admission and the state transaction enforce this restriction.
 - After the pin is removed, releasing the holding grip throws/drops the grenade.
   It cannot return to the chest or refund ammo.
-- Frag/pomegranate: a new B/Y press on the holding hand starts cooking. Holding the
+- Frag/pomegranate: after pin extraction, a new Trigger or B/Y press on the
+  holding hand starts cooking. The Trigger press used to bite the ring is fully
+  consumed: release it and press again to cook. Input is interpreted using the
+  phase before extraction, including when the other hand removes the pin in the
+  same frame, so no press can both extract a pin and start cooking. Holding the
   button before pickup, pressing before pin removal, or repeatedly pressing
   during cooking cannot pre-arm or restart it. Flash and smoke do not cook.
 - Without cooking, the native fuse starts at release. Throwing a cooked frag
@@ -101,7 +109,7 @@ requested/admitted native speed and NPC/world obstruction counts.
 ## Pomegranate and football
 
 `h2_cheatpomegrenade` follows frag behavior, including a simulated two-hand pin
-pull or mouth pull, transfer lock during manipulation, B/Y cooking and native explosion. The
+pull or mouth pull, transfer lock during manipulation, Trigger/B/Y cooking and native explosion. The
 interaction point is near the fruit crown. Its intact fruit model never gains
 an invented ring, pin or spoon: the same gestures move the hand and produce native
 sound/haptic feedback without pin/lever debris. Native token, shared `usgrenade`
@@ -132,7 +140,9 @@ close over 120 ms. Pin contact uses the visible pin geometry and the anatomical
 palm-to-pinch reach, rather than a distance from the controller wrist alone.
 The acquisition radius is 10 cm. During extraction the hand and ring follow a
 fixed local +Y slide with an 8 cm stroke; lateral/backward movement cannot
-increase extraction progress. Hand IK reuses the weapon-part constraint, and
+increase two-hand extraction progress. Mouth pulling instead measures the pin's
+displacement relative to the head and keeps the ring at its acquired mouth
+contact through the shared simulation/render transform. Hand IK reuses the weapon-part constraint, and
 visible pin travel comes from the current solved render record rather than the
 lower-frequency server snapshot. Physical input remains unconstrained for
 simulation and breakaway checks. Hand-closing interpolation uses pose timestamps.
@@ -186,7 +196,7 @@ uses the grenade definition, independently of the selected firearm. The queue
 is bounded, expires stale requests and clears at zone unload. It never invents
 an alias if the current definition lacks a unique matching native key. Starting
 cook replays the native pin sound once, along with haptic confirmation. Repeated
-B/Y presses neither replay the sound nor restart the fuse. No synthetic ticking
+Trigger/B/Y presses neither replay the sound nor restart the fuse. No synthetic ticking
 sound is added.
 
 The M67 spoon shares the body bone but is a disconnected 540-triangle island.
@@ -204,8 +214,10 @@ It also writes `minidumps/overlord-grenades.txt` without triggering an action.
 Throwback diagnostics include contract readiness, the current native candidate,
 accepted/refused pickups and each held grenade's source entity and deadline.
 Mouth diagnostics include `mouth_bites`, `mouth_pins` and each slot's
-`mouth_puller` flag. Automated mouth coverage checks dwell, physical scale,
-head orientation, axial extraction, failed debit, breakaway and tracking resets.
+`mouth_puller` flag. Automated mouth coverage checks one attempt per press,
+physical scale, head-relative extraction directions, rotated grenade rendering,
+failed debit, Trigger release, backward breakaway and tracking resets. Trigger
+tests cover pickup/handoff suppression and fresh-press cooking after extraction.
 Headset acceptance is still needed for the estimated mouth location, contact
 radius, bite feedback and the head/hand movement needed to extract each pin.
 

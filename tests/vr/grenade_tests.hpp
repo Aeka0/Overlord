@@ -3,6 +3,7 @@
 #include "component/vr/gameplay/grenade_profile.hpp"
 #include "component/vr/gameplay/grenade_contact.hpp"
 #include "component/vr/gameplay/grenade_mouth.hpp"
+#include "component/vr/gameplay/grenade_controls.hpp"
 #include "component/vr/gameplay/grenade_throwback.hpp"
 #include "component/vr/gameplay/hand_interaction/core.hpp"
 
@@ -116,52 +117,83 @@ namespace grenade_tests
 			using namespace std::chrono_literals;
 			using hands::vec;
 			const auto at=vr::controller_input::clock::now();
-			const auto mouth=mouth_point({}, {1,0,0}, {0,0,1},40);
-			check(mouth && hands::length(hands::sub(*mouth,{2.8f,0,-2.8f}))<1e-5f,
+			const auto mouth=mouth_pose({}, {1,0,0}, {0,0,1},40);
+			check(mouth && hands::length(hands::sub(mouth->position,{2.8f,0,-2.8f}))<1e-5f,
 				"mouth estimate uses center-eye forward and down offsets in physical meters");
-			const auto tilted=mouth_point({}, {0,0,-1}, {1,0,0},40);
-			check(tilted && hands::length(hands::sub(*tilted,{-2.8f,0,-2.8f}))<1e-5f &&
-				!mouth_point({}, {}, {0,0,1},40) && !mouth_point({}, {1,0,0},{1,0,0},40) &&
-				!mouth_point({NAN,0,0},{1,0,0},{0,0,1},40) && !mouth_point({},{1,0,0},{0,0,1},0),
+			const auto tilted=mouth_pose({}, {0,0,-1}, {1,0,0},40);
+			check(tilted && hands::length(hands::sub(tilted->position,{-2.8f,0,-2.8f}))<1e-5f &&
+				!mouth_pose({}, {}, {0,0,1},40) && !mouth_pose({}, {1,0,0},{1,0,0},40) &&
+				!mouth_pose({NAN,0,0},{1,0,0},{0,0,1},40) && !mouth_pose({},{1,0,0},{0,0,1},0),
 				"mouth follows pitched/rolled head axes and rejects invalid head geometry");
 			mouth_pin_pull bite;
-			check(!bite.advance({}, {},40,at,1,1) && !bite.bitten(),"mouth contact begins a dwell without pulling the pin");
-			check(!bite.advance({}, {},40,at+100ms,1,1) &&
-				!bite.advance({}, {},40,at+100ms,1,1),"duplicate input timestamps cannot complete the bite dwell");
-			check(bite.advance({}, {},40,at+150ms,1,1) && bite.bitten() && bite.travel()==vec{},
-				"150 ms continuous mouth contact latches with zero extraction travel");
-			check(bite.advance({}, {},40,at+200ms,1,1) && bite.travel()==vec{},
+			check(!bite.advance({},40,at,1,1,false,true) && !bite.bitten(),"mouth proximity alone cannot acquire a pin");
+			check(!bite.advance({4,0,0},40,at,1,1,true,true) &&
+				!bite.advance({},40,at+100ms,1,1,false,true),"failed bite attempt does not retry when a held trigger enters mouth range");
+			check(bite.advance({},40,at+150ms,1,1,true,true) && bite.bitten() && bite.travel()==vec{},
+				"explicit trigger attempt latches immediately without dwell or extraction travel");
+			check(bite.advance({},40,at+200ms,1,1,false,true) && bite.travel()==vec{},
 				"head and grenade moving together cannot extract a mouth-held pin");
-			check(bite.advance({0,1.6f,0}, {},40,at+250ms,1,1) && std::abs(bite.travel()[1]-1.6f)<1e-5f &&
-				bite.advance({0,3.2f,0}, {},40,at+300ms,1,1) && std::abs(bite.travel()[1]-3.2f)<1e-5f,
-				"mouth extraction shares the grenade-local eight-centimeter axial stroke");
+			check(bite.advance({0,1.6f,0},40,at+250ms,1,1,false,true) && std::abs(bite.travel()[1]+1.6f)<1e-5f &&
+				bite.advance({0,3.2f,0},40,at+300ms,1,1,false,true) && std::abs(bite.travel()[1]+3.2f)<1e-5f,
+				"sideways extraction advances eight centimeters while the ring stays at the mouth");
 			state bitten;bitten.take(kind::frag,50,hand::left,1,3500);bitten.mouth_puller=true;
 			check(bitten.pull_pin(true) && !bitten.mouth_puller && !bitten.pull_pin(true) && !bitten.due(999999),
 				"mouth extraction shares one ammo commitment and does not start cooking");
 			auto latch=[&]
 			{
-				bite.reset();bite.advance({}, {},40,at,1,1);bite.advance({}, {},40,at+75ms,1,1);
-				bite.advance({}, {},40,at+150ms,1,1);
+				bite.reset();bite.advance({},40,at,1,1,true,true);
 			};
-			latch();check(!bite.advance({3,0,0},{},40,at+200ms,1,1) && !bite.engaged(),
-				"sideways breakaway cancels the bite without extracting a pin");
-			latch();check(!bite.advance({0,-2,0},{},40,at+200ms,1,1),"backward mouth movement cancels extraction");
-			latch();check(!bite.advance({0,12,0},{},40,at+170ms,1,1),"tracking jumps cannot complete mouth extraction");
-			latch();check(!bite.advance({0,3.2f,0},{},40,at+200ms,2,1) && !bite.engaged(),
+			for(const auto direction:{vec{1,0,0},vec{0,1,0},vec{0,-1,0},vec{0,0,1},vec{0,0,-1},hands::unit(vec{1,1,-1})})
+			{
+				latch();check(bite.advance(hands::scale(direction,3.2f),40,at+100ms,1,1,false,true) &&
+					std::abs(hands::length(bite.travel())-3.2f)<1e-5f,"all non-backward head-relative pull angles can extract a pin");
+			}
+			latch();check(!bite.advance({-3.2f,0,0},40,at+100ms,1,1,false,true),"pulling back toward the head cancels the bite");
+			latch();check(!bite.advance({},40,at+50ms,1,1,false,false) &&
+				!bite.advance({},40,at+100ms,1,1,false,true),"trigger release cancels the bite and requires another attempt");
+			latch();check(!bite.advance({12,0,0},40,at+10ms,1,1,false,true),"tracking jumps cannot complete mouth extraction");
+			latch();check(!bite.advance({0,3.2f,0},40,at+100ms,2,1,false,true) && !bite.engaged(),
 				"recenter invalidates an existing bite before any pull progress");
-			latch();check(!bite.advance({0,3.2f,0},{},40,at+200ms,1,2),"tracking continuity replacement cancels the bite");
-			latch();check(!bite.advance({0,3.2f,0},{},40,at+400ms,1,1),"stale head/hand samples cannot finish extraction");
-			latch();check(!bite.advance({0,3.2f,0},{},40,at+100ms,1,1),"backward timestamps discard the bite");
-			latch();check(!bite.advance({0,3.2f,0},{},80,at+200ms,1,1),"world-scale changes discard stored mouth distances");
-			latch();check(!bite.advance({NAN,0,0},{},40,at+200ms,1,1) && !bite.engaged(),
+			latch();check(!bite.advance({0,3.2f,0},40,at+100ms,1,2,false,true),"tracking continuity replacement cancels the bite");
+			latch();check(!bite.advance({0,3.2f,0},40,at+200ms,1,1,false,true),"stale head/hand samples cannot finish extraction");
+			latch();check(!bite.advance({0,3.2f,0},40,at-1ms,1,1,false,true),"backward timestamps discard the bite");
+			latch();check(!bite.advance({0,3.2f,0},80,at+100ms,1,1,false,true),"world-scale changes discard stored mouth distances");
+			latch();check(!bite.advance({NAN,0,0},40,at+100ms,1,1,false,true) && !bite.engaged(),
 				"invalid tracking cannot preserve mouth ownership");
-			bite.reset();bite.advance({}, {},40,at,1,1);
-			check(!bite.advance({0,2,0},{},40,at+50ms,1,1) && !bite.engaged(),
-				"passing a grenade across the face does not latch or arm it");
-			bite.reset();bite.advance({},{},80,at,1,1);bite.advance({},{},80,at+75ms,1,1);
-			check(bite.advance({},{},80,at+150ms,1,1) && bite.advance({0,6.4f,0},{},80,at+250ms,1,1) &&
-				std::abs(bite.travel()[1]/80-pin_stroke_meters)<1e-5f,
+			bite.reset();check(bite.advance({},80,at,1,1,true,true) && bite.advance({0,6.4f,0},80,at+100ms,1,1,false,true) &&
+				std::abs(hands::length(bite.travel())/80-pin_stroke_meters)<1e-5f,
 				"mouth reach and extraction remain physical distances at another world scale");
+			using namespace hands::pose_math;
+			const hands::anchor head{{100,200,300},hands::from_axis({vec{0,1,0},vec{-1,0,0},vec{0,0,1}})};
+			for(const auto rotation:{hands::quat{0,0,0,1},hands::quat{0,0,1,0},hands::quat{0,1,0,0}})
+			{
+				latch();const hands::anchor grenade{hands::add(head.position,hands::rotate(head.rotation,{0,3.2f,0})),rotation};
+				const auto pin=mouth_pin_position(head,grenade,{});
+				check(bite.advance(pin,40,at+100ms,1,1,false,true) &&
+					hands::length(hands::sub(compose(grenade,{mouth_pin_offset(bite,head,grenade,{},40),{0,0,0,1}}).position,head.position))<1e-4f,
+					"rotated head and either grenade orientation share simulation travel and mouth-anchored pin rendering");
+			}
+		}
+		{
+			holder_trigger trigger;
+			const hand_interaction::edges up{false,false,false,true},press{true,false,true,true},held{false,false,true,true};
+			check(trigger.consume(phase::safe,true,press)==trigger_action::none,"trigger held during pickup cannot attempt a bite");
+			trigger.consume(phase::safe,true,up);
+			const auto action=trigger.consume(phase::safe,true,press);
+			state frag;frag.take(kind::frag,50,hand::right,1,3500);frag.pull_pin(true);
+			check(action==trigger_action::bite && trigger.consume(frag.stage,true,held)==trigger_action::none && frag.stage==phase::prepared,
+				"pin removal cannot reinterpret the bite press or its continued hold as cooking");
+			trigger.consume(frag.stage,true,up);
+			check(trigger.consume(frag.stage,true,press)==trigger_action::cook && frag.cook(100),
+				"release and fresh trigger press after pin extraction starts frag cooking");
+			check(trigger.consume(frag.stage,true,held)==trigger_action::none && !frag.cook(200) && frag.deadline==3600,
+				"holding or repeating the cook command cannot restart the fuse");
+			trigger.reset();check(trigger.consume(phase::prepared,true,press)==trigger_action::none,"handoff cannot inherit a pressed cook trigger");
+			trigger.consume(phase::prepared,true,up);trigger.consume(phase::prepared,false,held);
+			check(trigger.consume(phase::prepared,true,press)==trigger_action::none,"lost input requires trigger release before cooking");
+			trigger.consume(phase::safe,true,up);
+			check(trigger.consume(phase::safe,true,{true,true,true,true})==trigger_action::none,
+				"coalesced release and press cannot both cancel and reacquire a bite in one frame");
 		}
 		state invalid;check(!invalid.take(kind::frag,512,hand::left,1,5000) && !invalid.take(kind::frag,50,hand::none,1,5000) &&
 			!invalid.take(kind::frag,50,hand::left,1,0),"invalid native grenade descriptors cannot be acquired");
