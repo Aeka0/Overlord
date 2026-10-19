@@ -1,4 +1,5 @@
 #pragma once
+#include "component/vr/gameplay/weapons/aa12/reload_profile.hpp"
 #include "component/vr/gameplay/weapons/cheytac/profile.hpp"
 #include "component/vr/gameplay/weapons/famas/profile.hpp"
 #include "component/vr/gameplay/weapons/fn2000/profile.hpp"
@@ -23,7 +24,7 @@ namespace magazine_orientation_tests
 		namespace w=vr::gameplay::weapons;
 		using namespace vr::gameplay::hands;
 		const quat mirror{1,0,0,0},ordinary=normalize({.3f,.2f,-.1f,.8f});
-		for(const auto* p:{&w::scar::physical,&w::cheytac::physical,&w::cheytac::desert,&w::m82::physical,
+		for(const auto* p:{&w::aa12::physical,&w::scar::physical,&w::cheytac::physical,&w::cheytac::desert,&w::m82::physical,
 			&w::m14ebr::physical,&w::m14ebr::arctic,&w::fn2000::physical,
 			&w::famas::physical,&w::famas::tape,&w::famas::woodland,
 			&w::tavor::physical,&w::tavor::digital,&w::tavor::woodland,

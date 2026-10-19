@@ -53,6 +53,7 @@ using vr::hand;
 #include "scar_reload_tests.hpp"
 #include "pp2000_reload_tests.hpp"
 #include "manual_magazine_reload_tests.hpp"
+#include "aa12_reload_tests.hpp"
 #include "support_only_reload_tests.hpp"
 #include "tube_reload_tests.hpp"
 #include "fixed_drum_tests.hpp"
@@ -247,6 +248,7 @@ int main()
 	scar_reload_tests::run<fixture>(check);
 	pp2000_reload_tests::run<fixture>(check);
 	manual_magazine_reload_tests::run<fixture>(check);
+	aa12_reload_tests::run<fixture>(check);
 	support_only_reload_tests::run<fixture>(check);
 	belt_reload_tests::run<fixture>(check);
 	belt_cover_push_tests::run<fixture>(check);

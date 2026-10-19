@@ -1,5 +1,6 @@
 #pragma once
 #include "magazine_fill.hpp"
+#include "../../magazine_grasp_profile.hpp"
 #include "reload_poses.hpp"
 
 namespace vr::gameplay::weapons::aa12
@@ -19,7 +20,7 @@ namespace vr::gameplay::weapons::aa12
 	    .feed = mechanics::feed_type::closed_bolt,
 	};
 	inline constexpr physical_reload::magazine_manipulation manual_magazine{
-	    .grab_radius = physical_reload::defaults::magazine_grab_radius_m,
+	    .grab_radius = .08f,
 	    .pull_travel = physical_reload::defaults::magazine_pull_travel_m,
 	    .pull_lateral_limit = physical_reload::defaults::magazine_pull_lateral_limit_m,
 	    .pull_axis = {0, 0, -1},
@@ -30,7 +31,10 @@ namespace vr::gameplay::weapons::aa12
 	    .latch_direction = {1, 0, 0},
 	    .spare_strike = false,
 	};
-	inline constexpr physical_reload::profile reload_interaction{
+	// The top handle keeps its ordinary reach above and beside the receiver.
+	// Only acquisition from below the handle is clipped, away from the magazine.
+	inline constexpr part_capture_halfspace handle_capture{{0, 0, -1}, -action_grab_low[2]};
+	inline constexpr auto reload_interaction = physical_reload::with_box_magazine_well(physical_reload::profile{
 	    .waist_radius = physical_reload::defaults::waist_radius_m,
 	    .slide_radius = part_grip_capture::radius_m,
 	    .slide_stroke = action_stroke_m,
@@ -45,7 +49,7 @@ namespace vr::gameplay::weapons::aa12
 	    .well_capture_below = physical_reload::defaults::well_capture_below_m,
 	    .motion = physical_reload::action_motion::reciprocating_slide,
 	    .manual_magazine = &manual_magazine,
-	};
+	});
 	inline const char* sound_key(mechanics::effect kind) noexcept
 	{
 		using enum mechanics::effect;
@@ -62,7 +66,7 @@ namespace vr::gameplay::weapons::aa12
 			return nullptr;
 		}
 	}
-	inline const reload_profile physical = with_magazine_population(
+	inline const reload_profile physical = with_controller_magazine(with_magazine_population(
 	    with_split_sounds(
 	        reload_profile{
 	            .id = "aa12",
@@ -86,6 +90,7 @@ namespace vr::gameplay::weapons::aa12
 	            .native_family = native_family,
 	            .magazine_contacts = &contacts,
 	            .rigid_magazine_source = "h2_viewmodel_aa12_base",
+	            .slide_capture = &handle_capture,
 	            .action_detail_bone = "j_reload_end" // Upper 494-triangle handle piece, child of j_reload.
 	        },
 	        {
@@ -93,6 +98,6 @@ namespace vr::gameplay::weapons::aa12
 	            .retain_close = false,
 	            .split_removal = false,
 	        }),
-	    magazine_fills);
+	    magazine_fills));
 	static_assert(action_grips.size() == reload_interaction.slide_pose_count);
 }

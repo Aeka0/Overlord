@@ -10,7 +10,7 @@ selection, fallback index, controller tracking and pose count together. No
 weapon-name switch, per-weapon angle correction, mesh fitting or asset scan
 runs in the tracking loop.
 
-M200 (Cheytac), M82A1, M21/M14, F2000, FAMAS, TAR-21, MP5K and UMP45 use this
+AA-12, M200 (Cheytac), M82A1, M21/M14, F2000, FAMAS, TAR-21, MP5K and UMP45 use this
 entry point, with cosmetic variants inheriting it. SCAR uses the same entry
 point with its previous wrap and tracking behavior. TAR-21 now uses its existing
 wrap consistently instead of selecting a bottom pinch from outward palm roll.

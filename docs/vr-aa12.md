@@ -12,6 +12,15 @@ introduce a general shotgun reload policy.
   once on return. The handle reciprocates during firing.
 - Both holding hands use the common mirrored hand poses. The contact is the
   exposed top handle, not the long internal action mesh.
+- Magazine grasp assistance extends 8 cm from the authored body bounds. Free
+  magazines use the shared controller-aligned box-magazine policy, retaining
+  the native finger pose while following controller pitch, yaw and roll.
+- The insertion volume uses the shared 5.5 cm radius and 7 cm depth on either
+  side of the mouth. The existing 85-degree feed-axis allowance remains;
+  inverted magazines and discontinuous contact still cannot insert.
+- The top handle retains its 11 cm assistance except below its physical lower
+  edge: a gun-local wrist boundary prevents capture through the receiver into
+  the magazine area, with the same boundary for either hand and action travel.
 - Existing native shot timing, pellet generation, sounds, muzzle flash, shell
   effects, world pickup, carry and HUD remain routed through the weapon instance.
 
@@ -68,6 +77,11 @@ Export files are authoring evidence, never runtime or build dependencies.
   AA-12. Both hands, tactical/empty changes, used-magazine reinsertion, partial
   pulls/racks, full-cycle single extraction, failed commits, interruption and
   ammunition conservation all use the same reusable scenarios.
+- `aa12_reload_tests.hpp`: current-frame magazine grabs with 7 cm approach
+  offsets and 45-degree wrist variation, extraction ownership, oblique/inverted
+  insertion, and the handle's lower boundary with other directions preserved.
+  Both hands and rotated gun frames are covered; shared magazine-orientation
+  tests also include AA-12.
 - Weapon-grip and physical-reload suites pass; Debug x64 client compiles.
 
 Headset acceptance remains: bare/reflex AA-12, top-handle reach, magazine
