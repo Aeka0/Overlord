@@ -9,6 +9,7 @@
 #include "component/vr/gameplay/special_melee.hpp"
 #include <any>
 #include <iostream>
+#include "hei_round_tests.hpp"
 #include <map>
 
 namespace w=vr::gameplay::weapons;
@@ -26,7 +27,10 @@ struct archive
 };
 int main()
 {
+	// HEI is independent of native intel cheat state, but shares this focused
+	// optional-gameplay regression target.
     int failures{};const auto check=[&](bool ok,const char* why){if(!ok){++failures;std::cerr<<"FAIL: "<<why<<'\n';}};
+	hei_round_tests::run(check);
     try
     {
         xsk::gsc::h2::context ctx(xsk::gsc::instance::server);

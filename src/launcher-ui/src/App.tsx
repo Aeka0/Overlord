@@ -797,31 +797,7 @@ function Launcher({ data }: { data: Bootstrap }) {
                 </div>
               )}
               {category === "debug" && (
-                <p className="hint build-notice">
-                  {t(
-                    controller.state.build.optimized
-                      ? "settings.buildOptimized"
-                      : "settings.buildDebug",
-                    { configuration: controller.state.build.configuration },
-                  )}
-                </p>
-              )}
-              {groups.map((group) => (
-                <div className="setting-group" key={group}>
-                  <h2>{t(group)}</h2>
-                  <div className="panel">
-                    {category === "calibration" &&
-                      group === "settings.alignment" &&
-                      presetControl}
-                    {groupControls(fields.filter(
-                        (field) =>
-                          field.category === category && field.group === group,
-                      ))}
-                  </div>
-                </div>
-              ))}
-              {category === "debug" && (
-                <div className="setting-group">
+                <div className="setting-group" data-setting-group="settings.riskHeading">
                   <h2>{t("settings.riskHeading")}</h2>
                   <div className="panel">
                     <SettingRow
@@ -839,6 +815,30 @@ function Launcher({ data }: { data: Bootstrap }) {
                   </div>
                 </div>
               )}
+              {category === "debug" && (
+                <p className="hint build-notice">
+                  {t(
+                    controller.state.build.optimized
+                      ? "settings.buildOptimized"
+                      : "settings.buildDebug",
+                    { configuration: controller.state.build.configuration },
+                  )}
+                </p>
+              )}
+              {groups.map((group) => (
+                <div className="setting-group" key={group} data-setting-group={group}>
+                  <h2>{t(group)}</h2>
+                  <div className="panel">
+                    {category === "calibration" &&
+                      group === "settings.alignment" &&
+                      presetControl}
+                    {groupControls(fields.filter(
+                        (field) =>
+                          field.category === category && field.group === group,
+                      ))}
+                  </div>
+                </div>
+              ))}
             </MotionSurface>
           </section>
         ) : page === "language" ? (

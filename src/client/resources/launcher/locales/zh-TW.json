@@ -298,5 +298,9 @@
   "settings.campaignUnlockHint": "從此視窗啟動遊戲時套用一次，開放關卡和情報獎勵，不補齊通關或收集紀錄。關閉此視窗會捨棄尚未執行的選擇。",
   "settings.exoPunch": "外骨骼拳擊",
   "settings.exoPunchHint": "提高物理近戰傷害，致死命中時擊飛敵人。不影響子彈與爆炸傷害。需要在進階圖形設定中啟用布娃娃。",
-  "settings.funFeatures": "趣味功能"
+  "settings.funFeatures": "趣味功能",
+  "settings.heiRound": "高爆彈藥",
+  "settings.heiRoundHint": "普通槍彈命中時額外產生小型爆炸。霰彈槍、M200、WA2000 和 Barrett 改為發射下掛榴彈，仍使用原槍彈藥和裝填操作。",
+  "settings.playerAttributes": "玩家屬性",
+  "settings.weaponHandling": "武器操作"
 }

@@ -1054,7 +1054,9 @@ namespace vr::gameplay::hands
 				      solver().binding.equipment_parts.library.mirror_basis[layout.arms[1].wrist]},
 				     {},
 				     storage_body,
-				     reload_tokens});
+				     reload_tokens,
+				     spatial.head_forward,
+				     spatial.head_up});
 				empty_native::accept(object, object->matrices, object->timestamp);
 				vehicles::publish_render_hands(
 				    input,
@@ -1924,7 +1926,9 @@ namespace vr::gameplay::hands
 			      solver().binding.equipment_parts.library.mirror_basis[layout.arms[1].wrist]},
 			     knife_poses,
 			     storage_body,
-			     reload_tokens});
+			     reload_tokens,
+			     spatial.head_forward,
+			     spatial.head_up});
 			// Only AFTER native bones have been committed. Rendering later matches
 			// the exact object/buffer/epoch AND consumed bone, not current_muzzle().
 			if (layout.muzzle >= 0)

@@ -7,6 +7,8 @@
 #include "native_ammunition.hpp"
 #include "native_ammunition_storage.hpp"
 #include "native_ballistics.hpp"
+#include "native_launcher_fire.hpp"
+#include "hei_round.hpp"
 #include "native_scripted_control.hpp"
 #include "weapon_carry_runtime.hpp"
 #include <utils/native_memory.hpp>
@@ -36,10 +38,7 @@ namespace vr::gameplay::weapons::underbarrel::native
 	{
 		// Witnessed class-6 G_FireWeapon path: entity, resolved launcher token,
 		// 0x50-byte fire packet. Helper retains native speed, fuse and attacker.
-		constexpr std::uint8_t launcher[]{0x40,0x53,0x56,0x57,0x48,0x83,0xec,0x50};
-		constexpr std::uint8_t packet[]{0x0f,0xb6,0x57,0x44,0x8b,0x4f,0x3c};
-		constexpr std::uint8_t call[]{0xe8,0x9f,0x40,0x00,0x00};
-		verified=native_ballistics::initialize() && match(0x14051CD40,launcher) && match(0x14051CD69,packet) && match(0x140518C9C,call);
+		verified=native_ballistics::initialize() && native_launcher_fire::initialize();
 		return verified;
 	}
 	binding resolve(weapon_identity host)noexcept
@@ -130,14 +129,21 @@ namespace vr::gameplay::weapons::underbarrel::native
 		native_ballistics::parameters packet{};packet.shot=g;packet.weapon=expected.module.id.definition;
 		packet.definition=const_cast<game::WeaponDef*>(definition(packet.weapon));
 		if(!packet.definition)return false;
+		bool grenade_requested{};
+		const auto grenade=expected.module.id.type==kind::shotgun ?
+			hei_round::projectile_definition(packet.weapon,grenade_requested):0;
+		native_ballistics::parameters grenade_packet{};
+		if(grenade_requested && (!grenade || !native_launcher_fire::prepare(grenade,g,grenade_packet)))return false;
 		const auto spread=utils::hook::invoke<float>(native_ballistics::ads_spread_address,ps,packet.weapon,false,0);
 		if(!std::isfinite(spread)||spread<0||spread>90)return false;
 		if(entity->client!=reinterpret_cast<game::gclient_s*>(ps) || ps->commandTime!=command || !scripted_control::allowed(ps) ||
 			!commit(expected,after))return false;
 		settle(context);firing=true;const auto release=gsl::finally([]{firing=false;});
-		if(expected.module.id.type==kind::shotgun)
+		if(grenade_requested)
+			hei_round::projectile_fired(native_launcher_fire::fire(entity,grenade_packet));
+		else if(expected.module.id.type==kind::shotgun)
 			utils::hook::invoke<void>(native_ballistics::bullet_address,entity,spread,&packet,entity,command,-1.f);
-		else utils::hook::invoke<game::gentity_s*>(0x14051CD40,entity,packet.weapon,&packet);
+		else (void)native_launcher_fire::fire(entity,packet);
 		return true; // Never refund after entering native damage/scripts.
 	}
 }

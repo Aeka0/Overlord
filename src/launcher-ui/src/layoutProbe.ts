@@ -465,12 +465,18 @@ export function inspectCampaignUnlock() {
   const page = document.querySelector<HTMLElement>(".settings-page")!;
   const control = page.querySelector<HTMLInputElement>("#campaign-unlock");
   const bounds = control?.closest(".switch")?.getBoundingClientRect();
+  const groups = [...page.querySelectorAll<HTMLElement>(".setting-group")];
+  const groupOf = (name: string) => document.getElementById(name)?.closest(".setting-group");
   const result = {
     first: page.querySelector(".setting-row input") === control && !!control,
     defaultOff: control?.checked === false,
     boolean: control?.type === "checkbox",
     descriptionAtHeading: !!page.querySelector(".page-heading > .hint")?.textContent && !page.querySelector(".cheat-notice"),
     fits: !!bounds && bounds.left >= 0 && bounds.right <= innerWidth && page.scrollWidth <= page.clientWidth + 1,
+    playerGroup: groups[0]?.dataset.settingGroup === "settings.playerAttributes" &&
+      groupOf("vr_cheatHealth") === groups[0] && groupOf("vr_cheatNotarget") === groups[0],
+    weaponGroup: groups[1]?.dataset.settingGroup === "settings.weaponHandling" &&
+      groupOf("vr_cheatAmmo") === groups[1] && groupOf("vr_recoil") === groups[1],
   };
   flushSync(() => previous.click());
   finishFiniteAnimations();
@@ -503,6 +509,7 @@ export function inspectNativeComfort() {
     subtitleSecond: false,
     subtitleDefaultOn: false,
     subtitleDescription: false,
+    riskFirst: false,
   };
   const other = navigation!.querySelectorAll<HTMLButtonElement>("button")[4];
   flushSync(() => other.click());
@@ -513,6 +520,12 @@ export function inspectNativeComfort() {
   result.subtitleDefaultOn = subtitle?.type === "checkbox" && subtitle.checked && !subtitle.disabled;
   const hint = document.getElementById("hint-vr_subtitles")?.textContent;
   result.subtitleDescription = !!hint && !hint.startsWith("settings.");
+  const debug = navigation!.querySelectorAll<HTMLButtonElement>("button")[5];
+  flushSync(() => debug.click());
+  finishFiniteAnimations();
+  const firstGroup = document.querySelector<HTMLElement>(".settings-page .setting-group");
+  result.riskFirst = firstGroup?.dataset.settingGroup === "settings.riskHeading" &&
+    !!firstGroup.querySelector("button.button");
   flushSync(() => previous.click());
   finishFiniteAnimations();
   return { ...result, ok: Object.values(result).every(Boolean) };

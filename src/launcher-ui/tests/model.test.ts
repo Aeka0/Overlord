@@ -193,6 +193,33 @@ test("EXO Punch is a Cheats toggle and saves independently of native intel cheat
   assert.deepEqual(collect({ ...draft, vr_exoPunch: true }, fixture), { vr_exoPunch: true });
 });
 
+test("HEI rounds add an independent Fun Features toggle", () => {
+  const field = fields.find((field) => field.name === "vr_heiRound")!;
+  assert.equal(field.category, "cheats");
+  assert.equal(field.group, "settings.funFeatures");
+  const fixture = { ...state, values: { vr_heiRound: false, vr_exoPunch: true } } as SettingsState;
+  const draft = makeDraft(fixture.values, fixture.limits);
+  assert.deepEqual(collect({ ...draft, vr_heiRound: true }, fixture), { vr_heiRound: true, vr_exoPunch: true });
+});
+
+test("Cheats use the requested shared groups and localized explosive ammunition label", () => {
+  const cheats = fields.filter((field) => field.category === "cheats");
+  assert.deepEqual([...new Set(cheats.map((field) => field.group))],
+    ["settings.playerAttributes", "settings.weaponHandling", "settings.funFeatures"]);
+  assert.deepEqual(cheats.filter((field) => field.group === "settings.playerAttributes").map((field) => field.name),
+    ["vr_cheatHealth", "vr_cheatNotarget"]);
+  assert.deepEqual(cheats.filter((field) => field.group === "settings.weaponHandling").map((field) => field.name),
+    ["vr_cheatAmmo", "vr_recoil"]);
+  assert.equal(cheats.find((field) => field.name === "vr_recoil")!.inverted, true);
+  assert.equal(catalogs["zh-CN"]["settings.heiRound"], "高爆弹药");
+  assert.equal(catalogs["zh-CN"]["settings.playerAttributes"], "玩家属性");
+  assert.equal(catalogs["zh-CN"]["settings.weaponHandling"], "武器操作");
+  for (const catalog of Object.values(catalogs)) {
+    assert.ok(catalog["settings.playerAttributes"] && catalog["settings.weaponHandling"]);
+    assert.ok(catalog["settings.heiRound"] && catalog["settings.heiRound"] !== "HEI Round");
+  }
+});
+
 test("turning follows the backend in Basics and sight attraction belongs to Aiming", () => {
   const basicsGroups = [...new Set(fields.filter((field) => field.category === "basics").map((field) => field.group))];
   assert.deepEqual(basicsGroups.slice(0, 2), ["settings.runtimeBackend", "settings.turning"]);

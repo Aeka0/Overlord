@@ -4,6 +4,8 @@
 #include "native_ballistics.hpp"
 #include "official_cheats.hpp"
 #include "native_shield.hpp"
+#include "hei_round.hpp"
+#include "native_launcher_fire.hpp"
 #include "muzzle_clearance.hpp"
 #include "weapon_carry_runtime.hpp"
 #include "component/scheduler_context.hpp"
@@ -119,6 +121,10 @@ namespace vr::gameplay::weapons::native_ballistics
 		const auto spread=utils::hook::invoke<float>(ads_spread_address,ps,weapon,false,0);
 		out.status=outcome::unsupported_weapon;
 		if (!packet.definition || !std::isfinite(spread) || spread<0 || spread>90) return out;
+		bool grenade_requested{};
+		const auto grenade = hei_round::projectile_definition(weapon, grenade_requested);
+		parameters grenade_packet{};
+		if (grenade_requested && (!grenade || !native_launcher_fire::prepare(grenade, geometry, grenade_packet))) return out;
 		// Freeze the ACTUAL firing weapon, including its native variant name.
 		// Prepare script references/arguments before the irreversible ammo debit;
 		// native selection can belong to the other hand and must not be borrowed.
@@ -150,7 +156,14 @@ namespace vr::gameplay::weapons::native_ballistics
 		if (entity->client!=reinterpret_cast<game::gclient_s*>(ps) ||
 			native_ammunition::timeline()!=timeline || !game::CL_IsCgameInitialized() || ps->commandTime!=command_time)
 		{out.status=outcome::context_changed;return out;}
-		utils::hook::invoke<void>(bullet_address,entity,spread,&packet,entity,command_time,-1.f);
+		if (grenade_requested)
+			hei_round::projectile_fired(native_launcher_fire::fire(entity, grenade_packet));
+		else
+		{
+			hei_round::shot_scope addition{id};
+			utils::hook::invoke<void>(bullet_address,entity,spread,&packet,entity,command_time,-1.f);
+			addition.complete();
+		}
 		out.status=outcome::emitted;
 		if (entity->client==reinterpret_cast<game::gclient_s*>(ps))
 			out.after=native_ammunition::observe_carried(ps,id);

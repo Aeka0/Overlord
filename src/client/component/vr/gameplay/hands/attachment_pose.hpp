@@ -25,6 +25,7 @@ namespace vr::gameplay::hands::attachments
 		std::array<equipment::knife_hand_pose,2> knife_poses{}; // From this exact solved record, not a later runtime state.
 		body_pose::estimate body{}; // Same solved record; position is model-origin-relative.
 		std::array<std::uint64_t,2> reload_items{}; // Exact independent container pose revisions for either hand.
+		hands::vec head_forward{}, head_up{};       // Full center-eye axes, from the same solve.
 	};
 	// Rigid body attachments share the exact skin record's body and placement
 	// origin. Never combine its relative head with a later global camera origin.
@@ -32,6 +33,8 @@ namespace vr::gameplay::hands::attachments
 	{
 		head_pose_bridge::spatial_frame out;out.units_per_meter=pose.units;out.generation=pose.reference;out.captured_at=pose.at;
 		out.head_position=add(pose.head,origin);out.head_yaw_axis=pose.head_axis;out.body=pose.body;
+		out.head_forward = pose.head_forward;
+		out.head_up = pose.head_up;
 		if(out.body.valid)out.body.position=add(out.body.position,origin);
 		return out;
 	}

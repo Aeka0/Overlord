@@ -298,5 +298,9 @@
   "settings.campaignUnlockHint": "Wird einmal beim Spielstart aus diesem Fenster angewendet. Schaltet Missionen und Belohnungen frei, ohne Fortschritt oder Sammelobjekte als abgeschlossen zu markieren. Beim Schließen wird die Auswahl verworfen.",
   "settings.exoPunch": "Exoskelett-Schlag",
   "settings.exoPunchHint": "Erhöht den Schaden deiner physischen Nahkampfangriffe und schleudert Gegner bei tödlichen Treffern weg. Kugeln und Explosionen bleiben unverändert. Erfordert Ragdolls in den erweiterten Grafikeinstellungen.",
-  "settings.funFeatures": "Spielspaß"
+  "settings.funFeatures": "Spielspaß",
+  "settings.heiRound": "Hochexplosive Munition",
+  "settings.heiRoundHint": "Fügt normalen Geschosseinschlägen eine kleine Explosion hinzu. Schrotflinten, M200, WA2000 und Barrett verschießen stattdessen Unterlaufgranaten mit ihrer bisherigen Munition und Nachlademechanik.",
+  "settings.playerAttributes": "Spielerattribute",
+  "settings.weaponHandling": "Waffenhandhabung"
 }

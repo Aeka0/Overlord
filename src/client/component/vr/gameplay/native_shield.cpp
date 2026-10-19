@@ -21,8 +21,8 @@ namespace vr::gameplay::weapons::shield
  namespace
  {
   // H2 server BulletTrace / BulletProcess, witnessed in the saved native image.
-  constexpr std::uintptr_t trace_address=0x1404ac4e0,damage_address=0x1404abc50;
-  utils::hook::detour trace_hook,damage_hook;
+  constexpr std::uintptr_t damage_address=0x1404abc50;
+  utils::hook::detour damage_hook;
   game::dvar_t* setting{};std::atomic_bool installed{},alive{true};
   std::atomic_uint64_t queries{},blocks{},events{},filtered{},stale{},fire_blocks{},arm_blocks{};
   thread_local bool filtering{},filtering_angles{};
@@ -51,13 +51,13 @@ namespace vr::gameplay::weapons::shield
    if(target==&game::g_entities[0] && filtering_angles)return false;
    return utils::hook::invoke<bool>(0x1404a9b00,target,attacker,start,end);
   }
-  bool trace(bullet_parameters* parameters,unsigned weapon,bool alternate,game::gentity_s* attacker,bullet_result* result,int surface)
+  bool trace(native_bullet_trace::next next,bullet_parameters* parameters,unsigned weapon,bool alternate,game::gentity_s* attacker,bullet_result* result,int surface)
   {
    stamps.invalidate(result);
    const bool managed=parameters && ballistic_damage(parameters->means) && manages_player();
    const bool previous=filtering;filtering=managed;
    const auto restore=gsl::finally([&]{filtering=previous;});
-   const bool original=trace_hook.invoke<bool>(parameters,weapon,alternate,attacker,result,surface);
+   const bool original=next(parameters,weapon,alternate,attacker,result,surface);
    if(!managed || !parameters || !result)return original;
    const bool outgoing=attacker==&game::g_entities[0] || parameters->shooter==0;
    ++queries;
@@ -137,18 +137,18 @@ namespace vr::gameplay::weapons::shield
   void post_unpack() override
   {
    setting=dvars::register_bool("vr_physicalShield",true,game::DVAR_FLAG_SAVED,"Tracked shield front panels block bullets; native blunt physical melee");
-   constexpr std::uint8_t trace_entry[]{0x48,0x89,0x5c,0x24,0x08,0x48,0x89,0x6c,0x24,0x10};
    constexpr std::uint8_t damage_entry[]{0x48,0x89,0x5c,0x24,0x10,0x44,0x89,0x4c,0x24,0x20};
    constexpr std::uint8_t query_priority[]{0x4c,0x8b,0x4e,0x78};
    constexpr std::uint8_t priority_skip[]{0x41,0x3b,0xde,0x0f,0x82};
    constexpr std::uint8_t emitter[]{0x48,0x89,0x74,0x24,0x10,0x44,0x89,0x4c,0x24,0x20};
-   const bool ready=verify(trace_address,trace_entry) && verify(damage_address,damage_entry) &&
+   const bool ready=native_bullet_trace::initialize() && verify(damage_address,damage_entry) &&
     verify(0x1406b7727,query_priority) && verify(0x140655afa,priority_skip) && verify(0x1404ac950,emitter) &&
     call_matches(0x140599938,0x1406b73e0) && call_matches(0x1404abd94,0x1404a9b00) && call_matches(0x1404ab5f7,0x1404a9b00) &&
     call_matches(0x1404aa3f6,damage_address) && call_matches(0x1404ab5d7,0x1404ac950);
    if(ready)
    {
-    trace_hook.create(trace_address,trace);damage_hook.create(damage_address,damage);
+    if(!native_bullet_trace::set_interceptor(trace))return;
+    damage_hook.create(damage_address,damage);
     utils::hook::call(0x140599938,entity_query);utils::hook::call(0x1404abd94,angle_query);utils::hook::call(0x1404ab5f7,angle_query);
     installed=true;
    }

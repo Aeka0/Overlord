@@ -2,6 +2,7 @@
 #include "../h2/entrypoints.hpp"
 #ifdef DEBUG
 #include "native_ballistics.hpp"
+#include "native_bullet_trace.hpp"
 #include "component/command.hpp"
 #include "component/console.hpp"
 #include "component/scheduler.hpp"
@@ -16,7 +17,6 @@ namespace vr::gameplay::weapons::independent_fire_probe
 {
 	namespace
 	{
-		utils::hook::detour trace_hook;
 		bool installed{};
 		std::atomic<bool> busy{};
 		struct trace_sample {std::uint32_t weapon{}; float fraction{}; hands::vec end{};};
@@ -24,22 +24,16 @@ namespace vr::gameplay::weapons::independent_fire_probe
 		thread_local observation* active{};
 		template <typename T> T read(const void* p,std::size_t offset)
 		{ T value{}; std::memcpy(&value,static_cast<const std::byte*>(p)+offset,sizeof(value)); return value; }
-		bool trace_stub(void* bullet,std::uint32_t weapon,bool alternate,game::gentity_s* source,void* trace,int surface)
+		void trace_stub(const native_bullet_trace::parameters&,unsigned weapon,bool,
+		                const game::gentity_s* source,const native_bullet_trace::result& trace) noexcept
 		{
-			const auto result=trace_hook.invoke<bool>(bullet,weapon,alternate,source,trace,surface);
-			if (active && source==&game::g_entities[0] && trace && active->count<active->traces.size())
-				active->traces[active->count++]={weapon,read<float>(trace,0),read<hands::vec>(trace,0x38)};
-			return result;
+			if (active && source==&game::g_entities[0] && active->count<active->traces.size())
+				active->traces[active->count++]={weapon,trace.fraction,trace.position};
 		}
 		bool install()
 		{
 			if (installed) return true;
-			constexpr std::uint8_t bytes[]{0x48,0x89,0x5c,0x24,0x08,0x48,0x89,0x6c,0x24,0x10,
-				0x48,0x89,0x74,0x24,0x18,0x57,0x41,0x56,0x41,0x57,0x48,0x83,0xec,0x40};
-			std::array<std::uint8_t,sizeof(bytes)> mask{};mask.fill(0xff);
-			if (!utils::hook_validation::verify_masked_bytes(reinterpret_cast<void*>(0x1404AC4E0),
-				{bytes,mask.data(),sizeof(bytes)}) || !native_ballistics::initialize()) return false;
-			trace_hook.create(0x1404AC4E0,trace_stub);
+			if (!native_ballistics::initialize() || !native_bullet_trace::add_observer(trace_stub)) return false;
 			return installed=true;
 		}
 		struct identity

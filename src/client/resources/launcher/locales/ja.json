@@ -298,5 +298,9 @@
   "settings.campaignUnlockHint": "このウィンドウからゲームを起動するときに一度だけ適用します。ミッションと機密情報の報酬を解放し、クリアや収集の記録は変更しません。ウィンドウを閉じると未適用の選択は破棄されます。",
   "settings.exoPunch": "外骨格パンチ",
   "settings.exoPunchHint": "物理的な近接攻撃のダメージを強化し、致死攻撃で敵を吹き飛ばします。弾丸と爆発には影響しません。詳細グラフィック設定でラグドールを有効にする必要があります。",
-  "settings.funFeatures": "お楽しみ機能"
+  "settings.funFeatures": "お楽しみ機能",
+  "settings.heiRound": "炸裂弾",
+  "settings.heiRoundHint": "通常弾の命中時に小さな爆発を追加します。ショットガン、M200、WA2000、Barrettは銃身下ランチャー用の榴弾を発射します。元の弾薬と装填操作は維持されます。",
+  "settings.playerAttributes": "プレイヤー属性",
+  "settings.weaponHandling": "武器操作"
 }

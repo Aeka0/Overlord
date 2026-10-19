@@ -7,6 +7,10 @@ once before enabling them. It does not unlock the native Intel menu.
 
 ## Launcher controls
 
+Player attributes groups the health and notarget controls. Weapon handling
+groups infinite ammunition and no recoil; their native values and defaults
+are unchanged. Fun features contains EXO Punch and high-explosive ammunition.
+
 | Preference | Choices | Native integration |
 | --- | --- | --- |
 | No recoil (`vr_recoil`, inverted UI) | Disabled by default; checked saves `false` | Existing recoil switch; absent from OOBE, while single-hand penalty remains in OOBE and Gameplay |

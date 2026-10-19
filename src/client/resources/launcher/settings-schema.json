@@ -401,18 +401,9 @@
     "description": "settings.smartAmmoSelectionHint"
   },
   {
-    "name": "vr_recoil",
-    "category": "cheats",
-    "group": "settings.noRecoil",
-    "label": "settings.noRecoil",
-    "type": "toggle",
-    "description": "settings.noRecoilHint",
-    "inverted": true
-  },
-  {
     "name": "vr_cheatHealth",
     "category": "cheats",
-    "group": "settings.cheatHealth",
+    "group": "settings.playerAttributes",
     "label": "settings.cheatHealth",
     "type": "choice",
     "description": "settings.cheatHealthHint"
@@ -420,7 +411,7 @@
   {
     "name": "vr_cheatNotarget",
     "category": "cheats",
-    "group": "settings.cheatNotarget",
+    "group": "settings.playerAttributes",
     "label": "settings.cheatNotarget",
     "type": "choice",
     "description": "settings.cheatNotargetHint"
@@ -428,10 +419,19 @@
   {
     "name": "vr_cheatAmmo",
     "category": "cheats",
-    "group": "settings.cheatAmmo",
+    "group": "settings.weaponHandling",
     "label": "settings.cheatAmmo",
     "type": "choice",
     "description": "settings.cheatAmmoHint"
+  },
+  {
+    "name": "vr_recoil",
+    "category": "cheats",
+    "group": "settings.weaponHandling",
+    "label": "settings.noRecoil",
+    "type": "toggle",
+    "description": "settings.noRecoilHint",
+    "inverted": true
   },
   {
     "name": "vr_exoPunch",
@@ -440,6 +440,14 @@
     "label": "settings.exoPunch",
     "type": "toggle",
     "description": "settings.exoPunchHint"
+  },
+  {
+    "name": "vr_heiRound",
+    "category": "cheats",
+    "group": "settings.funFeatures",
+    "label": "settings.heiRound",
+    "type": "toggle",
+    "description": "settings.heiRoundHint"
   },
   {
     "name": "vr_killfeedStyle",

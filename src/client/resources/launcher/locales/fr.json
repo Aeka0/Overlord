@@ -298,5 +298,9 @@
   "settings.campaignUnlockHint": "Appliqué une seule fois au lancement depuis cette fenêtre. Débloque les missions et les récompenses des renseignements sans compléter la progression ni la collecte. Fermer cette fenêtre annule la sélection.",
   "settings.exoPunch": "Coup de poing d’exosquelette",
   "settings.exoPunchHint": "Augmente les dégâts de vos attaques physiques au corps à corps et projette les ennemis lors des coups mortels. Les balles et explosions restent inchangées. Nécessite les ragdolls dans les options graphiques avancées.",
-  "settings.funFeatures": "Fonctions amusantes"
+  "settings.funFeatures": "Fonctions amusantes",
+  "settings.heiRound": "Munitions hautement explosives",
+  "settings.heiRoundHint": "Ajoute une petite explosion aux impacts ordinaires. Les fusils à pompe, M200, WA2000 et Barrett tirent des grenades de lance-grenades sous le canon, en conservant leurs munitions et manipulations de rechargement.",
+  "settings.playerAttributes": "Attributs du joueur",
+  "settings.weaponHandling": "Manipulation des armes"
 }

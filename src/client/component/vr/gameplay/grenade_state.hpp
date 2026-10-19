@@ -11,7 +11,11 @@ namespace vr::gameplay::grenades
 		phase stage{}; kind type{}; vr::hand holder{vr::hand::none}, puller{vr::hand::none};
 		std::uint32_t weapon{};std::uint64_t revision{}, reference{};
 		int fuse_ms{}, deadline{}, remaining{};
-		bool spent{};
+		bool spent{}, mouth_puller{};
+		bool pin_busy() const noexcept
+		{
+			return vr::valid_hand(puller) || mouth_puller;
+		}
 		bool held()const noexcept{return stage!=phase::stowed;}
 		bool live()const noexcept{return held() && spent;}
 		bool take(kind k,std::uint32_t token,vr::hand h,std::uint64_t ref,int fuse) noexcept
@@ -33,12 +37,22 @@ namespace vr::gameplay::grenades
 		{if(type!=kind::football || stage!=phase::prepared || spent)return false;stow();return true;}
 		bool handoff(vr::hand next)noexcept
 		{
-			if(!held() || stage==phase::release_pending || vr::valid_hand(puller) || !vr::valid_hand(next) || next==holder)return false;
+			if (!held() || stage == phase::release_pending || pin_busy() || !vr::valid_hand(next) ||
+			    next == holder)
+				return false;
 			holder=next;puller=vr::hand::none;++revision;return true;
 		}
 		// Caller must commit exactly one native ammunition debit first.
 		bool pull_pin(bool debited)noexcept
-		{if(stage!=phase::safe || !behaviors[unsigned(type)].pin_gesture || !debited)return false;spent=true;stage=phase::prepared;puller=vr::hand::none;return true;}
+		{
+			if (stage != phase::safe || !behaviors[unsigned(type)].pin_gesture || !debited)
+				return false;
+			spent = true;
+			stage = phase::prepared;
+			puller = vr::hand::none;
+			mouth_puller = false;
+			return true;
+		}
 		bool cook(int time)noexcept
 		{
 			if(!behaviors[unsigned(type)].cook || stage!=phase::prepared || time<0 || time>INT32_MAX-fuse_ms)return false;

@@ -211,6 +211,10 @@ int main(int argc, char** argv)
 		}
 
 		const auto exo=vr::settings::exo_punch.name;
+		const auto hei=vr::settings::hei_round.name;
+		require(initial[hei]==false,"HEI rounds default off");
+		{auto selected=initial;selected[hei]=true;
+		 require(read_values(update_config("",selected))==selected,"HEI Bool round trips through launcher configuration");}
 		require(initial[exo]==false,"EXO punch defaults off");
 		for(bool enabled:{false,true})
 		{

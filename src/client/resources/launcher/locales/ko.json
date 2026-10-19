@@ -298,5 +298,9 @@
   "settings.campaignUnlockHint": "이 창에서 게임을 시작할 때 한 번 적용됩니다. 임무와 정보 보상을 해제하며 클리어 및 수집 기록은 변경하지 않습니다. 창을 닫으면 아직 적용하지 않은 선택이 취소됩니다.",
   "settings.exoPunch": "외골격 펀치",
   "settings.exoPunchHint": "물리 근접 공격의 피해를 높이고 치명적인 공격으로 적을 날려 보냅니다. 총탄과 폭발에는 영향을 주지 않습니다. 고급 그래픽 설정에서 래그돌을 활성화해야 합니다.",
-  "settings.funFeatures": "재미 기능"
+  "settings.funFeatures": "재미 기능",
+  "settings.heiRound": "고폭 탄약",
+  "settings.heiRoundHint": "일반 탄환 명중 시 작은 폭발을 추가합니다. 산탄총, M200, WA2000, Barrett은 대신 하부 유탄발사기용 유탄을 발사하며 기존 탄약과 장전 조작을 유지합니다.",
+  "settings.playerAttributes": "플레이어 속성",
+  "settings.weaponHandling": "무기 조작"
 }

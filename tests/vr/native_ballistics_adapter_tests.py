@@ -23,7 +23,12 @@ harness = r'''
 #include <tuple>
 #include <vector>
 using namespace vr::gameplay::weapons;
+namespace vr::gameplay::weapons::hei_round {
+struct shot_scope { explicit shot_scope(weapon_identity) {} void complete() {} };
+}
 namespace fixture {
+int grenade_mode=0;
+bool grenade_prepare=true;
 bool enabled=true, allowed=true, server=true, blocked=false, commit_ok=true, settle_ok=true, sustain=false;
 std::uint64_t epoch=1;
 std::map<std::uint64_t,native_ammunition::snapshot> clips;
@@ -98,6 +103,21 @@ template<class Result,class... Args> Result invoke(std::uintptr_t address,Args..
     }
 }
 }
+namespace vr::gameplay::weapons::hei_round {
+unsigned projectile_definition(unsigned,bool& requested) noexcept {
+    requested=fixture::grenade_mode!=0; return fixture::grenade_mode==2 ? 42u : 0u;
+}
+void projectile_fired(game::gentity_s*) noexcept {}
+}
+namespace vr::gameplay::weapons::native_launcher_fire {
+bool prepare(unsigned token,const shot_geometry& geometry,native_ballistics::parameters& packet) noexcept {
+    assert(token==42);packet={};packet.shot=geometry;packet.weapon=token;return fixture::grenade_prepare;
+}
+game::gentity_s* fire(game::gentity_s* player,const native_ballistics::parameters& packet) {
+    assert(player==&game::g_entities[0] && packet.weapon==42 && packet.shot.origin[0]==1.f);
+    fixture::events.push_back("grenade");return player;
+}
+}
 namespace vr::gameplay::weapons::native_ballistics {
 namespace {
 bool verified=true;
@@ -122,6 +142,7 @@ void reset() {
     events.clear(); names.clear(); bullets.clear(); clips.clear(); projected={}; definitions.fill(&game::player);
     enabled=allowed=server=commit_ok=settle_ok=true; blocked=sustain=invalid_name=false;
     on_notify={}; on_settle={}; epoch=1; game::player={}; game::g_entities[0].client=&game::player;
+    grenade_mode=0;grenade_prepare=true;
     for(auto id:{first,second,duplicate,wide})clips[id.generation]={true,id.weapon,5,30,0,0,id.generation};
 }
 int main() {
@@ -170,6 +191,18 @@ int main() {
         assert(names.size()==1 && bullets.empty() && clips[1].loaded==4);
     }
     reset(); result=fire(); assert(result.status==outcome::emitted); // Guard released after rejected/lost contexts.
+    reset(); grenade_mode=2;result=fire();
+    assert(result.status==outcome::emitted && result.notified && result.after.loaded==4 && bullets.empty());
+    assert((events==std::vector<std::string>{"debit","settle","notify","grenade"}));
+    assert(names==std::vector<std::string>{"weapon_25_silencer"} && clips[2].loaded==5);
+    reset();grenade_mode=1;result=fire();
+    assert(result.status==outcome::unsupported_weapon && !result.notified && clips[1].loaded==5 && events.empty());
+    reset();grenade_mode=2;grenade_prepare=false;result=fire();
+    assert(!result.notified && clips[1].loaded==5 && events.empty());
+    reset();grenade_mode=2;sustain=true;result=fire();
+    assert(result.status==outcome::emitted && clips[1].loaded==5 && bullets.empty() && events.back()=="grenade");
+    reset();grenade_mode=2;on_notify=[]{++epoch;};result=fire();
+    assert(result.status==outcome::context_changed && result.notified && events.back()=="notify");
     std::cout << "Production fire_owned: PASS (order, actual weapon, same-tick instances, rejected shots, reentry, lifecycle)\n";
 }
 '''

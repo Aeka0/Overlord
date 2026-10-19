@@ -298,5 +298,9 @@
   "settings.campaignUnlockHint": "Se aplica una vez al iniciar desde esta ventana. Desbloquea misiones y recompensas de información sin completar el progreso ni los coleccionables. Cerrar la ventana descarta la selección.",
   "settings.exoPunch": "Puñetazo de exoesqueleto",
   "settings.exoPunchHint": "Aumenta el daño de tus ataques físicos cuerpo a cuerpo y lanza a los enemigos con golpes mortales. No afecta a balas ni explosiones. Requiere ragdolls en los ajustes gráficos avanzados.",
-  "settings.funFeatures": "Funciones divertidas"
+  "settings.funFeatures": "Funciones divertidas",
+  "settings.heiRound": "Munición de alto explosivo",
+  "settings.heiRoundHint": "Añade una pequeña explosión a los impactos normales. Las escopetas, M200, WA2000 y Barrett disparan granadas de lanzagranadas acoplado, conservando su munición y recarga originales.",
+  "settings.playerAttributes": "Atributos del jugador",
+  "settings.weaponHandling": "Manejo de armas"
 }

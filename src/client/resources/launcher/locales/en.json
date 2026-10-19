@@ -298,5 +298,9 @@
   "settings.campaignUnlockHint": "Applies once when you launch the game from this window. Unlocks missions and intel rewards without completing campaign or collectible records. Closing this window discards the selection.",
   "settings.exoPunch": "EXO Punch",
   "settings.exoPunchHint": "Boost your physical melee damage and launch enemies on lethal hits. Bullets and explosions are unaffected. Requires ragdolls in Advanced Graphics.",
-  "settings.funFeatures": "Fun features"
+  "settings.funFeatures": "Fun features",
+  "settings.heiRound": "High-explosive ammo",
+  "settings.heiRoundHint": "Adds a small explosion to ordinary bullet impacts. Shotguns, M200, WA2000 and Barrett fire underbarrel grenades instead, using the original ammunition and reload mechanics.",
+  "settings.playerAttributes": "Player attributes",
+  "settings.weaponHandling": "Weapon handling"
 }

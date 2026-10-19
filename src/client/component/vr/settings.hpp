@@ -121,6 +121,7 @@ namespace vr::settings
 	inline constexpr boolean_setting ads_comfort{"vr_adsComfort", true};
 	inline constexpr boolean_setting ads_sprint{"vr_adsSprint", true};
 	inline constexpr boolean_setting exo_punch{"vr_exoPunch", false};
+	inline constexpr boolean_setting hei_round{"vr_heiRound", false};
 	inline constexpr auto toggles = []
 	{
 		constexpr std::array gameplay{recording_mode,
@@ -138,6 +139,7 @@ namespace vr::settings
 		                              ads_comfort,
 		                              ads_sprint,
 		                              exo_punch,
+		                              hei_round,
 		                              boolean_setting{disable_lens_flare, false},
 		                              boolean_setting{camera_bob, true},
 		                              boolean_setting{recoil, true},

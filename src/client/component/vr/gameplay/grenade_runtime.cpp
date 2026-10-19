@@ -2,6 +2,7 @@
 #include "grenade_runtime.hpp"
 #include "grenade_profile.hpp"
 #include "grenade_contact.hpp"
+#include "grenade_mouth.hpp"
 #include "part_hand_constraint.hpp"
 #include "knife_profile.hpp"
 #include "native_grenade.hpp"
@@ -46,6 +47,7 @@ namespace vr::gameplay::grenades
 			state value;anchor root{};vec pull_start{},pull_delta{},velocity{};
 			int grasp_started{},pin_started{};clock::time_point grasp_at{},pin_at{};quat pull_rotation{0,0,0,1};
 			release_motion motion;std::uint64_t button_generation{},button_presses{},motion_continuity{};
+			mouth_pin_pull mouth;
 			throwback::candidate source{};
 		};
 		struct pin_debris {bool active{};kind type{};anchor root{};vec velocity{};int started{};std::uint64_t reference{};unsigned mask{};};
@@ -72,6 +74,7 @@ namespace vr::gameplay::grenades
 		game::dvar_t *enabled{},*throw_gain{},*football_gain{};
 		std::atomic<float> last_raw_speed{},last_throw_speed{};
 		std::atomic_uint64_t takes{},pins{},returns{},throws{},cooks{},in_hand{},failed{},handoffs{};
+		std::atomic_uint64_t mouth_bites{}, mouth_pins{};
 		std::atomic_uint64_t throwback_takes{},throwback_rejected{};
 		std::atomic<const char*> reason{"waiting for native grenade resources"};
 		const void* player{};int last_time{};
@@ -232,6 +235,8 @@ namespace vr::gameplay::grenades
 		{return hi::object(hi::domain::grenade,{c.grenade.weapon,c.entity.generation+1},3,unsigned(c.entity.entity));}
 		void grasp(held& item,vr::hand actor,const hi::frame& f,int now)
 		{
+			item.mouth.reset();
+			item.value.mouth_puller = false;
 			item.motion.reset();item.grasp_started=now;item.grasp_at=f.input.sampled_at;item.pull_delta={};
 			const auto& secondary=f.input.secondary[unsigned(actor)];item.button_generation=secondary.generation;item.button_presses=secondary.presses;
 			weapons::feedback::carry_confirmation(actor,f.input);
@@ -239,8 +244,37 @@ namespace vr::gameplay::grenades
 		void release(held& item,int time,vec velocity)
 		{
 			if(item.value.stage==phase::release_pending)return;
+			item.mouth.reset();
+			item.value.mouth_puller = false;
 			if(item.value.stage==phase::safe){item.value.stow();item.motion.reset();++returns;return;}
 			item.value.release(time);item.velocity=velocity;item.pull_delta={};
+		}
+		bool finish_pin(
+		    held& item, unsigned slot, int now, const hi::frame& f, const asset& model, vr::hand feedback)
+		{
+			if (item.value.stage != phase::safe || !item.value.pull_pin(native::debit(item.value.weapon)))
+				return false;
+			++pins;
+			queue_sound(item, false);
+			auto root = item.root;
+			root.position = add(root.position, rotate(root.rotation, item.pull_delta));
+			const auto seconds = std::max(.05f, (now - item.pin_started) * .001f);
+			auto velocity = rotate(root.rotation, scale(item.pull_delta, 1 / seconds));
+			const float speed = length(velocity), limit = f.body.units_per_meter * 2;
+			if (speed > limit)
+				velocity = scale(velocity, limit / speed);
+			debris[slot] = {model.pin_mask != 0,
+			                item.value.type,
+			                root,
+			                velocity,
+			                now,
+			                item.value.reference,
+			                model.pin_mask};
+			item.mouth.reset();
+			item.pull_delta = {};
+			weapons::feedback::carry_confirmation(feedback, f.input);
+			reason = "pin removed; release to throw";
+			return true;
 		}
 		void emit(held& item,int time)
 		{
@@ -312,8 +346,13 @@ namespace vr::gameplay::grenades
 				{
 					if(handle!=reinterpret_cast<std::uintptr_t>(&lighting[slot][b]))continue;
 					const auto& current_item=live.items[slot];
-					if(!fresh(live.at) || item.value.revision!=current_item.value.revision || item.value.stage!=current_item.value.stage ||
-						item.value.reference!=live.reference || item.value.holder!=current_item.value.holder)return result::omit;
+					if (!fresh(live.at) || item.value.revision != current_item.value.revision ||
+					    item.value.stage != current_item.value.stage ||
+					    item.value.reference != live.reference ||
+					    item.value.holder != current_item.value.holder ||
+					    item.value.puller != current_item.value.puller ||
+					    item.value.mouth_puller != current_item.value.mouth_puller)
+						return result::omit;
 					std::array<float,12> camera{};vec origin{};attachments::solved pose;
 					if(!utils::native_memory::read_bytes(camera.data(),static_cast<const std::byte*>(p.record)+engine_stereo_view::h2_view_origin_offset,sizeof(camera)) ||
 						!attachments::for_record(p.record,camera,pose) || pose.reference!=item.value.reference ||
@@ -330,6 +369,16 @@ namespace vr::gameplay::grenades
 							if(off==1)point=hands::pose_mirror::local_point(point,pose.mirror_basis[off]);
 							const auto contact=compose({add(pose.wrists[off].position,origin),pose.wrists[off].rotation},{point,{0,0,0,1}}).position;
 							travel=pin_slide(a->pin,compose(inverse(root),{contact,{0,0,0,1}}).position,pose.units);
+						}
+						else if (item.value.mouth_puller)
+						{
+							const auto mouth = mouth_point(
+							    add(pose.head, origin), pose.head_forward, pose.head_up, pose.units);
+							if (!mouth)
+								return result::omit;
+							travel = pin_slide(item.mouth.start(),
+							                   compose(inverse(root), {*mouth, {0, 0, 0, 1}}).position,
+							                   pose.units);
 						}
 						local.position=add(local.position,travel);
 					}
@@ -395,7 +444,8 @@ namespace vr::gameplay::grenades
 					if(distance<=1)hi::offer({actor,{hi::object(hi::domain::grenade,identity(i,tokens[i],state.revision+1)),hi::role::tactical,hi::button::grip,hi::recipe::single,hi::capability::action},grip.event,20,distance,1,true,true});
 					continue;
 				}
-				if(unsigned(state.holder)==h || state.stage==phase::release_pending || vr::valid_hand(state.puller))continue;
+				if (unsigned(state.holder) == h || state.stage == phase::release_pending || state.pin_busy())
+					continue;
 				auto a=pub.assets[unsigned(state.type)];if(!a)continue;
 				const unsigned holder=unsigned(state.holder);if(holder>1 || !(f.valid_hands&(1u<<holder)))continue;
 				auto wrist=f.wrists[holder];wrist.rotation=normalize(multiply(wrist.rotation,pub.basis[holder]));
@@ -420,6 +470,19 @@ namespace vr::gameplay::grenades
 		const auto* frame=hi::simulation();if(!frame || !running())return;
 		const auto& f=*frame;const int now=native::time();const auto tokens=selected();
 		snapshot pub;{const std::lock_guard lock(mutex);pub=published;}
+		// The mouth is a single contact, independent of either free-hand slot.
+		unsigned mouth_owner = held_count;
+		for (unsigned i = 0; i < held_count; ++i)
+			if (items[i].value.stage == phase::safe && items[i].mouth.engaged())
+			{
+				mouth_owner = i;
+				break;
+			}
+		const auto mouth =
+		    mouth_point(f.body.head_position, f.body.head_forward, f.body.head_up, f.body.units_per_meter);
+		const bool mouth_valid = mouth && f.input.focused && fresh(f.input.sampled_at) &&
+		                         f.body.generation == f.input.reference_generation &&
+		                         fresh(f.body.captured_at);
 		for(unsigned h=0;h<2;++h)
 		{
 			const auto& candidate=throwback_candidates[h];
@@ -451,7 +514,12 @@ namespace vr::gameplay::grenades
 			const auto next=vr::hand(1-unsigned(s.holder));const auto handoff_target=target(i,2);
 			if(hi::granted(next,hi::domain::grenade,target(i).object,hi::button::grip,hi::role::control) && s.handoff(next))
 			{
-				hi::completed(next,handoff_target);item.motion.reset();item.pull_delta={};item.grasp_started=now;item.grasp_at=f.input.sampled_at;
+				hi::completed(next, handoff_target);
+				item.motion.reset();
+				item.mouth.reset();
+				item.pull_delta = {};
+				item.grasp_started = now;
+				item.grasp_at = f.input.sampled_at;
 				item.button_generation=f.input.secondary[unsigned(next)].generation;item.button_presses=f.input.secondary[unsigned(next)].presses;
 				++handoffs;weapons::feedback::carry_confirmation(next,f.input);
 			}
@@ -459,6 +527,9 @@ namespace vr::gameplay::grenades
 			if (item.motion_continuity != f.input.continuity_generation)
 			{
 				item.motion.reset();
+				item.mouth.reset();
+				s.mouth_puller = false;
+				item.pull_delta = {};
 				item.motion_continuity = f.input.continuity_generation;
 			}
 			if((f.valid_hands&(1u<<h)) && s.reference==f.input.reference_generation)
@@ -467,7 +538,13 @@ namespace vr::gameplay::grenades
 				item.root=compose(wrist,authored::attachment(s.type,pub.mirror[h],h==0));
 				item.motion.sample(item.root.position,f.input.sampled_at,f.body.units_per_meter);
 			}
-			else item.motion.reset(); // Missing/inferred geometry cannot retain an old throw impulse.
+			else
+			{
+				item.motion.reset();
+				item.mouth.reset();
+				s.mouth_puller = false;
+				item.pull_delta = {};
+			} // Missing/inferred geometry cannot retain an old impulse or bite.
 			if(s.stage==phase::safe && (i>=chest_count || tokens[i]!=s.weapon || !native::available(s.weapon))){s.stow();continue;}
 			const auto grip=hi::input(s.holder,hi::button::grip);
 			if(grip.release || (f.input.squeeze[h].active && !f.input.squeeze[h].down))
@@ -485,7 +562,12 @@ namespace vr::gameplay::grenades
 			if(s.stage==phase::safe && behaviors[unsigned(s.type)].pin_gesture)
 			{
 				const unsigned other=1-h;
-				if(hi::granted(vr::hand(other),hi::domain::grenade,target(i).object,hi::button::trigger,hi::role::part) && s.puller==vr::hand::none)
+				if (hi::granted(vr::hand(other),
+				                hi::domain::grenade,
+				                target(i).object,
+				                hi::button::trigger,
+				                hi::role::part) &&
+				    !s.pin_busy())
 				{s.puller=vr::hand(other);item.pin_started=now;item.pin_at=f.input.sampled_at;item.pull_start=compose(inverse(item.root),f.wrists[other]).position;item.pull_rotation=normalize(multiply(conjugate(item.root.rotation),multiply(f.wrists[other].rotation,pub.basis[other])));item.pull_delta={};}
 				if(vr::valid_hand(s.puller))
 				{
@@ -497,18 +579,48 @@ namespace vr::gameplay::grenades
 						item.pull_delta=pin_slide(item.pull_start,tracked,f.body.units_per_meter);
 						const float distance=item.pull_delta[1]/f.body.units_per_meter;
 						if(offset>.5f){s.puller=vr::hand::none;item.pull_delta={};}
-						else if(distance>=pin_stroke_meters-.0001f && s.pull_pin(native::debit(s.weapon)))
-						{
-							++pins;queue_sound(item,false);
-							auto root=item.root;root.position=add(root.position,rotate(root.rotation,item.pull_delta));
-							const auto speed=std::max(.05f,(now-item.pin_started)*.001f);
-							auto velocity=rotate(root.rotation,scale(item.pull_delta,1/speed));const float length_=length(velocity),limit=f.body.units_per_meter*2;
-							if(length_>limit)velocity=scale(velocity,limit/length_);
-							const auto mask=pub.assets[unsigned(s.type)]->pin_mask;
-							debris[i]={mask!=0,s.type,root,velocity,now,s.reference,mask};
-							item.pull_delta={};weapons::feedback::carry_confirmation(vr::hand(other),f.input);reason="pin removed; release to throw";
-						}
+						else if (distance >= pin_stroke_meters - .0001f)
+							finish_pin(item, i, now, f, *pub.assets[unsigned(s.type)], vr::hand(other));
 					}
+				}
+				if (s.stage == phase::safe && !vr::valid_hand(s.puller) && mouth_valid &&
+				    (f.valid_hands & (1u << h)) && s.reference == f.input.reference_generation &&
+				    (mouth_owner == held_count || mouth_owner == i))
+				{
+					const bool was_bitten = item.mouth.bitten();
+					const auto a = pub.assets[unsigned(s.type)];
+					const auto local = compose(inverse(item.root), {*mouth, {0, 0, 0, 1}}).position;
+					s.mouth_puller = a && item.mouth.advance(local,
+					                                         a->pin,
+					                                         f.body.units_per_meter,
+					                                         f.input.sampled_at,
+					                                         f.input.reference_generation,
+					                                         f.input.continuity_generation);
+					if (item.mouth.engaged())
+						mouth_owner = i;
+					if (s.mouth_puller)
+					{
+						item.pull_delta = item.mouth.travel();
+						if (!was_bitten)
+						{
+							item.pin_started = now;
+							++mouth_bites;
+							weapons::feedback::carry_confirmation(s.holder, f.input);
+							reason = "pin held at mouth; pull grenade away along pin axis";
+						}
+						if (item.pull_delta[1] / f.body.units_per_meter >= pin_stroke_meters - .0001f &&
+						    finish_pin(item, i, now, f, *a, s.holder))
+							++mouth_pins;
+					}
+					else
+						item.pull_delta = {};
+				}
+				else
+				{
+					item.mouth.reset();
+					s.mouth_puller = false;
+					if (!vr::valid_hand(s.puller))
+						item.pull_delta = {};
 				}
 			}
 			const auto& button=f.input.secondary[h];
@@ -527,6 +639,15 @@ namespace vr::gameplay::grenades
 	void lifecycle(bool suspended)noexcept
 	{
 		if(!scheduler::is_executing(scheduler::pipeline::server) || !ready)return;
+		// Suspension includes paused/menu frames, before the timer early return.
+		if (suspended || !running())
+			for (auto& item : items)
+			{
+				item.mouth.reset();
+				item.value.mouth_puller = false;
+				if (!vr::valid_hand(item.value.puller))
+					item.pull_delta = {};
+			}
 		if(suspended || !running())draw_intent.reset();
 		const auto* ps=game::g_entities[0].client;const int now=native::time();
 		if(!game::CL_IsCgameInitialized() || !ps || (player && (player!=ps || now<last_time)))
@@ -544,6 +665,8 @@ namespace vr::gameplay::grenades
 				(reinterpret_cast<const game::playerState_s*>(ps)->e_flags&0x103000) || weapons::carry::hand_has_weapon(s.holder);
 			if(lost)
 			{
+				item.mouth.reset();
+				s.mouth_puller = false;
 				if(!s.spent){s.stow();item.motion.reset();continue;}
 				const auto* state=reinterpret_cast<const game::playerState_s*>(ps);
 				item.root.position={state->origin[0],state->origin[1],state->origin[2]+state->viewHeightCurrent-10};
@@ -601,7 +724,10 @@ namespace vr::gameplay::grenades
 	{
 		void post_unpack()override
 		{
-			enabled=dvars::register_bool("vr_physicalGrenades",true,game::DVAR_FLAG_SAVED,"Physical chest grenades, two-hand pin pull and frag cooking");
+			enabled = dvars::register_bool("vr_physicalGrenades",
+			                               true,
+			                               game::DVAR_FLAG_SAVED,
+			                               "Physical chest grenades, hand/mouth pin pull and frag cooking");
 			const auto& general=settings::grenade_throw_speed;const auto& football=settings::football_throw_speed;
 			throw_gain=dvars::register_float(general.name,general.default_value,general.min,general.max,game::DVAR_FLAG_SAVED,"Physical throwable velocity gain");
 			football_gain=dvars::register_float(football.name,football.default_value,football.min,football.max,game::DVAR_FLAG_SAVED,"Additional football throw gain");
@@ -612,10 +738,19 @@ namespace vr::gameplay::grenades
 			scene_models::on_submit(submit);scene_models::on_prepare_placement(prepare);
 			command::add("vr_grenade_status",[]{scheduler::once([]{
 				std::ostringstream out;out<<"grenades_ready="<<ready<<" takes="<<takes<<" pins="<<pins<<" returns="<<returns<<" throws="<<throws<<" cooks="<<cooks<<" in_hand="<<in_hand<<" spawn_failures="<<failed<<" handoffs="<<handoffs<<" sounds="<<sounds_played<<" missing_sounds="<<sounds_missing<<" reason="<<reason.load()<<'\n';
+				out << "mouth_bites=" << mouth_bites << " mouth_pins=" << mouth_pins << '\n';
 				{const std::lock_guard lock(mutex);for(unsigned k=0;k<kind_count;++k)out<<"model="<<authored::profiles[k].model<<" ready="<<bool(published.assets[k])<<'\n';}
 				out<<"throwback_ready="<<throwback::ready()<<" throwback_takes="<<throwback_takes<<" throwback_rejected="<<throwback_rejected<<'\n';
 				const auto candidate=throwback::query();out<<"throwback_candidate="<<candidate.entity.entity<<" weapon="<<candidate.grenade.weapon<<" deadline="<<candidate.deadline<<'\n';
-				for(unsigned i=0;i<held_count;++i){const auto& s=items[i].value;out<<"slot="<<i<<" weapon="<<s.weapon<<" phase="<<unsigned(s.stage)<<" hand="<<int(s.holder)<<" puller="<<int(s.puller)<<" spent="<<s.spent<<" fuse="<<s.fuse_ms<<" deadline="<<s.deadline<<" throwback_entity="<<items[i].source.entity.entity<<'\n';}
+				for (unsigned i = 0; i < held_count; ++i)
+				{
+					const auto& s = items[i].value;
+					out << "slot=" << i << " weapon=" << s.weapon << " phase=" << unsigned(s.stage)
+						<< " hand=" << int(s.holder) << " puller=" << int(s.puller)
+						<< " mouth_puller=" << s.mouth_puller << " spent=" << s.spent << " fuse=" << s.fuse_ms
+						<< " deadline=" << s.deadline << " throwback_entity=" << items[i].source.entity.entity
+						<< '\n';
+				}
 				const auto native=native::launch_status();
 				out<<"throw_gain="<<throw_gain->current.value<<" football_gain="<<football_gain->current.value<<" last_raw_mps="<<last_raw_speed<<" last_scaled_mps="<<last_throw_speed
 					<<" native_attempts="<<native.attempts<<" native_spawns="<<native.spawned<<" actor_clearances="<<native.actor_clearances<<" world_clearances="<<native.world_clearances

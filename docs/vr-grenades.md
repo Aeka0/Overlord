@@ -13,6 +13,17 @@ animation. `vr_physicalGrenades` enables the interaction (default true).
 - Hold the other free hand's **trigger** near the pin and pull 8 cm relative to the
   grenade. This commits one native ammo debit, removes the pin assembly and
   frees the pulling hand. Releasing the trigger too early cancels the pull.
+- Alternatively, hold the ring at the mouth for 150 ms to bite it, then move the
+  grenade away along its pin axis by the same 8 cm. No extra button or free hand
+  is needed. A short holding-hand haptic confirms the bite. Teeth are estimated
+  7 cm forward and 7 cm below the center eye, following full head pitch/roll;
+  acquisition has a 4.5 cm radius. Passing across the face does not remove a pin.
+  The mouth owns at most one ring. A hand pin pull or handoff cancels a pending
+  bite. A bitten ring blocks handoff and hand pin acquisition until extraction
+  or sideways/backward breakaway. Tracking/focus loss, pause, recenter or changed
+  tracking continuity discard the bite.
+  Moving head and grenade together cannot extract it. Mouth and hand extraction
+  share the ammo debit, pin debris, native sound and unchanged cook/release rules.
 - Touch the grenade body with the other free hand and press its side grip to
   transfer ownership. The side grip never pulls the pin. Handoff preserves the
   paid-ammo flag and cooking deadline, and commits before the original hand's
@@ -90,7 +101,7 @@ requested/admitted native speed and NPC/world obstruction counts.
 ## Pomegranate and football
 
 `h2_cheatpomegrenade` follows frag behavior, including a simulated two-hand pin
-pull, transfer lock during manipulation, B/Y cooking and native explosion. The
+pull or mouth pull, transfer lock during manipulation, B/Y cooking and native explosion. The
 interaction point is near the fruit crown. Its intact fruit model never gains
 an invented ring, pin or spoon: the same gestures move the hand and produce native
 sound/haptic feedback without pin/lever debris. Native token, shared `usgrenade`
@@ -192,6 +203,11 @@ pin, return, throw/cook/handoff counters, native spawn/audio failures and curren
 It also writes `minidumps/overlord-grenades.txt` without triggering an action.
 Throwback diagnostics include contract readiness, the current native candidate,
 accepted/refused pickups and each held grenade's source entity and deadline.
+Mouth diagnostics include `mouth_bites`, `mouth_pins` and each slot's
+`mouth_puller` flag. Automated mouth coverage checks dwell, physical scale,
+head orientation, axial extraction, failed debit, breakaway and tracking resets.
+Headset acceptance is still needed for the estimated mouth location, contact
+radius, bite feedback and the head/hand movement needed to extract each pin.
 
 Automated coverage: safe return, failed debit, pin commitment, frag-only cooking,
 repeated B/Y, remaining fuse, held expiry, stale/teleported throw motion, opposite
