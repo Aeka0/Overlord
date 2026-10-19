@@ -10,11 +10,13 @@ namespace hei_round_tests
 		for(std::string_view gun:{"aa12","m1014_reflex","spas12_arctic","striker_woodland","ranger","model1887"})
 			check(hei_round::grenade_weapon(1,4,0,gun),"Every primary shotgun family and variant converts one round");
 		check(hei_round::grenade_weapon(1,4,3,"ak47_shotgun_attach"),"Underbarrel shotguns use the same grenade policy");
-		for(std::string_view gun:{"cheytac","cheytac_silencer_desert","wa2000_arctic","m82_silencer"})
+		for(std::string_view gun:{"cheytac","cheytac_silencer_desert","wa2000","wa2000_arctic","barrett","barrett_silencer"})
 			check(hei_round::grenade_weapon(1,1,0,gun),"M200, WA2000 and Barrett native variants convert");
-		for(std::string_view gun:{"m820","wa20000","not_cheytac","m4","m14ebr"})
+		for(std::string_view gun:{"m82","m82_silencer","barrett0","barrett_","barrett_bad/name","wa20000","not_cheytac","m4","m14ebr"})
 			check(!hei_round::grenade_weapon(1,1,0,gun),"Unrelated rifles cannot match a partial weapon name");
 		check(!hei_round::grenade_weapon(3,8,0,"m82_bipod_stand_thermal"),"Story-owned fixed thermal sniper retains its native route");
+		check(!hei_round::grenade_weapon(3,8,0,"barrett_bipod_stand_thermal"),"Fixed thermal delivery stays excluded regardless of family spelling");
+		check(!hei_round::grenade_weapon(1,1,3,"barrett"),"Sniper conversion is restricted to the carried primary inventory");
 		native_bullet_trace::result hit{};
 		hit.fraction = .5f; hit.type = 1; hit.entity = 3998;
 		hit.position = {5, 6, 7}; hit.normal = {0, 0, 1};

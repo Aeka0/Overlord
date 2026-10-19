@@ -3,6 +3,7 @@
 #include "native_ammunition.hpp"
 #include "native_weapon_read.hpp"
 #include "native_weapon_fx.hpp"
+#include "native_weapon_sound.hpp"
 #include "native_launcher_fire.hpp"
 #include "native_carry.hpp"
 #include "native_scripted_control.hpp"
@@ -24,20 +25,21 @@ namespace vr::gameplay::weapons::hei_round
 	namespace
 	{
 		game::dvar_t *option{}, *damage{}, *radius{};
-		bool ready{};
+		bool ready{}, sound_ready{};
 		std::atomic_bool alive{true};
 		std::atomic_uint64_t generation{1}, shots{}, contacts{}, blasts{}, effects{}, discarded{}, overflow{};
+		std::atomic_uint64_t sounds{}, sound_rejections{};
 		std::atomic_uint64_t grenade_requests{}, grenade_spawns{}, grenade_rejections{};
 		std::atomic_int grenade_reason{};
 		std::array<native_carry::world_key, 64> projectiles{};
 		thread_local shot_scope* active{};
-		struct visual
+		struct feedback
 		{
 			spatial_math::vec position{};
 			int time{};
 			std::uint64_t epoch{}, serial{};
 		};
-		std::array<visual, 128> queue{};
+		std::array<feedback, 128> queue{};
 		std::size_t count{};
 		std::mutex mutex;
 		bool enabled() noexcept
@@ -58,7 +60,7 @@ namespace vr::gameplay::weapons::hei_round
 		}
 		void tick()
 		{
-			std::array<visual, 128> batch;
+			std::array<feedback, 128> batch;
 			std::size_t size{};
 			{
 				const std::lock_guard lock(mutex);
@@ -87,6 +89,12 @@ namespace vr::gameplay::weapons::hei_round
 					++discarded;
 					continue;
 				}
+				// The same consumed contact owns both additions. A missing FX must
+				// not suppress available audio, and neither is retried next frame.
+				if (native_weapon_sound::play_explosive_impact(event.position))
+					++sounds;
+				else
+					++sound_rejections;
 				const auto* name = names[event.serial % names.size()];
 				// Resolve the original common resource in the current zone. Never
 				// retain a map pointer, mutate a definition or synthesize a fallback.
@@ -270,6 +278,8 @@ namespace vr::gameplay::weapons::hei_round
 			ready = bool(utils::hook_validation::verify_masked_bytes(reinterpret_cast<void*>(0x1404be5b0),
 			                                                         {bytes, mask.data(), sizeof(bytes)})) &&
 			        native_bullet_trace::add_observer(observe) && native_weapon_fx::initialize();
+			// Audio readiness is independent of damage, visuals and grenade delivery.
+			sound_ready = native_weapon_sound::initialize();
 			fastfiles::on_pre_unload(clear);
 			scripting::on_shutdown(
 			    [](bool, bool after)
@@ -285,6 +295,7 @@ namespace vr::gameplay::weapons::hei_round
 				    console::info(
 				        "[VR HEI] ready=%d enabled=%d damage=%.1f radius_m=%.2f shots=%llu contacts=%llu "
 				        "blast_requests=%llu fx_requests=%llu discarded=%llu overflow=%llu "
+				        "sound_ready=%d sound_requests=%llu sound_rejections=%llu "
 				        "grenade_requests=%llu grenade_spawns=%llu grenade_rejections=%llu grenade_reason=%d\n",
 				        ready,
 				        enabled(),
@@ -296,6 +307,9 @@ namespace vr::gameplay::weapons::hei_round
 				        effects.load(),
 				        discarded.load(),
 				        overflow.load(),
+				        sound_ready,
+				        sounds.load(),
+				        sound_rejections.load(),
 				        grenade_requests.load(),
 				        grenade_spawns.load(),
 				        grenade_rejections.load(),

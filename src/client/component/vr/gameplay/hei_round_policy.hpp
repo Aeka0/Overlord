@@ -1,5 +1,6 @@
 #pragma once
 #include "native_bullet_trace.hpp"
+#include "native_weapon_family.hpp"
 #include <cmath>
 #include <string_view>
 
@@ -13,9 +14,10 @@ namespace vr::gameplay::weapons::hei_round
 			return true; // Primary and underbarrel shotguns.
 		if (inventory != 0)
 			return false;
-		for (std::string_view family : {"cheytac", "wa2000", "m82"})
-			if (name == family ||
-			    (name.starts_with(family) && name.size() > family.size() && name[family.size()] == '_'))
+		// Match native inventory identities, as the reload profiles do. "m82"
+		// names the exported model family; the carried weapon is "barrett".
+		for (std::string_view family : {"cheytac", "wa2000", "barrett"})
+			if (native_weapon_family(name, family))
 				return true;
 		return false;
 	}

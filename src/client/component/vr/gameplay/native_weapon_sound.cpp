@@ -301,6 +301,26 @@ namespace vr::gameplay::weapons::native_weapon_sound
 		if(!alias || !alias->aliasName || std::strcmp(alias->aliasName,"vr_fist_hit") || alias->count!=5 || !alias->head)return false;
 		return utils::hook::invoke<int>(play_address,entity,origin.data(),"vr_fist_hit")!=-1;
 	}
+	bool play_explosive_impact(const std::array<float, 3>& origin)
+	{
+		if (!verified || !scheduler::is_executing(scheduler::pipeline::main) || !game::CL_IsCgameInitialized())
+			return false;
+		for (float value : origin)
+			if (!std::isfinite(value) || std::abs(value) > 1e7f)
+				return false;
+		const short entity = *reinterpret_cast<const signed char*>(0x141BB3C30);
+		if (entity < 0)
+			return false;
+		// CG impact registration at 0x14039E3D2 builds bullet_explode_default
+		// before its surface variants. Resolve that original world-impact alias
+		// in the current zone; native selection/mixing owns its variants/falloff.
+		constexpr auto name = "bullet_explode_default";
+		const auto* alias = game::DB_FindXAssetHeader(game::ASSET_TYPE_SOUND, name, 0).sound;
+		if (!alias || !alias->aliasName || std::strcmp(alias->aliasName, name) || !alias->head || !alias->count ||
+		    game::DB_IsXAssetDefault(game::ASSET_TYPE_SOUND, name))
+			return false;
+		return utils::hook::invoke<int>(play_address, entity, origin.data(), name) != -1;
+	}
 	bool play_quick_reload_start(std::uint32_t weapon,const std::array<float,3>& origin)
 	{
 		return verified && scheduler::is_executing(scheduler::pipeline::main) && game::CL_IsCgameInitialized() && weapon && weapon<512 &&

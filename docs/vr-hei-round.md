@@ -5,7 +5,7 @@ performance and HMD acceptance remain pending.
 
 Cheats > Fun features > **High-explosive ammo** (高爆弹药 in Simplified Chinese;
 `vr_heiRound`, default off) adds a weak
-explosion and a short original-game fireball at an ordinary player bullet's
+explosion, a short original-game fireball and positional explosion sound at an ordinary player bullet's
 first eligible native contact. Existing bullet damage, flesh effects, decals,
 material effects, ammunition and mission firing notifications remain native.
 Each ordinary discharged round has at most one addition across penetration;
@@ -20,6 +20,8 @@ feed and retain their own magazine, pump, lever, bolt and reload behavior.
 They do not also emit the original bullet/pellets or the weak HEI impact blast.
 With HEI off they resume their original firing delivery immediately. The
 mission-owned fixed thermal sniper remains on its separate native story route.
+Carried Barrett identification uses its native `barrett` family, shared with
+the reload family matcher; `m82` is the exported model/animation family.
 NPCs, vehicle/projectile weapons, already explosive bullets, rejected shots,
 sky/no-impact surfaces and the local player's shield do not create HEI blasts.
 The existing fallback/legacy firing route is outside this initial integration.
@@ -44,12 +46,14 @@ Converted shotgun/sniper shots retain the selected native grenade's full damage,
 trajectory, arming distance, collision and explosion resources instead.
 
 - `vr_heiRoundDamage`: 20 additional center damage by default; 0..100. Zero
-  retains the visual and disables additional radial damage.
+  retains the visual/audio feedback and disables additional radial damage.
 - `vr_heiRoundRadius`: 0.75 meters by default; 0.1..2 meters. The runtime converts
   meters through the shared world scale. Damage falls to zero at the radius.
 - `vr_hei_round_status`: requested state, native readiness, admitted shots,
   contacts, blast requests, FX requests, discards and queue overflows. These
-  counters do not prove visible particles or accepted damage.
+  counters do not prove visible particles or accepted damage. `sound_ready`,
+  `sound_requests` and `sound_rejections` report the verified positional wrapper
+  and accepted/rejected audio requests; they do not prove audible playback.
 
 The complete native `G_RadiusDamage` call contract and default cone/trace flags
 come from H2's `radiusdamage` builtin at `0x1404FBB10`, which calls
@@ -86,13 +90,22 @@ metadata releases slots when the native entity is freed/reused. The feature does
 not delete a projectile, extend its life or scan all entities each frame. Budget
 exhaustion rejects before ammunition debit. Both hands share this limit.
 
-## Additive visuals and resources
+## Additive visuals, audio and resources
 
 The main-thread consumer chooses one of the original common resources
 `fx/impacts/small_explosion_a`, `_b` and `_c`. Each is a 125 ms fireball; no
 original impact selector or effect is replaced. A half-native-unit normal
 offset avoids placing the added effect inside the impacted surface. Ordinary
 flesh effects remain, with the added fireball at that same contact.
+
+The same accepted contact also plays the original `bullet_explode_default`
+sound alias through the verified positional client wrapper. H2's impact-sound
+registration at `0x14039E3D2` constructs this default before its surface variants.
+The current non-default alias is resolved on the main thread without retaining
+asset pointers. Native variant selection, mixer levels and distance falloff
+remain authoritative. Missing FX and missing sound are independent; neither
+retries or accumulates delayed playback. Converted grenades never enter this
+queue and retain their own native explosion audio.
 
 The value-only queue is bounded to 128 entries. Old events, pause/menu events,
 backward time and zone/shutdown generations are discarded. Overflow may omit
@@ -112,6 +125,11 @@ rendering or gameplay acceptance.
 Focused regressions cover one addition across pellets/penetration, a later
 valid pellet after a miss, malformed geometry, sky/local-shield rejection,
 the existing fire/debit/notify transaction, shield/weapon interactions and the
-default-off launcher Bool. Runtime acceptance must separately check NPC and
+default-off launcher Bool. Native-name cases include carried `barrett` variants
+and reject the fixed thermal route. `python tests/vr/hei_feedback_adapter_tests.py`
+exercises the production consumer and audio helper with engine endpoints replaced:
+world position, single playback, independent resources, stale/pause/zone rejection
+and current-alias validation. Runtime acceptance must separately check NPC and
 world contacts, damage/occlusion and attribution, both hands, shotgun/automatic
-fire, native story permissions, pause/checkpoint/zone changes and HMD visuals.
+fire, native story permissions, pause/checkpoint/zone changes, positional audio
+balance and HMD visuals.
