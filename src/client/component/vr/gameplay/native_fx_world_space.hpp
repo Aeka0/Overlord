@@ -14,7 +14,7 @@ namespace vr::gameplay::native_fx
 	class world_space_cache
 	{
 	  public:
-		static constexpr std::size_t capacity = 256;
+		static constexpr std::size_t capacity = 512;
 		static constexpr unsigned surface_count = 53;
 		using surface_resolver = game::FxEffectDef* (*)(const game::FxEffectDef*, unsigned);
 		struct model_variant

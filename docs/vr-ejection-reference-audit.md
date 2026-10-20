@@ -190,3 +190,40 @@ cache isolation and fresh checkpoint identities. Live admission of the desert
 receiver, surface-specific landing, checkpoint reload/Resume and HMD appearance
 still require runtime acceptance. vr_weapon_fx_status reports spent_case_asset
 admission and the selected casing identity.
+
+
+## Desert Eagle, WA2000 and M14/M21 cases
+
+The same cartridge-derived case path now covers Desert Eagle base/gold, WA2000,
+and M14/M21 base/arctic. It includes the distinct m14ebr_thermal name and
+campaign M21 scoped/Soap/suppressed names. One-based checkpoint IDs 1-3 remain
+unchanged; the five added loaded-receiver variants append IDs 4-8.
+
+| Family | Finished case length | Completed triangles | Source treatment |
+| --- | ---: | ---: | --- |
+| Desert Eagle, base and gold | 3.48 cm | 286 | Axial cut of the single j_bullet01 round |
+| WA2000 | 5.93 cm | 400 | Neck-ring cut of j_ammo |
+| M14/M21, base and arctic | 6.45 cm | 448 | Existing separate j_bullet casing |
+
+These dimensions follow the existing game cartridge models. Desert Eagle's
+cartridge is inclined in source space; the shared geometry builder now uses
+its reviewed longitudinal axis for cutting and mouth validation. Gold and
+standard receivers retain their own loaded material. No whole-receiver face
+indices are transferred between skins.
+
+WA2000 contains one casing triangle whose three positions coincide exactly.
+The private case copy removes precisely that reviewed point triangle, guarded
+by its expected count. This check occurs after casing selection, so degenerate
+geometry on a discarded bullet tip (such as M14's) does not affect the casing.
+Unexpected collapsed counts, crossing cuts or invalid mouth topology still
+reject the candidate.
+
+Flight, collision, material-specific resting effects and normalized scale reuse
+the established per-weapon FX adapter. The bounded graph budget is 512 nodes
+to cover the expanded set of case/material variants; checkpoint registration
+keeps its separate native-capacity guard.
+
+Offline production-factory replay passed for all five added receiver variants
+and the existing M200/Barrett base cases: zero open edges and winding errors.
+The focused WARP/FX and native-family/skin selection checks passed. Runtime
+appearance, material landing and checkpoint restore still need game/HMD acceptance.

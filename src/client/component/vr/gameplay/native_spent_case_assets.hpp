@@ -1,6 +1,5 @@
 #pragma once
-#include "spent_case_geometry.hpp"
-#include "native_weapon_family.hpp"
+#include "spent_case_profiles.hpp"
 #include "component/scene_models.hpp"
 #include "component/scheduler_context.hpp"
 #include "game/game.hpp"
@@ -8,26 +7,6 @@
 
 namespace vr::gameplay::weapons::spent_case
 {
-	struct source_recipe
-	{
-		const char* source;
-		const char* bone;
-		const recipe* geometry;
-	};
-	// Stable save identities, including the actual loaded camouflage material.
-	inline constexpr std::array<source_recipe, 3> sources{{
-	    {"h2_viewmodel_cheytac_base", "j_bullet", &cheytac},
-	    {"h2_viewmodel_cheytac_base_desert", "j_bullet", &cheytac},
-	    {"h2_viewmodel_m82_base", "tag_bullet_single", &barrett},
-	}};
-	inline unsigned variant_for(std::string_view weapon, std::string_view receiver = {}) noexcept
-	{
-		if (native_weapon_family(weapon, "barrett"))
-			return 3;
-		if (native_weapon_family(weapon, "cheytac"))
-			return receiver == sources[1].source || weapon.ends_with("_desert") ? 2 : 1;
-		return 0;
-	}
 	class assets
 	{
 		struct prepared
@@ -37,12 +16,16 @@ namespace vr::gameplay::weapons::spent_case
 			game::XSurface* surfaces{};
 			unsigned variant{};
 		};
-		std::array<std::unique_ptr<prepared>, 12> retained_;
-		std::array<const char*, 3> reasons_{"not prepared", "not prepared", "not prepared"};
-		std::array<game::XModel*, 3> selected_{};
-		std::array<std::chrono::steady_clock::time_point, 3> attempts_{};
+		std::array<std::unique_ptr<prepared>, sources.size() * 4> retained_;
+		std::array<const char*, sources.size()> reasons_{};
+		std::array<game::XModel*, sources.size()> selected_{};
+		std::array<std::chrono::steady_clock::time_point, sources.size()> attempts_{};
 
 	  public:
+		assets()
+		{
+			reasons_.fill("not prepared");
+		}
 		game::XModel* peek(unsigned variant) const noexcept
 		{
 			return variant && variant <= selected_.size() ? selected_[variant - 1] : nullptr;

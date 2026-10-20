@@ -20,7 +20,7 @@ namespace vr::gameplay::native_fx::checkpoint
 	inline constexpr std::string_view prefix = "__overlord_fx/";
 	inline constexpr std::size_t source_name_limit = 255;
 	inline constexpr std::size_t variant_capacity =
-	    264; // 256 shell/surface graph nodes + 8 followed definitions.
+	    520; // 512 shell/surface graph nodes + 8 followed definitions.
 	inline constexpr std::size_t native_capacity = 2048;
 	inline constexpr unsigned effect_size = 0x140, handle_unit = 16;
 	inline bool valid_effect_handle(unsigned handle) noexcept

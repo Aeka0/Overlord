@@ -16,6 +16,9 @@ namespace vr::gameplay::weapons::spent_case
 		vec live_extent, case_extent; // Native units, measured on the single-round source.
 		float wall, depth;
 		bool separate_body;
+		vec long_axis{1, 0, 0};     // Source-space axis; some magazine cartridges are inclined.
+		float cut_from_base{};      // Zero uses case_extent[0] for the original axial recipes.
+		unsigned collapsed_faces{}; // Reviewed point triangles only; never arbitrary mesh repair.
 	};
 	// Authored from the matching live cartridge, not from a generic shell scale.
 	inline constexpr recipe cheytac{286,
@@ -34,6 +37,35 @@ namespace vr::gameplay::weapons::spent_case
 	                                .05f / 2.54f,
 	                                7.f / 2.54f,
 	                                true};
+	inline constexpr recipe deserteagle{322,
+	                                    196,
+	                                    18,
+	                                    {4.16821349f / 2.54f, 1.51743406f / 2.54f, 1.75906420f / 2.54f},
+	                                    {3.58373916f / 2.54f, 1.51743406f / 2.54f, 1.75906420f / 2.54f},
+	                                    .04f / 2.54f,
+	                                    2.2f / 2.54f,
+	                                    false,
+	                                    {.99700127f, 0, .07738519f},
+	                                    3.47863990f / 2.54f};
+	inline constexpr recipe wa2000{457,
+	                               300,
+	                               20,
+	                               {7.95762444f / 2.54f, 1.41064227f / 2.54f, 1.41063786f / 2.54f},
+	                               {5.92725468f / 2.54f, 1.41064227f / 2.54f, 1.41063786f / 2.54f},
+	                               .04f / 2.54f,
+	                               4.f / 2.54f,
+	                               false,
+	                               {1, 0, 0},
+	                               0,
+	                               1};
+	inline constexpr recipe m14{545,
+	                            368,
+	                            16,
+	                            {8.56777382f / 2.54f, 1.43720821f / 2.54f, 1.43707085f / 2.54f},
+	                            {6.45314980f / 2.54f, 1.43720821f / 2.54f, 1.43707085f / 2.54f},
+	                            .035f / 2.54f,
+	                            4.f / 2.54f,
+	                            true};
 
 	inline vec position(const game::GfxPackedVertex& v) noexcept
 	{
@@ -91,6 +123,12 @@ namespace vr::gameplay::weapons::spent_case
 		if (faces.size() != p.live_faces || faces.size() > 1024 || vertices.empty() ||
 		    vertices.size() > 65535 || p.mouth_edges < 3 || p.mouth_edges > 64 || p.wall <= 0 || p.depth <= 0)
 			return false;
+		for (float value : p.long_axis)
+			if (!std::isfinite(value))
+				return false;
+		if (std::abs(length(p.long_axis) - 1.f) > .001f || !std::isfinite(p.cut_from_base) ||
+		    p.cut_from_base < 0)
+			return false;
 		vec low, high;
 		if (!bounds(vertices, faces, p.live_extent, low, high))
 			return false;
@@ -146,10 +184,16 @@ namespace vr::gameplay::weapons::spent_case
 		}
 		else
 		{
-			const float mouth = low[0] + p.case_extent[0];
+			float base = 10000;
+			for (const auto& f : faces)
+				for (auto index : {f.v1, f.v2, f.v3})
+					base = std::min(base, dot(position(vertices[index]), p.long_axis));
+			const float mouth = base + (p.cut_from_base > 0 ? p.cut_from_base : p.case_extent[0]);
 			for (const auto& f : faces)
 			{
-				const float xs[]{vertices[f.v1].xyz[0], vertices[f.v2].xyz[0], vertices[f.v3].xyz[0]};
+				const float xs[]{dot(position(vertices[f.v1]), p.long_axis),
+				                 dot(position(vertices[f.v2]), p.long_axis),
+				                 dot(position(vertices[f.v3]), p.long_axis)};
 				const float lo = *std::min_element(std::begin(xs), std::end(xs)),
 				            hi = *std::max_element(std::begin(xs), std::end(xs));
 				if (lo < mouth - .0005f && hi > mouth + .0005f)
@@ -158,6 +202,18 @@ namespace vr::gameplay::weapons::spent_case
 					body.push_back(f);
 			}
 		}
+		// WA2000's casing contains one source triangle whose three positions
+		// coincide. Validate/remove it only from the selected private case:
+		// discarded bullet-tip geometry must not affect casing admission.
+		const auto original_count = body.size();
+		std::erase_if(body,
+		              [&](const game::Face& f)
+		              {
+			              return position(vertices[f.v1]) == position(vertices[f.v2]) &&
+			                     position(vertices[f.v1]) == position(vertices[f.v3]);
+		              });
+		if (original_count - body.size() != p.collapsed_faces)
+			return false;
 		if (body.size() != p.case_faces || !bounds(vertices, body, p.case_extent, low, high))
 			return false;
 		std::map<std::array<unsigned, 2>, unsigned> edges;
@@ -213,9 +269,18 @@ namespace vr::gameplay::weapons::spent_case
 		if (length(axis) < .001f)
 			return false;
 		axis = unit(axis);
-		if (axis[0] < 0)
+		if (dot(axis, p.long_axis) < 0)
 			axis = scale(axis, -1);
-		if (axis[0] < .98f || mouth[0] < high[0] - .1f || p.depth >= p.case_extent[0])
+		float axial_low = 10000, axial_high = -10000;
+		for (const auto& f : body)
+			for (auto index : {f.v1, f.v2, f.v3})
+			{
+				const auto axial = dot(position(vertices[index]), axis);
+				axial_low = std::min(axial_low, axial);
+				axial_high = std::max(axial_high, axial);
+			}
+		if (dot(axis, p.long_axis) < .98f || dot(mouth, axis) < axial_high - .1f ||
+		    p.depth >= axial_high - axial_low)
 			return false;
 		std::vector<vec> inner, deep;
 		for (auto v : ring)
