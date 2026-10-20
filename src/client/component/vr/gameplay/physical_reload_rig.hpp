@@ -140,10 +140,12 @@ namespace vr::gameplay::weapons::physical_reload
 			    !finite_part_quat(definition.chamber_round->rotation))
 				return {};
 		}
+		// All chambered feeds can eject a live round. A missing cosmetic marker
+		// must not disable otherwise valid automatic-weapon reload controls.
+		out.ejection = find("tag_brass");
+		out.port = bind_ejection_port(r, bones);
 		if (definition.interaction.manual_bolt)
 		{
-			out.ejection = find("tag_brass");
-			out.port = bind_ejection_port(r, bones);
 			if (!physical_reload::valid(definition.interaction) ||
 			    definition.ammunition.feed != mechanics::feed_type::manual_bolt || out.ejection < 0 ||
 			    !out.port.valid || definition.bolt || definition.handle_catch || definition.handle_fold ||

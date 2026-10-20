@@ -105,12 +105,15 @@ namespace manual_bolt_tests
 			prepare(f);
 			motion_step(f, 1, 0);
 			motion_step(f, 1, 1);
-			check(f.last_effect == m::effect::case_eject && f.spent == 1 && !f.state.bolt.spent_case,
-			    "M200 rear stroke ejects case without a second ammunition debit");
+			check(f.last_effect == m::effect::case_eject && f.spent == 1 && f.live_ejections == 0 &&
+			          !f.state.bolt.spent_case,
+			      "M200 rear stroke ejects case without a second "
+			      "ammunition debit");
 			motion_step(f, 1, .3f);
 			motion_step(f, 1, 1);
-			check(f.last_effect == m::effect::live_eject && f.spent == 2,
-			    "M200 reversed partial feed ejects its one live cartridge");
+			check(f.last_effect == m::effect::live_eject && f.spent == 2 && f.live_ejections == 1,
+			      "M200 reversed partial feed ejects its one live "
+			      "cartridge");
 			motion_step(f, 1, 0);
 			motion_step(f, 0, 0);
 			f.trigger(false);

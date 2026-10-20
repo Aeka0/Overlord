@@ -11,6 +11,15 @@ template<class Check> void native_fx_checkpoint_tests(const Check& check)
 	const auto parsed=parse(followed);
 	check(parsed && parsed->kind==variant::followed && parsed->attached==0x800000ff && parsed->source=="fx/flare",
 		"followed checkpoint identity restores all 32 attached-element bits");
+	const auto casing = name(variant::casing, "vfx/shelleject/rifle_view", 3);
+	const auto case_id = parse(casing);
+	check(case_id && case_id->kind == variant::casing && case_id->attached == 3 &&
+	          case_id->source == "vfx/shelleject/rifle_view" &&
+	          casing != name(variant::world, case_id->source),
+	      "per-weapon case identity cannot alias the shared rifle FX on checkpoint restore");
+	check(name(variant::casing, "fx/case", 0).empty() && !parse("__overlord_fx/casing/00000000/fx/case") &&
+	          !parse("__overlord_fx/casing/0000000z/fx/case"),
+	      "invalid case identity never falls through to followed FX");
 	check(!parse("__overlord_fx/follow/0000000z/fx/flare") && !parse("__overlord_fx/world/") &&
 		!parse("__overlord_fx/follow/0000000/fx/flare") && !parse("__overlord_fx/other/fx/flare") &&
 		name(variant::world,std::string(256,'x')).empty() &&

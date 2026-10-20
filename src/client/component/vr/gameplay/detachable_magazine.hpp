@@ -206,6 +206,7 @@ namespace vr::gameplay::weapons::mechanics
 		effect feedback{effect::none};
 		bool silent{}; // Lifecycle cleanup preserves mechanics without player feedback.
 		int rounds_spent{};
+		bool live_ejected{}; // Cosmetic payload after commit; does not replace action sound/feedback.
 		bool item_released{};
 		int rounds_to_item{},rounds_from_item{};
 		explicit operator bool() const noexcept
@@ -396,6 +397,7 @@ namespace vr::gameplay::weapons::mechanics
 			int extracted{};
 			if (!transition_feed(r,next,[&](const auto& policy,auto& feed) { return cycle(policy,feed,extracted); })) return out;
 			out.rounds_spent = extracted;
+			out.live_ejected = extracted > 0;
 			out.feedback = effect::action_close;
 			break;
 		}
@@ -437,6 +439,7 @@ namespace vr::gameplay::weapons::mechanics
 			if (req.op == operation::extract_chamber)
 			{
 				if (!transition_feed(r,next,[&](const auto& policy,auto& feed) { return extract(policy,feed,out.rounds_spent); })) return out;
+				out.live_ejected = out.rounds_spent > 0;
 			}
 			else if (!transition_feed(r,next,[](const auto& policy,auto& feed) { return finish_stroke(policy,feed); })) return out;
 			out.feedback = req.op == operation::extract_chamber ? effect::action_rear : effect::action_close;
@@ -454,7 +457,10 @@ namespace vr::gameplay::weapons::mechanics
 			case manual_bolt::event::unlock: out.feedback=effect::bolt_unlock;break;
 			case manual_bolt::event::lock: out.feedback=effect::bolt_lock;break;
 			case manual_bolt::event::eject_case: out.feedback=effect::case_eject;break;
-			case manual_bolt::event::eject_live: out.feedback=effect::live_eject;break;
+			case manual_bolt::event::eject_live:
+				out.feedback = effect::live_eject;
+				out.live_ejected = true;
+				break;
 			case manual_bolt::event::feed: out.feedback=effect::bolt_feed;break;
 			case manual_bolt::event::close: out.feedback=effect::action_close;break;
 			default: break;

@@ -96,6 +96,36 @@ int main()
 			"part culling bounds include actual selected geometry, not source model approximate radius");
 		check(selected.bind()[0]==4 && selected.bind()[6]==1,"part pivot retains native bind transform");
 		{
+			scene_models::rigid_part edited;
+			check(edited.create(&source, 1), "prepare unpublished geometry for mouth authoring");
+			check(!edited.edit_mesh(0,
+			                        [](auto&, auto& faces)
+			                        {
+				                        faces[0].v1 = 65535;
+				                        return true;
+			                        }) &&
+			          edited.model()->lodInfo[0].surfs[0].triIndices[0].v1 == 3,
+			      "invalid authored indices leave the unpublished source subset intact");
+			check(
+			    edited.edit_mesh(0,
+			                     [](auto& points, auto& faces)
+			                     {
+				                     auto added = points[3];
+				                     added.xyz[2] = 2;
+				                     points.push_back(added);
+				                     faces.push_back({3, 5, static_cast<unsigned short>(points.size() - 1)});
+				                     return true;
+			                     }),
+			    "append authored inner geometry to a private copied surface");
+			const auto& changed = edited.model()->lodInfo[0].surfs[0];
+			check(
+			    changed.triCount == 2 && changed.vertCount == 7 && changed.vb0 != surface.vb0 &&
+			        changed.indexBuffer != surface.indexBuffer && changed.rigidVertLists[0].triCount == 2 &&
+			        changed.rigidVertLists[0].vertCount == 7 && edited.model()->bounds.halfSize[2] == 1 &&
+			        vertices[3].xyz[2] == 0 && surface.triCount == 2 && mesh.triCount == 1,
+			    "authored geometry rebinds private GPU buffers, bounds and groups without changing source or sibling models");
+		}
+		{
 			auto skin_surface = surface;
 			skin_surface.flags = 4;
 			skin_surface.blendVertCounts[0] = 6;

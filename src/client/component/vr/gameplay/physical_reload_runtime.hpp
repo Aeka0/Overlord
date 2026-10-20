@@ -21,6 +21,8 @@ namespace vr::gameplay::weapons::physical_reload
 		const reload_profile* definition{};
 		bool manipulation{}; // Free-hand access is separate from scene/instance admission.
 		hands::anchor ejection_world{};
+		hands::quat receiver_rotation{0, 0, 0, 1};
+		bool has_ejection_port{};
 		hand_interaction::hand_binding binding{};
 		std::array<hands::vec,hands::hand_contact_count> contact_in_wrist{};
 		std::optional<contact_box> palm_in_wrist;
@@ -53,6 +55,8 @@ namespace vr::gameplay::weapons::physical_reload
 			int magazine_rounds{}; // Visual drop snapshot, not an ammunition authority.
 			bool recoverable{}; // Independent item owns the payload and its rendering.
 			std::optional<motion::release_impulse> impulse; // Accepted strike; zero impulse still releases immediately.
+			bool live_ejected{};
+			hands::vec ejection_velocity{};
 		};
 		bool active{}, fault{}, slide_held{}, magazine_seated{};
 		quick_reload::dwell quick_load{};

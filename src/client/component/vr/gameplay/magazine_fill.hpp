@@ -108,4 +108,54 @@ namespace vr::gameplay::weapons
 		}
 		return true;
 	}
+	struct cartridge_face_selection
+	{
+		std::array<scene_models::surface_face_range, 256> ranges{};
+		size_t count{};
+		std::span<const scene_models::surface_face_range> faces() const noexcept
+		{
+			return std::span(ranges).first(count);
+		}
+	};
+	// Reuse the audited single-round template, or subtract the empty body from
+	// the one-round population. Never take a whole multi-round bone as one round.
+	inline cartridge_face_selection magazine_cartridge_faces(const magazine_fill_recipe& p) noexcept
+	{
+		cartridge_face_selection out;
+		if (!valid_magazine_fill(p))
+			return out;
+		if (p.stack)
+		{
+			const auto source = p.stack->rounds[0].faces;
+			if (source.size() > out.ranges.size())
+				return out;
+			std::copy(source.begin(), source.end(), out.ranges.begin());
+			out.count = source.size();
+			return out;
+		}
+		const auto append = [&](unsigned surface, unsigned first, unsigned last)
+		{
+			if (out.count == out.ranges.size())
+				return false;
+			out.ranges[out.count++] = {surface, first, last};
+			return true;
+		};
+		for (const auto& range : p.faces[1])
+		{
+			auto first = range.first;
+			for (const auto& body : p.faces[0])
+			{
+				if (body.surface != range.surface || body.last < first || body.first > range.last)
+					continue;
+				if (body.first > first && !append(range.surface, first, body.first - 1))
+					return cartridge_face_selection{};
+				first = std::min(range.last, body.last) + 1;
+				if (first > range.last)
+					break;
+			}
+			if (first <= range.last && !append(range.surface, first, range.last))
+				return cartridge_face_selection{};
+		}
+		return out;
+	}
 }

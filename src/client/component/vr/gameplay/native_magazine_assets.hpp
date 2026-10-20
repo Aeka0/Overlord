@@ -6,7 +6,8 @@ namespace vr::gameplay::weapons::physical_reload::magazine_assets
 {
 	struct asset { game::XModel* model{}; hands::anchor in_magazine{}; };
 	asset get(const reload_profile* definition,int rounds) noexcept;
-	asset cartridge(const reload_profile* definition) noexcept;
+	asset cartridge(const reload_profile* definition, bool ejected = false) noexcept;
+	const char* cartridge_status(const reload_profile* definition) noexcept;
 	const char* status(const reload_profile* definition) noexcept;
 	void refresh(); // Main asset owner only; never called under a gameplay/render lock.
 	void clear() noexcept;

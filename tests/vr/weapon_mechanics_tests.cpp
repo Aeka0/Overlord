@@ -35,6 +35,14 @@ int main()
 			return false;
 		check(tx.before == native_ammo(old), "native compare-before is exact");
 		check(total_rounds(old) == total_rounds(tx.next) + tx.rounds_spent, "conservation per commit");
+		check(tx.live_ejected ==
+		          ((op == operation::cycle_action || op == operation::extract_chamber) && old.chamber_loaded),
+		      "only committed live extraction carries a visual round; "
+		      "shots and empty cycling do not");
+		if (op == operation::extract_chamber)
+			check(tx.feedback == effect::action_rear,
+			      "live extraction retains the original action-open "
+			      "sound and haptics");
 		check(!plan(rules, tx.next, request_for(op, actor)), "same revision cannot commit twice");
 		s = tx.next;
 		return true;

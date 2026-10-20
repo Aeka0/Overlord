@@ -97,6 +97,46 @@ in [the audit data](vr-ejection-reference-audit.json).
 | `h2_viewmodel_usp_base` | 1.84 / 0.00 / 8.10 | 4.03 |
 | `h2_viewmodel_wa2000_base` | -14.66 / 0.00 / 13.08 | 18.68 |
 
+## Manual extraction of live cartridges
+
+Closed-bolt full-stroke transactions now carry a separate `live_ejected`
+presentation flag after the native ammunition commit succeeds. The original
+action-rear/action-close sound and haptic event remains intact. Short pulls,
+empty chambers, held-rear repeats, forward feeding, rejected commits, automatic
+shots and open-bolt cocking do not emit a live cartridge. M200 retains its
+distinct spent-case and live-round events.
+
+The physical reload rig now binds the validated receiver `tag_brass` for
+automatic weapons as well as manual bolts. The committed marker supplies the
+exit position and velocity; receiver rotation supplies the cartridge orientation.
+The cartridge is centered at that point, so the original magazine-stack offset
+does not move it away from the port. A missing or malformed cosmetic marker
+omits the visual without disabling an otherwise valid automatic reload.
+
+Native cartridge geometry comes from the existing audited magazine recipes:
+the single-round stack template, or the one-round face set minus the empty body.
+This preserves the complete case and bullet, materials and native scale. The
+existing explicit single-round bones cover P90 and the M200 desert variant.
+Immutable models share the magazine asset registration and unload lifetime;
+failure to prepare the cosmetic round does not disable the magazine.
+
+The committed event enters the existing bounded falling-item presenter once,
+with world gravity and deterministic tumble evaluated at final surface packing.
+Both eyes share the same flight. Releasing or stowing the gun does not erase an
+already ejected round. Recentring and native scene unload retire obsolete drops.
+These are cosmetic rounds; the existing ammunition debit/refund policy is unchanged.
+
+Forty-one counted closed-bolt/manual-bolt profile recipes passed an offline
+single-cartridge replay through the production rigid factory. Weapon mechanics,
+physical reload and weapon-grip regression suites passed. This does not establish
+live asset admission, actual aperture clearance or headset appearance.
+`cartridge_asset(...)` in `vr_reload_interaction_status` reports runtime admission.
+
+The following exact variants still lack an audited single-cartridge selection:
+M4 arctic, AK47 desert/woodland, ACR arctic, AUG plain, FAMAS woodland,
+TAR-21 woodland and Dragunov arctic/woodland. They retain mechanical extraction
+without the new cosmetic round; no base-skin face indices are reused for them.
+
 ## Follow-up calibration
 
 Review each distinct receiver with the bolt/slide open and its textures visible;
@@ -105,3 +145,48 @@ clears the window. Keep native FX direction distinct from cartridge mesh
 orientation. Check both hands, rotated/inverted guns, suppressors and skin
 variants. Native or world tags are comparison references only. Headset acceptance
 is pending; no claim of complete geometric calibration is made by this audit.
+
+
+## Weapon-specific spent cases
+
+M200 and Barrett now derive their empty cases from their own loaded live-round
+geometry. The M200 neck-ring cut retains 202 original faces and adds 60 rim,
+inner-wall and recessed-floor faces. Barrett retains its separate 294-face case
+and adds 70 interior faces. Their finished lengths remain approximately 7.94 cm
+and 10.67 cm in the existing game geometry. These are model measurements, not
+real ammunition specifications.
+
+The shared rigid-part factory edits private unpublished buffers only. Single-round
+face counts, dimensions, one closed mouth loop, plane clearance and native
+16-bit limits gate construction. M200 desert uses its actually loaded j_bullet
+and must pass the same local cartridge-shape checks; it does not inherit base
+receiver face indices or materials. Both completed bodies are centered in the
+native shell coordinate frame and have closed, consistently oriented surfaces,
+with an open recess at the mouth.
+
+Per-weapon immutable FX graphs replace all model visuals and normalize their
+scale curves to the authored mesh size. Model collision bounds match each case.
+Native velocity, angular motion, gravity, opacity, lifetime, surface choice and
+sound remain authoritative. Unreviewed XModel rigid-body physics rejects the
+override rather than borrowing receiver physics.
+
+Native material impact dispatch at 0x1404608C0 selects a child through a separate
+8 x 53 table. Its version-checked adapter resolves the original source name,
+retains the original material choice, and selects the corresponding private
+world/case variant before calling the native direct-impact path. Table-selected
+children are prepared alongside the linked flight/death/runner graph before
+emission; landing cannot silently select a smaller generic model.
+
+Case variants use stable __overlord_fx/casing/<id>/<source> checkpoint names,
+separate from generic world and followed FX. Cached models can be reused during
+restore; rebuilding missing GPU/model resources requires the actual native main
+thread. Graphs, model descriptors and GPU buffers survive until the native
+asset-unload drain. The bounded FX dictionary includes material-table variants.
+
+Offline native-geometry replay passes for both base receivers, including zero
+open edges and zero winding mismatches. WARP/FX tests cover private buffers,
+complete model replacement, material children, unchanged native scale samples,
+cache isolation and fresh checkpoint identities. Live admission of the desert
+receiver, surface-specific landing, checkpoint reload/Resume and HMD appearance
+still require runtime acceptance. vr_weapon_fx_status reports spent_case_asset
+admission and the selected casing identity.

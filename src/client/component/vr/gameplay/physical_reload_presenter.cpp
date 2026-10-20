@@ -168,14 +168,34 @@ namespace vr::gameplay::weapons::physical_reload
 			if (!game::CL_IsCgameInitialized()) { drops = {}; event_cursors = {}; return; }
 			std::array<held_frame,15> frames;
 			{ const std::lock_guard lock(mutex); frames=held_frames; }
-			const auto draw = [&](anchor world, size_t index, const reload_profile* definition, float units,int rounds,bool cartridge=false,
-				const ::vr::gameplay::motion::flight* falling=nullptr,std::uint64_t reference=0,weapon_identity origin={}) {
-				const auto asset = cartridge ? magazine_assets::cartridge(definition) : magazine_assets::get(definition,rounds);
-				if (!asset.model) return;
+			const auto draw = [&](anchor world,
+			                      size_t index,
+			                      const reload_profile* definition,
+			                      float units,
+			                      int rounds,
+			                      bool cartridge = false,
+			                      const ::vr::gameplay::motion::flight* falling = nullptr,
+			                      std::uint64_t reference = 0,
+			                      weapon_identity origin = {})
+			{
+				const auto asset = cartridge ? magazine_assets::cartridge(definition, falling != nullptr)
+				                             : magazine_assets::get(definition, rounds);
+				if (!asset.model)
+					return;
 				if(falling)
 				{
-					falling_item_presentation::motion motion;motion.path=*falling;motion.local=asset.in_magazine;
-					motion.origin=origin;motion.rail_profile=definition;
+					falling_item_presentation::motion motion;
+					motion.path = *falling;
+					motion.local = asset.in_magazine;
+					motion.origin = origin;
+					motion.rail_profile = definition;
+					if (cartridge)
+					{
+						motion.scattered = true;
+						motion.scatter = ejection_scatter::sample(
+						    origin.generation, std::uint64_t(falling->born.time_since_epoch().count()), 0);
+						motion.scatter_basis = falling->start.rotation;
+					}
 					falling_item_presentation::submit(asset.model,motion,reference,.25f*units);
 					return;
 				}
@@ -221,8 +241,10 @@ namespace vr::gameplay::weapons::physical_reload
 					const auto& event = state.events[n % state.events.size()];
 					if (n <= last_event || event.sequence != n) continue;
 					if (now < event.at) break; // retry on next pose epoch; do not lose a newer simulation event
-					if (!event.recoverable && (event.kind == mechanics::effect::magazine_out || event.kind == mechanics::effect::magazine_cancel || event.kind==mechanics::effect::live_eject) &&
-						event.units_per_meter > 0 && now >= event.at && now-event.at < 1200ms)
+					if (!event.recoverable &&
+						(event.kind == mechanics::effect::magazine_out ||
+						 event.kind == mechanics::effect::magazine_cancel || event.live_ejected) &&
+						event.units_per_meter > 0 && now >= event.at && now - event.at < 1200ms)
 					{
 						auto* place = &drops[0];
 						for (auto& drop : drops)
@@ -233,7 +255,8 @@ namespace vr::gameplay::weapons::physical_reload
 						place->owner=state.owner.id();
 						if(event.kind==mechanics::effect::magazine_out)
 							place->motion=magazine_release_flight(*state.definition,event.world,event.units_per_meter,event.at,event.impulse);
-						else if(event.kind==mechanics::effect::live_eject)place->motion.velocity=cartridge_exit_velocity(event.world,event.units_per_meter);
+						else if (event.live_ejected)
+							place->motion.velocity = event.ejection_velocity;
 					}
 					last_event = n;
 				}
@@ -281,8 +304,15 @@ namespace vr::gameplay::weapons::physical_reload
 					for (const auto& frame:frames) if (frame.weapon==drop.weapon && frame.instance==drop.instance && now>=frame.at && now-frame.at<=150ms) {rail=frame.attached;break;}
 					drop.motion.advance(now,&rail);
 				}
-				draw({},index+15,drop.definition,drop.event.units_per_meter,drop.event.magazine_rounds,
-					drop.event.kind==mechanics::effect::live_eject,&drop.motion,drop.reference,drop.owner);
+				draw({},
+				     index + 15,
+				     drop.definition,
+				     drop.event.units_per_meter,
+				     drop.event.magazine_rounds,
+				     drop.event.live_ejected,
+				     &drop.motion,
+				     drop.reference,
+				     drop.owner);
 			}
 		}
 	}
@@ -319,6 +349,11 @@ namespace vr::gameplay::weapons::physical_reload
 		{
 			result += std::format("magazine_asset({})={} [{}] ",reload_profiles[i]->id,
 				magazine_assets::get(reload_profiles[i],0).model!=nullptr,magazine_assets::status(reload_profiles[i]));
+			if (reload_profiles[i]->ammunition.feed != mechanics::feed_type::open_bolt)
+				result += std::format("cartridge_asset({})={} [{}] ",
+				                      reload_profiles[i]->id,
+				                      magazine_assets::cartridge(reload_profiles[i], true).model != nullptr,
+				                      magazine_assets::cartridge_status(reload_profiles[i]));
 			if(partition_mesh(*reload_profiles[i]))
 				result+=std::format("partition_asset({})={} [{}] ",reload_profiles[i]->id,bool(partition_assets::get(reload_profiles[i])),partition_assets::status(reload_profiles[i]));
 		}
@@ -515,6 +550,8 @@ namespace vr::gameplay::weapons::physical_reload
 		{
 			next.ejection_world=compose(gun,parts.port.local);
 			next.ejection_world.position=add(next.ejection_world.position,view_offset);
+			next.receiver_rotation = gun.rotation;
+			next.has_ejection_port = parts.port.valid;
 		}
 		belt_feed::visual belt_visual;
 		float shown_bridge=state.ammo.belt.bridge;

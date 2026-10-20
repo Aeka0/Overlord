@@ -57,10 +57,28 @@ namespace fal_profile_tests
 			++combinations;
 		}
 		fixture f({});const auto parts=f.parts();
-		check(fal::bare.aiming==aim_rule::two_hand && fal::bare.wrists[1].position==fal::shotgun.wrists[1].position &&
-			fal::bare.wrists[0].position!=fal::shotgun.wrists[0].position && free_hand_rotation(fal::bare,0)==free_hand_rotation(fal::shotgun,0),
-			"FAL shotgun changes support contact without changing rear or free-hand basis");
-		const auto marked=[](const part_mask& mask,int i){return (mask[i/32]&(0x80000000u>>(i%32)))!=0;};
+		check(parts.ejection == 74 && parts.port.valid,
+		      "automatic closed-bolt reload binds the receiver "
+		      "ejection port");
+		{
+			auto missing = f;
+			missing.bones[74].name = "missing_brass";
+			check(missing.parts().valid && !missing.parts().port.valid,
+			      "missing cosmetic port suppresses ejection without "
+			      "disabling reload mechanics");
+			auto invalid = f;
+			invalid.r.parent[74] = 75;
+			check(invalid.parts().valid && !invalid.parts().port.valid,
+			      "magazine-parented brass cannot place a live cartridge");
+		}
+		check(fal::bare.aiming == aim_rule::two_hand &&
+		          fal::bare.wrists[1].position == fal::shotgun.wrists[1].position &&
+		          fal::bare.wrists[0].position != fal::shotgun.wrists[0].position &&
+		          free_hand_rotation(fal::bare, 0) == free_hand_rotation(fal::shotgun, 0),
+		      "FAL shotgun changes support contact without changing "
+		      "rear or free-hand basis");
+		const auto marked = [](const part_mask& mask, int i)
+		{ return (mask[i / 32] & (0x80000000u >> (i % 32))) != 0; };
 		for(int i=0;i<f.r.count;++i)check(marked(parts.animation_only_magazines,i)==(i==75 || i==86),"only native spare copy and its child round are suppressed");
 		const std::array<rigid_group_range,4> groups{{{7*64,2034,0,2974},{8*64,2034,2974,2974},{18*64,669,5948,1008},{19*64,669,6956,1008}}};
 		const auto visible=plan_rigid_visibility(groups,68,5406,7964,parts.animation_only_magazines);

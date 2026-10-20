@@ -52,6 +52,103 @@ template<class Check> void native_fx_world_space_tests(const Check& check)
 		"shared native FX definitions and effect-level flags remain untouched");
 	check(cache.get(&root)==world && cache.size()==2,"repeated shots reuse retained immutable shell graph");
 	{
+		std::array<game::FxElemVisStateSample, 2> samples{};
+		for (auto& sample : samples)
+		{
+			sample.base.scale = .25f;
+			sample.amplitude.scale = .1f;
+			sample.base.color[3] = .75f;
+		}
+		std::array<game::FxElemVisuals, 2> models{};
+		models[0].model = models[1].model = &model;
+		auto replacement_elements = elements;
+		auto replacement_child = child_element;
+		auto replacement_root = root, child_fx = child;
+		replacement_root.elemDefs = replacement_elements.data();
+		child_fx.elemDefs = &replacement_child;
+		replacement_child.visualCount = 2;
+		replacement_child.visuals.array = models.data();
+		replacement_child.visSamples = samples.data();
+		replacement_child.visStateIntervalCount = 1;
+		replacement_elements[0].visSamples = samples.data();
+		replacement_elements[0].visStateIntervalCount = 1;
+		replacement_elements[0].flags &= ~game::FX_ELEM_USE_MODEL_PHYSICS;
+		replacement_elements[0].effectOnImpact.handle = replacement_elements[0].effectOnDeath.handle =
+		    replacement_elements[0].effectEmitted.handle = &child_fx;
+		replacement_elements[0].flags |= game::FX_ELEM_SPAWN_IMPACT_FX_WITH_SURFACE_NAME;
+		auto surface_fx = child_fx;
+		surface_fx.name = "vfx/shelleject/rifle_resting_metal";
+		static game::FxEffectDef* material_effect{};
+		material_effect = &surface_fx;
+		const auto material_lookup = +[](const game::FxEffectDef*, unsigned surface) -> game::FxEffectDef* {
+			return surface == 17 ? material_effect : nullptr;
+		};
+		auto replacement_runners = runners;
+		replacement_runners[0].effectDef.handle = &child_fx;
+		replacement_runners[1].effectDef.handle = &replacement_root;
+		replacement_elements[1].visuals.array = replacement_runners.data();
+		replacement_elements[2].visuals.instance.effectDef.handle = &child_fx;
+		game::XModel cheytac_case{}, barrett_case{};
+		cheytac_case.bounds.halfSize[1] = 1.56334f;
+		barrett_case.bounds.halfSize[1] = 2.09963f;
+		barrett_case.radius = 2.2f;
+		world_space_cache variants;
+		auto* cheytac_fx = variants.get(&replacement_root, {1, &cheytac_case}, material_lookup);
+		auto* large = variants.get(&replacement_root, {3, &barrett_case}, material_lookup);
+		auto* ordinary = variants.get(&replacement_root, {}, material_lookup);
+		check(cheytac_fx && large && ordinary && cheytac_fx != large && large != ordinary &&
+		          variants.size() == 9,
+		      "one native rifle graph supports independent M200, Barrett and unchanged generic shells");
+		if (cheytac_fx && large)
+		{
+			const auto warmed = variants.size();
+			auto* metal = variants.get(&surface_fx, {3, &barrett_case});
+			check(
+			    metal && variants.size() == warmed &&
+			        metal->elemDefs[0].visuals.array[0].model == &barrett_case,
+			    "surface-table effects are prepared before collision workers select their material variant");
+			const auto& altered = large->elemDefs[0];
+			const auto& resting = altered.effectOnImpact.handle->elemDefs[0];
+			check(
+			    altered.visuals.instance.model == &barrett_case && resting.visuals.array != models.data() &&
+			        resting.visuals.array[0].model == &barrett_case &&
+			        resting.visuals.array[1].model == &barrett_case &&
+			        altered.collBounds.halfSize[1] == barrett_case.bounds.halfSize[1] &&
+			        resting.collBounds.halfSize[1] == barrett_case.bounds.halfSize[1],
+			    "all flight, impact, death and runner models keep the weapon-specific case and collision size");
+			check(
+			    altered.visSamples != samples.data() && altered.visSamples[0].base.scale == 1 &&
+			        altered.visSamples[1].amplitude.scale == 0 &&
+			        altered.visSamples[0].base.color[3] == .75f && altered.velSamples == &velocity &&
+			        samples[0].base.scale == .25f && models[0].model == &model,
+			    "native size curves cannot shrink custom cases; opacity, velocity and shared assets stay intact");
+			using namespace vr::gameplay::native_fx::checkpoint;
+			const auto id = parse(large->name);
+			world_space_cache restored;
+			game::XModel fresh = barrett_case;
+			auto* recovered =
+			    id ? restored.get(&replacement_root, {id->attached, &fresh}, material_lookup) : nullptr;
+			check(id && id->kind == variant::casing && id->attached == 3 && recovered &&
+			          std::string_view(recovered->name) == large->name &&
+			          recovered->elemDefs[0].effectOnDeath.handle->elemDefs[0].visuals.array[0].model ==
+			              &fresh,
+			      "checkpoint recreation rebinds the complete case graph to fresh model storage");
+			registry dictionary;
+			const auto definitions = variants.checkpoint_definitions();
+			check(dictionary.publish({definitions.data(), variants.size()}),
+			      "case graph identities publish with generic FX");
+			dictionary.remove(variant::casing);
+			check(dictionary.size() == 3, "case asset retirement preserves the shared generic FX dictionary");
+		}
+		world_space_cache rejected;
+		check(!rejected.get(&replacement_root, {1, nullptr}) &&
+		          !rejected.get(&replacement_root, {0, &barrett_case}),
+		      "partial case replacement identity never emits a native or mismatched model");
+		replacement_elements[0].flags |= game::FX_ELEM_USE_MODEL_PHYSICS;
+		check(!rejected.get(&replacement_root, {3, &barrett_case}) && !rejected.size(),
+		      "unreviewed XModel rigid-body physics rejects before publishing a partial case graph");
+	}
+	{
 		using namespace vr::gameplay::native_fx::checkpoint;
 		registry dictionary;
 		const auto private_definitions=cache.checkpoint_definitions();
@@ -80,10 +177,11 @@ template<class Check> void native_fx_world_space_tests(const Check& check)
 			std::string_view(replacement->elemDefs[0].effectOnDeath.handle->name)==world_child->name,
 			"saved child definitions retain independent stable identities");
 	}
-	std::array<game::FxEffectDef,127> more{};
-	std::array<std::string,127> more_names;
+	std::array<game::FxEffectDef, world_space_cache::capacity - 1> more{};
+	std::array<std::string, world_space_cache::capacity - 1> more_names;
 	for(unsigned i=0;i<more.size();++i){more_names[i]="fx/more/"+std::to_string(i);more[i].name=more_names[i].c_str();}
-	for(unsigned i=0;i<126;++i)check(cache.get(&more[i])!=nullptr,"bounded shell cache admission");
+	for (unsigned i = 0; i < more.size() - 1; ++i)
+		check(cache.get(&more[i]) != nullptr, "bounded shell cache admission");
 	check(!cache.get(&more.back()) && cache.get(&root)==world && world->elemDefs[0].visuals.instance.model==&model,
 		"capacity exhaustion never evicts in-flight FX descriptors");
 	cache.clear();check(!cache.size(),"native asset drain retires shell descriptors");

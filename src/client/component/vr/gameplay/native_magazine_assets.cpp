@@ -22,6 +22,8 @@ namespace vr::gameplay::weapons::physical_reload::magazine_assets
 			std::array<asset, max_population_states> views;
 			scene_models::rigid_part cartridge;
 			asset cartridge_view{};
+			asset ejected_view{};
+			const char* cartridge_reason{"no audited single-round geometry"};
 			const reload_profile* definition{};
 			game::XModel* source{};
 			game::XSurface* surfaces{};
@@ -251,6 +253,80 @@ namespace vr::gameplay::weapons::physical_reload::magazine_assets
 			return true;
 		}
 
+		bool create_cartridge(prepared_magazine& prepared,
+		                      game::XModel* source,
+		                      const reload_profile& definition,
+		                      const magazine_mesh_recipe& recipe,
+		                      const bone_selection& bones)
+		{
+			if (definition.ammunition.feed == mechanics::feed_type::open_bolt ||
+			    recipe.body_count >= recipe.count)
+				return false;
+			auto& part = prepared.cartridge;
+			const auto members =
+			    std::span(bones).subspan(recipe.body_count, recipe.count - recipe.body_count);
+			if (const auto* fill = definition.magazine_fill())
+			{
+				const auto selection = magazine_cartridge_faces(*fill);
+				if (!selection.count ||
+				    !part.create_static_face_partition(source, members.front(), members, selection.faces()))
+				{
+					prepared.cartridge_reason = part.status();
+					return false;
+				}
+			}
+			else
+			{
+				// M200's j_bullet and P90's tag_bullet_single already have explicit
+				// single-cartridge contracts. Missing camouflage face recipes do not.
+				if (!definition.interaction.manual_bolt && definition.magazine_round_variants.empty())
+					return false;
+				if (!part.create(source, members.front(), members.first(1)))
+				{
+					prepared.cartridge_reason = part.status();
+					return false;
+				}
+			}
+			unsigned gun = missing_bone;
+			for (unsigned bone = 0; bone < source->numBones; ++bone)
+			{
+				const auto* name = game::SL_ConvertToString(source->boneNames[bone]);
+				if (name && std::string_view(name) == "j_gun")
+				{
+					if (gun != missing_bone)
+						return false;
+					gun = bone;
+				}
+			}
+			game::DObjAnimMat bind{};
+			prepared.cartridge_reason = "cartridge receiver frame rejected";
+			if (gun == missing_bone ||
+			    !utils::native_memory::read_bytes(&bind, source->baseMat + gun, sizeof(bind)))
+				return false;
+			hands::quat rotation{bind.quat[0], bind.quat[1], bind.quat[2], bind.quat[3]};
+			float norm{};
+			for (float value : rotation)
+			{
+				if (!std::isfinite(value))
+					return false;
+				norm += value * value;
+			}
+			if (std::abs(norm - 1) > .01f)
+				return false;
+			rotation = hands::conjugate(rotation);
+			const auto& center = part.model()->bounds.midPoint;
+			const hands::vec position = hands::rotate(rotation, {-center[0], -center[1], -center[2]});
+			// Automatic profiles retain their existing native chamber geometry.
+			// Only the manual-bolt presenter already owns a separate chamber mesh.
+			if (definition.interaction.manual_bolt)
+				prepared.cartridge_view = part_view(part);
+			// The whole native cartridge (case, tip, materials) is centered at the
+			// port in receiver axes. Its source magazine offset must not leak out.
+			prepared.ejected_view = {part.model(), {position, rotation}};
+			prepared.cartridge_reason = "native single cartridge ready";
+			return true;
+		}
+
 		std::unique_ptr<prepared_magazine> prepare_subsets(game::XModel* source,
 		                                                   const reload_profile& definition,
 		                                                   const char*& reason)
@@ -280,7 +356,7 @@ namespace vr::gameplay::weapons::physical_reload::magazine_assets
 			const bool stacked = fill && fill->stack;
 			if (stacked && !create_stack_populations(*prepared, source, recipe, bones, *fill, reason))
 				return {};
-			std::array<scene_models::runtime_model, max_population_states + 1> identities{};
+			std::array<scene_models::runtime_model, max_population_states> identities{};
 			size_t identity_count = recipe.subsets;
 			for (size_t population = 0; population < recipe.subsets; ++population)
 			{
@@ -290,18 +366,7 @@ namespace vr::gameplay::weapons::physical_reload::magazine_assets
 				prepared->views[population] = part_view(part);
 				identities[population] = {part.model(), part.source()};
 			}
-			if (definition.interaction.manual_bolt)
-			{
-				auto& cartridge = prepared->cartridge;
-				const auto cartridge_bone = bones[recipe.body_count];
-				if (!cartridge.create(source, cartridge_bone, std::span(bones).subspan(recipe.body_count, 1)))
-				{
-					reason = cartridge.status();
-					return {};
-				}
-				prepared->cartridge_view = part_view(cartridge);
-				identities[identity_count++] = {cartridge.model(), cartridge.source()};
-			}
+			const bool has_cartridge = create_cartridge(*prepared, source, definition, recipe, bones);
 			std::fill(prepared->views.begin() + recipe.subsets,
 			          prepared->views.end(),
 			          prepared->views[recipe.subsets - 1]);
@@ -312,6 +377,19 @@ namespace vr::gameplay::weapons::physical_reload::magazine_assets
 			{
 				reason = "native magazine subset identity registration rejected";
 				return {};
+			}
+			// Optional cosmetics cannot consume the final registry slot needed
+			// by this magazine's mandatory population set.
+			if (has_cartridge)
+			{
+				const std::array<scene_models::runtime_model, 1> round{
+				    {{prepared->cartridge.model(), prepared->cartridge.source()}}};
+				if (!scene_models::register_runtime_models(round))
+				{
+					prepared->cartridge_view = {};
+					prepared->ejected_view = {};
+					prepared->cartridge_reason = "native cartridge identity registration rejected";
+				}
 			}
 			prepared->definition = &definition;
 			prepared->source = source;
@@ -409,11 +487,19 @@ namespace vr::gameplay::weapons::physical_reload::magazine_assets
 		return reason ? reason : "not prepared";
 	}
 
-	asset cartridge(const reload_profile* definition) noexcept
+	asset cartridge(const reload_profile* definition, bool ejected) noexcept
 	{
 		const auto index = reload_profile_index(definition);
 		const auto* prepared = index < reload_profiles.size() ? selected[index].load() : nullptr;
-		return prepared ? prepared->cartridge_view : asset{};
+		return prepared ? ejected ? prepared->ejected_view : prepared->cartridge_view : asset{};
+	}
+	const char* cartridge_status(const reload_profile* definition) noexcept
+	{
+		const auto index = reload_profile_index(definition);
+		const auto* prepared = index < reload_profiles.size() ? selected[index].load() : nullptr;
+		return prepared                                           ? prepared->cartridge_reason
+		       : definition && !definition->rigid_magazine_source ? "no audited single-round geometry"
+		                                                          : status(definition);
 	}
 
 	void clear() noexcept

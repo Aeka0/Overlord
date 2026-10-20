@@ -54,8 +54,10 @@ namespace vr::gameplay::native_fx::checkpoint
 			const auto id = parse(value);
 			if (!id) { reject("invalid presentation identity"); return nullptr; }
 			auto* source = utils::hook::invoke<game::FxEffectDef*>(find_address, id->source.data());
-			auto* result = id->kind == variant::world ? weapons::native_weapon_fx::restore_definition(source) :
-				native_followed_fx::restore_definition(source, id->attached);
+			auto* result = id->kind == variant::followed
+			                   ? native_followed_fx::restore_definition(source, id->attached)
+			                   : weapons::native_weapon_fx::restore_definition(
+			                         source, id->kind == variant::casing ? id->attached : 0);
 			if (!result) reject("presentation definition unavailable");
 			else ++restored_variants;
 			return result;

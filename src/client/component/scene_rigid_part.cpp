@@ -227,6 +227,48 @@ namespace scene_models
 		}
 		return true;
 	}
+	bool rigid_part::edit_mesh(
+	    unsigned index,
+	    const std::function<bool(std::vector<game::GfxPackedVertex>&, std::vector<game::Face>&)>& edit)
+	{
+		if (!data_ || index >= data_->count || !edit || !scheduler::is_executing(scheduler::pipeline::main))
+			return false;
+		auto& mesh = data_->meshes[index];
+		auto& surface = data_->surfaces[index];
+		auto vertices = mesh.vertices;
+		auto faces = mesh.indices;
+		if (!edit(vertices, faces) || vertices.empty() || faces.empty() || vertices.size() > UINT16_MAX ||
+		    faces.size() > UINT16_MAX)
+			return false;
+		for (const auto& v : vertices)
+			for (float x : v.xyz)
+				if (!std::isfinite(x) || std::abs(x) > 10000)
+					return false;
+		for (const auto& f : faces)
+			if (f.v1 >= vertices.size() || f.v2 >= vertices.size() || f.v3 >= vertices.size())
+				return false;
+		ComPtr<ID3D11Device> device;
+		mesh.vertex_buffer->GetDevice(&device);
+		ComPtr<ID3D11Buffer> buffer;
+		ComPtr<ID3D11ShaderResourceView> view;
+		if (!device ||
+		    !create_surface_indices(
+		        device.Get(), surface.indexBufferView, std::as_bytes(std::span(faces)), buffer, view))
+			return false;
+		mesh.vertices = std::move(vertices);
+		mesh.indices = std::move(faces);
+		mesh.index_buffer = std::move(buffer);
+		mesh.index_view = std::move(view);
+		surface.vertCount = static_cast<unsigned short>(mesh.vertices.size());
+		surface.triCount = static_cast<unsigned short>(mesh.indices.size());
+		surface.verts0.packedVerts0 = mesh.vertices.data();
+		surface.triIndices = surface.triIndices2 = mesh.indices.data();
+		surface.indexBuffer = mesh.index_buffer.Get();
+		surface.indexBufferView = mesh.index_view.Get();
+		mesh.group = {0, surface.vertCount, 0, surface.triCount, nullptr};
+		// Bounds and VB/SRV are rebuilt together before the caller can publish.
+		return bake_vertices([](unsigned, std::span<game::GfxPackedVertex>) { return true; });
+	}
 	namespace
 	{
 		template<class T> bool read(const T* source,T& value) noexcept

@@ -97,6 +97,7 @@ struct fixture
 	bool manipulation{true};
 	bool acquire_supply{true},acquire_parts{true};
 	int attempts{}, commits{}, spent{};
+	int live_ejections{};
 	int audible{}, silent{};
 	m::effect last_effect{};
 	std::optional<p::magazine_strike> committed_strike;
@@ -126,7 +127,11 @@ struct fixture
 		++attempts;
 		if (!writable || tx.before != native) return false;
 		native = tx.after; spent += tx.rounds_spent; ++commits;
-		if (tx.silent) ++silent; else ++audible;
+		live_ejections += tx.live_ejected && !tx.silent;
+		if (tx.silent)
+			++silent;
+		else
+			++audible;
 		last_effect = tx.feedback;
 		committed_strike=control.release_strike();
 		return true;
@@ -784,17 +789,27 @@ int main()
 		f.button(true);
 		check(f.state.magazine_inserted, "B cannot operate while slide is held even before full stroke");
 		f.geometry.hand_in_gun[0] = -.02f; f.step(); f.trigger(false);
-		check(f.native.loaded == 15 && f.spent == 0, "partial live pull loses nothing");
+		check(f.native.loaded == 15 && f.spent == 0 && f.live_ejections == 0,
+		      "partial live pull loses and displays nothing");
 		f.trigger(true);
-		f.geometry.hand_in_gun[0] -= .06f; f.step();
-		check(f.native.loaded == 14 && f.native.reserve == 60 && f.spent == 1 && !f.state.chamber_loaded,
-			"full stroke loses exactly the live chambered round before release");
-		for (int i = 0; i < 30; ++i) f.step();
-		check(f.native.loaded == 14 && f.spent == 1, "holding rearward cannot keep spending");
-		f.input.focused = false; f.step();
-		check(f.state.chamber_loaded && f.native.loaded == 14 && f.spent == 1 && !f.control.slide_held(),
-			"tracking interruption finishes stroke without refunding extracted live round");
-		f.input.focused = true; f.step();
+		f.geometry.hand_in_gun[0] -= .06f;
+		f.step();
+		check(f.native.loaded == 14 && f.native.reserve == 60 && f.spent == 1 && f.live_ejections == 1 &&
+		          !f.state.chamber_loaded,
+		      "full stroke loses exactly the live chambered round "
+		      "before release");
+		for (int i = 0; i < 30; ++i)
+			f.step();
+		check(f.native.loaded == 14 && f.spent == 1 && f.live_ejections == 1,
+		      "holding rearward cannot keep spending or spawning rounds");
+		f.input.focused = false;
+		f.step();
+		check(f.state.chamber_loaded && f.native.loaded == 14 && f.spent == 1 && f.live_ejections == 1 &&
+		          !f.control.slide_held(),
+		      "tracking interruption finishes stroke without refunding "
+		      "extracted live round");
+		f.input.focused = true;
+		f.step();
 		check(!f.control.slide_held(), "reconnect while trigger down cannot reacquire");
 	}
 	for (const auto rear : {vr::hand::left, vr::hand::right}) for (bool locked : {false, true})

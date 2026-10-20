@@ -120,12 +120,30 @@ namespace vr::gameplay::weapons::physical_reload
 			value.view.effect = tx.feedback;
 			value.view.effect_at = clock::now();
 			++value.view.effect_sequence;
-			value.view.events[value.view.effect_sequence % value.view.events.size()] =
-				{value.view.effect_sequence, tx.feedback, value.view.effect_at,
-				 tx.feedback == mechanics::effect::live_eject ? value.last_scene.ejection_world :
-				 direct_load || tx.feedback == mechanics::effect::magazine_out ? value.last_scene.attached_world : value.last_scene.held_world,
-				 value.last_scene.units_per_meter,value.last_scene.attached_world,
-				 tx.feedback==mechanics::effect::magazine_out ? value.view.ammo.magazine_rounds : value.view.ammo.held_rounds,tx.item_released,impulse};
+			value.view.events[value.view.effect_sequence % value.view.events.size()] = {
+			    value.view.effect_sequence,
+			    tx.feedback,
+			    value.view.effect_at,
+			    tx.live_ejected ? value.last_scene.ejection_world
+			    : direct_load || tx.feedback == mechanics::effect::magazine_out
+			        ? value.last_scene.attached_world
+			        : value.last_scene.held_world,
+			    value.last_scene.units_per_meter,
+			    value.last_scene.attached_world,
+			    tx.feedback == mechanics::effect::magazine_out ? value.view.ammo.magazine_rounds
+			                                                   : value.view.ammo.held_rounds,
+			    tx.item_released,
+			    impulse};
+			if (tx.live_ejected && value.last_scene.has_ejection_port)
+			{
+				auto& event = value.view.events[value.view.effect_sequence % value.view.events.size()];
+				event.live_ejected = true;
+				event.ejection_velocity =
+				    cartridge_exit_velocity(value.last_scene.ejection_world, event.units_per_meter);
+				// Mesh orientation follows the receiver; tag_brass supplies only the
+				// exit position and direction, never the cartridge's longitudinal axis.
+				event.world.rotation = value.last_scene.receiver_rotation;
+			}
 			if (!tx.silent) emit_feedback(value, tx.feedback);
 			return true;
 		}

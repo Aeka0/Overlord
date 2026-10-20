@@ -60,8 +60,22 @@ namespace ammunition_presentation_tests
 		{
 			++enabled;check(valid_magazine_fill(*recipe) && std::string_view(recipe->source)==p->rigid_magazine_source,
 				"every enabled camouflage binds its own validated source");
+			const auto cartridge = magazine_cartridge_faces(*recipe);
+			const auto expected = recipe->stack ? faces(recipe->stack->rounds[0].faces)
+				                                : faces(recipe->faces[1]) - faces(recipe->faces[0]);
+			check(cartridge.count && faces(cartridge.faces()) == expected,
+				  "ejected live cartridge contains exactly one "
+				  "authored round");
+			for (const auto& round : cartridge.faces())
+				for (const auto& body : recipe->faces[0])
+					check(round.surface != body.surface || round.last < body.first || body.last < round.first,
+						  "single-cartridge extraction excludes every "
+						  "magazine body face");
+			auto invalid = *recipe;
+			invalid.bones = 257;
+			check(!magazine_cartridge_faces(invalid).count, "invalid source cannot produce an ejected mesh");
 		}
-		check(enabled==42,"all forty-two reviewed counted-magazine profiles are registered");
+		check(enabled == 42, "all forty-two reviewed counted-magazine profiles are registered");
 		for (const auto* definition : reload_profiles)
 		{
 			const auto* fill = definition->magazine_fill();

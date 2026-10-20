@@ -3,9 +3,16 @@
 #include <array>
 #include <span>
 #include <functional>
+#include <vector>
 #include "scene_face_partition.hpp"
 
-namespace game { struct XModel; struct Material; struct GfxPackedVertex; }
+namespace game
+{
+	struct XModel;
+	struct Material;
+	struct GfxPackedVertex;
+	struct Face;
+}
 namespace scene_models
 {
 	// Immutable rigid geometry over a loaded asset. Face selections share source
@@ -55,6 +62,12 @@ namespace scene_models
 		// Main owner, before registration. Bake into private immutable buffers;
 		// queued models and source vertices must never be edited through this API.
 		bool bake_vertices(const std::function<bool(unsigned,std::span<game::GfxPackedVertex>)>& transform);
+		// Main owner, before registration only. Edit one copied material surface,
+		// preserving source buffers and rebuilding its private indices/vertices.
+		// Counts remain within the native 16-bit surface limits.
+		bool edit_mesh(
+		    unsigned surface,
+		    const std::function<bool(std::vector<game::GfxPackedVertex>&, std::vector<game::Face>&)>& edit);
 		// Multi-material version, preserving each source surface/material. Ranges
 		// must be sorted and non-overlapping within their surface.
 		bool create_face_partition(game::XModel*,unsigned bone,std::span<const surface_face_range>,bool include);

@@ -11,10 +11,16 @@
 
 namespace vr::gameplay::native_fx::checkpoint
 {
-	enum class variant { world, followed };
+	enum class variant
+	{
+		world,
+		followed,
+		casing
+	};
 	inline constexpr std::string_view prefix = "__overlord_fx/";
 	inline constexpr std::size_t source_name_limit = 255;
-	inline constexpr std::size_t variant_capacity = 136; // 128 shell graph nodes + 8 followed definitions.
+	inline constexpr std::size_t variant_capacity =
+	    264; // 256 shell/surface graph nodes + 8 followed definitions.
 	inline constexpr std::size_t native_capacity = 2048;
 	inline constexpr unsigned effect_size = 0x140, handle_unit = 16;
 	inline bool valid_effect_handle(unsigned handle) noexcept
@@ -36,7 +42,9 @@ namespace vr::gameplay::native_fx::checkpoint
 		if (kind == variant::world) result += "world/";
 		else
 		{
-			result += "follow/";
+			if (kind == variant::casing && !attached)
+				return {};
+			result += kind == variant::casing ? "casing/" : "follow/";
 			constexpr char hex[] = "0123456789abcdef";
 			for (int shift = 28; shift >= 0; shift -= 4) result += hex[(attached >> shift) & 15];
 			result += '/';
@@ -50,12 +58,15 @@ namespace vr::gameplay::native_fx::checkpoint
 		value.remove_prefix(prefix.size());
 		identity result;
 		if (value.starts_with("world/")) value.remove_prefix(6);
-		else if (value.starts_with("follow/") && value.size() >= 16 && value[15] == '/')
+		else if ((value.starts_with("follow/") || value.starts_with("casing/")) && value.size() >= 16 &&
+		         value[15] == '/')
 		{
-			result.kind = variant::followed;
+			result.kind = value.starts_with("casing/") ? variant::casing : variant::followed;
 			const auto mask = value.substr(7, 8);
 			const auto parsed = std::from_chars(mask.data(), mask.data() + mask.size(), result.attached, 16);
 			if (parsed.ec != std::errc{} || parsed.ptr != mask.data() + mask.size()) return {};
+			if (result.kind == variant::casing && !result.attached)
+				return {};
 			value.remove_prefix(16);
 		}
 		else return {};
