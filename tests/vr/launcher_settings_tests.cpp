@@ -95,6 +95,23 @@ int main(int argc, char** argv)
 				require(catalog[field.name][i]["value"]==field.values[i] && catalog[field.name][i]["labelKey"]==field.label_keys[i], "Frontend choices preserve native ordering and localized labels");
 		const auto initial = defaults();
 		require(validate(initial), "Shared defaults must be valid");
+		const auto* grip_mode = vr::settings::weapon_grip_mode.name;
+		require(initial[grip_mode] == "hold" && read_values("")[grip_mode] == "hold",
+		        "New and existing profiles retain hold-to-grip by default");
+		for (const auto* mode : {"hold", "toggle"})
+		{
+			auto selected = initial;
+			selected[grip_mode] = mode;
+			require(read_values(update_config("bind X vr_recenter\n", selected)) == selected,
+			        "Weapon grip modes persist through the shared config bridge");
+		}
+		require(read_values("seta vr_weaponGripMode 1\n")[grip_mode] == "toggle",
+		        "Native grip enum index reloads as the launcher choice");
+		{
+			auto invalid = initial;
+			invalid[grip_mode] = "invalid";
+			require(!validate(invalid), "Unknown grip modes cannot be saved");
+		}
 		require(initial[vr::settings::subtitles.name] == true, "Dialogue subtitles default on");
 		for (bool enabled : {false, true})
 		{

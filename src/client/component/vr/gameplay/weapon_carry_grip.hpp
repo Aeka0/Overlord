@@ -4,6 +4,20 @@
 
 namespace vr::gameplay::weapons::carry
 {
+	// Mission equipment and mechanical module grips keep their own hold/release
+	// contracts. Ordinary control/support hands share the carry preference.
+	inline std::array<identity, 2> toggle_grip_owners(const inventory& owned,
+	                                                  bool toggle,
+	                                                  unsigned mechanical_hands = 0) noexcept
+	{
+		std::array<identity, 2> result{};
+		if (toggle)
+			for (unsigned h = 0; h < result.size(); ++h)
+				if (const auto* item = owned.in_hand(hand(h));
+				    item && !item->policy.abdominal && !(mechanical_hands & (1u << h)))
+					result[h] = item->id;
+		return result;
+	}
 	// Same-frame acquisition uses authored local contacts and current tracking,
 	// never a render worker's previous squeeze decision.
 	inline bool support_contact(const profile& p,

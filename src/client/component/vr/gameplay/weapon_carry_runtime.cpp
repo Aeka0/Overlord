@@ -1,5 +1,6 @@
 #include <std_include.hpp>
 #include "../debug_options.hpp"
+#include "../settings.hpp"
 #include "component/scene_model_record.hpp"
 #include "vehicles/runtime.hpp"
 #include "carry_interaction.hpp"
@@ -63,6 +64,7 @@ namespace vr::gameplay::weapons::carry
 	{
 		std::atomic_bool alive{true}, running{};
 		game::dvar_t* enabled{};
+		game::dvar_t* grip_mode{};
 		std::array<game::dvar_t*, 6> slot_settings{};
 		inventory owned; // Server is the only writer; readers receive a published copy.
 		std::mutex publication_mutex;
@@ -756,7 +758,15 @@ namespace vr::gameplay::weapons::carry
 			const auto velocity = motion_history.update(input, hands, valid_hands, body.units_per_meter);
 			// Consume only after per-hand pose admission. A missing opposite hand
 			// must neither swallow this hand's release nor replay it on recovery.
-			const auto event = edges.consume(interaction_input, gameplay, now);
+			const bool toggle = grip_mode && grip_mode->current.integer == 1;
+			unsigned mechanical_hands{};
+			if (toggle)
+				for (const auto& item : owned.instances())
+					if (item.at == location::held && valid_hand(item.owner.support) &&
+					    underbarrel::current(item.id).owns_support)
+						mechanical_hands |= 1u << unsigned(item.owner.support);
+			const auto toggle_owners = toggle_grip_owners(owned, toggle, mechanical_hands);
+			const auto event = edges.consume(interaction_input, gameplay, now, toggle_owners);
 			if (event.pressed || event.released || event.resumed || event.deferred != deferred_mask)
 			{
 				const unsigned down = (input.squeeze[0].down ? 1u : 0u) | (input.squeeze[1].down ? 2u : 0u);
@@ -986,6 +996,7 @@ namespace vr::gameplay::weapons::carry
 			frame.body = body;
 			frame.wrists = wrists;
 			frame.valid_hands = valid_hands;
+			frame.blocked_acquisitions = event.consumed;
 			frame.objects = attachment_scenes;
 			frame.holsters = slots;
 			batch.frame = frame;
@@ -1639,6 +1650,13 @@ namespace vr::gameplay::weapons::carry
 			                               true,
 			                               game::DVAR_FLAG_SAVED,
 			                               "Grip release, native physical drops, waist/back weapon holsters");
+			const auto& mode = settings::weapon_grip_mode;
+			static auto grip_modes = settings::weapon_grip_mode.values;
+			grip_mode = dvars::register_enum(mode.name,
+			                                 grip_modes.data(),
+			                                 mode.default_index,
+			                                 game::DVAR_FLAG_SAVED,
+			                                 "Weapon grips: hold to carry, or press again to release");
 			constexpr std::array names{"vr_holsterWaistWidth",
 			                           "vr_holsterWaistDown",
 			                           "vr_holsterBackDistance",
@@ -1669,6 +1687,8 @@ namespace vr::gameplay::weapons::carry
 				        {
 					        std::ostringstream out;
 					        out << "active=" << active() << " selected=" << projection().weapon
+					            << " grip_mode="
+					            << (grip_mode && grip_mode->current.integer == 1 ? "toggle" : "hold")
 					            << " transitions=" << transitions << " rejections=" << rejections
 					            << " invariant=" << owned.invariant() << " reason=" << reason
 					            << " native=" << native_carry::status() << '\n';
@@ -1693,7 +1713,8 @@ namespace vr::gameplay::weapons::carry
 						        out << "grip_input seq=" << e.sequence << " valid_poses=" << e.poses
 						            << " down=" << e.down << " pressed=" << e.event.pressed
 						            << " released=" << e.event.released << " deferred=" << e.event.deferred
-						            << " resumed_held=" << e.event.resumed;
+						            << " resumed_held=" << e.event.resumed
+						            << " consumed=" << e.event.consumed;
 						        for (const auto& b : e.buttons)
 							        out << " button=" << b.generation << ':' << b.presses << ':'
 							            << b.releases;

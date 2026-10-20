@@ -55,8 +55,14 @@ namespace vr::settings
 		.values = {"standard", "legacy"},
 		.default_index = 1,
 		.label_keys = {"choice.standardControllerPose", "choice.legacyControllerPose"}};
+	inline constexpr choice_setting weapon_grip_mode{.name = "vr_weaponGripMode",
+	                                                 .values = {"hold", "toggle"},
+	                                                 .label_keys = {"choice.hold", "choice.toggle"}};
 	inline constexpr std::array choices{
-		runtime_backend, controller_pose_mode, killfeed_style,
+	    runtime_backend,
+	    controller_pose_mode,
+	    weapon_grip_mode,
+	    killfeed_style,
 	    choice_setting{
 	        .name = turn_mode, .values = {"smooth", "snap"}, .label_keys = {"choice.smooth", "choice.snap"}},
 	    choice_setting{.name = recoil_penalty,

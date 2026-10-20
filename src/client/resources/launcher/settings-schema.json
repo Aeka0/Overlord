@@ -377,6 +377,14 @@
     "description": "settings.physicalLaddersHint"
   },
   {
+    "name": "vr_weaponGripMode",
+    "category": "gameplay",
+    "group": "settings.weaponInteraction",
+    "label": "settings.weaponGripMode",
+    "type": "choice",
+    "description": "settings.weaponGripModeHint"
+  },
+  {
     "name": "vr_quickReload",
     "category": "gameplay",
     "group": "settings.weaponInteraction",

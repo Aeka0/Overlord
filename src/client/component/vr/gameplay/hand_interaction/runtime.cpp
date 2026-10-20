@@ -29,7 +29,10 @@ namespace vr::gameplay::hand_interaction
 	edges input(hand actor,button b)noexcept{return server() && active?history.get(actor,b):edges{};}
 	void offer(candidate c)noexcept
 	{
-		if(!server() || !active || !vr::valid_hand(c.actor) || !(context.valid_hands&(1u<<unsigned(c.actor))))return;
+		if (!server() || !active || !vr::valid_hand(c.actor) ||
+		    !(context.valid_hands & (1u << unsigned(c.actor))) ||
+		    (context.blocked_acquisitions & (1u << unsigned(c.actor))))
+			return;
 		if(c.desired.destination.provider!=domain::world && history.get(c.actor,c.desired.maintained).release)return;
 		authority.offer(c);
 	}
@@ -37,7 +40,10 @@ namespace vr::gameplay::hand_interaction
 	{if(server() && active)authority.select_supply(actor,object(provider,id));}
 	bool exchange_supply(hand actor,target from,grasp to,supply_exchange_fn commit,void* data)noexcept
 	{
-		if(!server() || !active || !commit || !vr::valid_hand(actor) || !(context.valid_hands&(1u<<unsigned(actor))))return false;
+		if (!server() || !active || !commit || !vr::valid_hand(actor) ||
+		    !(context.valid_hands & (1u << unsigned(actor))) ||
+		    (context.blocked_acquisitions & (1u << unsigned(actor))))
+			return false;
 		const auto trigger=history.get(actor,button::trigger);
 		return trigger.down && trigger.armed && !trigger.release && authority.exchange_supply(actor,from,to,[&]{return commit(data);});
 	}

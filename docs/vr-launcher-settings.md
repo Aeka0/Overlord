@@ -217,7 +217,13 @@ branch before the player knockdown sequence begins. Dogs remain able to attack.
 These policies apply only when VR is enabled. See [enemy combat](vr-enemy-combat.md)
 for the native boundaries and acceptance checks.
 
-Gameplay > Weapon interaction includes `vr_smartAmmoSelection` (default on).
+Gameplay > Weapon interaction includes `vr_weaponGripMode` (`hold` by default).
+`toggle` keeps an acquired gun or ordinary support grip after Grip is released;
+the next press releases it through the existing stow/exchange/drop transaction.
+Equipment and mechanical parts retain their hold controls. The shared native
+choice catalog supplies both modes, defaults, validation and config persistence.
+
+The same group includes `vr_smartAmmoSelection` (default on).
 New waist draws prioritize the primary magazine when it is absent or its loaded
 ammunition is exhausted. Otherwise they select a grenade for an empty, sufficiently
 open M203 or empty GP-25, or a shell for a partially filled underbarrel shotgun tube.
