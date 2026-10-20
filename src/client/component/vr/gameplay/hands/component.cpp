@@ -1,4 +1,6 @@
 #include <std_include.hpp>
+#include "../../diagnostics/wait_timing.hpp"
+
 #include "status.hpp"
 #include "../../h2/entrypoints.hpp"
 #include "component/vr/gameplay/hands/rig_builder.hpp"
@@ -55,6 +57,8 @@
 #include <utils/hook.hpp>
 #include <utils/hook_validation.hpp>
 #include <utils/io.hpp>
+
+namespace wait_timing = vr::diagnostics::wait_timing;
 
 namespace vr::gameplay::hands
 {
@@ -673,7 +677,9 @@ namespace vr::gameplay::hands
 			// The caller already owns the native DObj lock. This lock only serializes
 			// the independent per-object solver contexts; no native call from another
 			// component waits on this lock.
-			const std::lock_guard lock(mutex);
+			const wait_timing::context_scope timing_context({wait_timing::identity::skeleton,
+				object->timestamp, reinterpret_cast<std::uintptr_t>(object)});
+			const wait_timing::scoped_lock lock(mutex, wait_timing::site::hands_solver);
 			selected_solver = empty ? &empty_solver : &native_solver;
 			if (independent)
 			{

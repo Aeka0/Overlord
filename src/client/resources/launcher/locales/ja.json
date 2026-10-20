@@ -54,6 +54,8 @@
   "settings.debugView": "詳細なビュー診断",
   "settings.debugViewHint": "描画処理のコールスタック、メモリハッシュ、ビューの変化、詳細なバックエンドイベントを記録します。",
   "settings.debugEvents": "入力と武器のイベント",
+  "settings.debugWaitTiming": "CPU 待機時間の計測",
+  "settings.debugWaitTimingHint": "主要なロックの待機・保持時間と VR／デスクトップのフレーム待機時間を記録します。vr_status と診断パッケージに含まれます。次回のゲーム起動時に適用されます。",
   "settings.debugGeometry": "インタラクション形状",
   "settings.debugMenuInput": "メニュー入力の記録",
   "settings.debugMenuInputHint": "起動時とトラッキング復帰後にメニュー入力を 30 秒間記録し、CSV レポートを自動保存します。",

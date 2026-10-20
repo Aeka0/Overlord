@@ -511,6 +511,14 @@
     "type": "toggle"
   },
   {
+    "name": "vr_debugWaitTiming",
+    "category": "debug",
+    "group": "settings.debugProbes",
+    "label": "settings.debugWaitTiming",
+    "type": "toggle",
+    "description": "settings.debugWaitTimingHint"
+  },
+  {
     "name": "vr_debugSceneModels",
     "category": "debug",
     "group": "settings.debugProbes",

@@ -6,6 +6,7 @@
 #include "diagnostics/status_sections.hpp"
 #include "diagnostics/format_helpers.hpp"
 #include "diagnostics/report_paths.hpp"
+#include "diagnostics/wait_timing.hpp"
 #include "region_capture.hpp"
 #include "engine_backend_probe.hpp"
 #include "engine_stereo_binding.hpp"
@@ -486,6 +487,7 @@ namespace vr::diagnostics
 
 		std::ostringstream output;
 		output << "[VR] status\n";
+		wait_timing::append(output);
 		detail::append_session_status(output, identity.compatibility_probe_passed);
 		detail::append_environment_status(output, device);
 		output << "capture context: " << (graphics.present_count == 0 ?

@@ -54,6 +54,8 @@
   "settings.debugView": "详细视图诊断",
   "settings.debugViewHint": "在渲染路径上采集调用栈、内存哈希、视图变化及详细后端事件。",
   "settings.debugEvents": "输入与武器事件",
+  "settings.debugWaitTiming": "CPU 等待计时",
+  "settings.debugWaitTimingHint": "记录关键锁的等待、持锁时间及 VR／桌面帧等待，随 vr_status 和诊断包导出。下次启动游戏生效。",
   "settings.debugGeometry": "交互几何",
   "settings.debugMenuInput": "菜单输入录制",
   "settings.debugMenuInputHint": "启动及追踪恢复后记录 30 秒菜单输入，自动保存 CSV 报告。",

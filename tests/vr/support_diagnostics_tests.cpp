@@ -4,6 +4,7 @@
 #include "component/vr/diagnostics/support_archive.hpp"
 #include "component/vr/diagnostics/screen_display.hpp"
 #include "component/vr/diagnostics/post_aa.hpp"
+#include "wait_timing_tests.hpp"
 #include <utils/compression.hpp>
 #include <unzip.h>
 #include <iowin32.h>
@@ -13,6 +14,7 @@ int main()
 {
 	int failures{};
 	const auto check=[&](bool ok,const char* message){if(!ok){++failures;std::cerr<<"FAIL: "<<message<<'\n';}};
+	wait_timing_tests::run(check);
 	console::detail::message_history history;
 	history.push(1,"initial runtime failure",1);
 	for(unsigned i{};i<1000;++i)history.push(7,std::string(1024,'x')+std::to_string(i),i+2);

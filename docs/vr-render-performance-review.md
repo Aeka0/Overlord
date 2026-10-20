@@ -1,5 +1,47 @@
 # Render performance review: optional diagnostics
 
+## Optional CPU wait timing
+
+Launcher **Debug > Diagnostic probes > CPU wait timing** (`vr_debugWaitTiming`)
+is off by default and frozen at process startup. It measures the existing lock
+boundaries without changing acquisition order, owner threads or frame pacing.
+Disabled instrumentation performs no clock/thread-ID queries or sample publication.
+
+The `CPU wait timing` section in `vr_status` and support diagnostic packages covers:
+
+- Renderer frame-end maintenance, runtime facade/dispatch locks and both runtime
+  backends, including Present pre/post and renderer observation.
+- The hand solver lock, physical reload server tick, presentation reads and
+  scene publication. Other users of the same runtime/reload locks are grouped
+  under `.other`, so competing control work is still visible.
+- Native eye-copy session locking and eye composition.
+- The exclusive DXGI Present call, `xrWaitFrame`, `xrWaitSwapchainImage` and
+  OpenVR `WaitGetPoses`. The DXGI duration excludes both VR callbacks.
+
+Each site retains process-lifetime completed-sample counts, total/average/maximum
+acquisition and body durations, threshold counts, the latest and maximum samples,
+and the eight most recent samples with acquisition >= 100 us or body >= 1 ms.
+All times are elapsed wall time, not CPU execution time. Lock acquisition includes
+scheduling delay; call sites use zero acquisition time and report their duration
+as `hold_us` with `type=call`. Nested intervals are inclusive: do not sum the rows.
+An in-flight call is not reported as completed. Restart for a new measurement
+window, or compare counters from two status snapshots.
+
+Samples carry a steady-clock start timestamp, OS thread ID and a typed identity.
+Renderer frame IDs are per-thread observation counters; Present IDs are the
+existing DXGI indices (object=device generation, detail=sync interval); skeleton
+IDs are native timestamps (object=DObj); server IDs are game time (object=player
+state); stereo IDs are native pair IDs (detail=eye). These separate ID domains
+must not be treated as the same frame number. No borrowed object is retained or
+dereferenced by the report.
+
+Storage is fixed-size. Producers and report readers only try to acquire each
+diagnostic publication guard; busy producers drop the observation and increment
+`dropped`, and busy readers report `snapshot_busy`. Formatting/file I/O remains
+on the existing diagnostic path, with no per-frame logging or new worker. The
+feature is available in both Debug and optimized builds; use RelWithDebInfo for
+performance comparisons. Existing production timing and safety gates remain active.
+
 ## Follow-up: production render hot paths 
 
 An operator-coordinated The Gulag/M14 EBR capture with all launcher diagnostics

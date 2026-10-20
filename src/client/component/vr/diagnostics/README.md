@@ -63,6 +63,14 @@ Feature commands reuse the same cached formatters as the full/core report.
 The same worker is cancelled and joined before VR teardown. Existing artifacts
 retain their own timestamps and a historical association label.
 
+`wait_timing.hpp` supplies optional, bounded wall-time observations for the
+existing runtime, hands, reload and eye-copy lock boundaries and frame waits.
+The frozen `vr_debugWaitTiming` selection gates clock reads and sample creation.
+Per-site publication uses a nonblocking try guard with explicit dropped/busy
+counts. Lock observations publish after releasing the measured lock; nested
+intervals remain inclusive. The coordinator appends the same data to status
+reports and support packages without any producer-side formatting or file I/O.
+
 `runtime_code_snapshot.cpp` exports bounded, validated executable-memory ranges
 for offline analysis. The renderer invokes it at the existing loader boundary,
 after target validation and before its observation patches. It owns neither

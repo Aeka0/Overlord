@@ -54,6 +54,8 @@
   "settings.debugView": "Diagnostic détaillé des vues",
   "settings.debugViewHint": "Enregistre les piles d’appels, empreintes mémoire, changements de vue et événements détaillés du moteur de rendu.",
   "settings.debugEvents": "Événements d’entrée et d’armes",
+  "settings.debugWaitTiming": "Temps d’attente du CPU",
+  "settings.debugWaitTimingHint": "Mesure l’attente et la durée des verrous clés, ainsi que l’attente des images VR et bureau. Inclus dans vr_status et les paquets de diagnostic. Actif au prochain lancement du jeu.",
   "settings.debugGeometry": "Géométrie des interactions",
   "settings.debugMenuInput": "Enregistrement des entrées de menu",
   "settings.debugMenuInputHint": "Enregistre 30 secondes d’entrées au démarrage et après récupération du suivi ; sauvegarde automatiquement les rapports CSV.",

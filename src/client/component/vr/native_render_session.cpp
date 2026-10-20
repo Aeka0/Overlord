@@ -1,4 +1,6 @@
 #include <std_include.hpp>
+#include "diagnostics/wait_timing.hpp"
+
 
 #include "native_render_session.hpp"
 #include "diagnostics.hpp"
@@ -15,6 +17,8 @@
 #include <windows.h>
 
 #pragma comment(lib, "d3dcompiler.lib")
+
+namespace wait_timing = vr::diagnostics::wait_timing;
 
 namespace vr::native_render_session
 {
@@ -736,8 +740,9 @@ float4 main(float4 position : SV_Position) : SV_Target
 		diagnostics::record_trace(diagnostics::trace_event::native_conversion_begin,
 			pair_id, (static_cast<std::uint64_t>(eye) << 56) |
 				(reinterpret_cast<std::uintptr_t>(source) & 0x00FFFFFFFFFFFFFFull));
+		const wait_timing::context_scope timing_context({wait_timing::identity::stereo_pair, pair_id, 0, eye});
 		const auto lock_started = std::chrono::steady_clock::now();
-		const std::lock_guard lock(mutex_);
+		const wait_timing::scoped_lock lock(mutex_, wait_timing::site::native_copy);
 		record_timing(status_.copy_lock_wait_samples, status_.copy_lock_wait_last_us,
 			status_.copy_lock_wait_max_us, status_.copy_lock_wait_total_us, eye,
 			elapsed_us(lock_started));
@@ -1003,8 +1008,11 @@ float4 main(float4 position : SV_Position) : SV_Target
 			auto event=*composition;
 			desktop_mirror::crop recording_crop;
 			event.recording_crop=preview_valid ? &recording_crop : nullptr;
-			eye_composition::compose(event, context, conversion_source_view.Get(),
-				selected->eyes[eye].color_view.Get());
+			{
+				const wait_timing::scope timing(wait_timing::site::composition);
+				eye_composition::compose(event, context, conversion_source_view.Get(),
+					selected->eyes[eye].color_view.Get());
+			}
 			if (eye==1) selected->preview_recording_crop=recording_crop;
 		}
 		const auto removed_started = std::chrono::steady_clock::now();

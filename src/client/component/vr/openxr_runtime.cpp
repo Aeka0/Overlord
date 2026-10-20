@@ -1,4 +1,6 @@
 #include <std_include.hpp>
+#include "diagnostics/wait_timing.hpp"
+
 
 #include "openxr_runtime.hpp"
 #include "product.hpp"
@@ -28,6 +30,8 @@
 #include <format>
 #include <mutex>
 #include <vector>
+
+namespace wait_timing = vr::diagnostics::wait_timing;
 
 namespace vr::openxr
 {
@@ -195,7 +199,7 @@ namespace vr::openxr
 
 		void set_desired_enabled(const bool enabled)
 		{
-			const std::lock_guard lock(mutex_);
+			const wait_timing::scoped_lock lock(mutex_, wait_timing::site::xr_other);
 			if (enabled && !status_.desired_enabled)
 			{
 				auto_initialize_allowed_ = true;
@@ -206,7 +210,7 @@ namespace vr::openxr
 
 		void set_scene_mode(const scene_mode mode)
 		{
-			const std::lock_guard lock(mutex_);
+			const wait_timing::scoped_lock lock(mutex_, wait_timing::site::xr_other);
 			status_.requested_scene_mode = mode;
 		}
 
@@ -249,7 +253,7 @@ namespace vr::openxr
 
 		void request_reinitialize()
 		{
-			const std::lock_guard lock(mutex_);
+			const wait_timing::scoped_lock lock(mutex_, wait_timing::site::xr_other);
 			auto_initialize_allowed_ = true;
 			status_.reinitialize_pending = true;
 			publish_status_locked();
@@ -257,14 +261,14 @@ namespace vr::openxr
 
 		void prepare_frame(const d3d11::device_snapshot&, std::uint64_t)
 		{
-			const std::lock_guard lock(mutex_);
+			const wait_timing::scoped_lock lock(mutex_, wait_timing::site::xr_prepare);
 			status_.direct_renderer_thread_id = GetCurrentThreadId();
 			publish_status_locked();
 		}
 
 		bool initialize(const d3d11::device_snapshot& graphics)
 		{
-			const std::lock_guard lock(mutex_);
+			const wait_timing::scoped_lock lock(mutex_, wait_timing::site::xr_other);
 			const auto initialized = initialize_locked(graphics);
 			if (initialized)
 			{
@@ -284,7 +288,7 @@ namespace vr::openxr
 
 		void on_present(const d3d11::present_event& event)
 		{
-			const std::lock_guard lock(mutex_);
+			const wait_timing::scoped_lock lock(mutex_, wait_timing::site::xr_pre);
 			if (present_.active || d3d11::is_inside_present_gpu_scope())
 			{
 				fail(runtime_state::fatal_for_vr, "OpenXR Present ownership", XR_ERROR_CALL_ORDER_INVALID);
@@ -318,7 +322,7 @@ namespace vr::openxr
 		}
 		void on_present_post(const d3d11::present_event& event, HRESULT result)
 		{
-			const std::lock_guard lock(mutex_);
+			const wait_timing::scoped_lock lock(mutex_, wait_timing::site::xr_post);
 			++status_.present_owner_post_count;
 			const auto match = present_transaction::validate(present_, event, GetCurrentThreadId(), result);
 			present_ = {};
@@ -347,7 +351,7 @@ namespace vr::openxr
 		// CPU/WARP fixture entry: never substitutes a virtual Present for H2 stereo.
 		void on_present(const d3d11::device_snapshot& graphics, std::uint64_t frame)
 		{
-			const std::lock_guard lock(mutex_);
+			const wait_timing::scoped_lock lock(mutex_, wait_timing::site::xr_other);
 			if (status_.requested_scene_mode != scene_mode::synthetic)
 			{
 				fail(runtime_state::fatal_for_vr,
@@ -370,7 +374,7 @@ namespace vr::openxr
 
 		void on_device_destroying(const d3d11::device_snapshot& graphics) noexcept
 		{
-			const std::lock_guard lock(mutex_);
+			const wait_timing::scoped_lock lock(mutex_, wait_timing::site::xr_other);
 			capture_.invalidate(graphics.generation);
 			if (status_.device_generation == graphics.generation)
 			{
@@ -381,7 +385,7 @@ namespace vr::openxr
 
 		void shutdown() noexcept
 		{
-			const std::lock_guard lock(mutex_);
+			const wait_timing::scoped_lock lock(mutex_, wait_timing::site::xr_other);
 			status_.desired_enabled = false;
 			status_.reinitialize_pending = false;
 			(void)teardown_locked(true);
@@ -390,19 +394,19 @@ namespace vr::openxr
 
 		bool shutdown_complete() const noexcept
 		{
-			const std::lock_guard lock(mutex_);
+			const wait_timing::scoped_lock lock(mutex_, wait_timing::site::xr_other);
 			return !has_objects();
 		}
 
 		bool requested_enabled() const
 		{
-			const std::lock_guard lock(mutex_);
+			const wait_timing::scoped_lock lock(mutex_, wait_timing::site::xr_other);
 			return status_.desired_enabled;
 		}
 
 		bool applied_enabled() const
 		{
-			const std::lock_guard lock(mutex_);
+			const wait_timing::scoped_lock lock(mutex_, wait_timing::site::xr_enabled);
 			return status_.applied_enabled;
 		}
 
@@ -1375,7 +1379,11 @@ namespace vr::openxr
 			prediction_.state = {XR_TYPE_FRAME_STATE};
 			prediction_.pair = pair;
 			const XrFrameWaitInfo wait{XR_TYPE_FRAME_WAIT_INFO};
-				auto result = dispatch_.wait_frame(session_, &wait, &prediction_.state);
+				auto result = [&]
+				{
+					const wait_timing::scope timing(wait_timing::site::xr_wait_frame);
+					return dispatch_.wait_frame(session_, &wait, &prediction_.state);
+				}();
 				if (XR_FAILED(result))
 				{
 					inputs_.invalidate(controller_input::input_reason::wait_frame_failed,result);
@@ -1601,7 +1609,10 @@ namespace vr::openxr
 			eye.acquired = true;
 			++status_.eyes[index].acquired;
 			const XrSwapchainImageWaitInfo wait{XR_TYPE_SWAPCHAIN_IMAGE_WAIT_INFO, nullptr, 10'000'000};
-			result = dispatch_.wait_swapchain_image(eye.handle, &wait);
+			{
+				const wait_timing::scope timing(wait_timing::site::xr_wait_image);
+				result = dispatch_.wait_swapchain_image(eye.handle, &wait);
+			}
 			if (XR_FAILED(result) || result == XR_TIMEOUT_EXPIRED)
 			{
 				error = "xrWaitSwapchainImage";

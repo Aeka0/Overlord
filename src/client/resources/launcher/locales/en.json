@@ -54,6 +54,8 @@
   "settings.debugView": "Detailed view diagnostics",
   "settings.debugViewHint": "Capture call stacks, memory hashes, view changes and detailed backend events on the render path.",
   "settings.debugEvents": "Input and weapon events",
+  "settings.debugWaitTiming": "CPU wait timing",
+  "settings.debugWaitTimingHint": "Measure key lock waits, lock hold times and VR/desktop frame waits. Included in vr_status and diagnostic packages. Applies on the next game start.",
   "settings.debugGeometry": "Interaction geometry",
   "settings.debugMenuInput": "Menu input recording",
   "settings.debugMenuInputHint": "Record 30-second menu input windows at startup and after tracking recovery; save CSV reports automatically.",

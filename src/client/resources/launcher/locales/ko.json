@@ -54,6 +54,8 @@
   "settings.debugView": "상세 시점 진단",
   "settings.debugViewHint": "렌더링 경로의 호출 스택, 메모리 해시, 시점 변경 및 상세 백엔드 이벤트를 기록합니다.",
   "settings.debugEvents": "입력 및 무기 이벤트",
+  "settings.debugWaitTiming": "CPU 대기 시간 측정",
+  "settings.debugWaitTimingHint": "주요 잠금의 대기·유지 시간과 VR/데스크톱 프레임 대기 시간을 기록합니다. vr_status 및 진단 패키지에 포함됩니다. 다음 게임 시작 시 적용됩니다.",
   "settings.debugGeometry": "상호작용 형상",
   "settings.debugMenuInput": "메뉴 입력 기록",
   "settings.debugMenuInputHint": "시작 시 및 추적 복구 후 30초 동안 메뉴 입력을 기록하고 CSV 보고서를 자동 저장합니다.",

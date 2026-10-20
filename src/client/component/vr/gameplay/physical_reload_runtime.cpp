@@ -1,4 +1,6 @@
 #include <std_include.hpp>
+#include "../diagnostics/wait_timing.hpp"
+
 #include "../h2/entrypoints.hpp"
 #include "../debug_options.hpp"
 #include "component/scene_models.hpp"
@@ -30,6 +32,8 @@
 #include <utils/io.hpp>
 #include <mutex>
 #include <sstream>
+
+namespace wait_timing = vr::diagnostics::wait_timing;
 
 namespace vr::gameplay::weapons::physical_reload
 {
@@ -339,7 +343,9 @@ namespace vr::gameplay::weapons::physical_reload
 			std::array<hold,2> owners{};
 			if (carry::active()) { const auto held=carry::held_instances(); for (size_t h=0;h<held.size();++h) owners[h]=held[h].owner; }
 			else owners[0]=current_hold();
-			const std::lock_guard lock(mutex);
+			const wait_timing::context_scope timing_context({wait_timing::identity::game_time,
+				static_cast<std::uint64_t>(time), reinterpret_cast<std::uintptr_t>(ps)});
+			const wait_timing::scoped_lock lock(mutex, wait_timing::site::reload_tick);
 			++server_ticks;
 			latest_native = observed;
 			const auto timeline=native_ammunition::timeline();
@@ -428,7 +434,7 @@ namespace vr::gameplay::weapons::physical_reload
 	void collect_interactions(const hand_interaction::frame& input)noexcept
 	{
 		namespace hi=hand_interaction;
-		const std::lock_guard lock(mutex);
+		const wait_timing::scoped_lock lock(mutex, wait_timing::site::reload_other);
 		for(const auto& entry:scenes.entries())if(entry.id)
 		{
 			auto s=entry.value;const auto* live=input.find(entry.id);if(!live || !valid_hand(live->owner.holding_hand()))continue;
@@ -494,7 +500,7 @@ namespace vr::gameplay::weapons::physical_reload
 		if(!active() || !input || !write || !valid_hand(actor) || !input->input.focused ||
 			now<input->input.sampled_at || now-input->input.sampled_at>150ms)return false;
 		const auto* held=input->find(id);if(!held || !held->owner.can_fire() || held->owner.rear==actor || held->owner.support!=hand::none)return false;
-		const std::lock_guard lock(mutex);auto* value=find(id);const auto* cached=scenes.find(id);
+		const wait_timing::scoped_lock lock(mutex, wait_timing::site::reload_other);auto* value=find(id);const auto* cached=scenes.find(id);
 		if(!value || !cached || value->view.fault || !value->view.definition || value->assembly!=held->assembly ||
 			value->view.owner.rear_revision!=held->owner.rear_revision || value->view.reference_generation!=input->input.reference_generation ||
 			(draw ? value->view.part_leased() : value->view.ammo.magazine_hand!=actor))return false;
@@ -527,7 +533,7 @@ namespace vr::gameplay::weapons::physical_reload
 		const auto now=clock::now();if(!finite(world.position) || !finite_part_quat(world.rotation) || !input->input.focused ||
 			now<input->input.sampled_at || now-input->input.sampled_at>150ms)return false;
 		const auto* held=input->find(id);if(!held || !held->owner.can_fire() || held->owner.rear==actor || held->owner.support==actor)return false;
-		const std::lock_guard lock(mutex);auto* value=find(id);const auto* cached=scenes.find(id);
+		const wait_timing::scoped_lock lock(mutex, wait_timing::site::reload_other);auto* value=find(id);const auto* cached=scenes.find(id);
 		if(!value || !cached || value->view.fault || value->view.part_leased() || !value->view.definition ||
 			now<value->gesture.insertion_after() || !reload_items::compatible(source,*value->view.definition))return false;
 		const auto observed=native_ammunition::observe_owned(server_ps,id);if(!observed.valid || !reconcile(*value,observed))return false;
@@ -551,7 +557,7 @@ namespace vr::gameplay::weapons::physical_reload
 	void update_lifecycle(bool suspended){tick(false,suspended);}
 	void report_interactions()noexcept
 	{
-		namespace hi=hand_interaction;const std::lock_guard lock(mutex);
+		namespace hi=hand_interaction;const wait_timing::scoped_lock lock(mutex, wait_timing::site::reload_other);
 		for(const auto& i:inventory)if(i.view.active && carry::contains(i.view.owner.id()) && i.view.part_leased() && valid_hand(i.view.owner.holding_hand()))
 		{
 			const auto& v=i.view;const bool supply=v.magazine_leased();
@@ -562,14 +568,14 @@ namespace vr::gameplay::weapons::physical_reload
 	}
 	presentation current(weapon_identity id) noexcept
 	{
-		const std::lock_guard lock(mutex);
+		const wait_timing::scoped_lock lock(mutex, wait_timing::site::reload_current);
 		const auto* value = find(id);
 		return value ? value->view : presentation{};
 	}
 	bool primary_supply_needed(weapon_identity id) noexcept
 	{
 		if (!scheduler::is_executing(scheduler::pipeline::server)) return true;
-		const std::lock_guard lock(mutex);
+		const wait_timing::scoped_lock lock(mutex, wait_timing::site::reload_other);
 		const auto* ps = game::g_entities[0].client;
 		const auto observed = native_ammunition::observe_owned(ps, id);
 		if (!observed.valid) return true;
@@ -593,7 +599,7 @@ namespace vr::gameplay::weapons::physical_reload
 	bool prepare_transfer(weapon_identity id,presentation& saved) noexcept
 	{
 		if (!scheduler::is_executing(scheduler::pipeline::server)) return false;
-		const std::lock_guard lock(mutex);
+		const wait_timing::scoped_lock lock(mutex, wait_timing::site::reload_other);
 		auto* value=find(id); saved={};
 		if (!value) return true;
 		if (value->view.fault)
@@ -623,12 +629,12 @@ namespace vr::gameplay::weapons::physical_reload
 		const auto observed=native_ammunition::observe_owned(game::g_entities[0].client,saved.owner.id());
 		const bool compatible=observed.valid && saved.definition && saved.definition->matches_native(observed.native_name.data(),observed.base_capacity) &&
 			observed.ammo.loaded==mechanics::native_ammo(saved.ammo).loaded;
-		const std::lock_guard lock(mutex);
+		const wait_timing::scoped_lock lock(mutex, wait_timing::site::reload_other);
 		return runtime_lifecycle::restore_transfer(inventory,saved,compatible,[&](auto& value){value.native_name=observed.native_name;value.view.ammo.reserve_rounds=observed.ammo.reserve;++value.view.ammo.revision;});
 	}
 	bool support_available(const controller_input::frame& input,const hold& owner) noexcept
 	{
-		const std::lock_guard lock(mutex);
+		const wait_timing::scoped_lock lock(mutex, wait_timing::site::reload_other);
 		const auto* value=find(owner.id());
 		if (!value || !value->view.active) return true;
 		const auto& state=value->view;
@@ -637,13 +643,13 @@ namespace vr::gameplay::weapons::physical_reload
 	}
 	bool part_leased(weapon_identity id) noexcept
 	{
-		const std::lock_guard lock(mutex);const auto* value=find(id);
+		const wait_timing::scoped_lock lock(mutex, wait_timing::site::reload_other);const auto* value=find(id);
 		return value && value->view.active && value->view.part_leased();
 	}
 	void publish_scene(const scene_frame& value) noexcept
 	{
 		const auto ownership=carry::scene_ownership();
-		const std::lock_guard lock(mutex);
+		const wait_timing::scoped_lock lock(mutex, wait_timing::site::reload_publish);
 		runtime_lifecycle::publish_scene(scenes,last_published_scene,value,ownership);
 	}
 	void set_boundary_ready(unsigned bit) noexcept { boundaries.fetch_or(bit); }
@@ -651,7 +657,7 @@ namespace vr::gameplay::weapons::physical_reload
 	{
 		if (side || native_ammunition::local_role(ps) < 0) return false;
 		const auto observed = native_ammunition::observe_reload(ps);
-		const std::lock_guard lock(mutex);
+		const wait_timing::scoped_lock lock(mutex, wait_timing::site::reload_other);
 		// Claim mapped feeds before scene admission too. A draw/model transition
 		// must not let native auto-reload refill the gun while geometry is pending.
 		return observed.valid && (find(observed.ammo.id()) ||
@@ -663,7 +669,7 @@ namespace vr::gameplay::weapons::physical_reload
 		if (side || role < 0) return true;
 		const auto native = native_ammunition::observe_reload(ps);
 		const auto& observed = native.ammo;
-		const std::lock_guard lock(mutex);
+		const wait_timing::scoped_lock lock(mutex, wait_timing::site::reload_other);
 		auto* value = observed.valid ? find(observed.id()) : nullptr;
 		if (!value) return !active() || !native.valid || !native_reload_profile(native.native_name.data(),native.base_capacity);
 		const auto& state = value->view.ammo;
@@ -681,7 +687,7 @@ namespace vr::gameplay::weapons::physical_reload
 	{
 		if (!scheduler::is_executing(scheduler::pipeline::server) || !observed.valid || observed.id()!=owner.id() || !owner.can_fire()) return false;
 		const auto native=native_ammunition::observe_owned(game::g_entities[0].client,owner.id());
-		const std::lock_guard lock(mutex);auto* value=find(owner.id());
+		const wait_timing::scoped_lock lock(mutex, wait_timing::site::reload_other);auto* value=find(owner.id());
 		if (!value) return !active() || !native.valid || !native_reload_profile(native.native_name.data(),native.base_capacity);
 		if (value->view.fault || !value->view.definition || observed.loaded!=mechanics::native_ammo(value->view.ammo).loaded ||
 			!mechanics::ready(value->view.definition->ammunition,value->view.ammo,value->view.belt_grip.part!=belt_feed::lease::none || value->view.slide_held || value->view.magazine_grabbed)) return false;
@@ -692,7 +698,7 @@ namespace vr::gameplay::weapons::physical_reload
 	{
 		if (side || alternate || native_ammunition::local_role(ps) != 0 || amount != 1 || !before.valid || !after.valid || before.id()!=after.id() ||
 			before.weapon != weapon || after.weapon != weapon || after.loaded != before.loaded - int(!sustained) || after.reserve != before.reserve) return;
-		const std::lock_guard lock(mutex);
+		const wait_timing::scoped_lock lock(mutex, wait_timing::site::reload_other);
 		auto* value = find(before.id());
 		if (!value || value->view.fault) return;
 		auto& state = value->view.ammo;
@@ -726,7 +732,7 @@ namespace vr::gameplay::weapons::physical_reload
 				std::uint64_t ticks{}, committed{}, failed{}, fired{}, granted{};
 				unsigned contracts{}; bool is_active{}; const char* why{};
 				{
-					const std::lock_guard lock(mutex);
+					const wait_timing::scoped_lock lock(mutex, wait_timing::site::reload_other);
 					instances = inventory; sampled_scene = last_published_scene; native = latest_native;
 					ticks = server_ticks; committed = commits; failed = failures; fired = shots;
 					granted = native_grants;

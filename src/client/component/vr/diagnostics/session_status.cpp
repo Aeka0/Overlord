@@ -160,6 +160,6 @@ namespace vr::diagnostics::detail
 		for(const auto& setting:settings::toggles)append_setting(out,setting.name);
 		for(const auto& setting:settings::numbers)append_setting(out,setting.name);
 		for(const auto& setting:launcher_vr_settings::risk_settings)append_setting(out,setting.name);
-		for(const auto* name:{"r_postAA","r_displayMode","r_mode","r_vsync","com_maxfps","vr_engineProbe"})append_setting(out,name);
+		for(const auto* name:{"r_postAA","r_displayMode","r_mode","r_vsync","com_maxfps","com_waitEndFrameMode","vr_engineProbe"})append_setting(out,name);
 	}
 }

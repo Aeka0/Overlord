@@ -41,6 +41,20 @@ const state = {
     ],
   },
 } as unknown as SettingsState;
+test("CPU wait timing is an optional localized Debug toggle", () => {
+  const field = fields.find((entry) => entry.name === "vr_debugWaitTiming");
+  assert.ok(field);
+  assert.equal(field.category, "debug");
+  assert.equal(field.type, "toggle");
+  for (const catalog of Object.values(catalogs)) {
+    assert.ok(catalog["settings.debugWaitTiming"]);
+    assert.ok(catalog["settings.debugWaitTimingHint"]);
+  }
+  for (const enabled of [false, true]) {
+    const selected = { ...state, values: { vr_debugWaitTiming: enabled } } as SettingsState;
+    assert.equal(collect(makeDraft(selected.values, selected.limits), selected).vr_debugWaitTiming, enabled);
+  }
+});
 test("help searches all words and translations without exposing unacknowledged story entries", () => {
   assert.ok(
     searchHelp({ ...initialHelpState, query: "beretta trigger" }).some(

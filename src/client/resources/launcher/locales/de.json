@@ -54,6 +54,8 @@
   "settings.debugView": "Detaillierte Ansichtsdiagnose",
   "settings.debugViewHint": "Erfasst Aufrufstapel, Speicher-Hashes, Ansichtsänderungen und detaillierte Backend-Ereignisse im Renderpfad.",
   "settings.debugEvents": "Eingabe- und Waffenereignisse",
+  "settings.debugWaitTiming": "CPU-Wartezeiten",
+  "settings.debugWaitTimingHint": "Misst wichtige Sperrwartezeiten, Sperrhaltedauern und VR-/Desktop-Bildwartezeiten. In vr_status und Diagnosepaketen enthalten. Gilt ab dem nächsten Spielstart.",
   "settings.debugGeometry": "Interaktionsgeometrie",
   "settings.debugMenuInput": "Menüeingaben aufzeichnen",
   "settings.debugMenuInputHint": "Zeichnet beim Start und nach Wiederherstellung des Trackings je 30 Sekunden Menüeingaben auf und speichert CSV-Berichte automatisch.",

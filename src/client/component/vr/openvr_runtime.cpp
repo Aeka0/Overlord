@@ -1,4 +1,6 @@
 #include <std_include.hpp>
+#include "diagnostics/wait_timing.hpp"
+
 
 #include "openvr_runtime.hpp"
 
@@ -23,6 +25,8 @@
 #include <format>
 #include <mutex>
 #include <optional>
+
+namespace wait_timing = vr::diagnostics::wait_timing;
 
 namespace vr::openvr
 {
@@ -175,7 +179,7 @@ namespace vr::openvr
 
 		void set_desired_enabled(const bool enabled)
 		{
-			const std::lock_guard lock(mutex_);
+			const wait_timing::scoped_lock lock(mutex_, wait_timing::site::vr_other);
 			if (shutdown_requested_) return;
 			if (enabled) final_shutdown_ = false;
 			if (enabled && !status_.desired_enabled) auto_initialize_allowed_ = true;
@@ -185,14 +189,14 @@ namespace vr::openvr
 
 		void set_scene_mode(const scene_mode mode)
 		{
-			const std::lock_guard lock(mutex_);
+			const wait_timing::scoped_lock lock(mutex_, wait_timing::site::vr_other);
 			status_.requested_scene_mode = mode;
 			publish_status_locked();
 		}
 
 		void request_reinitialize()
 		{
-			const std::lock_guard lock(mutex_);
+			const wait_timing::scoped_lock lock(mutex_, wait_timing::site::vr_other);
 			if (shutdown_requested_ || final_shutdown_) return;
 			auto_initialize_allowed_ = true;
 			status_.reinitialize_pending = true;
@@ -201,7 +205,7 @@ namespace vr::openvr
 
 		void prepare_frame(const d3d11::device_snapshot& graphics, const std::uint64_t frame_index)
 		{
-			const std::lock_guard lock(mutex_);
+			const wait_timing::scoped_lock lock(mutex_, wait_timing::site::vr_prepare);
 			if (shutdown_requested_ || !status_.desired_enabled || !status_.applied_enabled)
 			{
 				return;
@@ -277,7 +281,7 @@ namespace vr::openvr
 		bool capture_engine_texture(const d3d11::device_snapshot& graphics,
 			ID3D11Texture2D* const source, const capture_frame_tag tag)
 		{
-			const std::lock_guard lock(mutex_);
+			const wait_timing::scoped_lock lock(mutex_, wait_timing::site::vr_other);
 			if (shutdown_requested_ || !graphics || graphics.generation != status_.device_generation ||
 				!direct_graphics_ || direct_graphics_.generation != graphics.generation ||
 				direct_graphics_.device.Get() != graphics.device.Get() || !tag.native ||
@@ -293,7 +297,7 @@ namespace vr::openvr
 		bool initialize(const d3d11::device_snapshot& graphics)
 		{
 			(void)graphics;
-			const std::lock_guard lock(mutex_);
+			const wait_timing::scoped_lock lock(mutex_, wait_timing::site::vr_other);
 			status_.state = runtime_state::fatal_for_vr;
 			status_.last_error =
 				"OpenVR initialization is restricted to the real DXGI Present-pre owner";
@@ -303,7 +307,7 @@ namespace vr::openvr
 
 		void on_present(const d3d11::present_event& event)
 		{
-			const std::lock_guard lock(mutex_);
+			const wait_timing::scoped_lock lock(mutex_, wait_timing::site::vr_pre);
 			if (shutdown_requested_ || final_shutdown_) return;
 			const auto thread_id = GetCurrentThreadId();
 			if (present_transaction_.active)
@@ -432,7 +436,7 @@ namespace vr::openvr
 		{
 			(void)graphics;
 			(void)frame;
-			const std::lock_guard lock(mutex_);
+			const wait_timing::scoped_lock lock(mutex_, wait_timing::site::vr_other);
 			status_.state = runtime_state::fatal_for_vr;
 			status_.last_error =
 				"synthetic Present completion is forbidden for the OpenVR production path";
@@ -441,7 +445,7 @@ namespace vr::openvr
 
 		void on_present_post(const d3d11::present_event& event, const HRESULT result)
 		{
-			const std::lock_guard lock(mutex_);
+			const wait_timing::scoped_lock lock(mutex_, wait_timing::site::vr_post);
 			if (final_shutdown_ || (!present_transaction_.active &&
 				!status_.applied_enabled && status_.device_generation == 0))
 			{
@@ -605,7 +609,7 @@ namespace vr::openvr
 
 		void on_device_destroying(const d3d11::device_snapshot& graphics) noexcept
 		{
-			const std::lock_guard lock(mutex_);
+			const wait_timing::scoped_lock lock(mutex_, wait_timing::site::vr_other);
 			if (status_.device_generation == graphics.generation)
 			{
 				present_transaction_ = {};
@@ -618,7 +622,7 @@ namespace vr::openvr
 
 		void shutdown() noexcept
 		{
-			const std::lock_guard lock(mutex_);
+			const wait_timing::scoped_lock lock(mutex_, wait_timing::site::vr_other);
 			if (final_shutdown_) return;
 			shutdown_requested_ = true;
 			auto_initialize_allowed_ = false;
@@ -632,19 +636,19 @@ namespace vr::openvr
 
 		bool shutdown_complete() const noexcept
 		{
-			const std::lock_guard lock(mutex_);
+			const wait_timing::scoped_lock lock(mutex_, wait_timing::site::vr_other);
 			return final_shutdown_;
 		}
 
 		bool requested_enabled() const
 		{
-			const std::lock_guard lock(mutex_);
+			const wait_timing::scoped_lock lock(mutex_, wait_timing::site::vr_other);
 			return status_.desired_enabled;
 		}
 
 		bool applied_enabled() const
 		{
-			const std::lock_guard lock(mutex_);
+			const wait_timing::scoped_lock lock(mutex_, wait_timing::site::vr_enabled);
 			return status_.applied_enabled;
 		}
 
@@ -1225,8 +1229,11 @@ namespace vr::openvr
 					diagnostics::gpu_interop_exited();
 				});
 				const auto wait_get_poses_started = pacing_clock::now();
-				pose_result = compositor_api_->WaitGetPoses(poses.data(),
-					static_cast<std::uint32_t>(poses.size()), nullptr, 0);
+				{
+					const wait_timing::scope timing(wait_timing::site::vr_wait_poses);
+					pose_result = compositor_api_->WaitGetPoses(poses.data(),
+						static_cast<std::uint32_t>(poses.size()), nullptr, 0);
+				}
 				wait_get_poses_us = elapsed_microseconds(wait_get_poses_started);
 			}
 			record_duration(wait_get_poses_us, status_.wait_get_poses_call_count,

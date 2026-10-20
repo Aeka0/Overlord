@@ -1,4 +1,6 @@
 #include <std_include.hpp>
+#include "diagnostics/wait_timing.hpp"
+
 
 #include "runtime_backend.hpp"
 
@@ -12,6 +14,8 @@
 #include <cstdlib>
 #include <mutex>
 #include <string>
+
+namespace wait_timing = vr::diagnostics::wait_timing;
 
 namespace vr
 {
@@ -123,17 +127,17 @@ namespace vr
 
 		void set_desired_enabled(const bool enabled)
 		{
-			const std::lock_guard lock(mutex_);
+			const wait_timing::scoped_lock lock(mutex_, wait_timing::site::dispatch_other);
 			visit([&](auto& backend) { return backend.set_desired_enabled(enabled); });
 		}
 		void set_scene_mode(const scene_mode mode)
 		{
-			const std::lock_guard lock(mutex_);
+			const wait_timing::scoped_lock lock(mutex_, wait_timing::site::dispatch_other);
 			visit([&](auto& backend) { return backend.set_scene_mode(mode); });
 		}
 		void request_reinitialize()
 		{
-			const std::lock_guard lock(mutex_);
+			const wait_timing::scoped_lock lock(mutex_, wait_timing::site::dispatch_other);
 			visit([&](auto& backend) { return backend.request_reinitialize(); });
 		}
 		void prepare_frame(const d3d11::device_snapshot& graphics, const std::uint64_t frame_index)
@@ -145,30 +149,30 @@ namespace vr
 		}
 		bool initialize(const d3d11::device_snapshot& graphics)
 		{
-			const std::lock_guard lock(mutex_);
+			const wait_timing::scoped_lock lock(mutex_, wait_timing::site::dispatch_other);
 			return choice_.valid && visit([&](auto& backend) { return backend.initialize(graphics); });
 		}
 		void on_present(const d3d11::device_snapshot& graphics, const std::uint64_t frame)
 		{
-			const std::lock_guard lock(mutex_);
+			const wait_timing::scoped_lock lock(mutex_, wait_timing::site::dispatch_other);
 			if (choice_.valid)
 				visit([&](auto& backend) { return backend.on_present(graphics, frame); });
 		}
 		void on_present(const d3d11::present_event& event)
 		{
-			const std::lock_guard lock(mutex_);
+			const wait_timing::scoped_lock lock(mutex_, wait_timing::site::dispatch_pre);
 			if (choice_.valid)
 				visit([&](auto& backend) { return backend.on_present(event); });
 		}
 		void on_present_post(const d3d11::present_event& event, const HRESULT result)
 		{
-			const std::lock_guard lock(mutex_);
+			const wait_timing::scoped_lock lock(mutex_, wait_timing::site::dispatch_post);
 			if (choice_.valid)
 				visit([&](auto& backend) { return backend.on_present_post(event, result); });
 		}
 		void capture_present(const d3d11::present_event& event)
 		{
-			const std::lock_guard lock(mutex_);
+			const wait_timing::scoped_lock lock(mutex_, wait_timing::site::dispatch_other);
 			if (choice_.valid)
 				visit([&](auto& backend) { return backend.capture_present(event); });
 		}
@@ -176,46 +180,46 @@ namespace vr
 		                            ID3D11Texture2D* const source,
 		                            const capture_frame_tag tag)
 		{
-			const std::lock_guard lock(mutex_);
+			const wait_timing::scoped_lock lock(mutex_, wait_timing::site::dispatch_other);
 			return choice_.valid && visit([&](auto& backend)
 			                              { return backend.capture_engine_texture(graphics, source, tag); });
 		}
 		void poll_capture(const d3d11::device_snapshot& graphics)
 		{
-			const std::lock_guard lock(mutex_);
+			const wait_timing::scoped_lock lock(mutex_, wait_timing::site::dispatch_poll);
 			if (choice_.valid)
 				visit([&](auto& backend) { return backend.poll_capture(graphics); });
 		}
 		void on_resize_before(const d3d11::resize_event& event) noexcept
 		{
-			const std::lock_guard lock(mutex_);
+			const wait_timing::scoped_lock lock(mutex_, wait_timing::site::dispatch_other);
 			if (choice_.valid)
 				visit([&](auto& backend) { return backend.on_resize_before(event); });
 		}
 		void on_device_destroying(const d3d11::device_snapshot& graphics) noexcept
 		{
-			const std::lock_guard lock(mutex_);
+			const wait_timing::scoped_lock lock(mutex_, wait_timing::site::dispatch_other);
 			if (choice_.valid)
 				visit([&](auto& backend) { return backend.on_device_destroying(graphics); });
 		}
 		void shutdown() noexcept
 		{
-			const std::lock_guard lock(mutex_);
+			const wait_timing::scoped_lock lock(mutex_, wait_timing::site::dispatch_other);
 			visit([&](auto& backend) { return backend.shutdown(); });
 		}
 		bool shutdown_complete() const noexcept
 		{
-			const std::lock_guard lock(mutex_);
+			const wait_timing::scoped_lock lock(mutex_, wait_timing::site::dispatch_other);
 			return visit([&](auto& backend) { return backend.shutdown_complete(); });
 		}
 		bool requested_enabled() const
 		{
-			const std::lock_guard lock(mutex_);
+			const wait_timing::scoped_lock lock(mutex_, wait_timing::site::dispatch_other);
 			return visit([&](auto& backend) { return backend.requested_enabled(); });
 		}
 		bool applied_enabled() const
 		{
-			const std::lock_guard lock(mutex_);
+			const wait_timing::scoped_lock lock(mutex_, wait_timing::site::dispatch_enabled);
 			return choice_.valid && visit([&](auto& backend) { return backend.applied_enabled(); });
 		}
 		bool requires_present_owner_execution() const noexcept
@@ -244,17 +248,17 @@ namespace vr
 	runtime_backend::~runtime_backend() = default;
 	void runtime_backend::set_desired_enabled(const bool value)
 	{
-		const std::lock_guard lock(mutex_);
+		const wait_timing::scoped_lock lock(mutex_, wait_timing::site::facade_other);
 		implementation_->set_desired_enabled(value);
 	}
 	void runtime_backend::set_scene_mode(const scene_mode value)
 	{
-		const std::lock_guard lock(mutex_);
+		const wait_timing::scoped_lock lock(mutex_, wait_timing::site::facade_other);
 		implementation_->set_scene_mode(value);
 	}
 	void runtime_backend::request_reinitialize()
 	{
-		const std::lock_guard lock(mutex_);
+		const wait_timing::scoped_lock lock(mutex_, wait_timing::site::facade_other);
 		implementation_->request_reinitialize();
 	}
 	void runtime_backend::prepare_frame(const d3d11::device_snapshot& graphics,
@@ -266,69 +270,69 @@ namespace vr
 	}
 	bool runtime_backend::initialize(const d3d11::device_snapshot& value)
 	{
-		const std::lock_guard lock(mutex_);
+		const wait_timing::scoped_lock lock(mutex_, wait_timing::site::facade_other);
 		return implementation_->initialize(value);
 	}
 	void runtime_backend::on_present(const d3d11::device_snapshot& value, const std::uint64_t frame)
 	{
-		const std::lock_guard lock(mutex_);
+		const wait_timing::scoped_lock lock(mutex_, wait_timing::site::facade_other);
 		implementation_->on_present(value, frame);
 	}
 	void runtime_backend::on_present(const d3d11::present_event& value)
 	{
-		const std::lock_guard lock(mutex_);
+		const wait_timing::scoped_lock lock(mutex_, wait_timing::site::facade_pre);
 		implementation_->on_present(value);
 	}
 	void runtime_backend::on_present_post(const d3d11::present_event& value, const HRESULT result)
 	{
-		const std::lock_guard lock(mutex_);
+		const wait_timing::scoped_lock lock(mutex_, wait_timing::site::facade_post);
 		implementation_->on_present_post(value, result);
 	}
 	void runtime_backend::capture_present(const d3d11::present_event& value)
 	{
-		const std::lock_guard lock(mutex_);
+		const wait_timing::scoped_lock lock(mutex_, wait_timing::site::facade_other);
 		implementation_->capture_present(value);
 	}
 	bool runtime_backend::capture_engine_texture(const d3d11::device_snapshot& graphics,
 	                                             ID3D11Texture2D* const source,
 	                                             const capture_frame_tag tag)
 	{
-		const std::lock_guard lock(mutex_);
+		const wait_timing::scoped_lock lock(mutex_, wait_timing::site::facade_other);
 		return implementation_->capture_engine_texture(graphics, source, tag);
 	}
 	void runtime_backend::poll_capture(const d3d11::device_snapshot& value)
 	{
-		const std::lock_guard lock(mutex_);
+		const wait_timing::scoped_lock lock(mutex_, wait_timing::site::facade_poll);
 		implementation_->poll_capture(value);
 	}
 	void runtime_backend::on_resize_before(const d3d11::resize_event& value) noexcept
 	{
-		const std::lock_guard lock(mutex_);
+		const wait_timing::scoped_lock lock(mutex_, wait_timing::site::facade_other);
 		implementation_->on_resize_before(value);
 	}
 	void runtime_backend::on_device_destroying(const d3d11::device_snapshot& value) noexcept
 	{
-		const std::lock_guard lock(mutex_);
+		const wait_timing::scoped_lock lock(mutex_, wait_timing::site::facade_other);
 		implementation_->on_device_destroying(value);
 	}
 	void runtime_backend::shutdown() noexcept
 	{
-		const std::lock_guard lock(mutex_);
+		const wait_timing::scoped_lock lock(mutex_, wait_timing::site::facade_other);
 		implementation_->shutdown();
 	}
 	bool runtime_backend::shutdown_complete() const noexcept
 	{
-		const std::lock_guard lock(mutex_);
+		const wait_timing::scoped_lock lock(mutex_, wait_timing::site::facade_other);
 		return implementation_->shutdown_complete();
 	}
 	bool runtime_backend::requested_enabled() const
 	{
-		const std::lock_guard lock(mutex_);
+		const wait_timing::scoped_lock lock(mutex_, wait_timing::site::facade_other);
 		return implementation_->requested_enabled();
 	}
 	bool runtime_backend::applied_enabled() const
 	{
-		const std::lock_guard lock(mutex_);
+		const wait_timing::scoped_lock lock(mutex_, wait_timing::site::facade_enabled);
 		return implementation_->applied_enabled();
 	}
 	bool runtime_backend::requires_present_owner_execution() const noexcept

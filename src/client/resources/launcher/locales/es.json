@@ -54,6 +54,8 @@
   "settings.debugView": "Diagnóstico detallado de vistas",
   "settings.debugViewHint": "Registra pilas de llamadas, hashes de memoria, cambios de vista y eventos detallados del renderizado.",
   "settings.debugEvents": "Eventos de controles y armas",
+  "settings.debugWaitTiming": "Tiempos de espera de CPU",
+  "settings.debugWaitTimingHint": "Mide esperas y duración de bloqueos clave, y esperas de fotogramas de VR y escritorio. Se incluye en vr_status y los paquetes de diagnóstico. Se aplica al próximo inicio del juego.",
   "settings.debugGeometry": "Geometría de interacción",
   "settings.debugMenuInput": "Registro de entradas de menú",
   "settings.debugMenuInputHint": "Registra 30 segundos de entradas de menú al iniciar y al recuperar el seguimiento; guarda informes CSV automáticamente.",

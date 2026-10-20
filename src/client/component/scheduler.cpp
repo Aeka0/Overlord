@@ -1,4 +1,6 @@
 #include <std_include.hpp>
+#include "vr/diagnostics/wait_timing.hpp"
+
 #include "loader/component_loader.hpp"
 
 #include "scheduler.hpp"
@@ -11,6 +13,8 @@
 #include <utils/thread.hpp>
 #include <utils/hook.hpp>
 #include <utils/concurrency.hpp>
+
+namespace wait_timing = vr::diagnostics::wait_timing;
 
 namespace scheduler
 {
@@ -146,17 +150,23 @@ namespace scheduler
 			// here therefore cannot define the pose for those already-built records.
 			// A native eye family must sample and freeze its pose at the proven per-view
 			// owner instead of treating this boundary as pre-scene.
-			auto& vr_runtime = vr::runtime::get();
-			if (vr_runtime.applied_enabled())
 			{
-				if (const auto graphics = d3d11::get_device_snapshot(); graphics)
+				static thread_local std::uint64_t timing_frame{};
+				const wait_timing::context_scope timing_context({wait_timing::identity::renderer_frame,
+					wait_timing::enabled() ? ++timing_frame : 0});
+				const wait_timing::scope timing(wait_timing::site::frame_maintenance);
+				auto& vr_runtime = vr::runtime::get();
+				if (vr_runtime.applied_enabled())
 				{
-					// D3D11 immediate-context queries must remain on the renderer
-					// thread that produced the native eye copy.  Polling from Present
-					// can race CopyResource/End on a game-created single-threaded
-					// device and surface later as an NVIDIA driver fault in Present.
-					vr_runtime.poll_capture(graphics);
-					vr_runtime.prepare_frame(graphics, ++vr_renderer_frame_index);
+					if (const auto graphics = d3d11::get_device_snapshot(); graphics)
+					{
+						// D3D11 immediate-context queries must remain on the renderer
+						// thread that produced the native eye copy.  Polling from Present
+						// can race CopyResource/End on a game-created single-threaded
+						// device and surface later as an NVIDIA driver fault in Present.
+						vr_runtime.poll_capture(graphics);
+						vr_runtime.prepare_frame(graphics, ++vr_renderer_frame_index);
+					}
 				}
 			}
 
