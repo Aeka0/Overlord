@@ -732,6 +732,44 @@ namespace
 			"selection differences or invalid pass were not classified");
 	}
 
+	void expect_eye_local_light_metadata_comparison()
+	{
+		synthetic_backend backend{7};
+		backend.set_descriptor_count(1);
+		backend.fill_descriptor(0, 19);
+		std::array<std::array<std::uint8_t, 0x170>, 2> records{};
+		const std::array<std::array<float, 3>, 2> origins{{{100, 201.25f, 30}, {100, 198.75f, 30}}};
+		for (std::size_t eye{}; eye < 2; ++eye)
+			std::memcpy(records[eye].data() + 0x100, origins[eye].data(), sizeof(origins[eye]));
+		// Correct per-eye metadata compares equal. An actual stale origin or scene
+		// pointer must still be reported, not hidden by unconditional masking.
+		for (unsigned defect{}; defect < 3; ++defect)
+		{
+			const std::uint64_t pair = 900 + defect;
+			require(arm() && begin_pair(pair, GetCurrentThreadId()), "light comparison did not start");
+			for (std::uint32_t eye{}; eye < 2; ++eye)
+			{
+				require(begin_eye(pair, eye), "light comparison eye did not start");
+				const auto base = descriptor_array_offset;
+				write_value(backend.data_bytes, base + 0x100, std::uint32_t{0x25});
+				const auto source = records[eye == 1 && defect == 2 ? 0 : eye].data();
+				write_value(backend.data_bytes, base + 0x108, reinterpret_cast<std::uintptr_t>(source));
+				const auto& origin = origins[eye == 1 && defect == 1 ? 0 : eye];
+				std::memcpy(backend.data_bytes.data() + base + 0x110, origin.data(), sizeof(origin));
+				const auto before = backend.data_bytes;
+				observe_backend_view_copy(pair, eye, 0, records[eye].data(), backend.state());
+				require(backend.data_bytes == before, "light comparison mutated the live descriptor");
+				require(end_eye(pair, eye), "light comparison eye did not finish");
+			}
+			end_pair(pair, true);
+			report result{};
+			get_report(result);
+			require(result.descriptor_mismatches == (defect == 0 ? 0u : 1u) &&
+				result.stream_content_mismatches == 0 && result.unreadable_sources == 0,
+				"light comparison hid a stale camera or rejected valid eye metadata");
+		}
+	}
+
 	void expect_local_bounds_fail_non_fatally()
 	{
 		synthetic_local_batch batch{2};
@@ -769,6 +807,7 @@ namespace
 int main()
 {
 	expect_identical_pair_and_no_writes();
+	expect_eye_local_light_metadata_comparison();
 	expect_structural_and_content_mismatches();
 	expect_lifecycle_bounds_and_invalid_pointer_guard();
 	expect_large_payload_window_is_bounded();

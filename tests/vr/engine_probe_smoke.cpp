@@ -12,6 +12,7 @@
 #include "test_support.hpp"
 #include "game_view_tests.hpp"
 #include "roomscale_origin_tests.hpp"
+#include "light_view_tests.hpp"
 #include <csetjmp>
 #include "game/structs.hpp"
 #include "component/vr/gameplay/mounted_turret_policy.hpp"
@@ -2131,6 +2132,7 @@ int main()
 		expect_scene_clone_rejects_mixed_camera_generations();
 		expect_owner_pass_target4_resource_contract();
 		expect_camera_model_list_origin_rebase_contract();
+		expect_dynamic_light_eye_scope();
 		expect_backend_model_eye_state_contract();
 		expect_backend_depth_hack_projection_contract();
 		expect_backend_local_stereo_binding_ring();

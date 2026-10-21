@@ -1,6 +1,7 @@
 #include <std_include.hpp>
 
 #include "engine_stereo_scene_batch_probe.hpp"
+#include "engine_stereo_light_views.hpp"
 
 #include <algorithm>
 #include <atomic>
@@ -511,6 +512,24 @@ namespace vr::engine_stereo_scene_batch_probe
 					continue;
 				}
 				descriptor.readable = true;
+				// Camera-facing light metadata is intentionally eye-local. Normalize
+				// only an exact current-view match in this private diagnostic copy;
+				// stale/foreign pointers and origins still compare as real differences.
+				std::uint32_t technique{};
+				std::uintptr_t view{};
+				std::array<float, 3> origin{};
+				std::memcpy(&technique, bytes.data() + 0x100, sizeof(technique));
+				std::memcpy(&view, bytes.data() + 0x108, sizeof(view));
+				std::uintptr_t origin_address{};
+				if (engine_stereo_light_views::is_lighting_technique(technique) &&
+					view == output.owner_record &&
+					add_address(view, 0x100, origin_address) &&
+					guarded_copy(origin.data(), reinterpret_cast<const void*>(origin_address), sizeof(origin)) &&
+					std::memcmp(origin.data(), bytes.data() + 0x110, sizeof(origin)) == 0)
+				{
+					std::memset(bytes.data() + engine_stereo_light_views::metadata_offset, 0,
+						engine_stereo_light_views::metadata_size);
+				}
 				descriptor.content_hash = hash_bytes(bytes.data(), bytes.size());
 				for (std::uint32_t stream_index{}; stream_index < stream_count;
 					++stream_index)

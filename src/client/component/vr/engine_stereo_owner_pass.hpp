@@ -6,6 +6,7 @@
 #include "engine_stereo_binding.hpp"
 #include "engine_stereo_dynamic_arena.hpp"
 #include "engine_stereo_dynamic_upload.hpp"
+#include "engine_stereo_light_views.hpp"
 #include "engine_stereo_tessellation_view.hpp"
 #include "native_display_contract.hpp"
 #include "native_post_aa_contract.hpp"
@@ -345,6 +346,7 @@ namespace vr::engine_stereo_owner_pass
 			maximum_dynamic_index_boundaries_per_eye> dynamic_index_left{};
 		auxiliary_scene::request auxiliary;
 		thermal_scene::arena_lease thermal_world_lease;
+		engine_stereo_light_views::scope light_views;
 		bool thermal_world{};
 		auxiliary_scene::history auxiliary_history, auxiliary_next_history;
 		auxiliary_scene::image_copy auxiliary_image, pending_left_image;

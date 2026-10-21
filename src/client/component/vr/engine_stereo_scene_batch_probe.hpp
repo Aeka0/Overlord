@@ -1,5 +1,7 @@
 #pragma once
 
+#include "native_render_contract.hpp"
+
 #include <array>
 #include <cstddef>
 #include <cstdint>
@@ -7,10 +9,10 @@
 namespace vr::engine_stereo_scene_batch_probe
 {
 	inline constexpr std::size_t backend_data_offset = 0x2BE8;
-	inline constexpr std::size_t descriptor_array_offset = 0x541C08;
-	inline constexpr std::size_t descriptor_count_offset = 0x542588;
+	inline constexpr std::size_t descriptor_array_offset = native_render_contract::dynamic_light_descriptors_offset;
+	inline constexpr std::size_t descriptor_count_offset = native_render_contract::dynamic_light_descriptor_count_offset;
 	inline constexpr std::size_t descriptor_size = 0x130;
-	inline constexpr std::size_t maximum_descriptors = 8;
+	inline constexpr std::size_t maximum_descriptors = native_render_contract::maximum_dynamic_light_descriptors;
 	inline constexpr std::size_t stream_count = 12;
 	inline constexpr std::size_t maximum_boundaries_per_eye = 64;
 	inline constexpr std::size_t maximum_mismatch_samples = 32;

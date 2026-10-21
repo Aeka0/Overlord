@@ -1353,6 +1353,24 @@ namespace vr::engine_stereo_owner_pass
 				return nullptr;
 			}
 		}
+		// The native input-completion gate has joined the descriptor producers.
+		// All three native views consume this shared arena serially on this owner.
+		// Its camera-facing light lists need both the eye record and the separate
+		// instancing origin; cloning GfxViewInfo alone cannot update either field.
+		auto* const frontend = reinterpret_cast<std::uint8_t*>(active.claim.frontend);
+		std::uint32_t light_count{};
+		std::array<float, 3> light_eye_origin{};
+		std::memcpy(&light_count, frontend +
+			native_render_contract::dynamic_light_descriptor_count_offset, sizeof(light_count));
+		std::memcpy(light_eye_origin.data(), eye_record + engine_stereo_view::h2_view_origin_offset,
+			sizeof(light_eye_origin));
+		if (!active.light_views.install(frontend + native_render_contract::dynamic_light_descriptors_offset,
+			light_count, reinterpret_cast<const void*>(active.natural_record), active.source_primary_origin,
+			eye_record, light_eye_origin))
+		{
+			fail_transaction(active, failure::model_state);
+			return nullptr;
+		}
 		if (eye<2 && active.gpu_census_pair_active)
 		{
 			active.gpu_census_eye_active = engine_stereo_gpu_census::begin_eye(
@@ -1546,6 +1564,9 @@ namespace vr::engine_stereo_owner_pass
 		bool (*const display_transform)(void*, native_display_contract::route,
 			const native_post_aa::view_identity&)) noexcept
 	{
+		// H2 has finished this view's geometry before end_view is called. Return
+		// shared light metadata before the next eye/auxiliary view or natural tail.
+		if (GetCurrentThreadId() == active.owner_thread_id) active.light_views.restore();
 		const auto restore_thermal=gsl::finally([&]() noexcept
 		{if(eye==0 && GetCurrentThreadId()==active.owner_thread_id)active.thermal_world_lease.restore();});
 		if (active.scene_batch_probe_eye_active)
@@ -1958,6 +1979,7 @@ namespace vr::engine_stereo_owner_pass
 	void end(transaction& active) noexcept
 	{
 		if (!active) return;
+		if (GetCurrentThreadId() == active.owner_thread_id) active.light_views.restore();
 		if(GetCurrentThreadId()==active.owner_thread_id)active.thermal_world_lease.restore();
 		if(active.failed) active.auxiliary_history.valid=false;
 		finish_dynamic_upload(active);
