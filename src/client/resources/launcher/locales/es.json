@@ -121,6 +121,8 @@
   "settings.aimStrength": "Intensidad de ayuda al apuntar",
   "settings.aimRange": "0 a 100 · Por defecto: desactivada",
   "settings.weaponGripMode": "Modo de agarre del arma",
+  "settings.supportGripLock": "Mantener la mano de apoyo",
+  "settings.supportGripLockHint": "La mano de apoyo permanece unida aunque el mando se aleje. En Mantener, suelta Grip para soltarla; en Alternar, pulsa otra vez. Desactiva para recuperar la liberación por posición. Las piezas de recarga conservan sus controles.",
   "settings.weaponGripModeHint": "Mantener: suelta Grip para soltar el arma. Alternar: pulsa para agarrar o apoyar el arma y pulsa otra vez para soltarla. Los demás equipos y piezas mecánicas siguen requiriendo mantener pulsado.",
   "choice.hold": "Mantener",
   "choice.toggle": "Alternar",

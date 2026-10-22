@@ -757,7 +757,8 @@ int main()
 		using namespace carry;
 		const float units = 39.37007874f;
 		const auto m4_library = bind_weapon_poses(rig, definitions, m4::foregrip);
-		for (unsigned scenario = 0; scenario < 3; ++scenario)
+		for (bool locked : {false, true})
+		for (unsigned scenario = 0; scenario < 4; ++scenario)
 		{
 			inventory authority;
 			const owned_weapon entry[]{{52, {false, false}}};
@@ -773,6 +774,7 @@ int main()
 			long_native[4].position = {-25, -2, 0}; long_native[5].position = {-12, -2, -20};
 			const std::array<vec, 2> retention_shoulders{long_native[1].position, long_native[4].position};
 			bool tracked = true;
+			bool spatially_allowed = true;
 			const auto present_authority = [&]
 			{
 				return presented.update(m4::foregrip, m4_library, rig, long_native, current_targets, retention_shoulders,
@@ -788,7 +790,7 @@ int main()
 			const auto retain = [&]
 			{
 				const auto status = retained_support(m4::foregrip, gun(), m4::foregrip.wrists[0],
-					current_targets[1].position, current_targets[0].position, units, tracked);
+					current_targets[1].position, current_targets[0].position, units, tracked, locked, spatially_allowed);
 				if (status == support_retention::released)
 					authority.release(id, 1u, location::absent, false, [](const instance&) { return false; });
 				return status;
@@ -806,13 +808,22 @@ int main()
 			if (scenario == 0) current_targets[0].position = add(current_targets[1].position, scale(unit(span), 60));
 			if (scenario == 1) current_targets[0].position = current_targets[1].position;
 			if (scenario == 2) tracked = false;
+			if (scenario == 3) spatially_allowed = false;
 			const auto status = retain(); sample(true); const auto view = present_authority();
+			if (locked && scenario != 2)
+			{
+				check(status==support_retention::retained && view.support==hand::left && view.blend==1 &&
+					authority.find(id)->owner.support==hand::left,
+					"locked support stays visibly attached through distance, coincident hands and directional breakaway");
+				check(std::isfinite(output[rig.gun].rotation[3]), "coincident locked hands keep a finite weapon pose");
+				continue;
+			}
 			check(view.support==hand::none && authority.in_hand(hand::right),
 				"suspended/released support never drops the primary weapon or keeps steering");
 			check((scenario==2 && status==support_retention::suspended && authority.find(id)->owner.support==hand::left) ||
 				(scenario!=2 && status==support_retention::released && authority.find(id)->owner.support==hand::none),
 				"tracking suspension preserves ownership while invalid geometry releases only the support lease");
-			tracked=true; current_targets[0].position=add(current_targets[1].position,span);
+			tracked=true; spatially_allowed=true; current_targets[0].position=add(current_targets[1].position,span);
 			(void)retain(); sample(true);
 			if (scenario==2) check(present_authority().support==hand::left, "tracking recovery restores the existing support without a new grab");
 			else

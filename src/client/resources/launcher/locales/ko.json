@@ -121,6 +121,8 @@
   "settings.aimStrength": "조준 보정 강도",
   "settings.aimRange": "0~100 · 기본값: 끄기",
   "settings.weaponGripMode": "무기 잡기 방식",
+  "settings.supportGripLock": "보조 손 잡기 유지",
+  "settings.supportGripLockHint": "무기를 잡은 보조 손은 컨트롤러가 멀어져도 붙어 있습니다. 길게 누르기에서는 Grip을 놓으면, 전환에서는 Grip을 다시 누르면 손을 뗍니다. 끄면 위치에 따라 손을 떼는 기존 방식으로 돌아갑니다. 재장전 부품 조작은 유지됩니다.",
   "settings.weaponGripModeHint": "길게 누르기: Grip을 놓으면 손을 뗍니다. 전환: 한 번 누르면 총을 집거나 지지하고 다시 누르면 놓습니다. 다른 장비와 기계 부품은 계속 길게 눌러 조작합니다.",
   "choice.hold": "길게 누르기",
   "choice.toggle": "전환",

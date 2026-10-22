@@ -121,6 +121,8 @@
   "settings.aimStrength": "Zielhilfestärke",
   "settings.aimRange": "0 bis 100 · Standard: aus",
   "settings.weaponGripMode": "Waffengriffmodus",
+  "settings.supportGripLock": "Stützhand festhalten",
+  "settings.supportGripLockHint": "Die Stützhand bleibt an der Waffe, auch wenn sich der Controller entfernt. Im Haltemodus Grip loslassen, im Umschaltmodus erneut drücken. Ausschalten stellt das räumliche Lösen wieder her. Bedienelemente zum Nachladen bleiben unverändert.",
   "settings.weaponGripModeHint": "Halten: Grip loslassen, um den Griff zu lösen. Umschalten: zum Greifen oder Stützen drücken, zum Loslassen erneut drücken. Andere Ausrüstung und mechanische Teile erfordern weiterhin Halten.",
   "choice.hold": "Halten",
   "choice.toggle": "Umschalten",

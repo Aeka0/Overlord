@@ -1258,8 +1258,11 @@ namespace vr::gameplay::hands
 					    if (weapons::underbarrel::enabled() &&
 					        weapons::underbarrel::directional_grips(
 					            solver().binding.underbarrel_parts.type) &&
-					        !module_grip.owns_support)
+					        !module_grip.owns_support &&
+					        !(weapons::carry::active() && owner.support == other))
 					    {
+						    // Carry validates spatial retention before publishing ownership.
+						    // Rechecking a committed support here would visually release a locked grip.
 						    const int off = int(other);
 						    const auto wrist =
 						        multiply(conjugate(targets[int(owner.rear)].rotation), targets[off].rotation);

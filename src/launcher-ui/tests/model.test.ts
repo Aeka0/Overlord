@@ -55,13 +55,13 @@ test("CPU wait timing is an optional localized Debug toggle", () => {
     assert.equal(collect(makeDraft(selected.values, selected.limits), selected).vr_debugWaitTiming, enabled);
   }
 });
-test("weapon grip mode is a localized Weapon interaction choice", () => {
+test("weapon grip mode and support lock are independent localized Weapon interaction settings", () => {
   const field = fields.find((entry) => entry.name === "vr_weaponGripMode")!;
   assert.equal(field.category, "gameplay");
   assert.equal(field.group, "settings.weaponInteraction");
   assert.equal(field.type, "choice");
   for (const catalog of Object.values(catalogs)) {
-    for (const key of ["settings.weaponGripMode", "settings.weaponGripModeHint", "choice.hold", "choice.toggle"])
+    for (const key of ["settings.weaponGripMode", "settings.weaponGripModeHint", "choice.hold", "choice.toggle", "settings.supportGripLock", "settings.supportGripLockHint"])
       assert.ok(catalog[key]);
   }
   const fixture = {
@@ -71,6 +71,16 @@ test("weapon grip mode is a localized Weapon interaction choice", () => {
   } as SettingsState;
   assert.equal(collect({ ...makeDraft(fixture.values, fixture.limits), vr_weaponGripMode: "toggle" }, fixture).vr_weaponGripMode, "toggle");
   assert.throws(() => collect({ vr_weaponGripMode: "invalid" }, fixture), /error.invalidVR/);
+  const supportLock = fields.find((entry) => entry.name === "vr_supportGripLock")!;
+  assert.equal(supportLock.category, "gameplay");
+  assert.equal(supportLock.group, field.group);
+  assert.equal(supportLock.type, "toggle");
+  for (const mode of ["hold", "toggle"]) {
+    for (const locked of [false, true]) {
+      const selected = { ...fixture, values: { vr_weaponGripMode: mode, vr_supportGripLock: locked } };
+      assert.deepEqual(collect(makeDraft(selected.values, selected.limits), selected), selected.values);
+    }
+  }
 });
 test("help searches all words and translations without exposing unacknowledged story entries", () => {
   assert.ok(

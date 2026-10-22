@@ -223,6 +223,12 @@ the next press releases it through the existing stow/exchange/drop transaction.
 Equipment and mechanical parts retain their hold controls. The shared native
 choice catalog supplies both modes, defaults, validation and config persistence.
 
+`vr_supportGripLock` (default on) independently keeps an acquired ordinary
+support grip attached regardless of controller distance or palm direction.
+Hold mode releases on Grip button-up; toggle mode releases on the next press.
+Disabling it restores spatial breakaway. Initial acquisition still requires a
+fresh press near the contact, and mechanical/reload grips keep their own rules.
+
 The same group includes `vr_smartAmmoSelection` (default on).
 New waist draws prioritize the primary magazine when it is absent or its loaded
 ammunition is exhausted. Otherwise they select a grenade for an empty, sufficiently

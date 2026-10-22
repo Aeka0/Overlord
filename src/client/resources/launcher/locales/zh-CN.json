@@ -121,6 +121,8 @@
   "settings.aimStrength": "辅助瞄准强度",
   "settings.aimRange": "0 至 100 · 默认关闭",
   "settings.weaponGripMode": "武器握持模式",
+  "settings.supportGripLock": "副手抓握保持",
+  "settings.supportGripLockHint": "副手抓住武器后，即使手柄移远也保持贴合。按住模式下松开 Grip 才松手，切换模式下再次按下 Grip 才松手。关闭后恢复空间脱手判定，装填部件仍按原有方式操作。",
   "settings.weaponGripModeHint": "按住：松开 Grip 即松手。切换：按一次 Grip 拾取或辅助握枪，再按一次松手。其他装备和机械部件仍需按住操作。",
   "choice.hold": "按住",
   "choice.toggle": "切换",

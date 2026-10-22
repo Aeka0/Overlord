@@ -121,6 +121,8 @@
   "settings.aimStrength": "Aim assist strength",
   "settings.aimRange": "0 to 100 · Default: off",
   "settings.weaponGripMode": "Weapon grip mode",
+  "settings.supportGripLock": "Keep support grip attached",
+  "settings.supportGripLockHint": "Keep an acquired support hand attached even when the controller moves away. Hold mode: release Grip to let go. Toggle mode: press Grip again. Turn off to restore spatial release. Reload parts keep their own controls.",
   "settings.weaponGripModeHint": "Hold: release Grip to let go. Toggle: press Grip to pick up or support a gun, then press again to let go. Other equipment and mechanical parts still require holding.",
   "choice.hold": "Hold",
   "choice.toggle": "Toggle",

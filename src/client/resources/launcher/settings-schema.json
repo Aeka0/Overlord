@@ -385,6 +385,14 @@
     "description": "settings.weaponGripModeHint"
   },
   {
+    "name": "vr_supportGripLock",
+    "category": "gameplay",
+    "group": "settings.weaponInteraction",
+    "label": "settings.supportGripLock",
+    "type": "toggle",
+    "description": "settings.supportGripLockHint"
+  },
+  {
     "name": "vr_quickReload",
     "category": "gameplay",
     "group": "settings.weaponInteraction",

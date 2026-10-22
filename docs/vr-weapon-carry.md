@@ -23,13 +23,19 @@ a headset acceptance check for this candidate.
 - Gameplay > Weapon interaction exposes `vr_weaponGripMode`: `hold` (default)
   or `toggle`. Toggle keeps an acquired weapon or ordinary support grip after
   button-up; the next Grip press requests the same release transaction described
-  below. Body location still decides stow/exchange/drop, and moving the support
-  hand away still releases its support. Mission equipment, chest equipment,
+  below. Body location still decides stow/exchange/drop. Mission equipment, chest equipment,
   reload parts and underbarrel mechanical grips retain physical hold controls.
   Only committed carry ownership enables toggle; failed acquisition does not
   create a latch. A release press cannot also acquire another object that frame.
   A deferred press is cancelled by focus/reference/input loss or a replacement
   weapon instance, and a rejected drop requires another press to retry.
+- `vr_supportGripLock` (default on) keeps an acquired ordinary support hand
+  attached when the controller moves away, crosses the rear hand, or turns away
+  from a directional support contact. Hold mode releases on Grip button-up;
+  toggle mode releases on the next Grip press. Turning this option off restores
+  spatial breakaway. Acquisition still requires a fresh press at the actual
+  contact. Tracking loss suspends steering without creating a release, and
+  mechanical/reload grips retain their existing transfer and release rules.
 - Hold the side grip to carry a weapon. A deliberate release outside a slot
   requests a native physical drop. Tracking loss, menu focus and recentering
   are not release gestures.

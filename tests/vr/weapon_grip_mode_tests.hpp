@@ -1,6 +1,7 @@
 #pragma once
 #include "component/vr/gameplay/grip_edges.hpp"
 #include "component/vr/gameplay/weapon_carry_grip.hpp"
+#include "component/vr/gameplay/support_retention.hpp"
 
 namespace weapon_grip_mode_tests
 {
@@ -9,6 +10,59 @@ namespace weapon_grip_mode_tests
 		using namespace vr::gameplay::weapons;
 		using namespace carry;
 		using namespace std::chrono_literals;
+		for (bool toggle : {false, true})
+		for (unsigned h = 0; h < 2; ++h)
+		{
+			inventory owned;
+			const owned_weapon items[]{{52, {false, false}}};
+			owned.reconcile(items);
+			owned.equip_definition(52, hand(1 - h));
+			const auto id = owned.in_hand(hand(1 - h))->id;
+			grip_edge_gate gate;
+			vr::controller_input::digital_sampler sampler;
+			vr::controller_input::frame f;
+			f.focused = true;
+			f.reference_generation = 1;
+			f.sampled_at = vr::controller_input::clock::time_point{} + 1s;
+			const auto tick = [&](bool down)
+			{
+				++f.sequence;
+				f.sampled_at += 10ms;
+				f.grip[h].valid = true;
+				f.squeeze[h] = sampler.sample(true, down, f.sampled_at);
+				return gate.consume(f, true, f.sampled_at, toggle_grip_owners(owned, toggle));
+			};
+			tick(false);
+			check(claim_grip(owned, {.actor=hand(h), .pressed=bool(tick(true).pressed),
+				.available=true, .support=id}).pose_changed, "fresh Grip press claims support for either hand and button mode");
+			profile p;
+			p.support_enabled = true;
+			p.aiming = aim_rule::two_hand;
+			p.acquire_meters = .15f;
+			p.release_meters = .3f;
+			const vr::gameplay::hands::anchor contact{{0, 0, .25f}, {0, 0, 0, 1}};
+			const vr::gameplay::hands::vec distant{0, 0, 2};
+			check(!support_contact(p, {}, contact, {}, distant, 1), "support lock cannot acquire a distant contact");
+			check(retained_support(p, {}, contact, {}, distant, 1, true, true)==support_retention::retained &&
+				tick(true).released==0, "held support ignores distance in either button mode");
+			check(retained_support(p, {}, contact, {}, distant, 1, true, false)==support_retention::released,
+				"disabling support lock restores distance release immediately");
+			check(retained_support(p, {}, contact, {}, distant, 0, true, true)==support_retention::suspended,
+				"locking cannot admit invalid geometry units");
+			p.support_enabled = false;
+			check(retained_support(p, {}, contact, {}, distant, 1, true, true)==support_retention::released,
+				"locking cannot keep support on a profile that forbids it");
+			auto release = tick(false);
+			if (toggle)
+			{
+				check(release.released==0 && owned.find(id)->owner.support==hand(h), "toggle support survives button-up");
+				release = tick(true);
+			}
+			const auto result = owned.release(id, release.released, location::absent, false, [](const auto&) { return false; });
+			check(release.released==(1u << h) && result.action==outcome::support_released &&
+				owned.find(id)->owner.support==hand::none && owned.in_hand(hand(1 - h)) && owned.invariant(),
+				"explicit Grip release removes only support even while the hand is far away");
+		}
 		for (unsigned h = 0; h < 2; ++h)
 		{
 			const auto actor = hand(h);

@@ -114,6 +114,7 @@ namespace vr::settings
 	inline constexpr boolean_setting recording_mode{"vr_recordingMode", false};
 	inline constexpr number_setting recording_dim{"vr_recordingDim", 65.f, 0.f, 100.f, 1.f};
 	inline constexpr boolean_setting quick_reload{"vr_quickReload", true};
+	inline constexpr boolean_setting support_grip_lock{"vr_supportGripLock", true};
 	inline constexpr boolean_setting chambering_guide{"vr_chamberingGuide", false};
 	inline constexpr boolean_setting physical_ladders{"vr_physicalLadders", true};
 	inline constexpr boolean_setting smart_ammo_selection{"vr_smartAmmoSelection", true};
@@ -131,6 +132,7 @@ namespace vr::settings
 	inline constexpr auto toggles = []
 	{
 		constexpr std::array gameplay{recording_mode,
+		                              support_grip_lock,
 		                              quick_reload,
 		                              chambering_guide,
 		                              physical_ladders,

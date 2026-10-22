@@ -113,6 +113,18 @@ int main(int argc, char** argv)
 			require(!validate(invalid), "Unknown grip modes cannot be saved");
 		}
 		require(initial[vr::settings::subtitles.name] == true, "Dialogue subtitles default on");
+		const auto* support_lock = vr::settings::support_grip_lock.name;
+		require(initial[support_lock] == true && read_values("")[support_lock] == true,
+		        "Support grip lock defaults on for new and existing profiles");
+		for (const auto* mode : {"hold", "toggle"})
+			for (bool locked : {false, true})
+			{
+				auto selected = initial;
+				selected[grip_mode] = mode;
+				selected[support_lock] = locked;
+				require(read_values(update_config("bind X vr_recenter\n", selected)) == selected,
+				        "Support retention and button modes persist independently, including explicit opt-out");
+			}
 		for (bool enabled : {false, true})
 		{
 			auto selected = initial;

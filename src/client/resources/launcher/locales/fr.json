@@ -121,6 +121,8 @@
   "settings.aimStrength": "Intensité de l’aide à la visée",
   "settings.aimRange": "0 à 100 · Désactivée par défaut",
   "settings.weaponGripMode": "Mode de prise de l’arme",
+  "settings.supportGripLock": "Maintenir la main de soutien",
+  "settings.supportGripLockHint": "La main de soutien reste attachée même si la manette s’éloigne. En mode Maintenir, relâchez Grip pour lâcher ; en mode Basculer, appuyez à nouveau. Désactivez pour rétablir le lâcher selon la position. Les commandes des pièces de rechargement restent inchangées.",
   "settings.weaponGripModeHint": "Maintenir : relâchez Grip pour lâcher. Basculer : appuyez pour saisir ou soutenir l’arme, puis à nouveau pour lâcher. Les autres équipements et pièces mécaniques nécessitent toujours un maintien.",
   "choice.hold": "Maintenir",
   "choice.toggle": "Basculer",

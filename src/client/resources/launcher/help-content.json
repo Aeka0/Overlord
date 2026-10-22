@@ -1336,7 +1336,7 @@
           "title": "拿枪、收枪与换手",
           "intro": "Grip 维持握持；松手时的位置决定收纳、交换或丢下。",
           "steps": [
-            "默认使用按住模式。可在“游戏玩法 → 武器交互”选择切换，松开按键后仍保留持枪或普通辅助握持，再按一次 Grip 才松手；下方说明中的“松开”在切换模式下改为再按一次。辅助手移离握位仍会解除辅助握持，装备与机械部件继续使用按住操作。",
+            "默认使用按住模式。可在“游戏玩法 → 武器交互”选择切换，松开按键后仍保留持枪或普通辅助握持，再按一次 Grip 才松手；下方说明中的“松开”在切换模式下改为再按一次。“副手抓握保持”默认开启，手柄移远不会解除已抓住的辅助握持；在同一设置组关闭此项可恢复空间脱手。装备与机械部件继续使用按住操作。",
             "用 Grip 拿枪，另一只手靠近辅助握位后按住 Grip，可双手持枪。",
             "在兼容的空装备位内松开 Grip 收纳；已有枪的兼容位置会交换。交换后先重新握住，才能再次松手操作。",
             "两侧腰位接受手枪、部分紧凑冲锋枪和 Ranger。背部普通装备位可放一把枪，背部枪可能不显示模型，但仍可取出。",
@@ -1348,7 +1348,7 @@
           "title": "Holding, stowing and changing hands",
           "intro": "Grip maintains holding. Where you release determines stowing, swapping or dropping.",
           "steps": [
-            "Hold is the default. In Gameplay > Weapon interaction, choose Toggle to keep a gun or ordinary support grip after releasing the button. Press Grip again to let go; use this second press wherever the instructions below say to release. Moving the support hand away still releases its support. Equipment and mechanical parts keep their hold controls.",
+            "Hold is the default. In Gameplay > Weapon interaction, choose Toggle to keep a gun or ordinary support grip after releasing the button. Press Grip again to let go; use this second press wherever the instructions below say to release. Keep support grip attached is on by default, so moving the controller away does not release an acquired support grip. Turn it off in the same group to restore spatial release. Equipment and mechanical parts keep their hold controls.",
             "Hold a gun with Grip. Bring the other hand to its support position and hold Grip for two-handed aiming.",
             "Release inside an empty compatible body slot to stow. An occupied compatible slot swaps guns; regrip before releasing the exchanged gun again.",
             "Waist slots accept pistols, selected compact SMGs and Ranger. The ordinary back slot holds one gun; its model may be hidden while it remains drawable.",
@@ -1360,7 +1360,7 @@
           "title": "拿槍、收槍與換手",
           "intro": "Grip 維持握持；松手時的位置決定收納、交換或丟下。",
           "steps": [
-            "預設使用按住模式。可在「遊戲玩法 → 武器互動」選擇切換，鬆開按鍵後仍保留持槍或一般輔助握持，再按一次 Grip 才鬆手；下方說明中的「鬆開」在切換模式下改為再按一次。輔助手移離握位仍會解除輔助握持，裝備與機械部件繼續使用按住操作。",
+            "預設使用按住模式。可在「遊戲玩法 → 武器互動」選擇切換，鬆開按鍵後仍保留持槍或一般輔助握持，再按一次 Grip 才鬆手；下方說明中的「鬆開」在切換模式下改為再按一次。「副手抓握保持」預設開啟，控制器移遠不會解除已抓住的輔助握持；在同一設定群組關閉此項可恢復空間鬆手。裝備與機械部件繼續使用按住操作。",
             "用 Grip 拿槍，另一只手靠近輔助握位后按住 Grip，可雙手持槍。",
             "在兼容的空裝備位內松開 Grip 收納；已有槍的兼容位置會交換。交換后先重新握住，才能再次松手操作。",
             "兩側腰位接受手槍、部分緊湊沖鋒槍和 Ranger。背部普通裝備位可放一把槍，背部槍可能不顯示模型，但仍可取出。",
@@ -1372,7 +1372,7 @@
           "title": "Tenir, ranger et changer de main",
           "intro": "Grip maintient la prise. L’endroit où vous relâchez détermine rangement, échange ou abandon.",
           "steps": [
-            "Maintenir est le mode par défaut. Dans Jouabilité > Interaction avec les armes, choisissez Basculer pour conserver la prise ou l’appui ordinaire après avoir relâché le bouton. Appuyez de nouveau sur Grip pour lâcher : ce second appui remplace les relâchements décrits ci-dessous. Éloigner la main d’appui libère toujours l’appui. Équipements et pièces mécaniques conservent leurs commandes à maintenir.",
+            "Maintenir est le mode par défaut. Dans Jouabilité > Interaction avec les armes, choisissez Basculer pour conserver la prise ou l’appui ordinaire après avoir relâché le bouton. Appuyez de nouveau sur Grip pour lâcher : ce second appui remplace les relâchements décrits ci-dessous. Maintenir la main de soutien est activé par défaut : éloigner la manette ne libère pas la prise acquise. Désactivez cette option dans le même groupe pour rétablir le lâcher selon la position. Équipements et pièces mécaniques conservent leurs commandes à maintenir.",
             "Tenez l’arme avec Grip. Placez l’autre main au point d’appui et maintenez Grip pour viser à deux mains.",
             "Relâchez dans un emplacement vide compatible pour ranger. S’il est occupé, les armes s’échangent ; reprenez Grip avant de relâcher l’arme échangée.",
             "La taille accepte pistolets, certains petits PM et Ranger. Le dos ordinaire porte une arme ; son modèle peut être masqué tout en restant accessible.",
@@ -1384,7 +1384,7 @@
           "title": "Halten, Verstauen und Handwechsel",
           "intro": "Grip hält die Waffe. Der Ort des Loslassens bestimmt Verstauen, Tauschen oder Fallenlassen.",
           "steps": [
-            "Halten ist die Voreinstellung. Unter Gameplay > Waffeninteraktion hält Umschalten die Waffe oder den normalen Stützgriff nach dem Loslassen der Taste fest. Erneutes Drücken von Grip löst den Griff und ersetzt das unten beschriebene Loslassen. Wegbewegen der Stützhand löst weiterhin den Stützgriff. Ausrüstung und mechanische Teile werden weiterhin durch Halten bedient.",
+            "Halten ist die Voreinstellung. Unter Gameplay > Waffeninteraktion hält Umschalten die Waffe oder den normalen Stützgriff nach dem Loslassen der Taste fest. Erneutes Drücken von Grip löst den Griff und ersetzt das unten beschriebene Loslassen. Stützhand festhalten ist standardmäßig aktiviert: Wegbewegen des Controllers löst einen bestehenden Stützgriff nicht. In derselben Gruppe ausschalten, um das räumliche Lösen wiederherzustellen. Ausrüstung und mechanische Teile werden weiterhin durch Halten bedient.",
             "Waffe mit Grip halten. Andere Hand an den Stützpunkt führen und Grip für beidhändiges Zielen halten.",
             "In einem freien passenden Körperplatz loslassen zum Verstauen. Belegter Platz tauscht Waffen; vor erneutem Loslassen die getauschte Waffe neu greifen.",
             "Hüftplätze nehmen Pistolen, ausgewählte kompakte MPs und Ranger auf. Am normalen Rückenplatz liegt eine Waffe; sie kann unsichtbar, aber weiterhin ziehbar sein.",
@@ -1396,7 +1396,7 @@
           "title": "Sujetar, guardar y cambiar de mano",
           "intro": "Grip mantiene el agarre. Dónde lo sueltes determina guardar, intercambiar o tirar.",
           "steps": [
-            "Mantener es el modo predeterminado. En Jugabilidad > Interacción con armas, elige Alternar para conservar el agarre o apoyo normal al soltar el botón. Pulsa Grip otra vez para soltar: esta segunda pulsación sustituye las indicaciones de soltar de abajo. Alejar la mano de apoyo sigue liberando el apoyo. El equipo y las piezas mecánicas mantienen sus controles de pulsación sostenida.",
+            "Mantener es el modo predeterminado. En Jugabilidad > Interacción con armas, elige Alternar para conservar el agarre o apoyo normal al soltar el botón. Pulsa Grip otra vez para soltar: esta segunda pulsación sustituye las indicaciones de soltar de abajo. Mantener la mano de apoyo está activado de forma predeterminada: alejar el mando no suelta un agarre adquirido. Desactívalo en el mismo grupo para recuperar la liberación por posición. El equipo y las piezas mecánicas mantienen sus controles de pulsación sostenida.",
             "Sujeta el arma con Grip. Acerca la otra mano al apoyo y mantén Grip para apuntar a dos manos.",
             "Suelta en un espacio corporal vacío compatible para guardar. Si está ocupado, intercambia armas; vuelve a agarrar antes de soltar la intercambiada.",
             "La cintura admite pistolas, algunos subfusiles compactos y Ranger. La espalda normal guarda un arma; puede ocultarse el modelo y seguir disponible.",
@@ -1408,7 +1408,7 @@
           "title": "Удержание, уборка и смена рук",
           "intro": "Grip удерживает предмет. Место отпускания определяет уборку, обмен или бросок.",
           "steps": [
-            "По умолчанию используется удержание. В разделе игрового процесса, в настройках взаимодействия с оружием, выберите переключение, чтобы сохранять основной или обычный поддерживающий хват после отпускания кнопки. Повторное нажатие Grip отпускает оружие и заменяет отпускание в инструкциях ниже. Отведение поддерживающей руки по-прежнему снимает её хват. Снаряжение и механические детали требуют удержания кнопок.",
+            "По умолчанию используется удержание. В разделе игрового процесса, в настройках взаимодействия с оружием, выберите переключение, чтобы сохранять основной или обычный поддерживающий хват после отпускания кнопки. Повторное нажатие Grip отпускает оружие и заменяет отпускание в инструкциях ниже. Сохранять поддерживающий хват включено по умолчанию: отведение контроллера не снимает уже установленный хват. Отключите параметр в той же группе, чтобы вернуть отпускание по положению руки. Снаряжение и механические детали требуют удержания кнопок.",
             "Держите оружие Grip. Подведите другую руку к опоре и зажмите Grip для двуручного прицеливания.",
             "Отпустите в пустом подходящем слоте для уборки. Занятый слот меняет оружие местами; перехватите Grip перед новым отпусканием.",
             "Пояс принимает пистолеты, некоторые компактные ПП и Ranger. Обычный слот спины хранит одно оружие; модель может быть скрыта, но оружие доступно.",
@@ -1420,7 +1420,7 @@
           "title": "保持・収納・持ち替え",
           "intro": "Grip で保持します。離す位置によって収納、交換、落下が決まります。",
           "steps": [
-            "初期設定は長押しです。ゲームプレイの武器操作設定で切り替えを選ぶと、ボタンを離しても銃や通常の支持グリップを保持します。もう一度 Grip を押すと手を離します。以下の「離す」は、この再押下に読み替えてください。支持手を握り位置から遠ざけると支持は解除されます。装備と機構部品は引き続き長押しで操作します。",
+            "初期設定は長押しです。ゲームプレイの武器操作設定で切り替えを選ぶと、ボタンを離しても銃や通常の支持グリップを保持します。もう一度 Grip を押すと手を離します。以下の「離す」は、この再押下に読み替えてください。「サポートハンドの保持」は初期設定でオンです。コントローラーを離しても支持は解除されません。同じ設定グループでオフにすると位置による解除に戻ります。装備と機構部品は引き続き長押しで操作します。",
             "Grip で銃を保持し、反対の手を支持位置へ伸ばして Grip を押すと両手で構えます。",
             "対応する空きスロットで離すと収納します。埋まっている対応スロットでは銃を交換します。交換した銃を再び離す前に握り直してください。",
             "腰にはピストル、一部の小型 SMG、Ranger を収納できます。通常の背中スロットは銃 1 丁です。モデルが非表示でも取り出せます。",
@@ -1432,7 +1432,7 @@
           "title": "들기, 보관 및 손 바꾸기",
           "intro": "Grip으로 잡기를 유지합니다. 놓는 위치에 따라 보관, 교환 또는 떨어뜨리기가 결정됩니다.",
           "steps": [
-            "기본값은 길게 누르기입니다. 게임플레이의 무기 상호작용 설정에서 전환을 선택하면 버튼을 놓아도 총이나 일반 보조 그립을 유지합니다. Grip을 다시 누르면 손을 떼며, 아래의 놓기 동작은 이 두 번째 누르기로 바뀝니다. 보조 손을 잡는 위치에서 멀리 옮기면 보조 그립은 해제됩니다. 장비와 기계 부품은 계속 길게 눌러 조작합니다.",
+            "기본값은 길게 누르기입니다. 게임플레이의 무기 상호작용 설정에서 전환을 선택하면 버튼을 놓아도 총이나 일반 보조 그립을 유지합니다. Grip을 다시 누르면 손을 떼며, 아래의 놓기 동작은 이 두 번째 누르기로 바뀝니다. 보조 손 잡기 유지는 기본적으로 켜져 있어 컨트롤러가 멀어져도 잡은 손을 떼지 않습니다. 같은 설정 그룹에서 끄면 위치에 따라 손을 떼는 기존 방식으로 돌아갑니다. 장비와 기계 부품은 계속 길게 눌러 조작합니다.",
             "Grip으로 총을 듭니다. 다른 손을 보조 위치에 대고 Grip을 눌러 양손으로 조준합니다.",
             "호환되는 빈 신체 슬롯에서 놓으면 보관합니다. 차 있으면 무기가 교환되며 교환된 총을 다시 놓기 전에 다시 잡아야 합니다.",
             "허리에는 권총, 일부 소형 기관단총 및 Ranger를 보관합니다. 일반 등 슬롯은 총 한 정이며 모델이 숨겨져도 꺼낼 수 있습니다.",

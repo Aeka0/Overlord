@@ -121,6 +121,8 @@
   "settings.aimStrength": "エイムアシストの強さ",
   "settings.aimRange": "0～100・初期状態：無効",
   "settings.weaponGripMode": "武器のグリップ方式",
+  "settings.supportGripLock": "サポートハンドの保持",
+  "settings.supportGripLockHint": "武器を支える手は、コントローラーを離しても接触を保ちます。長押しでは Grip を離すと解除し、切り替えでは再度押すと解除します。オフにすると位置による解除に戻ります。リロード部品の操作は変わりません。",
   "settings.weaponGripModeHint": "長押し：Grip を離すと手を離します。切り替え：1 回押すと銃を拾う・支える、もう一度押すと手を離します。他の装備や機構部品は引き続き長押しで操作します。",
   "choice.hold": "長押し",
   "choice.toggle": "切り替え",
