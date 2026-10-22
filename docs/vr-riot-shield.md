@@ -64,6 +64,16 @@ scene cache. Ownership, reference generation, input timestamp, grip/aim tracking
 focus and settling checks reject stale poses. Defense adds no render waits and
 performs at most 64 panel tests per shield (the current profile uses 16).
 
+Non-explosive shotguns also apply native cone damage after their visual pellet
+traces. That path performs a separate sight test and calls `G_Damage` directly,
+so intercepting pellets alone leaves damage that can pass through a held shield.
+The cone damage call now uses the same finite front-panel and current-pose
+checks. It runs after native visibility has succeeded; walls retain precedence.
+Only a segment that crosses the held shield is consumed. Exposed points, rear
+fire and unavailable poses keep their original damage arguments and script/Lua
+callbacks. The cone path's separate stock facing test is excluded for the local
+VR player, preserving physical offhand ownership and tracking-loss behavior.
+
 Nine shield surface/edge samples reuse physical firearm melee motion, body-local
 velocity, the 400 ms player cooldown, contact withdrawal and native NPC traces.
 Shield strikes use the held shield's native melee-damage accessor without the
@@ -123,6 +133,13 @@ complete hook set before enabling the shield rig.
 | `0x1404ABD94`, `0x1404AB5F7 -> 0x1404A9B00` | Bullet damage/feedback angle checks; return false only for the managed local player |
 | `0x1404ABC50` | Bullet processing; consumes only an unchanged, stamped synthetic shield result and returns false to terminate that pellet/penetration segment |
 | `0x1404AB5D7 -> 0x1404AC950` | Native shield hit-event emitter, called with actual world contact, normal, shooter, incoming weapon and event 0x47 |
+| `0x1404AC409 -> 0x1404A9B00` | Non-explosive shotgun cone facing test; local physical shielding replaces the selected-weapon angle policy |
+| `0x1404AA082 -> 0x1404BD2E0` | Cone damage after native sight clearance; shared front-panel contact consumes shielded damage before the common damage callback |
+
+The cone adapter additionally validates the native instructions passing
+`&BulletFireParams.direction` and `&BulletFireParams.end`. It checks their shared
+packet identity and damage type before reading the segment. A mismatched packet
+falls through to the original damage call.
 
 The original trace still owns all other geometry. NPC shield priorities and
 angle checks are untouched. No shared priority map, model, player angles or
@@ -147,9 +164,16 @@ Existing controller, hand-rig, melee and physical-reload tests cover the reused
 paths. Runtime contracts are checked against the saved native code independently
 of CPU geometry tests.
 
+`python tests/vr/native_shield_adapter_tests.py` exercises the production trace,
+damage and cone adapters against deterministic native endpoints. It reproduces
+the old pellet-blocked/cone-damage bypass, then checks finite front/window
+coverage, exposed/rear hits, native obstruction order, exact argument forwarding,
+NPC exclusion and invalid ownership/tracking/packet fallbacks. This is offline
+evidence; the reported Museum versus Gulag behavior still needs live comparison.
+
 `vr_physicalShield` defaults to true. `vr_shield_status` prints and saves
 `minidumps/overlord-shield.txt`, with installation status, query/block/event
-counts, filtered native player parts, stale-pose rejections, `fire_blocks` and
+counts, the `cone_blocks` subset, filtered native player parts, stale-pose rejections, `fire_blocks` and
 the `arm_blocks` subset.
 `vr_melee_status` separately reports native shield hit/blood event submissions.
 
@@ -159,4 +183,6 @@ rotate/raise the shield; test front and rear fire, window and edge hits, a wall
 in front, and a pistol in the other hand. Verify shield strike cooldown and
 withdrawal, release/drop/reacquisition, holstering, pause, tracking loss,
 recenter, checkpoint and level changes. Check that NPC shields still work.
+Include incoming shotgun fire in Museum and a rifle/shotgun comparison in Gulag;
+check that shielded cone damage increments `cone_blocks` while exposed hits hurt.
 Event submission counters are not proof that sounds or effects rendered.
