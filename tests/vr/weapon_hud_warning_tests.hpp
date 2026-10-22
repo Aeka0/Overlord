@@ -45,6 +45,15 @@ template<class Check> void weapon_hud_warning_tests(Check check)
 		"a final chambered round still counts as loaded ammunition");
 	check(select_messages(false,false,0,20)==warning_messages{status_line::magazine_empty,status_line::none},
 		"empty magazine and chamber request a steady empty-magazine caption");
+	for(const int reserve:{0,2})
+	{
+		check(select_messages(false,false,0,reserve,true)==warning_messages{status_line::discard,status_line::none},
+			"spent disposable requests discard regardless of reserve ammunition");
+		check(!has_message(select_messages(false,false,1,reserve,true)),"loaded disposable does not request discard");
+	}
+	check(select_messages(true,true,0,2,true)==warning_messages{status_line::discard,status_line::none} &&
+		!has_message(select_messages(false,false,-1,0,true)) && !has_message(select_messages(false,false,0,-1,true)),
+		"spent disposable cannot request reloading and invalid ammunition suppresses discard");
 	check(select_messages(false,false,10,0)==warning_messages{status_line::none,status_line::none} &&
 		select_messages(true,false,10,0)==warning_messages{status_line::chamber,status_line::none} &&
 		select_messages(false,false,1,0)==warning_messages{status_line::none,status_line::none} &&
@@ -54,10 +63,12 @@ template<class Check> void weapon_hud_warning_tests(Check check)
 		!has_message(select_messages(true,false,-1,0)),"loading replaces the empty caption and invalid ammunition has no warning");
 	check(status_color(status_line::chamber)==std::array<std::uint8_t,3>{255,215,0} &&
 		status_color(status_line::magazine_empty)==std::array<std::uint8_t,3>{255,128,128} &&
-		status_color(status_line::no_ammo)==status_color(status_line::magazine_empty),"chamber caption is yellow and ammo captions use soft red");
+		status_color(status_line::no_ammo)==status_color(status_line::magazine_empty) &&
+		status_color(status_line::discard)==status_color(status_line::magazine_empty),"chamber caption is yellow and ammo captions use soft red");
 	chamber_warning steady;
 	for(const auto now:{0u,499u,500u,999u,1000u})
-		check(status_visible(steady,status_line::magazine_empty,now) && status_visible(steady,status_line::no_ammo,now),"empty and no-ammo captions never blink");
+		check(status_visible(steady,status_line::magazine_empty,now) && status_visible(steady,status_line::no_ammo,now) &&
+			status_visible(steady,status_line::discard,now),"empty, no-ammo and discard captions never blink");
 	chamber_warning left,right;
 	check(left.visible(true,100) && left.visible(true,599) && !left.visible(true,600) && left.visible(true,1100),
 		"warning starts visible and alternates every 500 ms");

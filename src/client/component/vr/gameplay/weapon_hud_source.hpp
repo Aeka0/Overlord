@@ -16,6 +16,7 @@ namespace vr::gameplay::weapon_hud
 		float low_threshold{};
 		bool needs_chamber{};
 		bool quick_loading{};
+		bool disposable{};
 		std::string name;
 	};
 	// LUI gets copied read-only data; it never projects selection into native PS.

@@ -27,6 +27,7 @@ namespace game_text::locales
 		{key::weapon_needs_chamber,u8"需要上膛"},
 		{key::weapon_magazine_empty,u8"彈匣為空"},
 		{key::weapon_no_ammo,u8"無彈藥"},
+		{key::weapon_discard,u8"丟棄"},
 		{key::vehicle_duck,u8"{button}，低頭躲避"},
 		{key::weapon_quick_loading,u8"正在快捷裝彈"},
 		{key::cinematic_skip,u8"長按<em>扳機鍵</em>或 <em>Enter</em> 跳過"},

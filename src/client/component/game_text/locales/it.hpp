@@ -25,6 +25,7 @@ namespace game_text::locales
 		{key::recording_preview,u8"Anteprima streaming - Disattivabile nelle impostazioni VR del launcher"},
 		{key::weapon_magazine_empty,u8"Caricatore vuoto"},
 		{key::weapon_no_ammo,u8"Munizioni esaurite"},
+		{key::weapon_discard,u8"Getta"},
 		{key::weapon_quick_loading,u8"Ricarica rapida in corso"},
 		{key::ending_knife_pull,u8"Tieni premuta la <em>presa</em>, afferra il <em>coltello nel petto</em> ed estrailo"},
 		{key::cinematic_skip,u8"Tieni premuto il <em>grilletto</em> o <em>Invio</em> per saltare"},

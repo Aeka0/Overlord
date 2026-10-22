@@ -9,6 +9,8 @@ template<class Check> void game_text_tests(Check check)
 	check(text(key::weapon_magazine_empty,zh)==utf8(u8"弹匣为空") && text(key::weapon_no_ammo,zh)==utf8(u8"无弹药") &&
 		text(key::weapon_magazine_empty,en)=="Magazine empty" && text(key::weapon_no_ammo,en)=="No ammo",
 		"empty-magazine and reserve warnings preserve the requested labels");
+	check(text(key::weapon_discard,zh)==utf8(u8"丢弃") && text(key::weapon_discard,en)=="Discard" &&
+		text(key::weapon_discard,locale::traditional_chinese)==utf8(u8"丟棄"),"disposable launcher caption uses localized discard text");
 	check(text(key::weapon_quick_loading,zh)==utf8(u8"正在快捷装弹") &&
 		text(key::weapon_quick_loading,en)=="Quick reloading" &&
 		text(key::weapon_quick_loading,locale::traditional_chinese)==utf8(u8"正在快捷裝彈"),
@@ -28,6 +30,7 @@ template<class Check> void game_text_tests(Check check)
 			"translated car hints preserve yellow highlighting without unresolved placeholders");
 		check(!catalogs[static_cast<std::size_t>(selected)][static_cast<std::size_t>(key::weapon_needs_chamber)].empty(),
 			"every native game language has a chamber warning translation");
+		check(has_translation(key::weapon_discard,selected),"every native game language has a discard translation");
 		if (language!=game::LANGUAGE_ENGLISH && language!=game::LANGUAGE_ENGLISH_SAFE)
 			check(selected!=en,"non-English game languages are not collapsed to English");
 	}

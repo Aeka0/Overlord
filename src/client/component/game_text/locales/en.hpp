@@ -24,6 +24,7 @@ namespace game_text::locales
 		{key::weapon_needs_chamber,u8"Chamber round"},
 		{key::weapon_magazine_empty,u8"Magazine empty"},
 		{key::weapon_no_ammo,u8"No ammo"},
+		{key::weapon_discard,u8"Discard"},
 		{key::ending_knife_pull,u8"Hold <em>Grip</em> to grasp the <em>knife in your chest</em> and pull it out"},
 		{key::vehicle_duck,u8"Push the {button} to duck."},
 		{key::weapon_quick_loading,u8"Quick reloading"},

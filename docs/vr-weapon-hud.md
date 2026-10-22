@@ -84,6 +84,10 @@ counts as loaded ammunition. Quick reload takes the primary message position
 while active. The warnings share one row, mirror alignment for the left hand,
 and do not blink.
 
+Spent disposable launchers (AT4 and Stinger) show a steady soft-red "Discard"
+caption instead of the empty-ammunition messages, regardless of reserve rounds.
+Reloadable launchers keep the ordinary ammunition warnings.
+
 The caption uses the shared game-text catalog and the same smoothed scene anchor,
 holding lease, and A-button preference as the native counter. Its outline,
 color, and text are composed into an owned texture for both eyes. Language,

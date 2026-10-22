@@ -8,6 +8,7 @@
 #include "cylinder_runtime.hpp"
 #include "break_action_runtime.hpp"
 #include "tube_runtime.hpp"
+#include "launcher_runtime.hpp"
 #include "underbarrel_runtime.hpp"
 #include "weapon_hud_warning.hpp"
 #include "component/scheduler.hpp"
@@ -82,6 +83,9 @@ namespace vr::gameplay::weapon_hud
 					{
 						auto& source=batch[source_index(h,feed::primary)];
 						source=display_source(v.owner,v.id.weapon,feed::primary,ammo.loaded,ammo.reserve,reference);
+						const auto launcher=weapons::launcher::current(v.id);
+						source.disposable=launcher.active && !launcher.fault && launcher.definition && launcher.owner.id()==v.id &&
+							launcher.definition->matches(source.name) && launcher.definition->loading==weapons::launcher_loading::disposable;
 						const auto reload=weapons::physical_reload::current(v.id);
 						const auto loading=[&](const auto& view) {
 							return view.active && !view.fault && view.owner.id()==v.id && view.quick_load.active(v.owner,input,now);

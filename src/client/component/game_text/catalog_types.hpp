@@ -15,7 +15,7 @@ namespace game_text
 		button_menu_recenter, knuckles_button_menu_recenter, trainer_objectives, trainer_recenter,
 		grenade_cook,
 		item_weapon, interaction_use, interaction_pickup, rappel_brake, story_melee, right_stick_down, mine_prone, c4_draw, c4_detonate,
-		recording_preview, interaction_resupply, weapon_needs_chamber, vehicle_duck, weapon_quick_loading, cinematic_skip, signal_flare,
+		recording_preview, interaction_resupply, weapon_needs_chamber, weapon_discard, vehicle_duck, weapon_quick_loading, cinematic_skip, signal_flare,
 		nightvision_on, nightvision_off, breach_place, dsm_connect, dsm_recover, claymore_place, rappel_attach, gulag_attach, designator_draw, designator_target, briefcase_pickup, notebook_pickup, notebook_open, notebook_boost, notebook_control, fixed_sniper_zoom, fixed_sniper_aim, fixed_sniper_controls, heartbeat_fold, snowmobile_board, snowmobile_drive, snowmobile_fire, snowmobile_reverse, museum_warning, trainer_fire, trainer_hip_fire, trainer_ads, trainer_stop_ads, trainer_next_target, trainer_sidearm, trainer_primary, trainer_reload, trainer_knife, trainer_crouch, trainer_stand, trainer_prone, trainer_jump, trainer_mantle, trainer_sprint, trainer_frag, trainer_flash, trainer_menu, m203_reload, weapon_magazine_empty, weapon_no_ammo, ending_knife_pull, knuckles_trainer_menu, knuckles_fixed_sniper_controls, count
 	};
 	inline constexpr std::size_t key_count=static_cast<std::size_t>(key::count);

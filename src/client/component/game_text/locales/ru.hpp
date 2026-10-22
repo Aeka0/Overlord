@@ -25,6 +25,7 @@ namespace game_text::locales
 		{key::recording_preview,u8"Предпросмотр трансляции — отключается в настройках VR программы запуска"},
 		{key::weapon_magazine_empty,u8"Магазин пуст"},
 		{key::weapon_no_ammo,u8"Нет боеприпасов"},
+		{key::weapon_discard,u8"Выбросить"},
 		{key::weapon_quick_loading,u8"Быстрая зарядка"},
 		{key::ending_knife_pull,u8"Удерживайте <em>хват</em>, возьмитесь за <em>нож в груди</em> и вытащите его"},
 		{key::cinematic_skip,u8"Удерживайте <em>спуск</em> или <em>Enter</em>, чтобы пропустить"},

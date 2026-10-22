@@ -25,6 +25,7 @@ namespace game_text::locales
 		{key::recording_preview,u8"Aperçu de diffusion - Désactivable dans les paramètres VR du lanceur"},
 		{key::weapon_magazine_empty,u8"Chargeur vide"},
 		{key::weapon_no_ammo,u8"Plus de munitions"},
+		{key::weapon_discard,u8"Jeter"},
 		{key::weapon_quick_loading,u8"Rechargement rapide"},
 		{key::ending_knife_pull,u8"Maintenez le <em>bouton de prise</em>, saisissez le <em>couteau dans votre poitrine</em> et retirez-le"},
 		{key::cinematic_skip,u8"Maintenez la <em>gâchette</em> ou <em>Entrée</em> pour passer"},

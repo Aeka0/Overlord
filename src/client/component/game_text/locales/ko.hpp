@@ -25,6 +25,7 @@ namespace game_text::locales
 		{key::recording_preview,u8"방송 미리 보기 모드 - 런처 VR 설정에서 끌 수 있습니다"},
 		{key::weapon_magazine_empty,u8"탄창이 비어 있음"},
 		{key::weapon_no_ammo,u8"탄약 없음"},
+		{key::weapon_discard,u8"버리기"},
 		{key::weapon_quick_loading,u8"빠른 장전 중"},
 		{key::ending_knife_pull,u8"<em>그립</em>을 누른 채 <em>가슴의 칼</em>을 잡고 뽑기"},
 		{key::cinematic_skip,u8"<em>트리거</em> 또는 <em>Enter</em>를 길게 눌러 건너뛰기"},

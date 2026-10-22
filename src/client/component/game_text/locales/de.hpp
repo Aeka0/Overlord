@@ -25,6 +25,7 @@ namespace game_text::locales
 		{key::recording_preview,u8"Livestream-Vorschau – In den VR-Einstellungen des Launchers deaktivieren"},
 		{key::weapon_magazine_empty,u8"Magazin leer"},
 		{key::weapon_no_ammo,u8"Keine Munition"},
+		{key::weapon_discard,u8"Wegwerfen"},
 		{key::weapon_quick_loading,u8"Schnellladen"},
 		{key::ending_knife_pull,u8"<em>Greiftaste</em> halten, das <em>Messer in der Brust</em> greifen und herausziehen"},
 		{key::cinematic_skip,u8"<em>Abzug</em> oder <em>Enter</em> zum Überspringen halten"},

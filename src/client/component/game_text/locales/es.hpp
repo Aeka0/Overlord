@@ -25,6 +25,7 @@ namespace game_text::locales
 		{key::recording_preview,u8"Vista previa de retransmisión: desactívala en los ajustes de RV del iniciador"},
 		{key::weapon_magazine_empty,u8"Cargador vacío"},
 		{key::weapon_no_ammo,u8"Sin munición"},
+		{key::weapon_discard,u8"Desechar"},
 		{key::weapon_quick_loading,u8"Recarga rápida"},
 		{key::ending_knife_pull,u8"Mantén <em>agarre</em>, sujeta el <em>cuchillo en tu pecho</em> y sácalo"},
 		{key::cinematic_skip,u8"Mantén <em>gatillo</em> o <em>Intro</em> para saltar"},

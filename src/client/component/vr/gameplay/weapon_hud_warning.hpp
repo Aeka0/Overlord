@@ -33,13 +33,15 @@ namespace vr::gameplay::weapon_hud
 		bool active_{};
 		std::uint64_t started_{};
 	};
-	enum class status_line { none, chamber, quick_reload, magazine_empty, no_ammo, count };
+	enum class status_line { none, chamber, quick_reload, magazine_empty, no_ammo, discard, count };
 	inline status_line select_status(bool chamber,bool quick_loading) noexcept
 	{return quick_loading?status_line::quick_reload:chamber?status_line::chamber:status_line::none;}
 	using warning_messages=std::array<status_line,2>;
-	inline warning_messages select_messages(bool chamber,bool quick_loading,int loaded,int reserve) noexcept
+	inline warning_messages select_messages(bool chamber,bool quick_loading,int loaded,int reserve,bool disposable=false) noexcept
 	{
 		if(loaded<0 || reserve<0)return {};
+		// A spent disposable cannot use reserve ammunition to reload this instance.
+		if(disposable && loaded==0)return {status_line::discard,status_line::none};
 		// Native loaded includes the chamber and inserted magazine/tube. Reserve
 		// exhaustion alone is not an empty weapon, and the empty captions exclude
 		// one another. Keep quick-loading feedback while all ammunition is absent.
@@ -53,7 +55,7 @@ namespace vr::gameplay::weapon_hud
 	inline constexpr std::array<std::uint8_t,3> status_color(status_line line) noexcept
 	{
 		return line==status_line::chamber?std::array<std::uint8_t,3>{255,215,0}:
-			line==status_line::magazine_empty || line==status_line::no_ammo?std::array<std::uint8_t,3>{255,128,128}:
+			line==status_line::magazine_empty || line==status_line::no_ammo || line==status_line::discard?std::array<std::uint8_t,3>{255,128,128}:
 			std::array<std::uint8_t,3>{255,255,255};
 	}
 	inline bool status_visible(chamber_warning& blink,status_line line,std::uint64_t now_ms) noexcept
@@ -61,7 +63,7 @@ namespace vr::gameplay::weapon_hud
 		// Always clear the old blink phase during loading; a subsequent chamber
 		// prompt starts visible rather than inheriting a hidden half-cycle.
 		const bool chamber=blink.visible(line==status_line::chamber,now_ms);
-		return line==status_line::quick_reload || line==status_line::magazine_empty || line==status_line::no_ammo || chamber;
+		return line==status_line::quick_reload || line==status_line::magazine_empty || line==status_line::no_ammo || line==status_line::discard || chamber;
 	}
 	inline constexpr float warning_height_meters=.014f,warning_gap_meters=.004f;
 	inline constexpr float warning_row_meters=warning_height_meters+2*warning_gap_meters;

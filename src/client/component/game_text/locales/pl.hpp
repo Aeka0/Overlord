@@ -25,6 +25,7 @@ namespace game_text::locales
 		{key::recording_preview,u8"Podgląd transmisji — wyłącz w ustawieniach VR programu uruchamiającego"},
 		{key::weapon_magazine_empty,u8"Pusty magazynek"},
 		{key::weapon_no_ammo,u8"Brak amunicji"},
+		{key::weapon_discard,u8"Odrzuć"},
 		{key::weapon_quick_loading,u8"Szybkie ładowanie"},
 		{key::ending_knife_pull,u8"Przytrzymaj <em>chwyt</em>, złap <em>nóż w piersi</em> i wyciągnij go"},
 		{key::cinematic_skip,u8"Przytrzymaj <em>spust</em> lub <em>Enter</em>, aby pominąć"},

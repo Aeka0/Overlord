@@ -25,6 +25,7 @@ namespace game_text::locales
 		{key::recording_preview,u8"Prévia da transmissão - Desative nas configurações de RV do iniciador"},
 		{key::weapon_magazine_empty,u8"Carregador vazio"},
 		{key::weapon_no_ammo,u8"Sem munição"},
+		{key::weapon_discard,u8"Descartar"},
 		{key::weapon_quick_loading,u8"Recarregando rapidamente"},
 		{key::ending_knife_pull,u8"Segure <em>Grip</em>, agarre a <em>faca no peito</em> e puxe para fora"},
 		{key::cinematic_skip,u8"Segure o <em>gatilho</em> ou <em>Enter</em> para pular"},

@@ -25,6 +25,7 @@ namespace game_text::locales
 		{key::recording_preview,u8"配信プレビューモード - ランチャーの VR 設定で無効にできます"},
 		{key::weapon_magazine_empty,u8"マガジンが空"},
 		{key::weapon_no_ammo,u8"弾薬なし"},
+		{key::weapon_discard,u8"捨てる"},
 		{key::weapon_quick_loading,u8"クイックリロード中"},
 		{key::ending_knife_pull,u8"<em>グリップ</em>を押し続けて<em>胸のナイフ</em>をつかみ、引き抜く"},
 		{key::cinematic_skip,u8"<em>トリガー</em>または <em>Enter</em> を長押ししてスキップ"},

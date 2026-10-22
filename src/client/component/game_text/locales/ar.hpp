@@ -25,6 +25,7 @@ namespace game_text::locales
 		{key::recording_preview,u8"معاينة البث المباشر - يمكن تعطيلها من إعدادات الواقع الافتراضي في المشغّل"},
 		{key::weapon_magazine_empty,u8"المخزن فارغ"},
 		{key::weapon_no_ammo,u8"لا توجد ذخيرة"},
+		{key::weapon_discard,u8"تخلّص منه"},
 		{key::weapon_quick_loading,u8"جارٍ التلقيم السريع"},
 		{key::ending_knife_pull,u8"اضغط مطولًا على <em>زر الإمساك</em> وأمسك <em>السكين في صدرك</em> واسحبها"},
 		{key::cinematic_skip,u8"اضغط مطولًا على <em>الزناد</em> أو <em>Enter</em> للتخطي"},
