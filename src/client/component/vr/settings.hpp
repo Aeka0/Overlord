@@ -61,9 +61,13 @@ namespace vr::settings
 	inline constexpr choice_setting handedness{.name = "vr_handedness",
 	                                          .values = {"right", "left"},
 	                                          .label_keys = {"choice.rightHand", "choice.leftHand"}};
+	inline constexpr choice_setting body_pose_mode{.name = "vr_bodyPoseMode",
+	                                              .values = {"inferred", "head_locked"},
+	                                              .label_keys = {"choice.inferredBody", "choice.headLockedBody"}};
 	inline constexpr std::array choices{
 	    runtime_backend,
 	    handedness,
+	    body_pose_mode,
 	    controller_pose_mode,
 	    weapon_grip_mode,
 	    killfeed_style,

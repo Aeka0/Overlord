@@ -55,6 +55,27 @@ test("CPU wait timing is an optional localized Debug toggle", () => {
     assert.equal(collect(makeDraft(selected.values, selected.limits), selected).vr_debugWaitTiming, enabled);
   }
 });
+test("body positioning is a localized Basics choice", () => {
+  const field = fields.find((entry) => entry.name === "vr_bodyPoseMode")!;
+  assert.equal(field.category, "basics");
+  assert.equal(field.group, "settings.bodyPose");
+  assert.equal(field.type, "choice");
+  for (const catalog of Object.values(catalogs)) {
+    for (const key of [field.group, field.label, field.description!, "choice.inferredBody", "choice.headLockedBody"])
+      assert.ok(catalog[key]);
+  }
+  const fixture = {
+    ...state,
+    values: { vr_bodyPoseMode: "inferred" },
+    choices: { vr_bodyPoseMode: [
+      { value: "inferred", labelKey: "choice.inferredBody" },
+      { value: "head_locked", labelKey: "choice.headLockedBody" },
+    ] },
+  } as SettingsState;
+  for (const mode of ["inferred", "head_locked"])
+    assert.equal(collect({ ...makeDraft(fixture.values, fixture.limits), vr_bodyPoseMode: mode }, fixture).vr_bodyPoseMode, mode);
+  assert.throws(() => collect({ vr_bodyPoseMode: "invalid" }, fixture), /error.invalidVR/);
+});
 test("handedness is a localized Basics choice with validated left and right values", () => {
   const field = fields.find((entry) => entry.name === "vr_handedness")!;
   assert.equal(field.category, "basics");

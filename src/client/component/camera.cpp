@@ -19,6 +19,7 @@
 #include "gui/gui.hpp"
 #include "vr/engine_stereo_renderer.hpp"
 #include "vr/head_pose_bridge.hpp"
+#include "vr/settings.hpp"
 
 #include <utils/hook.hpp>
 #include <utils/concurrency.hpp>
@@ -30,6 +31,7 @@ namespace camera
 		utils::hook::detour sub_140781090_hook;
 
 		game::dvar_t* cl_free_move_scale = nullptr;
+		game::dvar_t* body_pose_mode = nullptr;
 		game::dvar_t** cg_paused = nullptr;
 		
 		using cb_type = std::optional<std::function<void()>>;
@@ -205,7 +207,8 @@ namespace camera
 				vr::gameplay::ladders::apply_camera_origin(game::refdef->org,ps->viewHeightCurrent,sequence.linked_entity,game::CG_GetGameTime(0));
 			if (ps && vr::head_pose_bridge::apply_camera(game::refdef->org, game::refdef->axis,
 				camera_command_time, mounted.request.epoch ? mounted.angles.data() : game::cgs->refdefViewAngles,
-				camera_request,&rotation))
+				camera_request,&rotation, body_pose_mode && body_pose_mode->current.integer == 1
+					? vr::body_pose::mode::head_locked : vr::body_pose::mode::inferred))
 			{
 				camera_origin[0] = game::refdef->org[0];
 				camera_origin[1] = game::refdef->org[1];
@@ -341,6 +344,10 @@ namespace camera
 	public:
 		void post_unpack() override
 		{
+			static auto body_modes = vr::settings::body_pose_mode.values;
+			body_pose_mode = dvars::register_enum(vr::settings::body_pose_mode.name, body_modes.data(),
+				vr::settings::body_pose_mode.default_index, game::DVAR_FLAG_SAVED,
+				"Equipment anchors: inferred body or immediate head position and horizontal heading");
 			cl_free_move_scale = dvars::register_float("cl_freemoveScale", 1.f, 0.0001f, 100.f,
 				game::DVAR_FLAG_SAVED, "Scale how fast you move in cl_freemove mode");
 

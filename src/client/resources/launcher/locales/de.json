@@ -1,4 +1,9 @@
 {
+  "settings.bodyPose": "Körperhaltung",
+  "settings.bodyPoseMode": "Ausrüstungsposition",
+  "settings.bodyPoseModeHint": "Die Körperschätzung reduziert die Bewegung von Brustausrüstung und Holstern bei kleinen Kopfdrehungen und beim Vorbeugen. Kopf folgen passt die Ausrüstung sofort an die Position und horizontale Blickrichtung des Headsets an. Beide Modi halten die Ausrüstung beim Heben, Senken oder Neigen des Kopfes aufrecht.",
+  "choice.inferredBody": "Körperschätzung",
+  "choice.headLockedBody": "Kopf folgen",
   "settings.handedness": "Händigkeit",
   "settings.defaultWeaponHand": "Standardhand für Waffen",
   "settings.defaultWeaponHandHint": "Wähle die Hand für Waffen, die beim Spawn oder durch Skripte ausgerüstet werden. Du kannst weiterhin frei die Hand wechseln. Asymmetrische Waffen behalten ihre Griffregeln; die linke Hand kann sie unter Umständen nur stützen.",

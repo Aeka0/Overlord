@@ -1,4 +1,9 @@
 {
+  "settings.bodyPose": "신체 자세",
+  "settings.bodyPoseMode": "장비 위치 방식",
+  "settings.bodyPoseModeHint": "자세 추정은 머리를 조금 돌리거나 몸을 기울일 때 가슴 장비와 무기 거치대의 움직임을 줄입니다. 머리 따라가기는 헤드셋 위치와 수평 방향에 맞춰 장비를 즉시 움직입니다. 두 방식 모두 위아래를 보거나 고개를 기울여도 장비를 수직으로 유지합니다.",
+  "choice.inferredBody": "자세 추정",
+  "choice.headLockedBody": "머리 따라가기",
   "settings.handedness": "주로 쓰는 손",
   "settings.defaultWeaponHand": "무기 기본 장착 손",
   "settings.defaultWeaponHandHint": "리스폰하거나 스크립트로 무기가 자동 장착될 때 사용할 손을 선택합니다. 손은 계속 자유롭게 바꿀 수 있습니다. 비대칭 무기는 기존 잡기 규칙을 유지하므로 왼손으로는 지지만 가능하고 발사할 수 없을 수 있습니다.",

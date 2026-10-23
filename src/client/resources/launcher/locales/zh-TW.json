@@ -1,4 +1,9 @@
 {
+  "settings.bodyPose": "身體姿態",
+  "settings.bodyPoseMode": "裝備定位方式",
+  "settings.bodyPoseModeHint": "姿態推斷會減少輕微轉頭、探身時胸掛與武器掛點的移動。跟隨頭部會讓裝備立即跟隨頭顯位置與水平朝向。兩種方式都保持裝備直立，不隨抬頭、低頭或歪頭傾斜。",
+  "choice.inferredBody": "姿態推斷",
+  "choice.headLockedBody": "跟隨頭部",
   "settings.handedness": "慣用手",
   "settings.defaultWeaponHand": "預設裝備手",
   "settings.defaultWeaponHandHint": "選擇重生或劇情自動裝備武器時使用的手，仍可自由換手。非對稱武器保留原有握持規則，左手可能只能托持、不能開火。",

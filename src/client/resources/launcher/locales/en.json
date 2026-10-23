@@ -1,4 +1,9 @@
 {
+  "settings.bodyPose": "Body posture",
+  "settings.bodyPoseMode": "Equipment positioning",
+  "settings.bodyPoseModeHint": "Body estimation reduces chest and holster movement during small head turns and leans. Follow head moves equipment immediately with headset position and horizontal heading. Both keep equipment upright when looking up, down or tilting your head.",
+  "choice.inferredBody": "Body estimation",
+  "choice.headLockedBody": "Follow head",
   "settings.handedness": "Handedness",
   "settings.defaultWeaponHand": "Default weapon hand",
   "settings.defaultWeaponHandHint": "Choose the hand for weapons equipped on spawn or by scripts. You can still switch hands freely. Asymmetric weapons keep their grip rules; the left hand may only support them.",

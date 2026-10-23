@@ -1,16 +1,31 @@
-# Body-mounted equipment estimation
+# Body-mounted equipment positioning
 
-The chest, waist weapon holsters and back holster share an estimated body frame.
+The chest, waist weapon holsters and back holster share a selectable body frame.
 The camera and controller transforms remain actual tracking transforms. Arm IK
-and waist ammunition supply retain their existing rules; this estimate controls
+and waist ammunition supply retain their existing rules; this frame controls
 equipment storage, including knife pickup and holster hit volumes.
 
-`body_pose.hpp` owns a bounded, allocation-free estimator. The head-pose bridge
-updates it once per distinct tracking timestamp and publishes the result in the
+Basics > Body posture > Equipment positioning exposes `vr_bodyPoseMode`:
+`inferred` (default) or `head_locked`. The shared choice registry handles
+launcher Save, Launch, Reset and native enum/config values. Existing profiles
+without the setting retain inference. Console changes apply on the next camera
+frame.
+
+Head-following mode copies the admitted center-eye position and horizontal
+heading directly, without neck compensation, translation tolerance or body
+filter delay. Equipment remains upright: head pitch and roll do not tilt the
+chest/waist/back layout. The final composed camera supplies the anchor, including
+scripted camera motion and any configured head stabilization. Both modes use the
+same storage offsets and render/grab records. Head-following mode clears the
+estimator so returning to inference starts from the current pose. Recenter,
+tracking loss and camera admission retain the shared spatial-frame lifecycle.
+
+`body_pose.hpp` owns a bounded, allocation-free estimator. In inference mode,
+the head-pose bridge updates it once per distinct tracking timestamp and publishes the result in the
 same spatial frame as the center-eye camera. Consumers do not run independent
 filters or infer a body again from a later head sample.
 
-## Initial policy
+## Inference policy
 
 - Preserve an equipment anchor at the neutral head-equivalent height. Existing
   chest/waist/back vertical offsets remain meaningful; no floor-height or player
@@ -41,10 +56,10 @@ These are first-pass headset tuning values, not full-body tracking.
 
 ## Consumers and coherence
 
-`body_slots_frame` selects the shared estimate, with an explicit head-frame
+`body_slots_frame` selects the shared body anchor, with an explicit head-frame
 fallback for callers without an estimate. `locate_chest` and `locate_holsters`
 apply the same policy to rendering and interaction. Holstered weapon rotation
-uses the estimated body axes as well as its estimated slot center.
+uses the selected body axes as well as its slot center.
 
 The hand attachment record retains this estimate in the exact solved object's
 model-origin space. Chest model preparation rebases that same record into the
@@ -79,7 +94,14 @@ tracking gaps/jumps and invalid poses. Layout tests verify that the central ches
 anchor is 4.5 cm forward and 35 cm down while both waist centers use the same estimated body
 position, and that the visible waist center remains inside its interaction volume.
 
-Headset acceptance is still required: turn the head without turning the torso,
+Bridge regressions also cover head-following position/yaw, upright equipment
+during head pitch/roll, crouching, scripted composition, switching back to
+inference without stale history, recenter and tracking loss. Launcher tests
+cover defaults, both saved choices, invalid values and all nine locales.
+
+Headset acceptance is still required in both modes: turn the head without turning the torso,
 look down, lean, walk/turn, crouch and recenter. Inspect chest distance and both
 waist slots, then draw/return the knife and stow/draw a weapon at the visible
-slots. A side glance should not orbit the waist weapons around the head.
+slots. Inference should tolerate a small side glance without orbiting the waist
+weapons; head-following should move the slots immediately with horizontal head
+turns while allowing the player to look down at them.

@@ -45,6 +45,14 @@
     "description": "settings.defaultWeaponHandHint"
   },
   {
+    "name": "vr_bodyPoseMode",
+    "category": "basics",
+    "group": "settings.bodyPose",
+    "label": "settings.bodyPoseMode",
+    "type": "choice",
+    "description": "settings.bodyPoseModeHint"
+  },
+  {
     "name": "vr_desktopStabilization",
     "category": "basics",
     "group": "settings.stabilization",

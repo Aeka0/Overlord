@@ -554,7 +554,8 @@ namespace vr::head_pose_bridge
 
 	bool apply_camera(float* const origin, float (*const axis)[3], const int command_time,
 		const float* const native_angles,const game_view::camera_request& request,
-		const game_view::scripted_rotation_reference* rotation_reference) noexcept
+		const game_view::scripted_rotation_reference* rotation_reference,
+		const body_pose::mode equipment_mode) noexcept
 	{
 		if (origin == nullptr || axis == nullptr)
 		{
@@ -676,8 +677,18 @@ namespace vr::head_pose_bridge
 		const auto head_radians = composed.world_heading * 0.017453292519943295f;
 		const auto hc = std::cos(head_radians), hs = std::sin(head_radians);
 		camera_frame.head_yaw_axis = {{{hc, hs, 0}, {-hs, hc, 0}, {0, 0, 1}}};
-		const auto estimated=body_estimator.update(head_meters,local_orientation,local_heading.yaw,recenter_count,pose_sampled_at);
-		camera_frame.body=body_pose::to_world(estimated,tracking_origin,base_yaw_axis,world_scale);
+		if (equipment_mode == body_pose::mode::head_locked)
+		{
+			// Use the admitted center-eye position and horizontal heading, including
+			// scripted camera composition. Never attach storage to head pitch/roll.
+			body_estimator.reset();
+			camera_frame.body = {true, camera_frame.head_position, camera_frame.head_yaw_axis};
+		}
+		else
+		{
+			const auto estimated=body_estimator.update(head_meters,local_orientation,local_heading.yaw,recenter_count,pose_sampled_at);
+			camera_frame.body=body_pose::to_world(estimated,tracking_origin,base_yaw_axis,world_scale);
+		}
 		camera_frame_available = true;
 		++camera_applications;
 		return true;

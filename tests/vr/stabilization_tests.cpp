@@ -3,6 +3,8 @@
 #include "component/vr/stabilization.hpp"
 #include "component/vr/controller_input.hpp"
 #include "component/vr/gameplay/hands/position_offset.hpp"
+#include "component/vr/gameplay/body_equipment.hpp"
+#include "component/vr/gameplay/weapon_holsters.hpp"
 #include "component/vr/desktop_stabilization.hpp"
 #include <limits>
 
@@ -150,6 +152,63 @@ namespace
 		require(head_pose_bridge::apply_camera(next_origin,next_axes) && head_pose_bridge::get_spatial_frame(frame) && !frame.head_stabilized,"disabled head restores original coordinate path");
 		head_pose_bridge::reset();
 	}
+	void equipment_modes()
+	{
+		using namespace vr;
+		using namespace head_pose_bridge;
+		reset(); configure_target(true); set_enabled(true); set_world_scale(40);
+		controls.head.enabled=false;
+		std::uint64_t sequence{};
+		float angles[]{0,25,0};const float delta[]{0,0,0};
+		spatial_frame frame;
+		const auto render=[&](const pose& head,body_pose::mode mode,const game_view::camera_request& request=game_view::camera_request{})
+		{
+			++sequence;
+			publish_tracking_pose({head.position,head.orientation},sequence);
+			require(apply_game_view(angles,delta),"equipment fixture records the native head command");
+			record_game_command(int(sequence));
+			float origin[]{100,200,300},axis[3][3]{{1,0,0},{0,1,0},{0,0,1}};
+			require(apply_camera(origin,axis,int(sequence),angles,request,nullptr,mode) && get_spatial_frame(frame),
+				"selected equipment mode publishes an admitted spatial frame");
+		};
+		const auto fixed=[&]
+		{
+			require(frame.body.valid && frame.body.position==frame.head_position && frame.body.yaw_axis==frame.head_yaw_axis,
+				"head-following equipment shares the exact composed center-eye position and horizontal heading");
+			require(frame.body.yaw_axis[2]==vec{0,0,1},"head-following equipment remains upright");
+			const auto chest=gameplay::equipment::locate_chest(frame);
+			const auto holsters=gameplay::weapons::carry::locate_holsters(frame);
+			require(chest.valid && holsters.valid &&
+				gameplay::equipment::chest_grab_distance(chest,gameplay::equipment::slot::knife,chest.anchors[0].position)<=1 &&
+				gameplay::weapons::carry::hit(holsters,holsters.centers[0])==gameplay::weapons::carry::location::left_waist,
+				"head-following chest and waist visuals remain inside their grab contacts");
+		};
+		render(yaw(0,{0,1.7f,0}),body_pose::mode::inferred);
+		const auto neutral=frame.body;
+		render(yaw(30,{.01f,1.7f,0}),body_pose::mode::inferred);
+		require(length(sub(frame.body.position,neutral.position))<.0001f && frame.body.yaw_axis==neutral.yaw_axis,
+			"default inference retains its small-lean and head-turn tolerance");
+		render(yaw(30,{.01f,1.7f,0}),body_pose::mode::head_locked);fixed();
+		require(length(sub(frame.body.position,neutral.position))>.1f && frame.body.yaw_axis!=neutral.yaw_axis,
+			"head-following mode immediately bypasses translation and yaw tolerances");
+		for (const auto tilt : {quat{.5f,0,0,.8660254f},quat{0,0,.258819f,.9659258f}})
+		{
+			const auto head=compose(yaw(80,{.1f,1.3f,-.2f}),pose{{},rotation(tilt)});
+			render(head,body_pose::mode::head_locked);fixed();
+		}
+		render(yaw(80,{.1f,1.3f,-.2f}),body_pose::mode::inferred);
+		require(length(sub(frame.body.position,frame.head_position))<.0001f &&
+			length(sub(frame.body.yaw_axis[0],frame.head_yaw_axis[0]))<.0001f,
+			"returning to inference seeds current tracking instead of stale body history");
+		render(yaw(100,{.2f,1.4f,-.3f}),body_pose::mode::head_locked,
+			game_view::camera_request{game_view::camera_profiles::aligned,401,601});fixed();
+		request_recenter();
+		require(!get_spatial_frame(frame),"recenter cannot expose a stale head-following anchor");
+		render(yaw(100,{.2f,1.4f,-.3f}),body_pose::mode::head_locked);fixed();
+		invalidate_pose();
+		require(!get_spatial_frame(frame),"tracking loss cannot expose a head-following anchor");
+		reset();
+	}
 	void desktop_math()
 	{
 		using namespace vr;
@@ -180,6 +239,6 @@ namespace
 }
 int main()
 {
-	try{filters();hands();tracking_root();desktop_math();std::cout<<"PASS: pose filters, controller publication, virtual tracking root and desktop reprojection\n";return 0;}
+	try{filters();hands();tracking_root();equipment_modes();desktop_math();std::cout<<"PASS: pose filters, controller publication, virtual tracking root, equipment modes and desktop reprojection\n";return 0;}
 	catch(const std::exception& e){std::cerr<<"FAIL: "<<e.what()<<'\n';return 1;}
 }

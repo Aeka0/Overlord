@@ -147,7 +147,8 @@ namespace vr::head_pose_bridge
 		float delta_pitch, float& pitch) noexcept;
 	[[nodiscard]] bool apply_camera(float* origin, float (*axis)[3], int command_time = 0,
 		const float* native_angles = nullptr, const game_view::camera_request& request = {},
-		const game_view::scripted_rotation_reference* rotation_reference = nullptr) noexcept;
+		const game_view::scripted_rotation_reference* rotation_reference = nullptr,
+		body_pose::mode equipment_mode = body_pose::mode::inferred) noexcept;
 	[[nodiscard]] bool camera_was_applied() noexcept;
 	[[nodiscard]] status get_status() noexcept;
 }

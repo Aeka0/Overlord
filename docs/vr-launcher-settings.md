@@ -2,6 +2,17 @@
 
 The desktop launcher exposes **Play / Language / VR Settings / Help / About**.
 
+## Body posture
+
+Basics > Body posture > Equipment positioning exposes `vr_bodyPoseMode`:
+`inferred` (default, Body estimation) or `head_locked` (Follow head).
+Inference reduces movement of chest equipment and weapon holsters during small
+head turns and leans. Follow head moves those anchors immediately with headset
+position and horizontal heading, keeping them upright during head pitch/roll.
+Rendering and grab/stow volumes share the selected frame. Save, Launch and Reset
+use the shared choice configuration path; Reset restores inference. See
+[body-mounted equipment](vr-body-equipment.md) for scope and headset checks.
+
 ## Handedness
 
 Basics > Handedness exposes `vr_handedness`: `right` (default) or `left`.

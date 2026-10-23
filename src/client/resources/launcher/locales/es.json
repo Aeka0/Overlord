@@ -1,4 +1,9 @@
 {
+  "settings.bodyPose": "Postura corporal",
+  "settings.bodyPoseMode": "Posición del equipo",
+  "settings.bodyPoseModeHint": "La estimación corporal reduce el movimiento del equipo del pecho y las fundas al girar o inclinar ligeramente la cabeza. Seguir la cabeza mueve el equipo de inmediato con la posición y orientación horizontal del visor. Ambos modos mantienen el equipo vertical al mirar arriba, abajo o ladear la cabeza.",
+  "choice.inferredBody": "Estimación corporal",
+  "choice.headLockedBody": "Seguir la cabeza",
   "settings.handedness": "Mano dominante",
   "settings.defaultWeaponHand": "Mano predeterminada del arma",
   "settings.defaultWeaponHandHint": "Elige la mano para las armas equipadas al reaparecer o por eventos del juego. Puedes seguir cambiando de mano libremente. Las armas asimétricas conservan sus reglas de agarre; la mano izquierda puede servir solo de apoyo.",

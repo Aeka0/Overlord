@@ -1,4 +1,9 @@
 {
+  "settings.bodyPose": "Posture du corps",
+  "settings.bodyPoseMode": "Position de l’équipement",
+  "settings.bodyPoseModeHint": "L’estimation du corps réduit le mouvement de l’équipement de poitrine et des étuis lors de légères rotations ou inclinaisons de la tête. Suivre la tête déplace immédiatement l’équipement selon la position et l’orientation horizontale du casque. Les deux modes gardent l’équipement vertical lorsque vous regardez vers le haut, le bas ou penchez la tête.",
+  "choice.inferredBody": "Estimation du corps",
+  "choice.headLockedBody": "Suivre la tête",
   "settings.handedness": "Main dominante",
   "settings.defaultWeaponHand": "Main par défaut pour les armes",
   "settings.defaultWeaponHandHint": "Choisissez la main pour les armes équipées à la réapparition ou par les scripts. Vous pouvez toujours changer de main librement. Les armes asymétriques conservent leurs règles de prise ; la main gauche peut servir uniquement de soutien.",

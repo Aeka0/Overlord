@@ -1,4 +1,9 @@
 {
+  "settings.bodyPose": "身体の姿勢",
+  "settings.bodyPoseMode": "装備の位置決め",
+  "settings.bodyPoseModeHint": "姿勢推定は、軽く首を回したり身体を傾けたりした際の胸部装備やホルスターの移動を抑えます。頭部追従は、ヘッドセットの位置と水平方向に装備を即座に追従させます。どちらも上下を向いたり首を傾けたりしても装備を直立させます。",
+  "choice.inferredBody": "姿勢推定",
+  "choice.headLockedBody": "頭部追従",
   "settings.handedness": "利き手",
   "settings.defaultWeaponHand": "武器を自動装備する手",
   "settings.defaultWeaponHandHint": "リスポーン時やイベントで武器を自動装備する手を選びます。持ち替えは引き続き自由に行えます。左右非対称の武器は従来の握り方を維持し、左手では支えるだけで発砲できない場合があります。",

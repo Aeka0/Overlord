@@ -95,6 +95,27 @@ int main(int argc, char** argv)
 				require(catalog[field.name][i]["value"]==field.values[i] && catalog[field.name][i]["labelKey"]==field.label_keys[i], "Frontend choices preserve native ordering and localized labels");
 		const auto initial = defaults();
 		require(validate(initial), "Shared defaults must be valid");
+		const auto* body_mode = vr::settings::body_pose_mode.name;
+		require(initial[body_mode] == "inferred" && read_values("")[body_mode] == "inferred",
+		        "Body positioning preserves inference by default");
+		for (const auto* mode : {"inferred", "head_locked"})
+		{
+			auto selected = initial;
+			selected[body_mode] = mode;
+			require(read_values(update_config("bind X vr_recenter\n", selected)) == selected,
+			        "Body modes persist through the shared config bridge");
+		}
+		require(read_values("seta vr_bodyPoseMode 0\n")[body_mode] == "inferred" &&
+		        read_values("seta vr_bodyPoseMode 1\n")[body_mode] == "head_locked",
+		        "Native body mode indices match the camera adapter");
+		for (const auto& bad : {json("invalid"), json("head_locked;quit"), json(true), json(2)})
+		{
+			auto selected = initial;
+			selected[body_mode] = bad;
+			require(!validate(selected), "Malformed body modes cannot be saved");
+		}
+		require(read_values("seta vr_bodyPoseMode invalid\n")[body_mode] == "inferred",
+		        "Invalid saved body modes fall back to inference");
 		const auto* handedness = vr::settings::handedness.name;
 		require(initial[handedness] == "right" && read_values("")[handedness] == "right",
 		        "New and existing profiles default to right-hand automatic equipment");

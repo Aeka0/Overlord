@@ -7,6 +7,7 @@
 
 namespace vr::body_pose
 {
+	enum class mode { inferred, head_locked };
 	using vec=std::array<float,3>;
 	using axes=std::array<vec,3>;
 	struct estimate {bool valid{};vec position{};axes yaw_axis{};};
