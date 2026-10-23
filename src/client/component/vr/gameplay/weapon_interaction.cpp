@@ -35,6 +35,7 @@ namespace vr::gameplay::weapons
 		bool projectile_verified{};
 		std::atomic<bool> alive{true};
 		game::dvar_t* enabled{};
+		game::dvar_t* handedness{};
 		game::dvar_t* disable_hip_fire_spread{};
 		game::dvar_t* aim_assist_strength{};
 		game::dvar_t* recoil_enabled{};
@@ -257,6 +258,10 @@ namespace vr::gameplay::weapons
 		void clear() noexcept { recoil_state.clear(); }
 	}
 
+	hand default_equip_hand() noexcept
+	{
+		return handedness && handedness->current.integer == 1 ? hand::left : hand::right;
+	}
 	hold sample_native_equipped() noexcept
 	{
 		if (carry::active()) return carry::current_hold();
@@ -266,7 +271,7 @@ namespace vr::gameplay::weapons
 				: 0;
 		const std::lock_guard lock(state_mutex);
 		const auto before = holding.current();
-		const auto result = holding.equipped(token);
+		const auto result = holding.equipped(token, default_equip_hand());
 		if (before.revision != result.revision)
 			muzzle = {};
 		return result;
@@ -346,6 +351,10 @@ namespace vr::gameplay::weapons
 	  public:
 		void post_unpack() override
 		{
+			const auto& preference = settings::handedness;
+			static auto hand_options = settings::handedness.values;
+			handedness = dvars::register_enum(preference.name, hand_options.data(), preference.default_index,
+				game::DVAR_FLAG_SAVED, "Hand used for automatically equipped weapons: right or left");
 			enabled = dvars::register_bool(
 				"vr_controllerFire", true, game::DVAR_FLAG_SAVED,
 				"Controller rear-grip trigger and muzzle shooting for bullet weapons and native launchers");

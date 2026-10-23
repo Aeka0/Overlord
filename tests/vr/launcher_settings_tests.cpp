@@ -95,6 +95,25 @@ int main(int argc, char** argv)
 				require(catalog[field.name][i]["value"]==field.values[i] && catalog[field.name][i]["labelKey"]==field.label_keys[i], "Frontend choices preserve native ordering and localized labels");
 		const auto initial = defaults();
 		require(validate(initial), "Shared defaults must be valid");
+		const auto* handedness = vr::settings::handedness.name;
+		require(initial[handedness] == "right" && read_values("")[handedness] == "right",
+		        "New and existing profiles default to right-hand automatic equipment");
+		for (const auto* hand : {"right", "left"})
+		{
+			auto selected = initial;
+			selected[handedness] = hand;
+			require(read_values(update_config("bind X vr_recenter\n", selected)) == selected,
+			        "Handedness persists through the shared config bridge");
+		}
+		require(read_values("seta vr_handedness 0\n")[handedness] == "right" &&
+		        read_values("seta vr_handedness 1\n")[handedness] == "left",
+		        "Native handedness indices match the runtime hand mapping");
+		for (const auto& bad : {json("invalid"), json("left;quit"), json(true), json(2)})
+		{
+			auto selected = initial;
+			selected[handedness] = bad;
+			require(!validate(selected), "Invalid handedness cannot be saved");
+		}
 		const auto* grip_mode = vr::settings::weapon_grip_mode.name;
 		require(initial[grip_mode] == "hold" && read_values("")[grip_mode] == "hold",
 		        "New and existing profiles retain hold-to-grip by default");

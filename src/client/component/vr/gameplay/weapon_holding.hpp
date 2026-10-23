@@ -52,11 +52,12 @@ struct hold
 		{
 			return value_;
 		}
-		hold equipped(std::uint32_t weapon) noexcept
+		hold equipped(std::uint32_t weapon, hand initial_hand = hand::right) noexcept
 		{
+			if (!valid_hand(initial_hand)) initial_hand = hand::right;
 			if (weapon != value_.weapon)
-				value_ = {weapon,	  value_.revision + 1,		   weapon ? hand::right : hand::none,
-						  hand::none, hold_source::engine_default, value_.rear_revision + 1};
+				value_ = {weapon, value_.revision + 1, weapon ? initial_hand : hand::none,
+						  hand::none, hold_source::engine_default, value_.rear_revision + 1, initial_hand};
 			return value_;
 		}
 		bool grip(const hold& expected, grip_role role, hand owner) noexcept

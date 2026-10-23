@@ -1,4 +1,9 @@
 {
+  "settings.handedness": "利き手",
+  "settings.defaultWeaponHand": "武器を自動装備する手",
+  "settings.defaultWeaponHandHint": "リスポーン時やイベントで武器を自動装備する手を選びます。持ち替えは引き続き自由に行えます。左右非対称の武器は従来の握り方を維持し、左手では支えるだけで発砲できない場合があります。",
+  "choice.rightHand": "右手",
+  "choice.leftHand": "左手",
   "settings.riskHeading": "リスクのある設定",
   "settings.disableRisk": "リスクのある設定をすべて無効化",
   "settings.riskHint": "ゲームを起動せずに、ゲーム設定の残りのビデオメモリを埋める設定、SSAA、シェーダーキャッシュ、2 種類のシャドウキャッシュを無効にします。変更はすぐに保存されます。",

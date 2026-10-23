@@ -1,4 +1,9 @@
 {
+  "settings.handedness": "Main dominante",
+  "settings.defaultWeaponHand": "Main par défaut pour les armes",
+  "settings.defaultWeaponHandHint": "Choisissez la main pour les armes équipées à la réapparition ou par les scripts. Vous pouvez toujours changer de main librement. Les armes asymétriques conservent leurs règles de prise ; la main gauche peut servir uniquement de soutien.",
+  "choice.rightHand": "Main droite",
+  "choice.leftHand": "Main gauche",
   "settings.riskHeading": "Paramètres à risque",
   "settings.disableRisk": "Désactiver tous les paramètres à risque",
   "settings.riskHint": "Désactive le remplissage de la mémoire vidéo restante, le SSAA, le cache des shaders et les deux caches d’ombres dans la configuration sans lancer le jeu. Enregistrement immédiat.",

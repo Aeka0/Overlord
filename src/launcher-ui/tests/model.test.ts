@@ -55,6 +55,24 @@ test("CPU wait timing is an optional localized Debug toggle", () => {
     assert.equal(collect(makeDraft(selected.values, selected.limits), selected).vr_debugWaitTiming, enabled);
   }
 });
+test("handedness is a localized Basics choice with validated left and right values", () => {
+  const field = fields.find((entry) => entry.name === "vr_handedness")!;
+  assert.equal(field.category, "basics");
+  assert.equal(field.group, "settings.handedness");
+  assert.equal(field.type, "choice");
+  for (const catalog of Object.values(catalogs)) {
+    for (const key of [field.group, field.label, field.description!, "choice.rightHand", "choice.leftHand"])
+      assert.ok(catalog[key]);
+  }
+  const fixture = {
+    ...state,
+    values: { vr_handedness: "right" },
+    choices: { vr_handedness: ["right", "left"].map((value) => ({ value, labelKey: `choice.${value}Hand` })) },
+  } as SettingsState;
+  for (const hand of ["right", "left"])
+    assert.equal(collect({ ...makeDraft(fixture.values, fixture.limits), vr_handedness: hand }, fixture).vr_handedness, hand);
+  assert.throws(() => collect({ vr_handedness: "invalid" }, fixture), /error.invalidVR/);
+});
 test("weapon grip mode and support lock are independent localized Weapon interaction settings", () => {
   const field = fields.find((entry) => entry.name === "vr_weaponGripMode")!;
   assert.equal(field.category, "gameplay");

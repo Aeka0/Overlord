@@ -326,6 +326,29 @@ int main()
 	check(button_result.pressed == 0, "suppressed command branch discards script notification");
 	check((0x81 | sprint_button | jump_button) == 0x483, "native unrelated bits retained by OR");
 	using namespace vr::gameplay::weapons;
+	for (const auto preferred : {hand::right, hand::left})
+	{
+		const auto other = preferred == hand::right ? hand::left : hand::right;
+		holding_state automatic;
+		const auto first = automatic.equipped(49, preferred);
+		check(first.rear == preferred && first.pose_rear == preferred && first.can_fire(),
+			"automatic equipment seeds control and pose from the preferred hand");
+		check(automatic.grip(first, grip_role::rear, other), "manual transfer overrides the initial hand");
+		const auto manual = automatic.current();
+		check(automatic.equipped(49, preferred).revision == manual.revision && automatic.current().rear == other,
+			"sampling the same weapon does not undo a manual hand transfer");
+		check(automatic.grip(manual, grip_role::rear, hand::none) && !automatic.equipped(49, preferred).can_fire(),
+			"hand preference does not reacquire a deliberately released weapon");
+		check(automatic.equipped(50, preferred).rear == preferred,
+			"a newly selected weapon uses the preferred hand");
+		check(!automatic.equipped(0, preferred).can_fire(), "empty selection remains empty for either preference");
+	}
+	{
+		holding_state automatic;
+		check(automatic.equipped(49, hand::none).rear == hand::right &&
+			automatic.equipped(50, static_cast<hand>(9)).rear == hand::right,
+			"invalid automatic hand falls back to the default right hand");
+	}
 	holding_state holding;
 	check(!holding.current().can_fire(), "empty hands cannot fire");
 	auto owner = holding.equipped(49);

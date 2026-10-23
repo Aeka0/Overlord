@@ -1,4 +1,9 @@
 {
+  "settings.handedness": "惯用手",
+  "settings.defaultWeaponHand": "默认装备手",
+  "settings.defaultWeaponHandHint": "选择重生或剧情自动装备武器时使用的手，仍可自由换手。非对称武器保留原有握持规则，左手可能只能托持、不能开火。",
+  "choice.rightHand": "右手",
+  "choice.leftHand": "左手",
   "settings.riskHeading": "风险设置",
   "settings.disableRisk": "关闭所有风险设置",
   "settings.riskHint": "无需启动游戏，即可关闭游戏配置中的填充剩余显存、SSAA、着色器缓存以及两项阴影缓存。点击后立即保存。",

@@ -1,4 +1,9 @@
 {
+  "settings.handedness": "Mano dominante",
+  "settings.defaultWeaponHand": "Mano predeterminada del arma",
+  "settings.defaultWeaponHandHint": "Elige la mano para las armas equipadas al reaparecer o por eventos del juego. Puedes seguir cambiando de mano libremente. Las armas asimétricas conservan sus reglas de agarre; la mano izquierda puede servir solo de apoyo.",
+  "choice.rightHand": "Mano derecha",
+  "choice.leftHand": "Mano izquierda",
   "settings.riskHeading": "Ajustes de riesgo",
   "settings.disableRisk": "Desactivar todos los ajustes de riesgo",
   "settings.riskHint": "Desactiva el llenado de la memoria de vídeo restante, SSAA, la caché de sombreadores y ambas cachés de sombras en la configuración sin iniciar el juego. Se guarda al instante.",

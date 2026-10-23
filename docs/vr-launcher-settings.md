@@ -2,6 +2,19 @@
 
 The desktop launcher exposes **Play / Language / VR Settings / Help / About**.
 
+## Handedness
+
+Basics > Handedness exposes `vr_handedness`: `right` (default) or `left`.
+It selects the initial hand when the carry inventory starts or resets and when
+native script/keyboard selection equips another weapon. Fresh inventory snapshot
+initialization and the non-carry fallback use the same preference. Manual pickups,
+hand transfers and restored inventory grips keep their actual hands.
+
+This setting does not swap controller bindings, body slots or authored grip roles.
+AT4, Stinger and Javelin retain right-hand control and left-hand support: automatic
+left-hand equipment is carry-only until the right hand acquires the control grip.
+Save/reset and native enum indices use the shared choice configuration path.
+
 ## World size calibration
 
 Calibration starts with World size, displayed as a percentage (100% by default).

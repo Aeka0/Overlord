@@ -69,6 +69,8 @@ namespace vr::gameplay::weapons
 		controller_input::clock::time_point now) noexcept
 	{return value.firing_capable && owner.can_fire() && pose_ready(value,owner,reference,now);}
 	// All locks are short copies; none are held while calling the engine or runtime.
+	// Automatic equipment only; physical interactions and restored grips keep their hand.
+	hand default_equip_hand() noexcept;
 	hold sample_native_equipped() noexcept;
 	hold current_hold() noexcept;
 	bool commit_grip(const hold& expected, grip_role role, hand owner) noexcept;

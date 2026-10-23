@@ -497,7 +497,7 @@ namespace vr::gameplay::weapons::carry
 				owned.reconcile_instances({native.owned.data(), native.count});
 				const auto selected = native_ammunition::projected_identity(native.selected);
 				if (const auto* item = owned.find(selected);
-				    item && !item->policy.abdominal && owned.equip(selected, hand::right))
+				    item && !item->policy.abdominal && owned.equip(selected, default_equip_hand()))
 					preferred = selected;
 				player = native.player;
 				last_selection = native.selected;
@@ -648,7 +648,7 @@ namespace vr::gameplay::weapons::carry
 			}
 			// A native requested selection is not an acknowledgement. In particular,
 			// the mission draw owns its switch lock until the startup watcher exists.
-			// Do not auto-equip the requested weapon to the right hand underneath it.
+			// Do not auto-equip the requested weapon underneath its native transition.
 			const bool mission_transition = pending_abdominal.weapon ||
 			                                equipment::special::designator_events::owns_native_transition() ||
 			                                equipment::special::notebook::controlling();
@@ -663,7 +663,7 @@ namespace vr::gameplay::weapons::carry
 				{
 					selection_pending = false;
 					if (const auto id = native_ammunition::projected_identity(native.selected);
-					    owned.find(id) && !owned.find(id)->policy.abdominal && owned.equip(id, hand::right))
+					    owned.find(id) && !owned.find(id)->policy.abdominal && owned.equip(id, default_equip_hand()))
 					{
 						preferred = id;
 						edges = {};
@@ -688,7 +688,7 @@ namespace vr::gameplay::weapons::carry
 				// Script/keyboard selection is an explicit equipment request. Console
 				// give does not request selection and never seizes a holding hand.
 				if (const auto id = native_ammunition::projected_identity(native.selected);
-				    owned.find(id) && !owned.find(id)->policy.abdominal && owned.equip(id, hand::right))
+				    owned.find(id) && !owned.find(id)->policy.abdominal && owned.equip(id, default_equip_hand()))
 				{
 					preferred = id;
 					edges = {};
@@ -1029,7 +1029,7 @@ namespace vr::gameplay::weapons::carry
 		if (fresh)
 			if (const auto* v = result.find(native_ammunition::projected_identity(selected));
 			    v && !v->policy.abdominal)
-				result.equip(v->id, hand::right);
+				result.equip(v->id, default_equip_hand());
 		return result;
 	}
 	bool restore_inventory(std::span<const instance> entries, identity selected)

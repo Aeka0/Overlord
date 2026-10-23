@@ -37,6 +37,14 @@
     ]
   },
   {
+    "name": "vr_handedness",
+    "category": "basics",
+    "group": "settings.handedness",
+    "label": "settings.defaultWeaponHand",
+    "type": "choice",
+    "description": "settings.defaultWeaponHandHint"
+  },
+  {
     "name": "vr_desktopStabilization",
     "category": "basics",
     "group": "settings.stabilization",

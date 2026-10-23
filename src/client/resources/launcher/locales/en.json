@@ -1,4 +1,9 @@
 {
+  "settings.handedness": "Handedness",
+  "settings.defaultWeaponHand": "Default weapon hand",
+  "settings.defaultWeaponHandHint": "Choose the hand for weapons equipped on spawn or by scripts. You can still switch hands freely. Asymmetric weapons keep their grip rules; the left hand may only support them.",
+  "choice.rightHand": "Right hand",
+  "choice.leftHand": "Left hand",
   "settings.riskHeading": "Risk settings",
   "settings.disableRisk": "Disable all risk settings",
   "settings.riskHint": "Turn off filling remaining video memory, SSAA, shader caching and both shadow caches in the game configuration without starting the game. Saves immediately.",

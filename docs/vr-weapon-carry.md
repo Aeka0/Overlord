@@ -20,6 +20,10 @@ a headset acceptance check for this candidate.
 
 ## Interaction
 
+- Basics > Handedness selects `vr_handedness`: `right` (default) or `left` for
+  automatic equipment after inventory initialization or native selection changes.
+  Physical grabs and restored grips keep their actual hands. Asymmetric launchers
+  retain their authored control/support roles, including support-only left carry.
 - Gameplay > Weapon interaction exposes `vr_weaponGripMode`: `hold` (default)
   or `toggle`. Toggle keeps an acquired weapon or ordinary support grip after
   button-up; the next Grip press requests the same release transaction described

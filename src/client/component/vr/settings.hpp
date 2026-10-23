@@ -58,8 +58,12 @@ namespace vr::settings
 	inline constexpr choice_setting weapon_grip_mode{.name = "vr_weaponGripMode",
 	                                                 .values = {"hold", "toggle"},
 	                                                 .label_keys = {"choice.hold", "choice.toggle"}};
+	inline constexpr choice_setting handedness{.name = "vr_handedness",
+	                                          .values = {"right", "left"},
+	                                          .label_keys = {"choice.rightHand", "choice.leftHand"}};
 	inline constexpr std::array choices{
 	    runtime_backend,
+	    handedness,
 	    controller_pose_mode,
 	    weapon_grip_mode,
 	    killfeed_style,

@@ -1,4 +1,9 @@
 {
+  "settings.handedness": "慣用手",
+  "settings.defaultWeaponHand": "預設裝備手",
+  "settings.defaultWeaponHandHint": "選擇重生或劇情自動裝備武器時使用的手，仍可自由換手。非對稱武器保留原有握持規則，左手可能只能托持、不能開火。",
+  "choice.rightHand": "右手",
+  "choice.leftHand": "左手",
   "settings.riskHeading": "風險設定",
   "settings.disableRisk": "關閉所有風險設定",
   "settings.riskHint": "無需啟動遊戲，即可關閉遊戲設定中的填充剩餘顯示記憶體、SSAA、著色器快取及兩項陰影快取。點擊後立即儲存。",

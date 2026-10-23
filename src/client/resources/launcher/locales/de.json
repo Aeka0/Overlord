@@ -1,4 +1,9 @@
 {
+  "settings.handedness": "Händigkeit",
+  "settings.defaultWeaponHand": "Standardhand für Waffen",
+  "settings.defaultWeaponHandHint": "Wähle die Hand für Waffen, die beim Spawn oder durch Skripte ausgerüstet werden. Du kannst weiterhin frei die Hand wechseln. Asymmetrische Waffen behalten ihre Griffregeln; die linke Hand kann sie unter Umständen nur stützen.",
+  "choice.rightHand": "Rechte Hand",
+  "choice.leftHand": "Linke Hand",
   "settings.riskHeading": "Risikoeinstellungen",
   "settings.disableRisk": "Alle Risikoeinstellungen deaktivieren",
   "settings.riskHint": "Das Füllen des verbleibenden Grafikspeichers, SSAA, Shader-Cache und beide Schatten-Caches ohne Spielstart in der Spielkonfiguration deaktivieren. Wird sofort gespeichert.",
