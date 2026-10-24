@@ -174,6 +174,10 @@ for _, source in ipairs({"weapon_registry", "weapon_mechanics_profiles"}) do
 end
 filter {}
 
+filter "files:src/client/loader/binary_cache.cpp"
+	flags {"NoPCH"}
+filter {}
+
 linkoptions {"/IGNORE:4254", "/DYNAMICBASE:NO", "/SAFESEH:NO", "/LARGEADDRESSAWARE", "/LAST:.main", "/PDBCompress"}
 
 files {"./src/client/**.rc", "./src/client/**.hpp", "./src/client/**.cpp", "./src/client/resources/**.*"}

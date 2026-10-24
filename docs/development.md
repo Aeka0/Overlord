@@ -54,6 +54,12 @@ Both `/m` and the project-level `MultiProcessorCompile` setting are enabled. Lar
 
 ## Select validation for the change
 
+The native executable cache under `%LOCALAPPDATA%/h2-mod/bin` is compared with
+the current game's ASLR-patched bytes on each startup. A stale cache is replaced
+atomically; an in-use stale file produces an explicit startup error. A read lease
+keeps the verified file unchanged until it is mapped. Profiles and saves are not
+removed when refreshing this generated executable.
+
 Test target definitions live in `premake/vr_tests.lua`; the main script invokes
 its registration function in the root path context. `test_executable` centralizes
 executable kind, language and output layout; feature sources and dependencies stay
@@ -63,6 +69,7 @@ These are registered standalone targets. Executable paths are relative to `build
 
 | Change area | Project target | Relative executable path |
 | --- | --- | --- |
+| Native game executable cache and loader | `game-loader-tests` | `game-loader/game-loader-tests.exe` |
 | Native query signatures and live read-only globals | `vr-native-binding-tests` | `native-bindings/vr-native-binding-tests.exe` |
 | Campaign phases, camera policy and scripted use | `vr-campaign-policy-tests` | `campaign-policy/vr-campaign-policy-tests.exe` |
 | Hand arbitration and phase binding | `vr-hand-interaction-tests` | `hand-interaction/vr-hand-interaction-tests.exe` |

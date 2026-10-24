@@ -4,6 +4,7 @@
 #include "launcher/launch_process.hpp"
 #include "component/game_data.hpp"
 #include "loader/loader.hpp"
+#include "loader/binary_cache.hpp"
 #include "loader/component_loader.hpp"
 #include "loader/target_identity.hpp"
 #include "game/game.hpp"
@@ -77,47 +78,6 @@ namespace
 		return launcher::mode::none;
 	}
 
-	void apply_aslr_patch(std::string* data)
-	{
-		// sp binary
-		if (data->size() != game_data::supported_binary_size)
-		{
-			throw std::runtime_error("File size mismatch, bad game files");
-		}
-
-		auto* dos_header = reinterpret_cast<PIMAGE_DOS_HEADER>(&data->at(0));
-		auto* nt_headers = reinterpret_cast<PIMAGE_NT_HEADERS>(&data->at(dos_header->e_lfanew));
-		auto* optional_header = &nt_headers->OptionalHeader;
-
-		if (optional_header->DllCharacteristics & IMAGE_DLLCHARACTERISTICS_DYNAMIC_BASE)
-		{
-			optional_header->DllCharacteristics &= ~(IMAGE_DLLCHARACTERISTICS_DYNAMIC_BASE);
-		}
-	}
-
-	void get_aslr_patched_binary(std::string* binary, std::string* data)
-	{
-		const auto patched_binary = (utils::properties::get_appdata_path() / "bin/h2_sp64_bnet_ship.exe"s).generic_string();
-
-		try
-		{
-			apply_aslr_patch(data);
-			if (!utils::io::file_exists(patched_binary) && !utils::io::write_file(patched_binary, *data, false))
-			{
-				throw std::runtime_error("Could not write file");
-			}
-		}
-		catch (const std::exception& e)
-		{
-			throw std::runtime_error(
-				utils::string::va("Could not create aslr patched binary for %s! %s",
-					binary->data(), e.what())
-			);
-		}
-
-		*binary = patched_binary;
-	}
-
 	FARPROC load_binary(const launcher::mode mode)
 	{
 		loader loader;
@@ -142,17 +102,12 @@ namespace
 		});
 
 		std::string binary = game_data::get_game_binary_path();
-
-		std::string data;
-		if (!utils::io::read_file(binary, &data))
-		{
-			throw std::runtime_error(utils::string::va(
-				"Failed to read game binary (%s)!\nPlease copy overlord.exe into your Call of Duty: Modern Warfare 2 Campaign Remastered installation folder and run it from there.",
-				binary.data()));
-		}
+		auto data = binary_cache::read_original(binary);
 
 		target_identity::capture_original(binary, data);
-		get_aslr_patched_binary(&binary, &data);
+		binary_cache::patch_aslr(data);
+		const auto cached = binary_cache::prepare(utils::properties::get_appdata_path() / "bin/h2_sp64_bnet_ship.exe", data);
+		binary = cached.path().generic_string();
 		target_identity::capture_loaded(binary, data);
 
 #ifdef INJECT_HOST_AS_LIB

@@ -9,6 +9,10 @@ return function()
 		targetdir ("%{wks.location}/bin/%{cfg.platform}/%{cfg.buildcfg}/vr-tests/" .. output_directory)
 	end
 
+	test_executable("game-loader-tests", "game-loader")
+		files {"./tests/loader/game_loader_tests.cpp", "./src/client/loader/binary_cache.cpp", "./src/common/utils/io.cpp"}
+		includedirs {"./src/client"}
+
 	test_executable("vr-support-diagnostics-tests", "support-diagnostics")
 		files {"./tests/vr/support_diagnostics_tests.cpp", "./src/client/component/vr/diagnostics/support_archive.cpp",
 			"./src/common/utils/compression.cpp"}
