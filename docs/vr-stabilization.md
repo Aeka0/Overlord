@@ -48,8 +48,8 @@ uncomfortable. It is deliberately optional and bounded.
 ## Desktop composition
 
 The native image ring snapshots camera axes, production timestamp, reset epoch
-and projection from the exact right-eye scene before publication. The GUI uses
-only that image's metadata, smooths three-axis orientation, and applies a UV
+and projection from each exact eye scene before publication. The GUI uses
+only the selected eye's image metadata, smooths three-axis orientation, and applies a UV
 homography in the existing sRGB mirror pass. Both tangent extents shrink to 85%
 to reserve a fixed border. Corner/forward-depth checks limit correction instead
 of varying FOV each frame; no depth reprojection or extra scene render is used.

@@ -22,6 +22,13 @@ namespace vr::gameplay::melee
 		if(boosted && tactical_knife>0 && tactical_knife<=100000)return tactical_knife;
 		return (bladed(kind) || kind==tool::shield)?native:std::max(1,(native+1)/3);
 	}
+	struct strike_policy {int fixed_damage{};bool native_hit_event{true};};
+	inline int resolved_damage(int native,tool kind,bool boosted,int tactical_knife,strike_policy policy={}) noexcept
+	{
+		if(!policy.fixed_damage)return scaled_damage(native,kind,boosted,tactical_knife);
+		if(kind!=tool::knife || native<=0 || native>10000 || policy.fixed_damage<0 || policy.fixed_damage>10000)return 0;
+		return policy.fixed_damage;
+	}
 	struct sample
 	{
 		std::array<vec,9> points{}; // Metres in the current calibrated body frame.

@@ -19,6 +19,7 @@ namespace vr::recording_frame
 		struct viewport
 		{
 			float width{}, height{}, fov{};
+			std::uint32_t eye{1};
 		};
 		std::mutex mutex;
 		viewport display;
@@ -33,7 +34,7 @@ namespace vr::recording_frame
 		             ID3D11ShaderResourceView*,
 		             ID3D11RenderTargetView* target) noexcept
 		{
-			if (event.eye > 1 || !event.pair_id || (event.eye == 1 && !event.recording_crop) || !context ||
+			if (event.eye > 1 || !event.pair_id || !event.recording_crop || !context ||
 			    !target || !alive.load())
 				return;
 			// Both eyes of one image family use the same GUI/config snapshot.
@@ -58,10 +59,10 @@ namespace vr::recording_frame
 			if (!guide.enabled)
 				return;
 			engine_stereo_bridge::eye_projection projection, target_projection;
-			const auto& right = event.views.eyes[1];
+			const auto& source = event.views.eyes[guide.display.eye];
 			const auto& eye = event.views.eyes[event.eye];
-			if (right.pair_id != event.pair_id || right.output_eye != 1 || eye.pair_id != event.pair_id ||
-			    eye.output_eye != event.eye || !engine_stereo_view::read_projection(right, projection) ||
+			if (source.pair_id != event.pair_id || source.output_eye != guide.display.eye || eye.pair_id != event.pair_id ||
+			    eye.output_eye != event.eye || !engine_stereo_view::read_projection(source, projection) ||
 			    !engine_stereo_view::read_projection(eye, target_projection))
 			{
 				++skips;
@@ -73,10 +74,9 @@ namespace vr::recording_frame
 			                                          guide.display.width,
 			                                          guide.display.height,
 			                                          guide.display.fov);
-			const auto frame =
-			    make_layout(event.eye == 1 ? crop : other_eye_crop(crop, projection, target_projection),
-			                event.width,
-			                event.height);
+			const auto eye_crop = event.eye == guide.display.eye ? crop :
+			    other_eye_crop(crop, projection, target_projection);
+			const auto frame = make_layout(eye_crop, event.width, event.height);
 			if (!frame.valid)
 			{
 				++skips;
@@ -101,20 +101,19 @@ namespace vr::recording_frame
 			                                  caption_pixels[2] > 0 ? label.view() : nullptr,
 			                                  caption_pixels))
 			{
-				// Freeze the exact crop with the decorated image. GUI changes to FOV
-				// or aspect must not sample an older guide using a newer rectangle.
-				if (event.eye == 1)
-					*event.recording_crop = crop;
+				// Freeze each eye's crop with its decorated image. GUI changes to eye,
+				// FOV or aspect must not sample an older guide using a newer rectangle.
+				*event.recording_crop = eye_crop;
 				++draws;
 			}
 			else
 				++skips;
 		}
 	}
-	void publish_viewport(float width, float height, float horizontal_fov) noexcept
+	void publish_viewport(float width, float height, float horizontal_fov, std::uint32_t eye) noexcept
 	{
 		const std::lock_guard lock(mutex);
-		display = {width, height, horizontal_fov};
+		display = {width, height, horizontal_fov, eye == 0 ? 0u : 1u};
 	}
 	class component final : public component_interface
 	{

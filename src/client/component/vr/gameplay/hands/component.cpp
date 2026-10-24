@@ -1062,7 +1062,7 @@ namespace vr::gameplay::hands
 				     storage_body,
 				     reload_tokens,
 				     spatial.head_forward,
-				     spatial.head_up});
+				     spatial.head_up,view_offset,interaction_presentation.knife_hands});
 				empty_native::accept(object, object->matrices, object->timestamp);
 				vehicles::publish_render_hands(
 				    input,
@@ -1937,7 +1937,7 @@ namespace vr::gameplay::hands
 			     storage_body,
 			     reload_tokens,
 			     spatial.head_forward,
-			     spatial.head_up});
+			     spatial.head_up,view_offset,interaction_presentation.knife_hands});
 			// Only AFTER native bones have been committed. Rendering later matches
 			// the exact object/buffer/epoch AND consumed bone, not current_muzzle().
 			if (layout.muzzle >= 0)

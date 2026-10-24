@@ -57,6 +57,7 @@ namespace vr
 		game::dvar_t* vr_world_scale{};
 		game::dvar_t* vr_engine_swap_eyes{};
 		game::dvar_t* vr_desktop_fov{};
+		game::dvar_t* vr_desktop_eye{};
 
 		std::mutex listener_mutex;
 		std::atomic_bool soft_freeze_reported{false};
@@ -223,7 +224,8 @@ namespace vr
 			{
 				diagnostics::record_gui_frame();
 				if (vr_enable && vr_enable->current.enabled && vr_desktop_fov)
-					desktop_mirror::draw(vr_desktop_fov->current.value);
+					desktop_mirror::draw(vr_desktop_fov->current.value,
+						vr_desktop_eye ? vr_desktop_eye->current.integer : settings::desktop_eye.default_index);
 			}
 		}
 
@@ -833,7 +835,11 @@ namespace vr
 				"Swap the engine stereo left and right eye assignment; apply with vr_reinit");
 			vr_desktop_fov = dvars::register_float("vr_desktopFov", desktop_mirror::default_horizontal_fov,
 				30.0f, 120.0f, game::DVAR_FLAG_SAVED,
-				"Desktop horizontal FOV in degrees; limited to the right-eye image, applies immediately");
+				"Desktop horizontal FOV in degrees; limited to the selected eye image, applies immediately");
+			static auto desktop_eyes = settings::desktop_eye.values;
+			vr_desktop_eye = dvars::register_enum(settings::desktop_eye.name, desktop_eyes.data(),
+				settings::desktop_eye.default_index, game::DVAR_FLAG_SAVED,
+				"Eye shown in the desktop preview and recording guide; applies immediately");
 
 			callbacks_finalized.store(false, std::memory_order_release);
 			shutdown_started.store(false, std::memory_order_release);

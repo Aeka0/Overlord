@@ -118,6 +118,7 @@ namespace vr::gameplay::hands
 		    parts, r, input, targets, shoulders, axes, units, solved, posed_hands, visible_hands);
 		const auto tokens =
 		    reload_items::present(parts, r, input, targets, solved, posed_hands, visible_hands);
-		return {.knife_revision = knife_state.knife.revision, .reload_item_tokens = tokens};
+		unsigned knife_hands{};for(unsigned h=0;h<2;++h)if(knife[h] && !occupied[h] && (visible_hands&(1u<<h)))knife_hands|=1u<<h;
+		return {.knife_revision = knife_state.knife.revision, .reload_item_tokens = tokens, .knife_hands=knife_hands};
 	}
 }

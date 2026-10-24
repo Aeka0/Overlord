@@ -161,7 +161,9 @@ require headset acceptance. Native SSAA remains a separate scene-size setting.
 
 Optional head, hand and desktop stabilization is documented in [pose stabilization](vr-stabilization.md).
 
-The desktop mirror samples the completed output-right-eye texture on the existing GUI owner.
+The desktop mirror samples the completed selected output-eye texture on the existing GUI owner.
+`vr_desktopEye` selects `right` (default, index 1) or `left` (index 0), is saved, and applies
+immediately. The launcher exposes this choice under **VR Settings > Basics > Stabilization**.
 It keeps that eye's origin and orientation and crops around its optical forward direction,
 using a symmetric projection at the current desktop aspect ratio. Texture dimensions do not
 define optical aspect. The existing linear-to-sRGB shader still handles desktop color.
@@ -171,7 +173,8 @@ saved and applied immediately). For example, `vr_desktopFov 80` narrows the view
 The effective FOV is limited by the shorter side of each source frustum axis and the
 window aspect ratio. A half-texel inset keeps bilinear sampling inside the source.
 Increasing the requested FOV beyond this limit does not reveal more image or stretch it.
-`vr_status` reports `requested_hfov`, `effective_hfov`, `fov_limited`, and mirror state.
+`vr_status` reports the selected eye in mirror mode, `requested_hfov`, `effective_hfov`,
+`fov_limited`, and mirror state. Switching eyes resets desktop stabilization history.
 
 The submission ring retains projection bounds recovered from the same immutable eye
 slot as its image. It never fetches a newer runtime projection for an older image.
@@ -190,7 +193,7 @@ The current source is a fully rendered rectangular H2 image; a future hidden-are
 would need its own valid-region constraint beyond rectangular UV bounds.
 
 Offline coverage: `vr-desktop-mirror-tests` checks asymmetric projection, aspect/DPI,
-FOV limits, invalid inputs, exact ring metadata lifetime, and WARP color conversion.
+FOV limits, invalid inputs, both eyes' ring metadata lifetime, and WARP color conversion.
 In-game acceptance should check forward alignment, straight-edge proportions, aiming,
 window resizing, pause/menu return, recentering, and runtime/device recreation.
 
@@ -206,7 +209,7 @@ window aspect and `vr_desktopFov`. A white border with a dark outline remains
 visible against light and dark scenery. `vr_recordingDim` controls exterior dimming
 in percent (0–100, saved, default 65). Zero preserves exterior brightness; 100
 makes exterior scenery fully black while retaining the white border and caption.
-Both eye interiors stay unchanged. The left-eye frame maps the right-eye crop's
+Both eye interiors stay unchanged. The other-eye frame maps the selected crop's
 angular boundaries into its own asymmetric projection, clipped to its field of view;
 it approximates capture framing and retains normal parallax for nearby objects. Line thickness
 scales with eye render resolution. A centered caption below the frame follows
@@ -225,21 +228,21 @@ no readable space below it, the caption is omitted instead of entering or changi
 the captured picture. Neither Windows desktop DPI nor the native game's font
 atlas changes the caption's text or placement.
 
-The GUI owner publishes a small viewport/FOV snapshot. Both eyes share a single
-snapshot of viewport, enabled state and dimming for each image family. Their owner
-computes the crop from that image's immutable right-eye projection and blends the guide as
+The GUI owner publishes a small viewport/FOV/selected-eye snapshot. Both eyes share a single
+snapshot of viewport, selected eye, enabled state and dimming for each image family. Their owner
+computes the crop from that image's immutable selected-eye projection and blends the guide as
 the last composition layer, without a scene copy, GPU readback or additional
 render loop. Short CPU snapshot locks never span native/GPU work. The guide
-publishes its exact crop back to the submission ring only after a successful
+publishes each eye's exact crop back to the submission ring only after a successful
 draw. Desktop presentation uses that saved crop for the same image, so changing
-FOV/aspect between production and presentation cannot sample the guide. The next
+FOV/aspect or the selected eye between production and presentation cannot sample the guide. The next
 produced frame picks up the updated GUI request. Ring reuse and mode-off frames
 clear the saved crop; retirement retains it with the image.
 
 The border lies outside an outward-rounded one-texel guard around the recording
 rectangle. Every texel in the desktop bilinear sampling footprint is protected,
 including fractional crop boundaries. Thus the normal desktop mirror and its
-recording do not contain the frame, caption or dimming. A full right-eye/SteamVR capture
+recording do not contain the frame, caption or dimming. A full-eye/SteamVR capture
 will include the guide. If the crop reaches a texture edge, that side of the
 border can lie outside the eye image rather than narrowing the recording crop.
 

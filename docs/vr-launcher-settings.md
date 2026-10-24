@@ -1,9 +1,22 @@
-# Launcher VR settings
-
-The desktop launcher exposes **Play / Language / VR Settings / Help / About**.
-
-## Body posture
+# Launcher VR settings
 
+
+
+The desktop launcher exposes **Play / Language / VR Settings / Help / About**.
+
+
+
+## Personalization
+
+Personalization appears between Gameplay and Cheats. `vr_meleeWeapon` offers
+Default, Ghost Dance, Baton, Karambit, Endgame Blade and Bloodied Blade. Default
+uses Ghost Dance and follows Green Beret; named choices override cheat melee
+substitution. Save/Launch/Reset use the shared native choice catalog, with
+Default at index 0. The Endgame story sequence keeps its own weapon ownership.
+See [melee customization](vr-melee-customization.md) for grip, deployment,
+damage and asset boundaries.
+
+## Body posture
 Basics > Body posture > Equipment positioning exposes `vr_bodyPoseMode`:
 `inferred` (default, Body estimation) or `head_locked` (Follow head).
 Inference reduces movement of chest equipment and weapon holsters during small
@@ -25,6 +38,17 @@ This setting does not swap controller bindings, body slots or authored grip role
 AT4, Stinger and Javelin retain right-hand control and left-hand support: automatic
 left-hand equipment is carry-only until the right hand acquires the control grip.
 Save/reset and native enum indices use the shared choice configuration path.
+
+## Desktop preview eye
+
+Basics > Stabilization > Desktop preview eye exposes `vr_desktopEye`: `left`
+(native index 0) or `right` (native index 1, default). The choice is available
+whether desktop stabilization is enabled or disabled. It changes the desktop
+mirror source and the recording-frame projection to the selected eye without
+changing the headset's stereo views or weapon handedness.
+
+Save and Launch use the shared validated choice configuration path. New profiles,
+profiles without this setting and Reset retain the existing right-eye preview.
 
 ## World size calibration
 
@@ -103,16 +127,20 @@ No additional runtime dropdown is required. `vr_status` reports the effective
 runtime, selection source and evidence; `vr_reinit` repeats the initialization
 decision after reconnecting. See [installation and runtime selection](client-installation.md#runtime-selection).
 
-## First-use setup and quick guide
-
+## First-use setup and quick guide
+
+
+
 The six-step guide opens automatically only when the working directory contains
 the supported, readable game executable and the effective native profile has no
 VR assignments. The check shares the loader's executable selection and supported
 size, reads only its signature, and does not launch the game. A missing executable,
 failed profile read, existing VR configuration (including advanced VR dvars), or
 missing bridge metadata never triggers setup. A flat-game profile without VR
-settings is eligible. Skipping keeps the applied choices and initializes an untouched first run with the current defaults.
-
+settings is eligible. Skipping keeps the applied choices and initializes an untouched first run with the current defaults.
+
+
+
 The steps are language; controller preset and turning; visual comfort; weapon
 interaction and aim assistance; single-hand and ammunition penalties; author and
 GitHub. Device choices reuse the shared calibrated preset catalog. Other devices
@@ -124,14 +152,18 @@ written. Failed toggles and dropdown choices return to the last applied value;
 failed numeric edits stay available for correction or retry. Skip retains all
 applied choices, discards unfinished numeric text and initializes an untouched
 first run with the current defaults. Finish returns to the launcher. Read/write
-errors remain retryable without overwriting the last successful configuration.
-
+errors remain retryable without overwriting the last successful configuration.
+
+
+
 VR Settings > Basics > Quick guide reopens the same flow with the current draft,
 including unrelated unsaved settings. Both editors share numeric limits, preset
 data, validation and atomic profile merging. Native configuration inheritance
 also works when launcher language preferences have already created the profile
-folder. All settings categories and the guide have extra trailing content padding.
-
+folder. All settings categories and the guide have extra trailing content padding.
+
+
+
 Guide behavior and styling live in `src/launcher-ui/src/App.tsx`,
 `useSettings.ts`, and `styles.css`. Settings descriptions and help content reuse
 the shared locale resources. Both editors use the native defaults, limits and
@@ -153,27 +185,38 @@ original embedded Latin faces and Windows glyph fallback.
 Launching creates a new instance of the same EXE in game mode, preserves
 startup arguments and the selected backend, then closes the launcher. The game
 process bypasses WebView2 initialization.
-
-## Language
-
+
+
+## Language
+
+
+
 Launcher language defaults to English. English and Simplified Chinese apply
 immediately, including navigation, setting descriptions, dropdown options,
 validation/status messages, and accessibility labels. Switching languages
 preserves the unsaved VR draft and active settings category. Chinese uses system
 CJK fonts only for missing glyphs; supported glyphs keep the English decorative
-fonts. Chinese headings use a heavier weight.
-
+fonts. Chinese headings use a heavier weight.
+
+
+
 The native bridge atomically saves only the launcher locale ID in
 `players2/h2-mod/launcher.json`, relative to the game directory. This separate
 launcher preference does not write the game's language setting or VR dvars.
 Missing, malformed, unsupported, or oversized preferences fall back to English.
-Read/write errors are shown; a failed save keeps the previously applied language.
-
+Read/write errors are shown; a failed save keeps the previously applied language.
+
+
+
 The game-language dropdown is a session-only preview with English and Simplified
-Chinese choices. It does not save, change native game settings, or download assets.
-
-### Localization source map
-
+Chinese choices. It does not save, change native game settings, or download assets.
+
+
+
+### Localization source map
+
+
+
 - `src/client/resources/launcher/locales/en.json`: English message catalog and fallback.
 - `src/client/resources/launcher/locales/zh-CN.json`: Simplified Chinese translations.
 - `src/client/resources/launcher/i18n.js`: ES5 translation, interpolation, fallback,
@@ -181,21 +224,29 @@ Chinese choices. It does not save, change native game settings, or download asse
 - `src/client/resources/launcher/app.js`: Launcher interaction and state management.
 - `src/client/launcher/localization.hpp`: Supported locale/resource registry and
   bounded preference parsing.
-- `src/client/launcher/localization.cpp`: Embedded script composition and preference I/O.
-
+- `src/client/launcher/localization.cpp`: Embedded script composition and preference I/O.
+
+
+
 Add a locale catalog, its RCDATA resource, and a registry entry to enable a new
 language. Keep semantic keys and interpolation parameters consistent with English.
 Use `data-i18n`, `data-i18n-aria-label`, and `data-i18n-title` for static content;
 dynamic UI state stores message keys so it can be retranslated. Catalogs are
-embedded in the executable; installed launchers need no external translation files.
-
-## VR Settings
-
+embedded in the executable; installed launchers need no external translation files.
+
+
+
+## VR Settings
+
+
+
 Visual comfort includes **Disable blur** (`vr_disableBlur`, off by default).
 **Other > Hide all HUD** (`vr_hideHud`, off by default) hides native game HUD and
 spatial HUD while preserving menus. See [presentation options](vr-presentation-options.md)
-for rendering boundaries.
-
+for rendering boundaries.
+
+
+
 VR Settings has six categories: **Basics** contains the quick guide, VR backend,
 turning (the third section, directly below VR backend) and visual comfort;
 **Calibration** contains controller alignment; **Gameplay** contains aiming,
@@ -217,7 +268,8 @@ preserved. The GSC feedback script owns recovery: it holds until 150 ms after
 the last feedback and fades back over 180 ms.
 The selection is saved for the next game
 launch; Reset restores MW2019. There is no in-game settings menu for this feature.
-
+
+
 Cheats uses the recommendation to complete the campaign once as its heading
 description. Its first row is a boolean switch, off by default, that requests a
 one-time unlock of all missions and intel rewards. Off does nothing; the launcher
@@ -231,16 +283,20 @@ request is consumed once even if the menu or Lua VM is recreated. Failures are
 logged without interrupting the menu; readback does not prove a successful disk
 write, which still needs a restart check. Demigod/God cannot prevent scripted deaths. Infinite reserves locks carried
 reserve pools at 500 while retaining normal reload/chambering; Infinite ammo
-reuses the existing sustained-shot behavior. See [native cheat integration](vr-official-cheats.md).
-
+reuses the existing sustained-shot behavior. See [native cheat integration](vr-official-cheats.md).
+
+
+
 Gameplay's Enemy close combat group exposes `vr_enemyMeleeDamageScale`
 (0.1–2.0, default 0.5, step 0.1) and `vr_disableDogPounce` (default on).
 The multiplier applies to incoming enemy AI melee, including dog bites; 1.0
 restores native damage. Disabling dog pounces selects the native ordinary bite
 branch before the player knockdown sequence begins. Dogs remain able to attack.
 These policies apply only when VR is enabled. See [enemy combat](vr-enemy-combat.md)
-for the native boundaries and acceptance checks.
-
+for the native boundaries and acceptance checks.
+
+
+
 Gameplay > Weapon interaction includes `vr_weaponGripMode` (`hold` by default).
 `toggle` keeps an acquired gun or ordinary support grip after Grip is released;
 the next press releases it through the existing stow/exchange/drop transaction.
@@ -265,38 +321,49 @@ The former Ammo Drop preview is now the saved `vr_discardAmmoPenalty` toggle
 or speedloader expires or hits the world, and when live revolver rounds are
 cleared. Releasing a held container at the waist recovers its exact payload;
 catching a falling container preserves it. Forced cleanup is exempt. Save,
-load, reset and launch use the shared boolean settings contract.
-
+load, reset and launch use the shared boolean settings contract.
+
+
+
 Gameplay's Throwables group exposes the general throw-speed multiplier
 (`vr_grenadeThrowSpeedScale`): displayed as 0.1–4.0, default 1, step 0.1.
 The shared schema converts launcher units to native velocity gain using a factor
 of 2.5, preserving the default throw strength and existing profiles in this range.
 Native console/config units are 0.25–10.0, default 2.5, step 0.25. The additional football multiplier
 remains an advanced runtime setting and is excluded from the frontend schema;
-launcher Save and Reset preserve its existing configuration line.
-
+launcher Save and Reset preserve its existing configuration line.
+
+
+
 The embedded IE11 view uses a custom DOM scrollbar with wheel/touch scrolling,
 thumb dragging, track clicks and keyboard arrows, Page Up/Down, Home/End. The
 sidebar supports Up/Down and Home/End. Invalid input reveals its category before
-receiving focus. The scrollbar hides when all content fits.
-
+receiving focus. The scrollbar hides when all content fits.
+
+
+
 Dropdowns use a shared custom list with arrow-key navigation, Enter/Space to
-confirm, Escape to cancel, and dismissal on outside click, scroll or resize.
-
+confirm, Escape to cancel, and dismissal on outside click, scroll or resize.
+
+
+
 **Basics > Controller alignment > Preset** controls the three position offsets
 and three angles together. **None** is the only built-in preset and sets all six
 to zero in either controller pose mode. New profiles and Restore all defaults
 use the same zero values. Zero selects that mode's grip origin without a hidden
 wrist offset. Manual nonzero values display **Custom**; selecting Custom preserves
 the current draft for editing.
-
+
+
 The preset is inferred from the six numeric values on load, save and manual
 input, so existing profiles retain their calibration and console edits are
 recognized. Numerically identical input such as 0.0 still matches. Only the
 six dvars are saved; there is no separate preset identifier or migration. Preset
 selection leaves other unsaved settings and advanced wrist-pivot calibration
-unchanged. Save or Launch applies the draft through the existing settings path.
-
+unchanged. Save or Launch applies the draft through the existing settings path.
+
+
+
 **Gameplay > Recoil** raises the tracked muzzle after each confirmed shot using
 the weapon's native gun-kick pitch velocity. Signed and descending native ranges
 are valid; the expected absolute velocity is converted over a 50 ms impulse
@@ -317,13 +384,17 @@ skip the long-only penalty; All weapons applies the 4x penalty to them while sta
 Both options save with the other VR settings.
 The firing wrist and fingers pitch with the receiver about the tracked wrist
 position. An attached support hand follows the foregrip with arm IK; free hands
-and the other firing hand keep their own pose. Raw controller input is unchanged.
-
+and the other firing hand keep their own pose. Raw controller input is unchanged.
+
+
+
 Weapon-specific recoil tuning is applied after the posture multiplier and before
 the single-hand penalty. See the [recoil developer guide](vr-weapon-recoil.md)
 for the current weapon table, native names, calculation, integration boundaries,
-and regression tests.
-
+and regression tests.
+
+
+
 | Control | Saved dvar | Default | Range |
 | --- | --- | --- | --- |
 | Turn style | `vr_turnMode` | `smooth` | `smooth`, `snap` |
@@ -357,8 +428,10 @@ and regression tests.
 | Hand upward | `vr_handOffsetUp` | 0 m | -0.5 to 0.5 m |
 | Hand pitch | `vr_handAnglePitch` | 0 degrees | -180 to 180 degrees |
 | Hand yaw | `vr_handAngleYaw` | 0 degrees | -180 to 180 degrees |
-| Hand roll | `vr_handAngleRoll` | 0 degrees | -180 to 180 degrees |
-
+| Hand roll | `vr_handAngleRoll` | 0 degrees | -180 to 180 degrees |
+
+
+
 Live stream preview mode and its exterior dimming are under Other. It marks the desktop
 capture angle in both eyes with a white frame, dims the exterior and displays
 the localized caption below the frame. It follows the game language independently
@@ -371,13 +444,17 @@ guide maps the right-eye capture's angular bounds into its own projection, with
 normal parallax for nearby objects. Existing console-saved values are loaded,
 and Restore defaults turns the draft off and resets dimming to 65%. See
 [recording-frame rendering](vr-runtime-rendering.md#recording-frame-in-both-eyes)
-for clipping and composition guarantees.
-
+for clipping and composition guarantees.
+
+
+
 Movement camera bob is under Basics > Visual comfort. It covers armed and
 unarmed walking, sprinting, crouch movement and crawling; headset tracking is
 independent. See [VR movement camera bob](vr-camera-bob.md) for native contracts
-and headset acceptance checks.
-
+and headset acceptance checks.
+
+
+
 Position offsets select one rigid point in the controller's grip frame, shared
 by rendering and physical interactions. Inward remains mirrored per hand.
 The point follows controller rotation and whole-body physical turning; head
@@ -392,7 +469,8 @@ The separate `vr_wristPivot*` and `vr_standardWristPivot*` controls are retired.
 Saved entries are preserved by launcher saves but no longer affect hand poses;
 the selected `vr_handOffset*` or `vr_standardHandOffset*` bank now defines the
 complete calibrated wrist point and its rotation centre.
-
+
+
 The three angle controls also live under **Basics > Controller alignment**.
 They rotate both hands and their held weapons about the controller's local axes:
 positive pitch tilts up, positive yaw turns left, positive roll tilts the right
@@ -401,39 +479,56 @@ aim orientation. Angle calibration does not change the position correction.
 Console commands use the same names, for example
 `vr_handAnglePitch -20`, and take effect on the next input frame.
 Live changes reset melee motion history for 200 ms so calibration cannot be
-mistaken for a strike; the calibrated model remains visible and held.
-
+mistaken for a strike; the calibrated model remains visible and held.
+
+
+
 Save writes the existing `players2/h2-mod/config.cfg` relative to the game
 directory. Before the first profile initialization, the launcher reads the same
 default/Battle.net source profile used by the game's existing initialization.
 There is no separate launcher settings file or runtime override loop. The game
 loads these saved dvars normally; console changes saved by the game can be read
-on the next launcher run.
-
+on the next launcher run.
+
+Native output may use either readable dvar names or `0x` hash names. The
+launcher resolves both forms for every shared choice, toggle and numeric field;
+the last valid assignment wins. Saving removes both forms before writing one
+readable assignment, so an old hash alias cannot restore a previous value.
+
+
+
 Save re-reads and merges only the shared settings registry, preserves other
 configuration and bindings, and uses the existing atomic file writer. Input is
 validated at both the HTML and C++ boundaries. Missing settings use the shared
 defaults; invalid saved values are ignored. Reads are bounded to 4 MiB and bridge
-payloads to 4 KiB. Errors remain visible and do not report a successful save.
-
+payloads to 4 KiB. Errors remain visible and do not report a successful save.
+
+
+
 Restore defaults changes the draft. Save commits it; Launch also saves a dirty
 draft and refuses to launch if validation or persistence fails. Close without
-saving discards the draft.
-
+saving discards the draft.
+
+
+
 Debug options are read from the same bounded profile parser once, after the
 launcher closes and before the game binary is loaded. Direct `-singleplayer`
 starts use that same path. The loaded selection is immutable for the process:
 console edits and `vr_reinit` cannot install or remove probes mid-frame.
 `vr_status` reports the actual selection as `debug_loaded`, independently of
-later dvar edits. Missing or malformed values leave probes off.
-
+later dvar edits. Missing or malformed values leave probes off.
+
+
+
 The Debug page also shows the running executable's build configuration. A
 `Debug` build remains unoptimized and retains compiler debugging checks even
 with every probe off. Use `RelWithDebInfo` for gameplay/performance comparisons:
 it optimizes for speed, uses the release CRT and disables JMC/RTC instrumentation
 while retaining PDB symbols. This is build information, not a saved setting;
-the launcher cannot change compiler optimization in an already built executable.
-
+the launcher cannot change compiler optimization in an already built executable.
+
+
+
 Detailed view diagnostics enables frontend call stacks, view/global memory
 hashes, initializer byte differences, the view event ring, optional parent-PC
 capture and artifact/code snapshots. Automatic reports enables the watchdog's
@@ -442,25 +537,39 @@ checkpoint policy still applies. Startup, manual status, crash and stall
 reports remain available independently. CPU performance capture installs the
 four scene-job observation wrappers and creates the bounded recorder's worker;
 recording still starts explicitly with `vr_perfStart` and stops with
-`vr_perfStop`. If unloaded, `vr_perfStart` explains how to enable it next launch.
-
+`vr_perfStop`. If unloaded, `vr_perfStart` explains how to enable it next launch.
+
+Audio output diagnostics (`vr_debugAudioOutput`) records the game's output
+device, native start result and session volume/mute state in `vr_status` and
+`overlord-audio.txt`. It defaults off and follows the same frozen startup
+selection as other Debug probes. With it off, no audio diagnostic hooks, COM
+queries or file writes are installed. Changing it requires a game restart.
+
+
+
 The renderer's required stereo transaction tracking, hook validation, bootstrap
 execution/readback proof and eye-resource isolation are independent of Debug.
 GPU timestamp queries remain hard-disabled in the client. See the
 [rendering performance review](vr-render-performance-review.md) for findings
-and the hardware comparison procedure.
-
+and the hardware comparison procedure.
+
+
+
 The lens-flare option suppresses draws in the verified native VR flare hook.
 Native geometry allocation and bookkeeping remain intact, and non-stereo draws
 retain their previous behavior. This does not disable unrelated bloom, lighting
-or every possible authored effect. `vr_flare_status` includes `disabled_draws`.
-
+or every possible authored effect. `vr_flare_status` includes `disabled_draws`.
+
+
+
 Aim assist strength maps linearly to the maximum angle from the VR barrel:
 `0` disables it, `50` selects within 5 degrees, and `100` selects within 10 degrees
 (cone half-angle). The console command `vr_aimAssistStrength <0-100>` takes effect
 on the next admitted controller-muzzle shot and is saved through the normal game
-config. The launcher edits that same value in **Settings > Gameplay > Aiming**.
-
+config. The launcher edits that same value in **Settings > Gameplay > Aiming**.
+
+
+
 Selection uses the native enemy AI set and native shoot-at point, with the
 verified zodiac distance ceiling of 1300 game units and a muzzle-to-target cover
 trace. It changes the bullet direction; it does not rotate the tracked head or
@@ -468,10 +577,14 @@ hand model. Native ammunition, pellet spread, penetration and damage remain in
 the existing firing path. Scripted vehicle shots and NPC shots use their own
 paths. `vr_fire_status` reports strength, angle, applied/no-target/error counts.
 Zero performs no target or visibility queries. See
-[controller firing](vr-controller-interaction.md#holding-authority-and-firing).
-
-Validation:
-
+[controller firing](vr-controller-interaction.md#holding-authority-and-firing).
+
+
+
+Validation:
+
+
+
 - Generate with `tools/premake5 vs2022 --with-vr-tests`; build and run
   `vr-launcher-settings-tests` for config preservation, round trips, duplicates,
   malformed inputs and numeric boundaries.

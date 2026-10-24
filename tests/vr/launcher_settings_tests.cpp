@@ -13,6 +13,8 @@
 #include <sstream>
 #include <shellapi.h>
 
+void test_native_melee_setting();
+
 namespace
 {
 	void require(bool condition, const char* message)
@@ -26,6 +28,7 @@ int main(int argc, char** argv)
 	using namespace launcher_vr_settings;
 	try
 	{
+		test_native_melee_setting();
 		campaign_unlock::request disabled_request("0");
 		require(!disabled_request.take(true), "Off never changes an existing campaign unlock");
 		campaign_unlock::request unlock_request("1");
@@ -95,6 +98,54 @@ int main(int argc, char** argv)
 				require(catalog[field.name][i]["value"]==field.values[i] && catalog[field.name][i]["labelKey"]==field.label_keys[i], "Frontend choices preserve native ordering and localized labels");
 		const auto initial = defaults();
 		require(validate(initial), "Shared defaults must be valid");
+		{
+			// Exercise the native writer's hashed names, not just our own output.
+			const auto alias = [](const char* name)
+			{
+				std::ostringstream out;
+				out << "0x" << std::hex << static_cast<std::uint32_t>(dvars::generate_hash(name));
+				return out.str();
+			};
+			const auto check_native = [&](const char* name, const json& value, const std::string& text)
+			{
+				const auto hashed = alias(name);
+				const auto profile = "bind F10 togglemenu\nseta " + std::string(name) + " \"invalid\"\nseta " + hashed + " \"" + text + "\"\n";
+				const auto loaded = read_values(profile);
+				require(loaded[name] == value, "Last native hashed assignment must survive launcher reload");
+				const auto saved = update_config(profile, loaded);
+				require(saved.starts_with("bind F10 togglemenu\n") && saved.find(hashed) == std::string::npos,
+					"Launcher merge removes old hash aliases and preserves bindings");
+				require(read_values(saved) == loaded && update_config(saved, loaded) == saved,
+					"Native profiles stay stable after repeated launcher saves");
+			};
+			for (const auto& field : vr::settings::choices)
+				for (std::size_t i{}; i < field.values.size() && field.values[i]; ++i)
+				{
+					check_native(field.name, field.values[i], field.values[i]);
+					check_native(field.name, field.values[i], std::to_string(i));
+				}
+			for (const auto& field : vr::settings::toggles)
+				for (bool enabled : {false, true}) check_native(field.name, enabled, enabled ? "1" : "0");
+			for (const auto& field : vr::settings::numbers)
+				check_native(field.name, setting_number(field.max), json(setting_number(field.max)).dump());
+			require(has_vr_configuration("seta 0x2BA94576 \"baton\"\n"), "Hashed melee profile is existing VR configuration");
+			require(!has_vr_configuration("seta 0x70BF1633 \"1\"\n"), "Native graphics alone is not VR onboarding");
+			require(read_values("seta 0x2BA94576 \"baton\"\n")[vr::settings::melee_weapon.name] == "baton",
+				"Reported engine-generated baton assignment must load without resetting");
+		}
+		{
+			const auto* name=vr::settings::melee_weapon.name;
+			require(initial[name]=="default","Melee choice defaults to native Ghost Dance with cheat substitution");
+			for(const auto* value:{"default","ghost","baton","karambit","ending","bloody"})
+			{
+				auto selected=initial;selected[name]=value;
+				require(validate(selected),"Every named melee choice is admitted by native and launcher catalogs");
+				const auto saved=update_config("",selected);
+				require(read_values(saved)[name]==value,"Melee selections persist through config serialization");
+			}
+			auto invalid=initial;invalid[name]="sas";
+			require(!validate(invalid),"Unregistered SAS and arbitrary asset names cannot enter melee selection");
+		}
 		const auto* body_mode = vr::settings::body_pose_mode.name;
 		require(initial[body_mode] == "inferred" && read_values("")[body_mode] == "inferred",
 		        "Body positioning preserves inference by default");
@@ -135,6 +186,29 @@ int main(int argc, char** argv)
 			selected[handedness] = bad;
 			require(!validate(selected), "Invalid handedness cannot be saved");
 		}
+		const auto* desktop_eye = vr::settings::desktop_eye.name;
+		require(initial[desktop_eye] == "right" && read_values("")[desktop_eye] == "right",
+		        "New and existing profiles retain the right-eye desktop preview by default");
+		for (const auto* eye : {"left", "right"})
+			for (bool stabilized : {false, true})
+			{
+				auto selected = initial;
+				selected[desktop_eye] = eye;
+				selected[vr::settings::stabilization_toggles[0]] = stabilized;
+				require(read_values(update_config("bind X vr_recenter\n", selected)) == selected,
+				        "Desktop eye selection persists independently of desktop stabilization");
+			}
+		require(read_values("seta vr_desktopEye 0\n")[desktop_eye] == "left" &&
+		        read_values("seta vr_desktopEye 1\n")[desktop_eye] == "right",
+		        "Desktop eye enum indices preserve left-zero and right-one ordering");
+		for (const auto& bad : {json("invalid"), json("left;quit"), json(true), json(2)})
+		{
+			auto selected = initial;
+			selected[desktop_eye] = bad;
+			require(!validate(selected), "Invalid desktop eye selections cannot be saved");
+		}
+		require(read_values("seta vr_desktopEye 2\n")[desktop_eye] == "right",
+		        "Unknown saved desktop eye values retain the default right eye");
 		const auto* grip_mode = vr::settings::weapon_grip_mode.name;
 		require(initial[grip_mode] == "hold" && read_values("")[grip_mode] == "hold",
 		        "New and existing profiles retain hold-to-grip by default");

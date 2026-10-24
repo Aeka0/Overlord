@@ -31,6 +31,7 @@ namespace vr::gameplay::hands
 	{
 		std::uint64_t knife_revision{};
 		std::array<std::uint64_t, 2> reload_item_tokens{};
+		unsigned knife_hands{}; // Actually visible/posed chest-tool hands in this DObj.
 	};
 	presentation_result present_interactions(const interaction_rig&, const presentation_input&) noexcept;
 }

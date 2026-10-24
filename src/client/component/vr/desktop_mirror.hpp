@@ -13,10 +13,11 @@ namespace vr::desktop_mirror
 		float requested_fov{}, effective_fov{};
 		bool fov_limited{};
 		float smoothing_strength{},correction_fraction{1};
+		std::uint32_t eye{1};
 	};
 	// Called only inside the existing GUI owner callback. No independent render
 	// loop, scene camera, shared texture, GPU wait, or OpenVR call is introduced.
-	void draw(float horizontal_fov);
+	void draw(float horizontal_fov, std::uint32_t eye);
 	report get_report() noexcept;
 	const char* to_string(state value) noexcept;
 }

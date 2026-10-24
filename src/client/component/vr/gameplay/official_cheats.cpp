@@ -1,4 +1,5 @@
 #include <std_include.hpp>
+#include "melee_weapon_policy.hpp"
 #include "official_cheats.hpp"
 #include "official_cheats_script.hpp"
 #include "weapon_inventory_snapshot.hpp"
@@ -147,8 +148,8 @@ namespace vr::gameplay::cheats
     }
     bool green_beret() noexcept{return green.load();}
     bool transitioning() noexcept{return busy.load();}
-    bool chest_bayonet() noexcept{return green_beret() && !pickaxe_map;}
-    bool waist_pickaxes() noexcept{return green_beret() && pickaxe_map;}
+    bool chest_bayonet() noexcept{return green_beret() && !pickaxe_map && equipment::melee_weapons::cheat_tools_allowed();}
+    bool waist_pickaxes() noexcept{return green_beret() && pickaxe_map && equipment::melee_weapons::cheat_tools_allowed();}
     bool body_weapon(std::string_view name) noexcept{return green_beret() && body_weapon_definition(name);}
     bool settle_pickup(std::uint32_t weapon)
     {

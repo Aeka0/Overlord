@@ -301,6 +301,17 @@ namespace vr::gameplay::weapons::native_weapon_sound
 		if(!alias || !alias->aliasName || std::strcmp(alias->aliasName,"vr_fist_hit") || alias->count!=5 || !alias->head)return false;
 		return utils::hook::invoke<int>(play_address,entity,origin.data(),"vr_fist_hit")!=-1;
 	}
+	bool play_baton(bool impact,const std::array<float,3>& origin)
+	{
+		if(!verified || !scheduler::is_executing(scheduler::pipeline::main) || !game::CL_IsCgameInitialized())return false;
+		for(float value:origin)if(!std::isfinite(value) || std::abs(value)>1e7f)return false;
+		const short entity=*reinterpret_cast<const signed char*>(0x141BB3C30);if(entity<0)return false;
+		const auto* name=impact?"vr_melee_baton_hit":"vr_melee_baton_extend";
+		const auto* alias=game::DB_FindXAssetHeader(game::ASSET_TYPE_SOUND,name,0).sound;
+		if(!alias || !alias->aliasName || std::strcmp(alias->aliasName,name) || !alias->head || alias->count!=(impact?2:1) ||
+			game::DB_IsXAssetDefault(game::ASSET_TYPE_SOUND,name))return false;
+		return utils::hook::invoke<int>(play_address,entity,origin.data(),name)!=-1;
+	}
 	bool play_explosive_impact(const std::array<float, 3>& origin)
 	{
 		if (!verified || !scheduler::is_executing(scheduler::pipeline::main) || !game::CL_IsCgameInitialized())

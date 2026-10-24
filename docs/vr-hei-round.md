@@ -3,8 +3,7 @@
 Status: implementation candidate; native gameplay, visual size, sustained-fire
 performance and HMD acceptance remain pending.
 
-Cheats > Fun features > **High-explosive ammo** (高爆弹药 in Simplified Chinese;
-`vr_heiRound`, default off) adds a weak
+Cheats > Fun features > **High-explosive ammo** (`vr_heiRound`, default off) adds a weak
 explosion, a short original-game fireball and positional explosion sound at an ordinary player bullet's
 first eligible native contact. Existing bullet damage, flesh effects, decals,
 material effects, ammunition and mission firing notifications remain native.

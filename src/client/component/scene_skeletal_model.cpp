@@ -49,6 +49,7 @@ namespace scene_models
 		unsigned count{},slot{};
 		const void* accepted{};
 		bool visible{},created{};
+		pose_provider provider{};
 	};
 	static_assert(skeletal_model::scene_begin+skeletal_model::capacity<=4032);
 	skeletal_model::skeletal_model()=default;
@@ -60,12 +61,12 @@ namespace scene_models
 		{const std::lock_guard lock(registry_mutex);objects[data_->slot]=nullptr;registry[data_->slot]=nullptr;}
 		if(data_->created)utils::hook::invoke<void>(free_object,data_->object.data());
 	}
-	bool skeletal_model::create(game::XModel* model)
+	bool skeletal_model::create(game::XModel* model,pose_provider provider)
 	{
 		if(data_ || !skeleton_hook_ready || !scheduler::is_executing(scheduler::pipeline::main) || !native_ready() || !model || !model->numBones || !model->baseMat || model->numRootBones!=1)return false;
 		const std::lock_guard lock(registry_mutex);
 		const auto free=std::find(registry.begin(),registry.end(),nullptr);if(free==registry.end())return false;
-		auto next=std::make_unique<storage>();next->count=model->numBones;next->slot=unsigned(free-registry.begin());
+		auto next=std::make_unique<storage>();next->count=model->numBones;next->slot=unsigned(free-registry.begin());next->provider=provider;
 		struct model_entry{game::XModel* model;std::uint32_t tag{};std::uint8_t collision{};std::byte pad[3]{};};
 		static_assert(sizeof(model_entry)==16);const model_entry entry{model};
 		utils::hook::invoke<void>(create_object,&entry,1,nullptr,next->object.data(),0);next->created=true;
@@ -95,9 +96,22 @@ namespace scene_models
 			// subtract an origin twice or retain a previous render-frame origin.
 			for(unsigned i=0;i<data.count;++i)for(unsigned axis=0;axis<3;++axis)
 				if(std::abs(data.bones[i].trans[axis]-offset[axis])>10000)return;
-			std::copy_n(data.bones.begin(),data.count,matrices);
-			for(unsigned i=0;i<data.count;++i)for(unsigned axis=0;axis<3;++axis)matrices[i].trans[axis]-=offset[axis];
-			data.accepted=matrices;return;
+			// Providers work on a bounded private copy. A rejected/nonfinite
+			// refinement must never leave partially written world-space data in
+			// a native bone buffer that another queued skin job may still consume.
+			std::array<game::DObjAnimMat,255> posed;
+			std::copy_n(data.bones.begin(),data.count,posed.begin());
+			const bool refined=!data.provider || data.provider(view,{posed.data(),data.count});
+			if(!refined)std::copy_n(data.bones.begin(),data.count,posed.begin());
+			for(unsigned i=0;i<data.count;++i)
+			{
+				float norm{};for(float x:posed[i].quat){if(!std::isfinite(x))return;norm+=x*x;}
+				if(norm<.5f || norm>1.5f)return;
+				for(unsigned axis=0;axis<3;++axis)if(!std::isfinite(posed[i].trans[axis]) || std::abs(posed[i].trans[axis]-offset[axis])>10000)return;
+			}
+			for(unsigned i=0;i<data.count;++i)for(unsigned axis=0;axis<3;++axis)posed[i].trans[axis]-=offset[axis];
+			std::copy_n(posed.begin(),data.count,matrices);
+			data.accepted=refined?matrices:nullptr;return;
 		}
 	}
 	bool skeletal_model::submit(std::span<const game::DObjAnimMat> bones,unsigned flags)

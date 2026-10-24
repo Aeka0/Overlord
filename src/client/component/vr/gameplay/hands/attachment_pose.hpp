@@ -26,6 +26,8 @@ namespace vr::gameplay::hands::attachments
 		body_pose::estimate body{}; // Same solved record; position is model-origin-relative.
 		std::array<std::uint64_t,2> reload_items{}; // Exact independent container pose revisions for either hand.
 		hands::vec head_forward{}, head_up{};       // Full center-eye axes, from the same solve.
+		hands::vec render_origin{}; // World origin used by these exact committed bone matrices.
+		unsigned knife_hands{}; // Reject a later DObj whose knife hand was hidden/unposed.
 	};
 	// Rigid body attachments share the exact skin record's body and placement
 	// origin. Never combine its relative head with a later global camera origin.
@@ -46,5 +48,10 @@ namespace vr::gameplay::hands::attachments
 	void after_skin(const solved&,int result,const void* record) noexcept;
 	bool for_record(const void* record,const std::array<float,12>& camera,solved&,
 		int reload_hand=-1,std::uint64_t reload_revision=0) noexcept;
+	// Retained skeletal props are evaluated before a rigid packing record exists.
+	// Admit a committed hand solve whose DObj/epoch/bones still match. Skinning
+	// occurs later and must not be a prerequisite for skeletal scene admission;
+	// its copied render_origin prevents mixing another frame's world origin.
+	bool for_current(std::uint64_t reference,std::uint64_t lease,solved&,int knife_hand=-1) noexcept;
 	void clear_after_drain() noexcept;
 }

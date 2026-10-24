@@ -17,7 +17,7 @@ from pathlib import Path
 import shutil
 import uuid
 
-SOUND_RESOURCES = ('h2-mod/zone/h2_vr_sounds.ff',
+SOUND_RESOURCES = ('h2-mod/zone/h2_vr_sounds.ff', 'h2-mod/zone/h2_vr_melee.ff',
                    'h2-mod/scripts/killfeed/__init__.lua',
                    'h2-mod/scripts/killfeed_ducking.gsc')
 

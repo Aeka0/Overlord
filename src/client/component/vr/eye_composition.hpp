@@ -66,7 +66,7 @@ namespace vr::eye_composition
 		std::uint32_t eye{}, width{}, height{};
 		model_view_origins model_origins{};
 		// Optional output owned by copy_eye for this call only. A successfully
-		// drawn right-eye recording frame publishes its immutable desktop crop.
+		// drawn recording frame publishes this eye's immutable desktop crop.
 		desktop_mirror::crop* recording_crop{};
 		ID3D11DepthStencilView* scene_depth{}; // Borrowed for this eye only, before its depth is reused.
 		const auxiliary_scene::request* auxiliary{};

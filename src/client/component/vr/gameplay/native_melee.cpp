@@ -91,9 +91,9 @@ namespace vr::gameplay::melee::native
 		const auto delta=sub(to,from);const auto distance=length(delta);if (distance<.0001f) return {};
 		return {weapons::native_carry::entity_key(result.hitId),point,scale(delta,1/distance),read<unsigned>(&result,0x20),read<std::uint16_t>(&result,0x24),read<std::uint16_t>(&result,0x26),result.fraction,flesh};
 	}
-	int damage(const hit& contact,std::uint32_t weapon,tool kind,std::uint32_t tactical_knife)
+	int damage(const hit& contact,std::uint32_t weapon,tool kind,std::uint32_t tactical_knife,strike_policy policy)
 	{
-		if(!allowed() || !contact)return 0;
+		if(!allowed() || !contact || policy.fixed_damage<0 || policy.fixed_damage>10000)return 0;
 		const auto definition=weapons::native_weapon_read::get(weapon);
 		if (!definition ||
 			weapons::native_carry::entity_key(contact.target.entity).generation!=contact.target.generation || contact.hit_location>=19) return 0;
@@ -103,14 +103,14 @@ namespace vr::gameplay::melee::native
         const bool exo=cheats::exo_punch::active();
         const auto knife_amount=(impact || exo) && weapons::native_weapon_read::get(tactical_knife) ?
             utils::hook::invoke<int>(0x1406a45d0,tactical_knife,false):0;
-        const auto amount=scaled_damage(native_amount,kind,impact || exo,knife_amount);if (!amount) return 0;
+        const auto amount=resolved_damage(native_amount,kind,impact || exo,knife_amount,policy);if (!amount) return 0;
 		if(kind==tool::shield && definition.definition->weapType!=game::WEAPTYPE_RIOTSHIELD)return 0;
 		auto* target=&game::g_entities[contact.target.entity];auto* player=&game::g_entities[0];const int before=read<int>(target,0x184);
 		committing=true;const auto restore=gsl::finally([]{committing=false;});
 		// Native melee sends a separate contact event before G_Damage. That
 		// event owns weapon-specific impact audio/FX; G_Damage alone never sends it.
 		// Use the physical contact, not the stock forward search/auto-lunge.
-		if (bladed(kind) || kind==tool::shield)
+		if (policy.native_hit_event && (bladed(kind) || kind==tool::shield))
 		{
 			const auto* ps=reinterpret_cast<const game::playerState_s*>(player->client);
 			if (ps && events::valid_weapon_hit(target->s.entityNum,player->s.entityNum,weapon))

@@ -16,6 +16,7 @@
 #include <algorithm>
 #include <array>
 #include <cstdint>
+#include <csetjmp>
 #include <cstring>
 #include <deque>
 #include <exception>

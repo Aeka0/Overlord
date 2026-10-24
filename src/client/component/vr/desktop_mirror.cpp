@@ -20,9 +20,11 @@ namespace vr::desktop_mirror
 		std::atomic_int32_t last_result{};
 		std::atomic<float> requested_fov{}, effective_fov{};
 		std::atomic_bool fov_limited{};
+		std::atomic_uint32_t selected_eye{1};
 		std::atomic<float> smoothing_strength{},correction_fraction{1};
 		thread_local pose_filter::filter camera_filter;
 		thread_local std::uint64_t camera_generation{};
+		thread_local std::uint32_t camera_eye{1};
 		thread_local std::array<float,3> camera_viewport{};
 		struct source_view
 		{
@@ -94,7 +96,7 @@ namespace vr::desktop_mirror
 			{
 				Microsoft::WRL::ComPtr<ID3DBlob> code, errors;
 				resources.error = D3DCompile(pixel_shader, sizeof(pixel_shader) - 1,
-					"h2v-desktop-right-eye", nullptr, nullptr, "main", "ps_4_0",
+					"h2v-desktop-mirror", nullptr, nullptr, "main", "ps_4_0",
 					D3DCOMPILE_OPTIMIZATION_LEVEL3, 0, &code, &errors);
 				if (FAILED(resources.error) && errors) console::error("[VR] desktop mirror shader: %s\n",
 					static_cast<const char*>(errors->GetBufferPointer()));
@@ -113,13 +115,15 @@ namespace vr::desktop_mirror
 		}
 	}
 
-	void draw(const float horizontal_fov)
+	void draw(const float horizontal_fov, const std::uint32_t requested_eye)
 	{
+		const std::uint32_t source_eye = requested_eye == 0 ? 0 : 1;
+		selected_eye.store(source_eye, std::memory_order_relaxed);
 		const auto* viewport = ImGui::GetMainViewport();
 		bool mirror_ready{};
 		const auto publish = gsl::finally([&] {
 			recording_frame::publish_viewport(mirror_ready ? viewport->Size.x : 0,
-				mirror_ready ? viewport->Size.y : 0,horizontal_fov);
+				mirror_ready ? viewport->Size.y : 0,horizontal_fov,source_eye);
 		});
 		// Native menus/console are still needed on the desktop. They are not a
 		// third scene render and must remain usable while the HMD is unavailable.
@@ -137,7 +141,7 @@ namespace vr::desktop_mirror
 			last_state.store(state::ui, std::memory_order_relaxed);
 			return;
 		}
-		const auto eye = native_render_session::active().right_eye_for_desktop();
+		const auto eye = native_render_session::active().eye_for_desktop(source_eye);
 		if (!eye.texture)
 		{
 			camera_filter.reset();
@@ -160,8 +164,8 @@ namespace vr::desktop_mirror
 		smoothing_strength.store(amount,std::memory_order_relaxed);
 		stabilized_view stabilized;
 		const std::array<float,3> current_viewport{viewport->Size.x,viewport->Size.y,horizontal_fov};
-		if(camera_generation!=eye.generation || camera_viewport!=current_viewport)
-		{camera_filter.reset();camera_generation=eye.generation;camera_viewport=current_viewport;}
+		if(camera_generation!=eye.generation || camera_viewport!=current_viewport || camera_eye!=source_eye)
+		{camera_filter.reset();camera_generation=eye.generation;camera_viewport=current_viewport;camera_eye=source_eye;}
 		if(std::isfinite(amount) && amount>0)
 		{
 			if(!eye.camera.valid){camera_filter.reset();last_state.store(state::invalid_view);return;}
@@ -181,7 +185,7 @@ namespace vr::desktop_mirror
 			last_result.store(resources.error, std::memory_order_relaxed);
 			last_state.store(state::failed, std::memory_order_relaxed);
 			if (SUCCEEDED(previous_error)) console::error(
-				"[VR] desktop right-eye mirror failed: HRESULT=0x%08X (HMD transport unchanged)\n",
+				"[VR] desktop mirror failed: HRESULT=0x%08X (HMD transport unchanged)\n",
 				static_cast<unsigned>(resources.error));
 			return;
 		}
@@ -226,7 +230,7 @@ namespace vr::desktop_mirror
 			last_pair.load(std::memory_order_relaxed), last_result.load(std::memory_order_relaxed),
 			requested_fov.load(std::memory_order_relaxed), effective_fov.load(std::memory_order_relaxed),
 			fov_limited.load(std::memory_order_relaxed),smoothing_strength.load(std::memory_order_relaxed),
-			correction_fraction.load(std::memory_order_relaxed)};
+			correction_fraction.load(std::memory_order_relaxed),selected_eye.load(std::memory_order_relaxed)};
 	}
 	const char* to_string(const state value) noexcept
 	{
@@ -234,7 +238,7 @@ namespace vr::desktop_mirror
 		{
 		case state::idle: return "idle";
 		case state::ui: return "desktop_ui";
-		case state::waiting_eye: return "waiting_right_eye";
+		case state::waiting_eye: return "waiting_eye";
 		case state::invalid_view: return "invalid_projection_or_extent";
 		case state::wrong_target: return "not_sdr_desktop_target";
 		case state::failed: return "failed";

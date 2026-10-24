@@ -159,11 +159,11 @@ namespace launcher_vr_settings
 	inline std::string setting_name(const std::vector<std::string>& parts)
 	{
 		if (parts.size() != 3 || (!same_name(parts[0], "seta") && !same_name(parts[0], "set"))) return {};
-		for(const auto& field:vr::settings::choices)if(same_name(field.name,parts[1]))return field.name;
+		for(const auto& field:vr::settings::choices)if(native_name(parts[1],field.name))return field.name;
 		for(const auto& field:vr::settings::toggles)
-			if(field.max_enabled_value > 1 ? native_name(parts[1], field.name) : same_name(field.name, parts[1]))return field.name;
+			if(native_name(parts[1], field.name))return field.name;
 		for (const auto& field : vr::settings::numbers)
-			if (same_name(field.name, parts[1])) return field.name;
+			if (native_name(parts[1], field.name)) return field.name;
 		return {};
 	}
 
@@ -177,6 +177,8 @@ namespace launcher_vr_settings
 			// Include advanced VR dvars, not just fields exposed by this launcher.
 			if (parts.size() == 3 && (same_name(parts[0], "set") || same_name(parts[0], "seta")) &&
 				parts[1].size() > 3 && same_name(std::string_view(parts[1]).substr(0, 3), "vr_")) return true;
+			const auto name = setting_name(parts);
+			if (name.size() > 3 && same_name(std::string_view(name).substr(0, 3), "vr_")) return true;
 			if (end == std::string_view::npos) break;
 			config.remove_prefix(end + 1);
 		}

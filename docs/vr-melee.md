@@ -3,10 +3,11 @@
 Standalone ending/cheat knives use the separate
 [special inventory knife binding](vr-special-knives.md). They retain ordinary
 carry/drop ownership outside scripted sequences. Official Green Beret delegates
-`h2_cheatcommandoknife` to this chest slot while the mode is active; see
+`h2_cheatcommandoknife` to this chest slot while the mode is active and the
+[melee weapon choice](vr-melee-customization.md) is Default; see
 [official cheat adaptation](vr-official-cheats.md).
 Cliffhanger instead uses two Grip-operated waist picks while Green Beret is
-active and hides the chest knife. Their curved head contact points, independent
+active with the Default melee choice and hides the chest knife. Their curved head contact points, independent
 leases, original-side return and story handoff are described in
 [Green Beret cheat melee tools](vr-official-cheats.md).
 

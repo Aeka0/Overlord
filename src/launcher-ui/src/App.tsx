@@ -724,6 +724,7 @@ function Launcher({ data }: { data: Bootstrap }) {
                 {categories.map((item) => (
                   <button
                     key={item}
+                    data-category={item}
                     aria-current={category === item ? "page" : undefined}
                     disabled={disabled}
                     onClick={() => {

@@ -57,8 +57,15 @@ does not change the provenance requirements above.
 
   The runtime scripts adapt the prototype's damage/death feedback and ducking;
   its LUI settings and experimental recoil model are not included.
+- `data/zone/h2_vr_melee.ff` is the requested curated melee resource zone. It
+  combines operator-selected H1 multiplayer baton/karambit sources with H2
+  common/ending knife sources and the H2 shader provider. The optional offline
+  conversion/build workflow and runtime boundaries are documented in
+  [melee customization](vr-melee-customization.md). Game artwork/recordings
+  retain their original provenance; the code license does not relicense them.
 - Proprietary game executables, game archives, local asset-export directories,
-  captures, minidumps and other generated fastfiles are excluded from this snapshot.
+  captures and minidumps are excluded. Only the explicitly curated compiled
+  VR sound/melee resource zones are client package inputs.
 
 These are explicit review items, not a claim that every inherited asset has
 already received complete legal clearance.

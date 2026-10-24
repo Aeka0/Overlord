@@ -16,7 +16,7 @@ namespace vr::gameplay::melee::native
 	bool initialize();
 	bool allowed() noexcept;
 	hit trace(vec from,vec to,vec head,float units,tool);
-	int damage(const hit&,std::uint32_t weapon,tool,std::uint32_t tactical_knife);
+	int damage(const hit&,std::uint32_t weapon,tool,std::uint32_t tactical_knife,strike_policy={});
 	struct feedback_counts {std::uint64_t hits{},blood{},shield_hits{},shield_blood{};};
 	feedback_counts feedback_status() noexcept;
 }

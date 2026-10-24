@@ -5,6 +5,7 @@
 #include "hand_interaction/frame.hpp"
 #include "hand_interaction/pose_plan.hpp"
 #include "grip_edges.hpp"
+#include "melee_weapon_policy.hpp"
 
 namespace vr::gameplay::equipment
 {
@@ -24,6 +25,7 @@ namespace vr::gameplay::equipment
 	{
 		knife_state knife{};
 		bool active{};
+		melee_weapons::kind variant{melee_weapons::kind::ghost};
 	};
 	knife_hand_snapshot prepare_hand_pose(const hands::interaction_rig&,const hands::rig&) noexcept;
 	void present(const knife_hand_snapshot&,const hands::interaction_rig&,const hands::rig&,

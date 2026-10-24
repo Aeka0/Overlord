@@ -73,22 +73,27 @@ namespace
 		using namespace vr;
 		const engine_stereo_bridge::eye_projection projection{-1.5f,1.2f,-1.1f,.9f};
 		const engine_stereo_bridge::eye_projection other{-1.2f,1.5f,-.9f,1.1f};
-		const auto captured=desktop_mirror::project(projection,2528,2704,1920,1080,95);
-		const auto matched=recording_frame::other_eye_crop(captured,projection,other);
-		require(matched && std::abs(matched.u0-captured.u0)>.01f,"asymmetric eyes use different UVs");
-		for (const auto uv : {std::array{captured.u0,matched.u0},std::array{captured.u1,matched.u1}})
-			require(std::abs(projection.tan_left+uv[0]*(projection.tan_right-projection.tan_left)-
-				(other.tan_left+uv[1]*(other.tan_right-other.tan_left)))<.00001f,"both eyes mark the same horizontal angles");
-		for (const auto uv : {std::array{captured.v0,matched.v0},std::array{captured.v1,matched.v1}})
-			require(std::abs(projection.tan_up-uv[0]*(projection.tan_up-projection.tan_down)-
-				(other.tan_up-uv[1]*(other.tan_up-other.tan_down)))<.00001f,"both eyes mark the same vertical angles");
-		const auto clipped=recording_frame::other_eye_crop(captured,projection,{-.2f,.2f,-.2f,.2f});
-		require(clipped && clipped.u0==0 && clipped.v0==0 && clipped.u1==1 && clipped.v1==1,
-			"narrow other-eye frustum clips safely without shrinking the captured eye");
-		require(!recording_frame::other_eye_crop({},projection,other) &&
-			!recording_frame::other_eye_crop(captured,projection,{-1,0,-1,1}) &&
-			!recording_frame::other_eye_crop({0,0,1,(std::numeric_limits<float>::quiet_NaN)()},projection,other),
-			"invalid paired-eye metadata has no guide");
+		for (const auto projections : {std::array{projection,other},std::array{other,projection}})
+		{
+			const auto& selected=projections[0];
+			const auto& paired=projections[1];
+			const auto captured=desktop_mirror::project(selected,2528,2704,1920,1080,95);
+			const auto matched=recording_frame::other_eye_crop(captured,selected,paired);
+			require(matched && std::abs(matched.u0-captured.u0)>.01f,"either selected eye uses its own asymmetric UVs");
+			for (const auto uv : {std::array{captured.u0,matched.u0},std::array{captured.u1,matched.u1}})
+				require(std::abs(selected.tan_left+uv[0]*(selected.tan_right-selected.tan_left)-
+					(paired.tan_left+uv[1]*(paired.tan_right-paired.tan_left)))<.00001f,"both eyes mark the same horizontal angles");
+			for (const auto uv : {std::array{captured.v0,matched.v0},std::array{captured.v1,matched.v1}})
+				require(std::abs(selected.tan_up-uv[0]*(selected.tan_up-selected.tan_down)-
+					(paired.tan_up-uv[1]*(paired.tan_up-paired.tan_down)))<.00001f,"both eyes mark the same vertical angles");
+			const auto clipped=recording_frame::other_eye_crop(captured,selected,{-.2f,.2f,-.2f,.2f});
+			require(clipped && clipped.u0==0 && clipped.v0==0 && clipped.u1==1 && clipped.v1==1,
+				"narrow other-eye frustum clips safely without shrinking the captured eye");
+			require(!recording_frame::other_eye_crop({},selected,paired) &&
+				!recording_frame::other_eye_crop(captured,selected,{-1,0,-1,1}) &&
+				!recording_frame::other_eye_crop({0,0,1,(std::numeric_limits<float>::quiet_NaN)()},selected,paired),
+				"invalid paired-eye metadata has no guide");
+		}
 		for (const unsigned size:{32u,1024u,2704u,8192u})
 			for (const auto display:{std::array<float,2>{1920,1080},{1080,1920},{3440,1440}})
 				for (float fov:{30.f,95.f,120.f})
@@ -127,7 +132,9 @@ namespace
 	void publish_test_recording_crop(const vr::eye_composition::event& event,ID3D11DeviceContext*,
 		ID3D11ShaderResourceView*,ID3D11RenderTargetView*) noexcept
 	{
-		if (event.recording_crop) *event.recording_crop={.2f,.3f,.8f,.7f,80,false};
+		if (event.recording_crop) *event.recording_crop=event.eye==0 ?
+			vr::desktop_mirror::crop{.1f,.2f,.7f,.6f,70,false} :
+			vr::desktop_mirror::crop{.2f,.3f,.8f,.7f,80,false};
 	}
 
 	vr::engine_stereo_view::slot_pair make_views(const std::uint64_t id, const bool swap = false)
@@ -276,41 +283,65 @@ vertex main(uint id : SV_VertexID) {
 			require(session.admit_pair(id), "admit projection test pair");
 			auto views = make_views(id, id == 302);
 			const auto camera_time=views.camera_sampled_at;
-			if (id == 304) ++views.eyes[1].pair_id;
-			if (id == 305) views.eyes[1].output_eye = 0;
-			if (id == 306) views.eyes[1].bytes.fill(0);
+			views.stabilization_epoch=id;
+			auto camera_axes=std::array{vr::pose_filter::identity,vr::pose_filter::identity};
+			camera_axes[0]={{{0,1,0},{-1,0,0},{0,0,1}}};
+			for (unsigned eye=0;eye<2;++eye)
+				std::memcpy(views.eyes[eye].bytes.data()+0x10C,camera_axes[eye].data(),sizeof(camera_axes[eye]));
+			const auto invalid_eye=static_cast<unsigned>(id%2);
+			if (id == 304) ++views.eyes[invalid_eye].pair_id;
+			if (id == 305) views.eyes[invalid_eye].output_eye = 1-invalid_eye;
+			if (id == 306) views.eyes[invalid_eye].bytes.fill(0);
 			vr::eye_composition::event event{views, id, graphics.generation, 1, 256, 256};
 			// Right-first completion also has to retain its metadata until left completes.
 			require(session.copy_eye(id, 1, source.Get(), 5, graphics.context.Get(), id == 303 ? nullptr : &event),
 				"copy right eye with optional preview metadata");
 			views.eyes[1].bytes.fill(0); // No retained pointer to the producer's slot.
-			const auto partial = session.right_eye_for_desktop();
-			require(!partial.texture || partial.pair_id < id, "unpublished image and metadata must stay hidden");
+			for (unsigned eye=0;eye<2;++eye)
+			{
+				const auto partial = session.eye_for_desktop(eye);
+				require(!partial.texture || partial.pair_id < id, "unpublished image and metadata must stay hidden for either eye");
+			}
 			event.eye = 0;
 			require(session.copy_eye(id, 0, source.Get(), 5, graphics.context.Get(), &event), "complete metadata pair");
-			const auto mirror = session.right_eye_for_desktop();
-			require(mirror.texture && mirror.pair_id == id, "preview must match published image");
-			require(mirror.camera.valid==(id<=302),"camera orientation is frozen with the exact valid image only");
-			if(id<=302)require(mirror.camera.at==camera_time,"preview timestamp must come from scene creation, not a later copy/draw");
-			require(bool(mirror.recording_crop)==(id==301),"guide crop freezes with its image and clears on mode-off or slot reuse");
-			if (id==301) require(mirror.recording_crop.u0==.2f && mirror.recording_crop.v1==.7f,
-				"right-first guide metadata survives later left-eye completion");
-			if (id <= 302)
-				require(std::abs(mirror.projection.tan_left - (id == 301 ? -1.15f : -.9f)) < .00001f,
-					"projection snapshot must follow the exact image, including eye swap");
-			else
-				require(mirror.projection.tan_left == 0 && mirror.projection.tan_right == 0,
-					"absent, foreign or invalid metadata must not reuse a prior ring projection");
 			std::array<vr::native_render_session::eye_target, 2> submitted;
-			require(session.acquire_published_pair(id, submitted) && session.release_pair(id),
-				"desktop metadata must not affect HMD publication or retirement");
-			const auto retired = session.right_eye_for_desktop();
-			require(retired.recording_crop.u0==mirror.recording_crop.u0,"retirement preserves exact guide crop until reuse");
-			require(retired.pair_id == id && retired.projection.tan_left == mirror.projection.tan_left,
-				"retired image retains its matching projection");
+			require(session.acquire_published_pair(id, submitted), "desktop metadata must not affect HMD publication");
+			std::array<vr::native_render_session::desktop_eye,2> mirrors;
+			for (unsigned eye=0;eye<2;++eye)
+			{
+				const auto& mirror=mirrors[eye]=session.eye_for_desktop(eye);
+				const bool metadata_valid=id<=302 || eye!=invalid_eye;
+				require(mirror.texture.Get()==submitted[eye].color.Get() && mirror.texture.Get()!=submitted[1-eye].color.Get() &&
+					mirror.pair_id==id,"each preview must match its own published eye texture");
+				require(mirror.camera.valid==metadata_valid,"invalid metadata in one eye does not affect the other camera");
+				if(metadata_valid)require(mirror.camera.at==camera_time && mirror.camera.epoch==id && mirror.camera.axes==camera_axes[eye],
+					"each preview freezes its own camera orientation with the scene timestamp and epoch");
+				require(bool(mirror.recording_crop)==(id==301),"each guide crop freezes with its image and clears on mode-off or slot reuse");
+				if(id==301)require(mirror.recording_crop.u0==(eye==0?.1f:.2f) && mirror.recording_crop.v1==(eye==0?.6f:.7f),
+					"each eye retains its own guide crop regardless of completion order");
+				if(metadata_valid)
+				{
+					const auto view_eye=id==302 ? 1-eye : eye;
+					require(std::abs(mirror.projection.tan_left-(view_eye==0?-.9f:-1.15f))<.00001f &&
+						std::abs(mirror.projection.tan_up-(view_eye==0?.8f:1.f))<.00001f,
+						"each projection snapshot follows the exact image, including eye swap");
+				}
+				else require(mirror.projection.tan_left==0 && mirror.projection.tan_right==0,
+					"absent, foreign or invalid metadata must not reuse a prior ring projection");
+			}
+			require(session.release_pair(id), "desktop metadata must not affect HMD retirement");
+			for (unsigned eye=0;eye<2;++eye)
+			{
+				const auto retired=session.eye_for_desktop(eye);
+				require(retired.texture.Get()==mirrors[eye].texture.Get() && retired.pair_id==id &&
+					retired.recording_crop.u0==mirrors[eye].recording_crop.u0 &&
+					retired.projection.tan_left==mirrors[eye].projection.tan_left && retired.camera.axes==mirrors[eye].camera.axes,
+					"retired images retain their own projection, camera and guide crop until reuse");
+			}
 		}
 		session.invalidate();
-		require(!session.right_eye_for_desktop().texture, "device invalidation removes image and metadata");
+		for (unsigned eye=0;eye<2;++eye)
+			require(!session.eye_for_desktop(eye).texture, "device invalidation removes both images and metadata");
 	}
 
 	void test_ring()
@@ -323,7 +354,8 @@ vertex main(uint id : SV_VertexID) {
 		vr::native_render_session::session session;
 		std::string error;
 		require(session.ensure(graphics, 256, 256, error), error.c_str());
-		require(!session.right_eye_for_desktop().texture, "unrendered ring is not a mirror image");
+		for (unsigned eye=0;eye<2;++eye)
+			require(!session.eye_for_desktop(eye).texture, "unrendered ring has no mirror image for either eye");
 		auto render = [&](const std::uint64_t id, const std::uint32_t eye)
 		{
 			vr::native_render_session::eye_target target;
@@ -334,35 +366,46 @@ vertex main(uint id : SV_VertexID) {
 			return target;
 		};
 		const auto left = render(101, 0);
-		require(!session.right_eye_for_desktop().texture, "partial pair must not be exposed");
+		for (unsigned eye=0;eye<2;++eye)
+			require(!session.eye_for_desktop(eye).texture, "partial pair must not expose either eye");
 		const auto right = render(101, 1);
 		const auto before = session.get_status();
-		const auto mirror = session.right_eye_for_desktop();
-		require(mirror.texture.Get() == right.color.Get() && mirror.texture.Get() != left.color.Get() &&
-			mirror.pair_id == 101 && mirror.generation == 73, "mirror is exact output eye 1");
+		const auto mirrors=std::array{session.eye_for_desktop(0),session.eye_for_desktop(1)};
+		for (unsigned eye=0;eye<2;++eye)
+			require(mirrors[eye].texture.Get()==(eye==0?left.color.Get():right.color.Get()) &&
+				mirrors[eye].pair_id==101 && mirrors[eye].generation==73,"mirror is the exact selected output eye");
+		require(!session.eye_for_desktop(2).texture &&
+			!session.eye_for_desktop((std::numeric_limits<std::uint32_t>::max)()).texture,
+			"invalid eye indices are rejected without touching either published eye");
 		bool foreign_visible{};
-		std::thread reader([&] { foreign_visible = !!session.right_eye_for_desktop().texture; });
+		std::thread reader([&] { foreign_visible=!!session.eye_for_desktop(0).texture || !!session.eye_for_desktop(1).texture; });
 		reader.join();
-		require(!foreign_visible, "cross-thread mirror access must be refused");
+		require(!foreign_visible, "cross-thread mirror access must be refused for both eyes");
 		const auto after = session.get_status();
 		require(after.pair_acquires == before.pair_acquires && after.pair_releases == before.pair_releases &&
 			after.pair_rejections == before.pair_rejections && session.pair_published(101), "mirror must not alter ownership");
-		test_color(graphics, mirror.texture.Get());
-		test_color(graphics, mirror.texture.Get(),true);
+		test_color(graphics, mirrors[1].texture.Get());
+		test_color(graphics, mirrors[1].texture.Get(),true);
 		require(session.release_pair(101), "retire first pair");
-		require(session.right_eye_for_desktop().pair_id == 101, "retired right eye persists without a copy");
+		for (unsigned eye=0;eye<2;++eye)
+			require(session.eye_for_desktop(eye).pair_id == 101, "both retired eye previews persist without a copy");
 		render(102, 0);
-		require(session.right_eye_for_desktop().pair_id == 101, "partial next pair does not displace the previous image");
+		for (unsigned eye=0;eye<2;++eye)
+			require(session.eye_for_desktop(eye).pair_id == 101, "partial next pair does not displace either previous image");
 		render(102, 1);
-		require(session.right_eye_for_desktop().pair_id == 102, "new complete pair replaces mirror");
+		for (unsigned eye=0;eye<2;++eye)
+			require(session.eye_for_desktop(eye).pair_id == 102, "new complete pair replaces both mirror choices");
 		session.quarantine_pair(102);
-		require(session.right_eye_for_desktop().pair_id == 101, "quarantined pair never displayed");
+		for (unsigned eye=0;eye<2;++eye)
+			require(session.eye_for_desktop(eye).pair_id == 101, "neither eye of a quarantined pair can be displayed");
 		vr::native_render_session::eye_target writing;
 		require(session.acquire_target(103, 0, writing), "reuse retired slot");
-		require(!session.right_eye_for_desktop().texture, "leased slot cannot remain a readable mirror");
+		for (unsigned eye=0;eye<2;++eye)
+			require(!session.eye_for_desktop(eye).texture, "leased slot cannot leave either eye readable");
 		session.cancel_pair(103);
 		session.invalidate();
-		require(!session.right_eye_for_desktop().texture, "invalidation clears mirror access");
+		for (unsigned eye=0;eye<2;++eye)
+			require(!session.eye_for_desktop(eye).texture, "invalidation clears both mirror choices");
 		test_copy_projection(graphics);
 	}
 }
@@ -372,7 +415,7 @@ int main()
 	try
 	{
 			test_layout(); test_recording_layout(); test_projection_metadata(); test_ring();
-		std::cout << "PASS: desktop mirror optical crop, FOV bounds, pair-matched projection, ownership and sRGB shader (CPU/WARP only; no H2/HMD acceptance)\n";
+		std::cout << "PASS: desktop mirror eye selection, optical crop, FOV bounds, per-eye metadata, ownership and sRGB shader (CPU/WARP only; no H2/HMD acceptance)\n";
 		return 0;
 	}
 	catch (const std::exception& error)

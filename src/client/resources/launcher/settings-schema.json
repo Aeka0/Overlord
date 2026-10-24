@@ -53,6 +53,14 @@
     "description": "settings.bodyPoseModeHint"
   },
   {
+    "name": "vr_desktopEye",
+    "category": "basics",
+    "group": "settings.stabilization",
+    "label": "settings.desktopEye",
+    "type": "choice",
+    "description": "settings.desktopEyeHint"
+  },
+  {
     "name": "vr_desktopStabilization",
     "category": "basics",
     "group": "settings.stabilization",
@@ -401,6 +409,14 @@
     "description": "settings.weaponGripModeHint"
   },
   {
+    "name": "vr_meleeWeapon",
+    "category": "personalization",
+    "group": "settings.meleeCustomization",
+    "label": "settings.meleeWeapon",
+    "type": "choice",
+    "description": "settings.meleeWeaponHint"
+  },
+  {
     "name": "vr_supportGripLock",
     "category": "gameplay",
     "group": "settings.weaponInteraction",
@@ -549,6 +565,14 @@
     "label": "settings.debugWaitTiming",
     "type": "toggle",
     "description": "settings.debugWaitTimingHint"
+  },
+  {
+    "name": "vr_debugAudioOutput",
+    "category": "debug",
+    "group": "settings.debugProbes",
+    "label": "settings.debugAudioOutput",
+    "type": "toggle",
+    "description": "settings.debugAudioOutputHint"
   },
   {
     "name": "vr_debugSceneModels",

@@ -1,58 +1,58 @@
-# 本轮可读性改动的实机回归清单
+# Runtime regression checklist for readability changes
 
-范围：携带／交互调度／手部呈现的可读性整理，以及武器装配、供弹、交互和声音配置的具名字段迁移。所有实机结果先留空，由测试者确认。
+Scope: readability cleanup of carry handling, interaction dispatch and hand presentation, plus migration to named fields in weapon assembly, feeding, interaction and sound configuration. All runtime results remain pending until confirmed by a tester.
 
-离线检查已完成：携带与杠杆握持用例 10,743 项检查、零失败；177 条配置／装配快照与迁移前一致；现有物理换弹回归零失败。这些结果不代替下面的实机确认。
+Completed offline checks: 10,743 checks across carry and lever-grip cases with zero failures; 177 configuration/assembly snapshots match their pre-migration values; existing physical-reload regressions have zero failures. These results do not replace the runtime checks below.
 
-## 测试准备
+## Test preparation
 
-- 用正常版本进行主要验收；Debug 版本补一次启动、加载和退出检查。
-- 使用熟悉的普通战斗检查点。保留惯常设置；检查弹药行为时临时关闭无限弹药与快捷装填，避免辅助功能掩盖结果。
-- 记录客户端版本、测试关卡／检查点和特殊武器版本。一般检查左右手都做一次；枪械本身有固定操作侧时保持原有设计。
+- Use the regular build for primary acceptance; also check startup, loading and shutdown once with the Debug build.
+- Use a familiar checkpoint in ordinary combat. Keep your usual settings; temporarily disable infinite ammunition and quick reload when checking ammunition behavior so these assists do not mask the results.
+- Record the client version, test map/checkpoint and any special weapon variants. Run general checks with each hand; preserve the intended operating side for weapons with fixed controls.
 
-## 第一轮：公共携带与状态恢复
+## Pass 1: Shared carry handling and state recovery
 
-| 结果 | 测试 | 操作和确认点 |
+| Result | Test | Actions and checks |
 | --- | --- | --- |
-| 待测 | 启动与冷加载 | 启动后加载存档，检查双眼画面、双手、手中枪、腰间／背后收纳物的可见性和位置；正常退出。正式／Debug 各启动一次。 |
-| 待测 | 空手／持枪拾取 | 分别在空手和另一只手已有枪的情况下拾取、收纳、取回；左右手互换。检查没有重复枪、错误火控手或丢失物品。 |
-| 待测 | 副手与枪套优先级 | 握住长枪，再抓副手支撑点；把枪靠近枪套区域复测。一次 Grip 不应同时取得支撑与另一把枪。松副手、重新握住后，姿势和射击恢复正常。 |
-| 待测 | 交换、丢弃与重抓 | 在有枪的收纳位交换武器，丢弃并拾回；检查弹药保持原有行为。一次释放只提交一次操作，失败操作不会变成错误的世界使用。 |
-| 待测 | 暂停／焦点／读档 | 在 Grip 按住和松开两种状态下暂停／恢复、切出／切回、读取检查点。恢复后没有意外射击或丢枪，手部姿势与收纳状态正常。 |
+| Pending | Startup and cold load | Launch and load a save. Check both eye views and the visibility and position of both hands, held weapons and items stored at the waist or back; exit normally. Launch both the regular and Debug builds once. |
+| Pending | Pickup with empty or occupied hands | Pick up, stow and retrieve items with empty hands and with a gun already in the other hand; swap left and right hands. Check for duplicate guns, incorrect firing-hand ownership and lost items. |
+| Pending | Support-hand and holster priority | Hold a long gun, then grab its support-hand point; repeat near a holster region. One Grip press must not acquire both support and another gun. Release and reattach the support hand; verify that pose and firing return to normal. |
+| Pending | Swap, drop and regrab | Swap weapons at an occupied storage slot, then drop and retrieve them; verify that ammunition behavior is preserved. One release commits only one action, and a failed action must not become an unintended world-use interaction. |
+| Pending | Pause, focus and checkpoint loading | Pause/resume, switch focus away/back and load a checkpoint with Grip both held and released. After recovery, check for unintended firing or dropped guns, and verify normal hand poses and storage state. |
 
-## 第二轮：按供弹家族取代表武器
+## Pass 2: Representative weapons by feeding family
 
-每组至少完成一次正常装填与射击。存在膛内保留／空枪锁定差异的武器，再分别做半弹换弹和打空换弹。
+Complete at least one normal reload and firing cycle per group. For weapons whose chamber retention or empty-lock behavior differs, also perform both a partial reload and a reload from empty.
 
-| 结果 | 武器范围 | 重点 |
+| Result | Weapons | Focus |
 | --- | --- | --- |
-| 待测 | M9 或 USP | 按钮退匣、插匣、拉套筒、空枪锁定与释放；膛内保留、弹药数量及换弹声音与此前一致。 |
-| 待测 | M4、M16 | 两者都做一次，覆盖共享配置工厂；拉机柄、空枪锁定和机匣释放片接触正常。 |
-| 待测 | AK47；MP5 或 UMP | 物理拔匣、插入及锁扣交互。MP5／UMP 补测拉机柄抬起、保持与拍下，检查不能误触另一部件。 |
-| 待测 | M200／CheyTac | 抬栓、拉后、推前、锁栓；抛壳、供弹和双手持握正常，装填后能继续射击。 |
-| 待测 | M240 或 MG4；RPD | 前者覆盖弹链换弹；RPD 另测瞄具桥架与顶盖互锁。打开、放入供弹物、铺链、闭盖、拉机柄后射击；握持和声音正常。 |
-| 待测 | M1014、SPAS-12 | 分别覆盖自动管式与泵动供弹；逐发装填、空枪恢复与泵动动作正常。 |
-| 待测 | M1887 | 杠杆开合与转枪；只剩副手持枪时，分别重抓原固定握把与活动控制点。检查姿势、火控恢复和装填没有跳变。 |
-| 待测 | Striker | 固定弹鼓的逐发装填与射击；没有被错误当成可拆弹匣或普通管式枪。 |
-| 待测 | Magnum .44 | 开转轮、清空弹壳、速装器补弹、闭合和射击；手部姿势、弹药和声音正常。 |
-| 待测 | Ranger、M79 | 分别覆盖双膛与单膛折开式供弹；开合、抛壳、插入和射击正常。 |
-| 待测 | RPG；Stinger／AT4 | RPG 做一次物理装填与射击；Stinger／AT4 检查瞄具、持握、原生射击及空管行为。以各自既有制导／装填规则为准。 |
-| 待测 | 一个附件／皮肤版本 | 选择 M4/M203、消音版本或 Arctic 版本，检查附件、贴图、可动部件和弹药显示。M4/M203 额外做一次模式切换与供弹。 |
+| Pending | M9 or USP | Button magazine release, insertion, slide cycling, empty lock and release; chamber retention, ammunition counts and reload sounds match previous behavior. |
+| Pending | M4 and M16 | Test both to cover the shared configuration factory; check charging-handle operation, empty lock and receiver release-tab contact. |
+| Pending | AK47; MP5 or UMP | Physical magazine removal, insertion and latch interaction. For MP5/UMP, also test raising, holding and slapping the charging handle; check for unintended interaction with another component. |
+| Pending | M200/CheyTac | Unlock, pull back, push forward and lock the bolt; verify ejection, feeding and two-handed grip, and confirm that firing resumes after reloading. |
+| Pending | M240 or MG4; RPD | Use M240/MG4 to cover belt-fed reloading; also test the RPD sight-bridge/top-cover interlock. Open, insert the ammunition supply, lay the belt, close the cover, charge and fire; verify grip and sound. |
+| Pending | M1014 and SPAS-12 | Cover semiautomatic tube feeding and pump-action feeding respectively; check individual shell loading, recovery from empty and pump operation. |
+| Pending | M1887 | Cycle the lever and spin the gun; with only the support hand holding it, regrab the original fixed grip and the moving control point separately. Check for discontinuities in pose, restored firing control and reloading. |
+| Pending | Striker | Load individual rounds into the fixed drum and fire; verify that it is not treated as a detachable magazine or an ordinary tube-fed weapon. |
+| Pending | Magnum .44 | Open the cylinder, eject cases, load with a speedloader, close and fire; verify hand poses, ammunition and sound. |
+| Pending | Ranger and M79 | Cover double-chamber and single-chamber break-action feeding respectively; check opening/closing, ejection, insertion and firing. |
+| Pending | RPG; Stinger/AT4 | Complete one physical reload and shot with the RPG; check sights, grip, native firing and empty-tube behavior for Stinger/AT4. Follow each weapon's existing guidance and reload rules. |
+| Pending | One attachment/skin variant | Choose M4/M203, a suppressed variant or an Arctic variant; check attachments, textures, moving parts and ammunition display. For M4/M203, also switch modes and reload once. |
 
-## 第三轮：公共手部与任务接管
+## Pass 3: Shared hand behavior and mission control handoffs
 
-| 结果 | 场景 | 确认点 |
+| Result | Scenario | Checks |
 | --- | --- | --- |
-| 待测 | 夜视仪、手雷、刀 | 使用和收回后能正常持枪／换弹；手指姿势、占用关系和装备可见性正常。 |
-| 待测 | Exodus 激光指示器 | 空手及已有枪两种状态下取出、使用和收回，检查原有任务交接与持枪恢复。 |
-| 待测 | 一个独立手部场景 | 选择 Cliffhanger 攀爬／冰镐或结局互动检查点，检查手部、剧情接管与控制归还。 |
-| 待测 | 一次载具／固定武器交接 | 进入、使用、离开；分别检查 Grip 按住／松开时的手部呈现与后续持枪。 |
+| Pending | Night vision, grenades and knife | Use and stow each item, then verify normal weapon handling/reloading, finger poses, hand occupancy and equipment visibility. |
+| Pending | Exodus laser designator | Draw, use and stow it with empty hands and with a gun already held; verify the existing mission handoff and restoration of weapon handling. |
+| Pending | One independent hand scenario | Choose a Cliffhanger climbing/ice-axe checkpoint or an ending interaction checkpoint; check hands, scripted takeover and return of control. |
+| Pending | One vehicle/mounted-weapon handoff | Enter, use and leave; check hand presentation and subsequent weapon handling with Grip both held and released. |
 
-## 问题记录
+## Issue reporting
 
-出现问题时记录：正常／Debug 版本、关卡／检查点、完整武器版本、左右手持有物、Grip／Trigger 是否按住、复现步骤，以及画面／声音／弹药哪一项异常。
+When an issue occurs, record the regular/Debug build, map/checkpoint, full weapon variant, items held in each hand, whether Grip/Trigger is held, reproduction steps and whether the fault affects visuals, sound or ammunition.
 
-可按相关家族手动查询现有控制台状态，必要时保留输出：
+Query the existing console status commands for the relevant family manually, and retain the output when needed:
 
 ```text
 vr_carry_status
@@ -62,4 +62,4 @@ vr_cylinder_status
 vr_break_action_status
 ```
 
-实机确认后把对应行的结果改为通过、失败或未覆盖；未覆盖的场景继续保留边界，不据此宣称全战役或全部硬件验收完成。
+After runtime verification, mark each corresponding row as Pass, Fail or Not covered. Keep untested scenarios explicitly outside the acceptance boundary; these checks do not establish acceptance for the entire campaign or all hardware.

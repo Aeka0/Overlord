@@ -5,9 +5,11 @@
 #include "equipment_runtime.hpp"
 #include "carry_interaction.hpp"
 #include "knife_profile.hpp"
+#include "melee_weapon_profile.hpp"
 #include "official_cheats.hpp"
 #include "native_weapon_read.hpp"
 #include "campaign/cliffhanger/runtime.hpp"
+#include "campaign/ending/runtime.hpp"
 #include "campaign/cliffhanger/pickaxe_policy.hpp"
 #include "physical_reload_runtime.hpp"
 #include "hands/attachment_pose.hpp"
@@ -21,6 +23,7 @@
 #include "weapon_feedback.hpp"
 #include "component/scene_models.hpp"
 #include "component/scene_rigid_part.hpp"
+#include "component/scene_skeletal_model.hpp"
 #include "component/scheduler.hpp"
 #include "component/fastfiles.hpp"
 #include "component/command.hpp"
@@ -45,6 +48,9 @@ namespace vr::gameplay::equipment
 			knife_state knife{};chest_slots chest{};anchor world{};
 			std::array<quat,2> basis{},mirror{};
 			bool hand_ready{},visible{},bayonet{};
+			melee_weapons::choice selection{melee_weapons::choice::native};
+			melee_weapons::kind variant{melee_weapons::kind::ghost};
+			clock::time_point drawn_at{};
 			std::uint64_t reference{};clock::time_point at{};
 		};
 		state published;
@@ -57,10 +63,12 @@ namespace vr::gameplay::equipment
 
 		std::atomic<game::XModel*> model{};
 		std::atomic_uint32_t knife_weapon{};
-		std::array<std::unique_ptr<scene_models::rigid_part>,2> knife_models;
-		std::array<std::atomic<game::XModel*>,2> models{};
-		std::array<std::atomic_uint32_t,2> providers{};
-		std::array<unsigned short,2> lighting{};
+		static constexpr unsigned variant_count=unsigned(melee_weapons::kind::count);
+		std::array<std::unique_ptr<scene_models::rigid_part>,variant_count> knife_models;
+		std::unique_ptr<scene_models::skeletal_model> baton_model;
+		std::array<std::atomic<game::XModel*>,variant_count> models{};
+		std::array<std::atomic_uint32_t,variant_count> providers{};
+		std::array<unsigned short,variant_count> lighting{};
 		std::atomic_uint64_t draws{},returns{},attempts{},contacts{},damaging_hits{};
 		std::atomic_uint64_t submitted{},prepared{},missing_pose{};
 		std::atomic_uint64_t chest_prepared{},grip_checks{};
@@ -77,27 +85,43 @@ namespace vr::gameplay::equipment
 		void end_fist(unsigned h) noexcept {fist_lease[h]=0;}
 		void reset_motion(unsigned h) noexcept {end_fist(h);motion[h].reset();motion_diagnostics[h].sequence=0;}
 		std::atomic<const char*> reason{"waiting for native knife resources"};
-		bool running() noexcept {return alive && enabled && enabled->current.enabled && !cheats::transitioning() && weapons::carry::active();}
+		bool running() noexcept {return alive && enabled && enabled->current.enabled && !cheats::transitioning() && !ending::latest().active && weapons::carry::active();}
 		bool fresh(clock::time_point at,clock::time_point now) noexcept {return now>=at && now-at<=150ms;}
 		anchor in_hand(const state& s,unsigned h) noexcept
-		{return knife_profile::attachment(s.knife.grip,s.mirror[h],h==1,knife_hand_pose::grip,s.bayonet);}
+		{return melee_weapons::attachment(s.variant,s.knife.grip,s.mirror[h],h==1);}
+		bool refine_baton_pose(const void*,std::span<game::DObjAnimMat>) noexcept;
         void refresh()
         {
             if(!alive || !game::CL_IsCgameInitialized() || !scene_models::ready())return;
-            for(unsigned variant=0;variant<2;++variant)
+            for(unsigned variant=0;variant<variant_count;++variant)
             {
+				const auto kind=melee_weapons::kind(variant);const auto& profile=melee_weapons::get(kind);
                 const auto* map=game::Dvar_FindVar("mapname");
-                if(variant && map && map->current.string && cheats::pickaxe_level(map->current.string))continue;
-                const auto* name=variant?knife_profile::bayonet_model_name:knife_profile::model_name;
+                if(kind==melee_weapons::kind::bayonet && map && map->current.string && cheats::pickaxe_level(map->current.string))continue;
+                const auto* name=profile.model;
                 if(!models[variant].load())
                 {
                     auto* candidate=game::DB_FindXAssetHeader(game::ASSET_TYPE_XMODEL,name,0).model;
                     if(!candidate || !candidate->name || std::string_view(candidate->name)!=name ||
-                        candidate->numBones!=(variant?3:2) || !candidate->boneNames || !candidate->baseMat)continue;
+                        candidate->numBones!=profile.bones || candidate->numRootBones!=1 || !candidate->boneNames || !candidate->baseMat)continue;
                     const auto* root=game::SL_ConvertToString(candidate->boneNames[0]);
-                    if(!root || std::string_view(root)!=(variant?"j_gun":"tag_knife"))continue;
-                    if(variant)
+                    if(!root || std::string_view(root)!=profile.root)continue;
+                    if(kind==melee_weapons::kind::bayonet)
                     {const auto* sheath=game::SL_ConvertToString(candidate->boneNames[1]);if(!sheath || std::string_view(sheath)!="tag_clip")continue;}
+					if(kind==melee_weapons::kind::baton)
+					{
+						bool matches=candidate->parentList!=nullptr;
+						for(unsigned i=0;matches && i<melee_weapons::baton_bones.size();++i)
+						{
+							const auto* bone=game::SL_ConvertToString(candidate->boneNames[i]);
+							matches=bone && std::string_view(bone)==melee_weapons::baton_bones[i] &&
+								(!i || candidate->parentList[i-1]==melee_weapons::baton_parents[i-1]);
+						}
+						if(!matches)continue;
+						auto skeletal=std::make_unique<scene_models::skeletal_model>();
+						if(!skeletal->create(candidate,refine_baton_pose))continue;
+						baton_model=std::move(skeletal);models[variant]=candidate;continue;
+					}
                     auto subset=std::make_unique<scene_models::rigid_part>();
                     // Root-only geometry excludes the bayonet sheath and empty FX socket.
                     if(!subset->create(candidate,0)){reason=subset->status();continue;}
@@ -105,29 +129,36 @@ namespace vr::gameplay::equipment
                     if(!scene_models::register_runtime_models(identity))continue;
                     knife_models[variant]=std::move(subset);models[variant]=knife_models[variant]->model();
                 }
-                if(providers[variant])continue;
+                if(providers[variant] || (variant && kind!=melee_weapons::kind::bayonet))continue;
                 for(std::uint32_t i=1;i<512;++i)
                 {
                     const auto value=weapons::native_weapon_read::get(i);if(!value)continue;
-                    if(variant)
+                    if(kind==melee_weapons::kind::bayonet)
                     {if(std::string_view(value.name.data())=="h2_cheatcommandoknife"){providers[variant]=i;break;}continue;}
                     game::XModel* attached{};
                     if(!utils::native_memory::read_at(value.definition,0x488,attached))continue;
-                    if(attached==knife_models[variant]->source()){providers[variant]=i;break;}
+					const char* attached_name{};unsigned char attached_bones{};
+					std::array<char,sizeof("h2_viewmodel_knife")> copied_name{};
+                    if(attached && utils::native_memory::read_at(attached,offsetof(game::XModel,name),attached_name) &&
+						utils::native_memory::read_at(attached,offsetof(game::XModel,numBones),attached_bones) && attached_bones==2 && attached_name &&
+						utils::native_memory::read_bytes(copied_name.data(),attached_name,copied_name.size()) &&
+						std::memcmp(copied_name.data(),knife_profile::model_name,copied_name.size())==0)
+					{providers[variant]=i;break;}
                 }
             }
+			for(unsigned i=1;i<unsigned(melee_weapons::kind::bayonet);++i)providers[i]=providers[0].load();
         }
 		void retire()
 		{
 			model=nullptr;knife_weapon=0;
 			{const std::lock_guard lock(mutex);published.knife.return_to_chest();published.visible=false;published.hand_ready=false;}
-			hands::attachments::clear_after_drain();for(unsigned i=0;i<2;++i){models[i]=nullptr;providers[i]=0;knife_models[i].reset();}
+			hands::attachments::clear_after_drain();for(unsigned i=0;i<variant_count;++i){models[i]=nullptr;providers[i]=0;knife_models[i].reset();}baton_model.reset();
 		}
 		void submit()
 		{
 				if (!running() || cheats::waist_pickaxes() || !scripted_control::predicted_allowed()) return;
 			state s;{const std::lock_guard lock(mutex);s=published;}
-			auto* asset=models[unsigned(s.bayonet)].load();if (!asset || !s.visible || !fresh(s.at,clock::now())) return;
+			auto* asset=models[unsigned(s.variant)].load();if (!asset || !s.visible || !fresh(s.at,clock::now())) return;
 			// Scene admission follows the current render body, not the server tick.
 			// Final chest/held placement is refined against the actual view record.
 			if (s.knife.holder==hand::none)
@@ -135,12 +166,27 @@ namespace vr::gameplay::equipment
 				if(!sequences::chest_equipment_visible())return;
 				head_pose_bridge::spatial_frame body;
 				if (!head_pose_bridge::get_spatial_frame(body) || body.generation!=s.reference || !fresh(body.captured_at,clock::now())) return;
-				const auto chest=locate_chest(body);if (!chest.valid) return;s.world=knife_profile::stowed(chest,s.bayonet);
+				const auto chest=locate_chest(body);if (!chest.valid) return;s.world=melee_weapons::stowed(chest,s.variant);
+			}
+			if(s.variant==melee_weapons::kind::baton)
+			{
+				if(!baton_model)return;
+				const auto seconds=std::chrono::duration<float>(clock::now()-s.drawn_at).count();
+				const auto parts=melee_weapons::baton_pose(seconds,vr::valid_hand(s.knife.holder));
+				std::array<game::DObjAnimMat,11> bones{};
+				for(unsigned i=0;i<bones.size();++i)
+				{
+					const auto world=compose(s.world,parts[i]);
+					std::copy(world.position.begin(),world.position.end(),bones[i].trans);
+					std::copy(world.rotation.begin(),world.rotation.end(),bones[i].quat);bones[i].transWeight=2;
+				}
+				if(baton_model->submit(bones,scene_models::no_cast_shadow))++submitted;
+				return;
 			}
 			game::GfxScaledPlacement placement{};placement.scale=1;
 			std::copy(s.world.position.begin(),s.world.position.end(),placement.base.origin);
 			std::copy(s.world.rotation.begin(),s.world.rotation.end(),placement.base.quat);
-			float color[4]{1,1,1,1};scene_models::submit(asset,&placement,scene_models::no_cast_shadow,&lighting[unsigned(s.bayonet)],color,color,color,8.f);
+			float color[4]{1,1,1,1};scene_models::submit(asset,&placement,scene_models::no_cast_shadow,&lighting[unsigned(s.variant)],color,color,color,8.f);
 			++submitted;
 		}
 		scene_models::placement_result prepare(const scene_models::preparation& p,const void* entry,game::GfxPlacement& current,game::GfxPlacement& previous) noexcept
@@ -148,10 +194,10 @@ namespace vr::gameplay::equipment
 			using result=scene_models::placement_result;
 			std::uintptr_t handle{};
 			if (!utils::native_memory::read_bytes(&handle,static_cast<const std::byte*>(entry)+0x68,8))return result::unchanged;
-			const int variant=handle==reinterpret_cast<std::uintptr_t>(&lighting[0])?0:handle==reinterpret_cast<std::uintptr_t>(&lighting[1])?1:-1;
+			int variant=-1;for(unsigned i=0;i<lighting.size();++i)if(handle==reinterpret_cast<std::uintptr_t>(&lighting[i]))variant=int(i);
 			if(variant<0)return result::unchanged;
 			state s;{const std::lock_guard lock(mutex);s=published;}
-				if (!running() || cheats::waist_pickaxes() || variant!=int(s.bayonet) || !s.visible || !fresh(s.at,clock::now())) return result::omit;
+				if (!running() || cheats::waist_pickaxes() || variant!=int(s.variant) || !s.visible || !fresh(s.at,clock::now())) return result::omit;
 			const bool held=vr::valid_hand(s.knife.holder);
 			if(!held && !sequences::chest_equipment_visible())return result::omit;
 			std::array<float,12> camera{};vec origin{};hands::attachments::solved pose;
@@ -164,14 +210,49 @@ namespace vr::gameplay::equipment
 			if (held)
 			{
 				const auto h=unsigned(s.knife.holder);
-				world=compose({add(pose.wrists[h].position,origin),normalize(pose.wrists[h].rotation)},knife_profile::attachment(s.knife.grip,pose.mirror_basis[h],h==1,pose.knife_poses[h],s.bayonet));
+				world=compose({add(pose.wrists[h].position,origin),normalize(pose.wrists[h].rotation)},melee_weapons::attachment(s.variant,s.knife.grip,pose.mirror_basis[h],h==1,pose.knife_poses[h]));
 			}
 			else
 			{
 				const auto body=hands::attachments::body_frame(pose,origin);
-				const auto chest=locate_chest(body);if (!chest.valid) return result::omit;world=knife_profile::stowed(chest,s.bayonet);++chest_prepared;
+				const auto chest=locate_chest(body);if (!chest.valid) return result::omit;world=melee_weapons::stowed(chest,s.variant);++chest_prepared;
 			}
 			std::copy(world.position.begin(),world.position.end(),current.origin);std::copy(world.rotation.begin(),world.rotation.end(),current.quat);previous=current;++prepared;return result::replace;
+		}
+		bool refine_baton_pose(const void*,std::span<game::DObjAnimMat> bones) noexcept
+		{
+			state s;{const std::lock_guard lock(mutex);s=published;}
+			if(!running() || !s.visible || s.variant!=melee_weapons::kind::baton || bones.size()!=11 || !fresh(s.at,clock::now()))return false;
+			const bool held=vr::valid_hand(s.knife.holder);
+			if(!held && !sequences::chest_equipment_visible())return false;
+			hands::attachments::solved pose;
+			if(!hands::attachments::for_current(s.reference,s.knife.revision,pose,held?int(s.knife.holder):-1))
+			{if(held)++missing_pose;return !held;}
+			const auto origin=pose.render_origin;
+			for(float x:origin)if(!std::isfinite(x) || std::abs(x)>1e7f)return false;
+			anchor target;
+			if(held)
+			{
+				const auto h=unsigned(s.knife.holder);
+				target=compose({add(pose.wrists[h].position,origin),normalize(pose.wrists[h].rotation)},
+					melee_weapons::attachment(s.variant,s.knife.grip,pose.mirror_basis[h],h==1,pose.knife_poses[h]));
+			}
+			else
+			{
+				const auto chest=locate_chest(hands::attachments::body_frame(pose,origin));if(!chest.valid)return false;
+				target=melee_weapons::stowed(chest,s.variant);++chest_prepared;
+			}
+			const anchor submitted_root{{bones[0].trans[0],bones[0].trans[1],bones[0].trans[2]},
+				{bones[0].quat[0],bones[0].quat[1],bones[0].quat[2],bones[0].quat[3]}};
+			const auto delta=compose(target,inverse(submitted_root));
+			for(auto& bone:bones)
+			{
+				const auto world=compose(delta,{{bone.trans[0],bone.trans[1],bone.trans[2]},
+					{bone.quat[0],bone.quat[1],bone.quat[2],bone.quat[3]}});
+				std::copy(world.position.begin(),world.position.end(),bone.trans);
+				std::copy(world.rotation.begin(),world.rotation.end(),bone.quat);
+			}
+			++prepared;return true;
 		}
 	}
 	bool held_by(hand h) noexcept {return running() && hand_interaction::has(h,hand_interaction::domain::knife);}
@@ -190,7 +271,7 @@ namespace vr::gameplay::equipment
 		if(!sequences::chest_equipment_visible()){draw_intent.reset();return;}
 		if(!running() || !knife_weapon || !model)return;
 		namespace hi=hand_interaction;state s;{const std::lock_guard lock(mutex);s=published;}
-		if(!s.hand_ready || s.bayonet!=cheats::chest_bayonet() || vr::valid_hand(s.knife.holder))return;
+		if(!s.hand_ready || s.selection!=melee_weapons::selected() || s.bayonet!=cheats::chest_bayonet() || vr::valid_hand(s.knife.holder))return;
 		const auto chest=locate_chest(f.body);if(!chest.valid)return;
 		unsigned pressed{},released{},available{};
 		for(int h=0;h<2;++h){const auto edge=hi::input(hand(h),hi::button::grip);if(edge.press)pressed|=1u<<h;if(edge.release)released|=1u<<h;if(hi::free(hand(h)))available|=1u<<h;}
@@ -234,13 +315,14 @@ namespace vr::gameplay::equipment
 		}
 		if (!melee::native::allowed() || !input.focused || !fresh(input.sampled_at,clock::now()) || body.generation!=input.reference_generation || owned.size()!=scenes.size()) {suspend();return 0;}
 		state s;{const std::lock_guard lock(mutex);s=published;}
-		const bool bayonet=cheats::chest_bayonet();
-        if(s.bayonet!=bayonet)
+		const auto selection=melee_weapons::selected();
+		const bool bayonet=cheats::chest_bayonet();const auto variant=melee_weapons::resolve(selection,bayonet);
+        if(s.bayonet!=bayonet || s.selection!=selection || s.variant!=variant)
         {
-            s.knife.return_to_chest();++s.knife.revision;s.bayonet=bayonet;
+            s.knife.return_to_chest();++s.knife.revision;s.bayonet=bayonet;s.selection=selection;s.variant=variant;s.drawn_at={};
             for(unsigned h=0;h<2;++h)reset_motion(h);hits.clear_contacts();draw_intent.reset();
         }
-        model=models[unsigned(bayonet)].load();knife_weapon=providers[unsigned(bayonet)].load();
+        model=models[unsigned(variant)].load();knife_weapon=providers[unsigned(variant)].load();
         const bool waist_picks=cheats::waist_pickaxes();
         if(waist_picks){s.knife.return_to_chest();draw_intent.reset();}
         reason=model && knife_weapon?"native chest knife ready":"selected chest knife resources unavailable";
@@ -259,7 +341,7 @@ namespace vr::gameplay::equipment
 			palms[h]=knife_profile::palm_contact(wrists[h],s.basis[h],s.mirror[h],h==1);
 			palm_distance[h]=length(sub(palms[h],s.chest.anchors[0].position))/body.units_per_meter;
 		}
-		unsigned claimed{};
+		unsigned claimed{};bool just_drawn{};
 		if (s.knife.release(released)) {claimed|=released;++returns;}
 		if (vr::valid_hand(s.knife.holder))
 		{
@@ -276,24 +358,27 @@ namespace vr::gameplay::equipment
 			if (best<2)
 			{
 				const auto wrist=anchor{wrists[best].position,normalize(multiply(wrists[best].rotation,s.basis[best]))};
-				const auto forward=compose(wrist,knife_profile::attachment(knife_grip::forward,s.mirror[best],best==1,knife_hand_pose::grip,s.bayonet));
-				const auto reverse=compose(wrist,knife_profile::attachment(knife_grip::reverse,s.mirror[best],best==1,knife_hand_pose::grip,s.bayonet));
+				const auto forward=compose(wrist,melee_weapons::attachment(s.variant,knife_grip::forward,s.mirror[best],best==1));
+				const auto reverse=compose(wrist,melee_weapons::attachment(s.variant,knife_grip::reverse,s.mirror[best],best==1));
 				const auto stowed=rotate(s.chest.anchors[0].rotation,{1,0,0});
-				const vec blade_axis=s.bayonet?vec{0,0,1}:vec{1,0,0};
-				const auto grip=dot(rotate(forward.rotation,blade_axis),stowed)>=dot(rotate(reverse.rotation,blade_axis),stowed) ? knife_grip::forward : knife_grip::reverse;
-				if (s.knife.take(static_cast<hand>(best),grip)) {draw_intent.reset();claimed|=1u<<best;++draws;weapons::feedback::carry_confirmation(static_cast<hand>(best),input);}
+				const auto& selected_profile=melee_weapons::get(s.variant);
+				const vec blade_axis=rotate(conjugate(selected_profile.slot_rotation),{1,0,0});
+				const auto grip=melee_weapons::grip(s.variant,dot(rotate(forward.rotation,blade_axis),stowed)>=dot(rotate(reverse.rotation,blade_axis),stowed) ? knife_grip::forward : knife_grip::reverse);
+				if (s.knife.take(static_cast<hand>(best),grip)) {s.drawn_at=input.sampled_at;just_drawn=true;draw_intent.reset();claimed|=1u<<best;++draws;weapons::feedback::carry_confirmation(static_cast<hand>(best),input);}
 			}
 		}
 		if (s.chest.valid)
 		{
-			s.world=knife_profile::stowed(s.chest,s.bayonet);
+			s.world=melee_weapons::stowed(s.chest,s.variant);
 			if (vr::valid_hand(s.knife.holder))
 			{
 				const auto h=unsigned(s.knife.holder);s.visible=s.visible && (valid_hands&(1u<<h));claimed|=1u<<h;
 				s.world=compose({wrists[h].position,normalize(multiply(wrists[h].rotation,s.basis[h]))},in_hand(s,h));
 			}
 		}
-		{const std::lock_guard lock(mutex);published.knife=s.knife;published.bayonet=s.bayonet;published.chest=s.chest;published.world=s.world;published.visible=s.visible;published.reference=s.reference;published.at=s.at;}
+		{const std::lock_guard lock(mutex);published.knife=s.knife;published.bayonet=s.bayonet;published.variant=s.variant;published.selection=s.selection;published.drawn_at=s.drawn_at;published.chest=s.chest;published.world=s.world;published.visible=s.visible;published.reference=s.reference;published.at=s.at;}
+		if(just_drawn && s.variant==melee_weapons::kind::baton)
+			melee::feedback::baton_sound(s.world.position,s.knife.holder,s.knife.revision,input.reference_generation,false);
 		const auto body_point=[&](vec p) {return body_local(body,p);};
 		const auto world_point=[&](vec p) {return body_world(body,p);};
 		const auto body_rotation=conjugate(from_axis(body.head_yaw_axis));
@@ -317,7 +402,14 @@ namespace vr::gameplay::equipment
 				// Co-grasp can strike, but acquiring/releasing its pose cannot bridge a swing.
 				if (knife_motion_pose[h]!=plan.grasp) {reset_motion(h);knife_motion_pose[h]=plan.grasp;}
 				if (!plan.melee) {reset_motion(h);hits.contact(h,0,false,input.sampled_at);continue;}
-				sample.kind=melee::tool::knife;sample.identity=s.knife.revision;object=s.world;start=s.bayonet?knife_profile::bayonet_blade_base:knife_profile::blade_base;end=s.bayonet?knife_profile::bayonet_blade_tip:knife_profile::blade_tip;
+				// Authored telescopic motion must never arm a stationary hand's
+				// melee sweep. Start a fresh interval only after deployment settles.
+				if(s.variant==melee_weapons::kind::baton &&
+					std::chrono::duration<float>(input.sampled_at-s.drawn_at).count()<23.f/melee_poses::baton_fps)
+				{reset_motion(h);hits.contact(h,0,false,input.sampled_at);continue;}
+				const auto& profile=melee_weapons::get(s.variant);
+				sample.kind=melee::tool::knife;sample.identity=s.knife.revision;object=s.world;start=profile.blade_base;end=profile.blade_tip;
+				if(s.variant==melee_weapons::kind::baton)end=melee_weapons::baton_tip(std::chrono::duration<float>(input.sampled_at-s.drawn_at).count());
 			}
 			else
 			{
@@ -384,14 +476,18 @@ namespace vr::gameplay::equipment
 			if (contact) ++contacts;
 			if (hits.contact(h,key,bool(hit),input.sampled_at))
 			{
-				++attempts;const int damage=melee::native::damage(hit,weapon,sample.kind,knife_weapon.load());last_target=hit.target.entity;last_damage=damage;
+				const bool chest_tool=sample.kind==melee::tool::knife && !striking_owner.weapon && s.knife.holder==hand(h);
+				const bool baton=chest_tool && s.variant==melee_weapons::kind::baton;
+				++attempts;const int damage=melee::native::damage(hit,weapon,sample.kind,knife_weapon.load(),
+					{baton?120:0,!baton});last_target=hit.target.entity;last_damage=damage;
 				if (damage>0)
 				{
 					++damaging_hits;weapons::feedback::carry_confirmation(static_cast<hand>(h),input);
 					if(striking_pick && hit.flesh)melee::feedback::pickaxe(object,hand(h),pick.side,pick.lease,input.reference_generation);
-					if (sample.kind==melee::tool::knife && hit.flesh)
+					if(baton)melee::feedback::baton_sound(hit.point,hand(h),s.knife.revision,input.reference_generation,true);
+					if (sample.kind==melee::tool::knife && hit.flesh && !baton)
 						melee::feedback::knife(object,static_cast<hand>(h),striking_owner.weapon ? striking_owner.revision : s.knife.revision,
-							input.reference_generation,striking_owner.id());
+							input.reference_generation,striking_owner.id(),s.variant);
 					if (sample.kind==melee::tool::firearm) weapons::feedback::melee_confirmation(striking_owner,input,hit.point);
 					if (sample.kind==melee::tool::fist) weapons::feedback::fist_confirmation(hand(h),sample.identity,input,hit.point);
 				}
@@ -405,7 +501,7 @@ namespace vr::gameplay::equipment
 		const bool active=running();
 		const std::lock_guard lock(mutex);published.hand_ready=true;published.basis=parts.basis;
 		for(unsigned h=0;h<2;++h)published.mirror[h]=parts.library.mirror_basis[r.arms[h].wrist];
-		return {published.knife,active};
+		return {published.knife,active,published.variant};
 	}
 	void present(const knife_hand_snapshot& s,const hands::interaction_rig& parts,const hands::rig& r,
 		const std::array<anchor,2>& targets,const std::array<hand_interaction::pose_plan,2>& plans,
@@ -422,7 +518,8 @@ namespace vr::gameplay::equipment
 				(knife || plan.driver.provider==hand_interaction::domain::world))
 			{
 				if(knife){const auto wrist=r.arms[h].wrist;move_part(r,wrist,{solved[wrist].position,normalize(multiply(targets[h].rotation,parts.basis[h]))},solved);}
-				hands::pose_mirror::fingers(r,parts.library,hands::native_hand_schema::definition,knife_profile::fingers,h,solved,h==1);
+				const auto fingers=knife?melee_weapons::get(s.variant).fingers:std::span<const hands::joint_pose>(knife_profile::fingers);
+				hands::pose_mirror::fingers(r,parts.library,hands::native_hand_schema::definition,fingers,h,solved,h==1);
 			}
 		}
 	}
@@ -441,7 +538,7 @@ namespace vr::gameplay::equipment
 				auto report=std::format("[VR melee] enabled={} model={} weapon={} hand={} grip={} revision={} visible={} hands_ready={} draws={} returns={} contacts={} attempts={} damaging_hits={} last_target={} last_damage={} submissions={} prepared={} missing_pose={} cooldown_ms=400 reason={}\n",
 					running(),model.load()!=nullptr,knife_weapon.load(),int(s.knife.holder),unsigned(s.knife.grip),s.knife.revision,s.visible,s.hand_ready,
 					draws.load(),returns.load(),contacts.load(),attempts.load(),damaging_hits.load(),last_target.load(),last_damage.load(),submitted.load(),prepared.load(),missing_pose.load(),reason.load())+
-					std::format("model_name={} chest_prepared={} grip_checks={} available={} pending={} palm_distance_m={:.3f}/{:.3f} world_depth=1\n",s.bayonet?knife_profile::bayonet_model_name:knife_profile::model_name,
+					std::format("model_name={} choice={} variant={} chest_prepared={} grip_checks={} available={} pending={} palm_distance_m={:.3f}/{:.3f} world_depth=1\n",melee_weapons::get(s.variant).model,unsigned(s.selection),unsigned(s.variant),
 						chest_prepared.load(),grip_checks.load(),grab_available.load(),grab_pending.load(),palm_distance[0].load(),palm_distance[1].load())+
 					std::format("native_knife_hit_events={} native_knife_blood_events={} native_shield_hit_events={} native_shield_blood_events={}\n",
 						feedback.hits,feedback.blood,feedback.shield_hits,feedback.shield_blood)+melee::feedback::status()+npc_collision::status();

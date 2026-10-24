@@ -163,9 +163,9 @@ namespace vr::native_render_session
 			const eye_composition::event* composition = nullptr) noexcept;
 		[[nodiscard]] bool acquire_published_pair(std::uint64_t pair_id,
 			std::array<eye_target, 2>& output) noexcept;
-		// Read-only right-eye preview on the same H2 GPU owner thread. This does
+		// Read-only selected-eye preview on the same H2 GPU owner thread. This does
 		// not lease/retire a pair, wait for SteamVR, or retain a desktop backbuffer.
-		[[nodiscard]] desktop_eye right_eye_for_desktop() const noexcept;
+		[[nodiscard]] desktop_eye eye_for_desktop(std::uint32_t eye) const noexcept;
 		[[nodiscard]] bool pair_failed(std::uint64_t pair_id) const noexcept;
 		[[nodiscard]] bool pair_deferred(std::uint64_t pair_id) const noexcept;
 		[[nodiscard]] bool pair_published(std::uint64_t pair_id) const noexcept;
@@ -198,9 +198,9 @@ namespace vr::native_render_session
 			pair_state state{pair_state::free};
 			std::uint64_t preview_pair_id{};
 			std::uint32_t preview_owner_thread{};
-			engine_stereo_bridge::eye_projection preview_projection{};
-			desktop_mirror::crop preview_recording_crop{};
-			desktop_mirror::camera_sample preview_camera{};
+			std::array<engine_stereo_bridge::eye_projection, 2> preview_projection{};
+			std::array<desktop_mirror::crop, 2> preview_recording_crop{};
+			std::array<desktop_mirror::camera_sample, 2> preview_camera{};
 		};
 		void invalidate_locked() noexcept;
 		[[nodiscard]] bool terminate_unpublished_pair_locked(std::uint64_t pair_id,

@@ -13,6 +13,7 @@ using vr::hand;
 #include "melee_motion_tests.hpp"
 #include "enemy_combat_tests.hpp"
 #include "fist_feedback_tests.hpp"
+#include "melee_weapon_tests.hpp"
 #include <iostream>
 #include <limits>
 
@@ -28,6 +29,7 @@ int main()
 	trainer_tests::run(check);
 	melee_motion_tests::run(check);
 	fist_feedback_tests::run(check);
+	melee_weapon_tests::run(check);
 	{
 		melee::motion motion;melee::sample sample;sample.count=1;sample.sequence=1;sample.reference=1;sample.identity=3;
 		sample.weapon=80;sample.kind=melee::tool::pickaxe;sample.at=melee::clock::now();sample.points[0]={0,0,.45f};

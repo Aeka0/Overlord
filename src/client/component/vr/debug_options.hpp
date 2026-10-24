@@ -10,13 +10,13 @@ namespace vr::debug_options
 	enum class probe : std::size_t
 	{
 		view, snapshots, perf, scene_models, menu_input, weapon_events, vehicle,
-		reload_well, hk_slap, bolt, cover, waits, count
+		reload_well, hk_slap, bolt, cover, waits, audio_output, count
 	};
 	inline constexpr std::array names{
 		"vr_debugViewProbes", "vr_debugAutoSnapshots", "vr_debugPerfCapture", "vr_debugSceneModels",
 		"vr_debugMenuInput", "vr_debugWeaponEvents", "vr_debugVehicle",
 		"vr_reloadWellDebug", "vr_hkSlapDebug", "vr_boltDebug", "vr_coverPushDebug",
-		"vr_debugWaitTiming"};
+		"vr_debugWaitTiming", "vr_debugAudioOutput"};
 	using selection = std::array<bool, static_cast<std::size_t>(probe::count)>;
 	static_assert(names.size() == selection{}.size());
 

@@ -216,6 +216,7 @@ namespace fastfiles
 			}
 
 				try_add_zone(zones, allocator, "h2_vr_sounds", false);
+			try_add_zone(zones, allocator, "h2_vr_melee", false);
 			add_mod_zones(zones, allocator, mods::zone_priority::post_common);
 
 			game::DB_LoadXAssets(zones.data(), static_cast<int>(zones.size()), sync_mode);

@@ -26,9 +26,9 @@ namespace vr::settings
 	struct choice_setting
 	{
 		const char* name;
-		std::array<const char*, 5> values; // Null terminated for native enum registration.
+		std::array<const char*, 7> values; // Null terminated for native enum registration.
 		int default_index{};
-		std::array<const char*, 5> label_keys{}; // Launcher localization keys, paired with values.
+		std::array<const char*, 7> label_keys{}; // Launcher localization keys, paired with values.
 	};
 	inline constexpr choice_setting killfeed_style{
 		.name = "vr_killfeedStyle",
@@ -58,18 +58,29 @@ namespace vr::settings
 	inline constexpr choice_setting weapon_grip_mode{.name = "vr_weaponGripMode",
 	                                                 .values = {"hold", "toggle"},
 	                                                 .label_keys = {"choice.hold", "choice.toggle"}};
+	inline constexpr choice_setting melee_weapon{
+		.name = "vr_meleeWeapon",
+		.values = {"default", "ghost", "baton", "karambit", "ending", "bloody"},
+		.label_keys = {"choice.meleeDefault", "choice.meleeGhost", "choice.meleeBaton",
+			"choice.meleeKarambit", "choice.meleeEnding", "choice.meleeBloody"}};
 	inline constexpr choice_setting handedness{.name = "vr_handedness",
 	                                          .values = {"right", "left"},
 	                                          .label_keys = {"choice.rightHand", "choice.leftHand"}};
+	inline constexpr choice_setting desktop_eye{.name = "vr_desktopEye",
+	                                           .values = {"left", "right"},
+	                                           .default_index = 1,
+	                                           .label_keys = {"choice.leftEye", "choice.rightEye"}};
 	inline constexpr choice_setting body_pose_mode{.name = "vr_bodyPoseMode",
 	                                              .values = {"inferred", "head_locked"},
 	                                              .label_keys = {"choice.inferredBody", "choice.headLockedBody"}};
 	inline constexpr std::array choices{
 	    runtime_backend,
 	    handedness,
+	    desktop_eye,
 	    body_pose_mode,
 	    controller_pose_mode,
 	    weapon_grip_mode,
+	    melee_weapon,
 	    killfeed_style,
 	    choice_setting{
 	        .name = turn_mode, .values = {"smooth", "snap"}, .label_keys = {"choice.smooth", "choice.snap"}},

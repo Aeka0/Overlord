@@ -115,6 +115,7 @@ return function()
 
 	test_executable("vr-launcher-settings-tests", "launcher-settings")
 		files {"./tests/vr/launcher_settings_tests.cpp", "./src/client/launcher/vr_settings_config.hpp",
+			"./tests/vr/native_melee_setting_tests.cpp", "./src/client/component/vr/gameplay/melee_weapon_selection.cpp",
 			"./src/client/component/vr/settings.hpp", "./src/client/launcher/bridge_protocol.hpp"}
 		includedirs {"./tests/vr", "./src/client"}
 		gsl.import()
@@ -190,6 +191,12 @@ return function()
 		includedirs {"./tests/vr", "./src/client"}
 		gsl.import()
 		links {"d3d11", "dxgi", "d3dcompiler"}
+
+	test_executable("vr-attachment-pose-tests", "attachment-pose")
+		files {"./tests/vr/attachment_pose_tests.cpp",
+			"./src/client/component/vr/gameplay/hands/attachment_pose.cpp"}
+		includedirs {"./tests/vr", "./src/client"}
+		gsl.import()
 
 	test_executable("vr-menu-backdrop-tests", "menu-backdrop")
 		files {"./tests/vr/menu_backdrop_tests.cpp", "./src/client/component/vr/spatial_panel_renderer.cpp"}

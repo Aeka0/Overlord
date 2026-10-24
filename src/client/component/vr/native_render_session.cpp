@@ -644,6 +644,7 @@ float4 main(float4 position : SV_Position) : SV_Target
 			if (pair.state != pair_state::free) continue;
 			pair.pair_id = pair_id;
 			pair.preview_pair_id = 0;
+			pair.preview_owner_thread = 0;
 			pair.preview_projection = {};
 			pair.preview_recording_crop = {};
 			pair.preview_camera = {};
@@ -854,6 +855,7 @@ float4 main(float4 position : SV_Position) : SV_Target
 				if (pair.state != pair_state::free) continue;
 				pair.pair_id = pair_id;
 				pair.preview_pair_id = 0;
+				pair.preview_owner_thread = 0;
 				pair.preview_projection = {};
 				pair.preview_recording_crop = {};
 				pair.preview_camera = {};
@@ -994,11 +996,11 @@ float4 main(float4 position : SV_Position) : SV_Target
 			// Freeze metadata with this ring image before publication. An invalid
 			// preview projection disables only the desktop crop, never HMD output.
 			const auto& slot = composition->views.eyes[eye];
-			const bool preview_valid=eye==1 && slot.pair_id==pair_id && slot.output_eye==eye &&
-				engine_stereo_view::read_projection(slot, selected->preview_projection);
+			const bool preview_valid=slot.pair_id==pair_id && slot.output_eye==eye &&
+				engine_stereo_view::read_projection(slot, selected->preview_projection[eye]);
 			if(preview_valid)
 			{
-				auto& camera=selected->preview_camera;
+				auto& camera=selected->preview_camera[eye];
 				std::memcpy(camera.axes.data(),slot.bytes.data()+0x10C,sizeof(camera.axes));
 				camera.at=composition->views.camera_sampled_at;camera.epoch=composition->views.stabilization_epoch;
 				camera.valid=pose_filter::valid({{},camera.axes});
@@ -1013,7 +1015,7 @@ float4 main(float4 position : SV_Position) : SV_Target
 				eye_composition::compose(event, context, conversion_source_view.Get(),
 					selected->eyes[eye].color_view.Get());
 			}
-			if (eye==1) selected->preview_recording_crop=recording_crop;
+			selected->preview_recording_crop[eye]=recording_crop;
 		}
 		const auto removed_started = std::chrono::steady_clock::now();
 		const auto removed_reason = device_->GetDeviceRemovedReason();
@@ -1061,10 +1063,10 @@ float4 main(float4 position : SV_Position) : SV_Target
 		return false;
 	}
 
-	desktop_eye session::right_eye_for_desktop() const noexcept
+	desktop_eye session::eye_for_desktop(const std::uint32_t eye) const noexcept
 	{
 		const std::lock_guard lock(mutex_);
-		if (!status_.available) return {};
+		if (eye >= 2 || !status_.available) return {};
 		const auto thread = GetCurrentThreadId();
 		const target_pair* latest{};
 		for (const auto& pair : pairs_)
@@ -1076,8 +1078,8 @@ float4 main(float4 position : SV_Position) : SV_Target
 			if (!latest || pair.preview_pair_id > latest->preview_pair_id) latest = &pair;
 		}
 		if (!latest) return {};
-		return {latest->eyes[1].color, latest->preview_pair_id, device_generation_, width_, height_,
-			latest->preview_projection,latest->preview_recording_crop,latest->preview_camera};
+		return {latest->eyes[eye].color, latest->preview_pair_id, device_generation_, width_, height_,
+			latest->preview_projection[eye],latest->preview_recording_crop[eye],latest->preview_camera[eye]};
 	}
 
 	bool session::pair_failed(const std::uint64_t pair_id) const noexcept

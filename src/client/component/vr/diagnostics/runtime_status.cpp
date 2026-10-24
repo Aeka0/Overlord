@@ -9,6 +9,7 @@
 #include "../engine_scene_resolution.hpp"
 #include "../head_pose_bridge.hpp"
 #include "../vr_runtime.hpp"
+#include "component/sound_output_diagnostics.hpp"
 
 #include <algorithm>
 #include <iomanip>
@@ -40,6 +41,7 @@ namespace vr::diagnostics::detail
 		const head_pose_bridge::status& head_status)
 	{
 		output << "runtime:\n";
+		output << sound::output_diagnostics::status();
 		output << "  backend=" << available(runtime_status.backend_name);
 		output << " selection=" << available(runtime_status.backend_selection_reason) << '\n';
 		output << "  menu_surface=" << available(runtime_status.menu_surface_mode) << '\n';
@@ -166,7 +168,8 @@ namespace vr::diagnostics::detail
 			<< " rebuilds=" << resolution.rebuilds << " thread=" << resolution.apply_thread << '\n';
 		output << "  native_resolution_error=" << available(resolution.error) << '\n';
 		const auto mirror = desktop_mirror::get_report();
-		output << "  desktop_mirror: mode=right_eye_symmetric_projection state=" << desktop_mirror::to_string(mirror.phase)
+		output << "  desktop_mirror: mode=" << (mirror.eye == 0 ? "left_eye" : "right_eye")
+			<< "_symmetric_projection state=" << desktop_mirror::to_string(mirror.phase)
 			<< " draws=" << mirror.draws << " last_pair=" << mirror.last_pair
 			<< " last_result=" << mirror.last_result
 			<< " requested_hfov=" << mirror.requested_fov << " effective_hfov=" << mirror.effective_fov

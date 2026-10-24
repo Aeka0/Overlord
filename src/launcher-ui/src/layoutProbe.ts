@@ -458,7 +458,7 @@ export function inspectLauncherLayout() {
 export function inspectCampaignUnlock() {
   const navigation = document.querySelector(".settings-navigation");
   const previous = navigation?.querySelector<HTMLButtonElement>('[aria-current="page"]');
-  const cheats = navigation?.querySelectorAll<HTMLButtonElement>("button")[3];
+  const cheats = navigation?.querySelector<HTMLButtonElement>('button[data-category="cheats"]');
   if (!previous || !cheats) throw new Error("Cheats navigation is unavailable");
   flushSync(() => cheats.click());
   finishFiniteAnimations();

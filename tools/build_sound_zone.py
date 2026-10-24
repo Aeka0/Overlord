@@ -20,8 +20,8 @@ EXCLUDED_DIRS = {"dump", "minidumps", "mods", "players2", "trainer", "zonetool",
 EXCLUDED_FILES = {"__h2Exe", "h2_sp_patched.exe"}
 
 
-def run(tool: Path, stage: Path, action: str, timeout: int) -> str:
-    command = [str(tool), "-unattended", "-unbuffered-io", action, ZONE]
+def run(tool: Path, stage: Path, action: str, timeout: int, zone: str = ZONE) -> str:
+    command = [str(tool), "-unattended", "-unbuffered-io", action, zone]
     try:
         result = subprocess.run(command, cwd=stage, capture_output=True, text=True,
                                 encoding="utf-8", errors="replace", timeout=timeout)
@@ -30,10 +30,10 @@ def run(tool: Path, stage: Path, action: str, timeout: int) -> str:
         # Some linker builds keep the UI loop alive after reporting completion.
         output = b"".join(part if isinstance(part, bytes) else (part or "").encode()
                           for part in (error.stdout, error.stderr)).decode("utf-8", errors="replace")
-        if action != "-buildzone" or f'Successfully compiled fastfile "{ZONE}"' not in output:
+        if action != "-buildzone" or f'Successfully compiled fastfile "{zone}"' not in output:
             raise
         result = subprocess.CompletedProcess(command, 0)
-    (stage.parent / (ZONE + action + ".log")).write_text(output, encoding="utf-8")
+    (stage.parent / (zone + action + ".log")).write_text(output, encoding="utf-8")
     if result.returncode or "[ ERROR ]" in output or "Stream must have a constant blocksize" in output:
         raise RuntimeError(action + " failed:\n" + "\n".join(output.splitlines()[-40:]))
     return output

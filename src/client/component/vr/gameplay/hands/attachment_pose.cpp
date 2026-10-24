@@ -62,4 +62,28 @@ namespace vr::gameplay::hands::attachments
 		return false;
 	}
 	void clear_after_drain() noexcept {const std::lock_guard lock(mutex);poses={};records={};cursor=record_cursor=0;}
+	bool for_current(std::uint64_t reference,std::uint64_t lease,solved& out,int knife_hand) noexcept
+	{
+		if(!reference || knife_hand < -1 || knife_hand>1)return false;
+		const auto now=controller_input::clock::now();const std::lock_guard lock(mutex);
+		std::array<std::pair<std::uintptr_t,std::uintptr_t>,16> examined{};std::size_t count{};
+		// Skeletal scene submission precedes viewmodel skin/packing. Read the
+		// already committed hand solve; waiting for after_skin here introduces
+		// a dependency on a later renderer stage and omits every held prop.
+		for(std::size_t n=0;n<poses.size();++n)
+		{
+			const auto& p=poses[(cursor+poses.size()-1-n)%poses.size()];
+			if(!p.object || !p.matrices)continue;
+			const auto key=std::pair{p.object,p.matrices};
+			if(std::find(examined.begin(),examined.begin()+count,key)!=examined.begin()+count)continue;
+			if(count==examined.size())return false;
+			examined[count++]=key;
+			// A newer solve with this hand hidden/repurposed supersedes the
+			// earlier pose even when native wrists happen to remain identical.
+			if(p.reference!=reference || p.lease!=lease || now<p.at || now-p.at>std::chrono::milliseconds(150) ||
+				(knife_hand>=0 && !(p.knife_hands&(1u<<knife_hand))))continue;
+			if(matches(p)){out=p;return true;}
+		}
+		return false;
+	}
 }
