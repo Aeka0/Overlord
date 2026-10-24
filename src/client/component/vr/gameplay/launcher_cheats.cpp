@@ -39,6 +39,15 @@ namespace vr::gameplay::cheats::launcher
             if(!utils::native_memory::read_bytes(inventory.data(),static_cast<const std::byte*>(player)+0x2f8,sizeof(inventory)))return;
             for(const auto weapon:inventory)
             {
+                if(!weapon || weapon>=512)continue;
+                const auto* definition=game::weapon_defs[weapon];
+                game::weapInventoryType_t inventory_type{};
+                // The native inventory also contains offhands and mission props.
+                // Trainer pickup waits depend on exact frag stock (0..4); a 500
+                // grant bypasses the lesson wait and rejects its pickup trigger.
+                // Match carry's primary class; secondary feeds resolve below.
+                if(!utils::native_memory::read_at(definition,offsetof(game::WeaponDef,inventoryType),inventory_type) ||
+                    inventory_type!=game::WEAPINVENTORY_PRIMARY)continue;
                 const auto ammo=weapons::native_ammunition::observe_carried(player,weapon);
                 if(!ammo.valid)continue;
                 if(ammo.reserve!=reserve_rounds)

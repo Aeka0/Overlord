@@ -35,6 +35,14 @@ pauses during Green Beret inventory transfers, and stops replenishing when off;
 it does not rewind ammunition acquired while enabled. Native official cheats can
 still affect gameplay independently of launcher preferences.
 
+Only the native primary inventory class receives this grant; its admitted
+underbarrel feed is resolved separately. Offhand grenades, items and mission
+props retain native stock. In `trainer`, the frag pickup rejects stock above 3
+and the lesson waits for at least 3: replenishing frags to 500 could both reject
+the pickup and advance the lesson before its native pickup sequence. The reserve
+grant does not repair already inflated grenade stock in a running game or save;
+restart the lesson from before the grant after loading the corrected client.
+
 `vr_launcher_cheats_status` reports requested modes, effective sustain state and
 reserve write/rejection counts. Runtime/HMD acceptance is still required for
 native AI, scripted deaths and checkpoint transitions.
@@ -177,3 +185,8 @@ topology, storage-vs-support release and bayonet contacts in both hands/grips
 and co-grasps. The virtual script can compile without level-specific imports.
 Offline validation does not establish headset grip fit, native save/load
 integration, mission transitions or visible ragdoll flight.
+
+`python tests/vr/launcher_reserve_adapter_tests.py` exercises the production
+reserve loop across the trainer's zero/reset, partial, full and cleanup frag
+counts, alongside primary/underbarrel clip preservation and invalid inventory
+rejection. It does not establish live training-target or HMD acceptance.
