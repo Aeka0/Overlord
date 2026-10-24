@@ -60,6 +60,16 @@ atomically; an in-use stale file produces an explicit startup error. A read leas
 keeps the verified file unchanged until it is mapped. Profiles and saves are not
 removed when refreshing this generated executable.
 
+Native hooks require the game image at `0x140000000`. A different mapped or
+preferred base stops startup before import/TLS patching. TLS bootstrap checks
+directory bounds, absolute addresses, helper capacity (including zero fill),
+the current thread's slot and committed memory access before writing. Temporary
+write permissions are checked and restored per memory region. The
+[PE/TLS specification](https://learn.microsoft.com/en-us/windows/win32/debug/pe-format#the-tls-section)
+defines these address and template fields. `game-loader-tests` exercises synthetic
+images and real Win32 file/protection failures; it does not establish affected-user
+startup recovery or game/headset acceptance.
+
 Test target definitions live in `premake/vr_tests.lua`; the main script invokes
 its registration function in the root path context. `test_executable` centralizes
 executable kind, language and output layout; feature sources and dependencies stay

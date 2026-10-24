@@ -2,6 +2,8 @@
 #include "loader.hpp"
 #include "seh.hpp"
 #include "tls.hpp"
+#include "tls_bootstrap.hpp"
+#include "image_contract.hpp"
 
 #include <utils/string.hpp>
 #include <utils/hook.hpp>
@@ -33,10 +35,20 @@ FARPROC loader::load(const utils::nt::library& library, const std::string& buffe
 
 FARPROC loader::load_library(const std::string& filename) const
 {
-	const auto target = utils::nt::library::load(filename);
+	auto target = utils::nt::library::load(filename);
 	if (!target)
 	{
 		throw std::runtime_error{"Failed to map binary!"};
+	}
+	const auto actual_base = reinterpret_cast<std::uintptr_t>(target.get_handle());
+	const auto preferred_base = target.get_optional_header()->ImageBase;
+	if (!game_image::supported_mapping(actual_base, preferred_base))
+	{
+		target.free();
+		throw std::runtime_error(utils::string::va(
+			"The game image was mapped at 0x%llX (preferred 0x%llX), but requires 0x%llX. Startup stopped before imports and TLS were patched.",
+			static_cast<unsigned long long>(actual_base), static_cast<unsigned long long>(preferred_base),
+			static_cast<unsigned long long>(game_image::base_address)));
 	}
 
 	this->load_imports(target, target);
@@ -178,29 +190,11 @@ void loader::load_exception_table(const utils::nt::library& target, const utils:
 
 void loader::load_tls(const utils::nt::library& target, const utils::nt::library& source) const
 {
-	if (source.get_optional_header()->DataDirectory[IMAGE_DIRECTORY_ENTRY_TLS].Size)
-	{
-		const auto target_tls = tls::allocate_tls_index();
-
-		const auto source_tls = reinterpret_cast<PIMAGE_TLS_DIRECTORY>(target.get_ptr() + source.get_optional_header()
-			->DataDirectory[IMAGE_DIRECTORY_ENTRY_TLS].VirtualAddress);
-
-		const auto tls_size = source_tls->EndAddressOfRawData - source_tls->StartAddressOfRawData;
-		const auto tls_index = *reinterpret_cast<DWORD*>(target_tls->AddressOfIndex);
-		utils::hook::set<DWORD>(source_tls->AddressOfIndex, tls_index);
-
-		const auto target_start = PVOID(target_tls->StartAddressOfRawData);
-		const auto source_start = PVOID(source_tls->StartAddressOfRawData);
-
-		DWORD old_protect;
-		VirtualProtect(target_start, tls_size, PAGE_READWRITE, &old_protect);
-
-		const auto tls_base = *reinterpret_cast<LPVOID*>(__readgsqword(0x58) + 8ull * tls_index);
-
-		std::memmove(tls_base, source_start, tls_size);
-		std::memmove(target_start, source_start, tls_size);
-
-		VirtualProtect(target_tls, sizeof(*target_tls), PAGE_READWRITE, &old_protect);
-		*target_tls = *source_tls;
-	}
+	const tls::image_view game{reinterpret_cast<std::uintptr_t>(target.get_ptr()), source.get_optional_header()->SizeOfImage,
+		source.get_optional_header()->DataDirectory[IMAGE_DIRECTORY_ENTRY_TLS]};
+	if (!tls::has_template(game)) return;
+	const auto helper = tls::allocate_helper();
+	const tls::image_view helper_image{reinterpret_cast<std::uintptr_t>(helper.get_ptr()), helper.get_optional_header()->SizeOfImage,
+		helper.get_optional_header()->DataDirectory[IMAGE_DIRECTORY_ENTRY_TLS]};
+	tls::initialize_game_tls(game, helper_image, reinterpret_cast<void*>(__readgsqword(0x58)));
 }

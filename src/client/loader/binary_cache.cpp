@@ -91,7 +91,7 @@ namespace binary_cache
 		if (headers.Signature != IMAGE_NT_SIGNATURE || headers.FileHeader.Machine != IMAGE_FILE_MACHINE_AMD64 ||
 			headers.FileHeader.SizeOfOptionalHeader < sizeof(IMAGE_OPTIONAL_HEADER64) ||
 			headers.OptionalHeader.Magic != IMAGE_NT_OPTIONAL_HDR64_MAGIC ||
-			headers.OptionalHeader.ImageBase != game_image_base)
+			headers.OptionalHeader.ImageBase != game_image::base_address)
 			throw std::runtime_error("Unsupported game executable PE layout");
 
 		headers.OptionalHeader.DllCharacteristics &= ~IMAGE_DLLCHARACTERISTICS_DYNAMIC_BASE;

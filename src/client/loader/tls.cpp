@@ -11,7 +11,7 @@ namespace tls
 		utils::binary_resource tls_dll_file(TLS_DLL, "overlord-tlsdll.dll");
 	}
 
-	PIMAGE_TLS_DIRECTORY allocate_tls_index()
+	utils::nt::library allocate_helper()
 	{
 		static auto already_allocated = false;
 		if (already_allocated)
@@ -28,7 +28,6 @@ namespace tls
 			throw std::runtime_error("Failed to load TLS DLL");
 		}
 
-		return reinterpret_cast<PIMAGE_TLS_DIRECTORY>(tls_dll.get_ptr() + tls_dll.get_optional_header()
-			->DataDirectory[IMAGE_DIRECTORY_ENTRY_TLS].VirtualAddress);
+		return tls_dll;
 	}
 }

@@ -3,11 +3,10 @@
 #include <utils/nt.hpp>
 #include <cstdint>
 #include <memory>
+#include "image_contract.hpp"
 
 namespace binary_cache
 {
-	inline constexpr std::uintptr_t game_image_base = 0x140000000;
-
 	struct close_handle
 	{
 		void operator()(void* handle) const noexcept;

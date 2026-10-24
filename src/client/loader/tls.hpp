@@ -1,6 +1,7 @@
 #pragma once
+#include <utils/nt.hpp>
 
 namespace tls
 {
-	PIMAGE_TLS_DIRECTORY allocate_tls_index();
+	utils::nt::library allocate_helper();
 }

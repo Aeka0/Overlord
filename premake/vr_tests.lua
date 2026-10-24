@@ -10,7 +10,8 @@ return function()
 	end
 
 	test_executable("game-loader-tests", "game-loader")
-		files {"./tests/loader/game_loader_tests.cpp", "./src/client/loader/binary_cache.cpp", "./src/common/utils/io.cpp"}
+		files {"./tests/loader/game_loader_tests.cpp", "./src/client/loader/binary_cache.cpp",
+			"./src/client/loader/tls_bootstrap.cpp", "./src/common/utils/io.cpp"}
 		includedirs {"./src/client"}
 
 	test_executable("vr-support-diagnostics-tests", "support-diagnostics")
