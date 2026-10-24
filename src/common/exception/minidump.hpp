@@ -7,7 +7,7 @@ namespace exception
 	// Dump writers use one process-wide try-only gate. Concurrent calls return
 	// an empty string/false immediately instead of waiting in a crash path.
 	std::string create_minidump(LPEXCEPTION_POINTERS exceptioninfo);
-	bool write_process_minidump(const std::string& path);
+	bool write_process_minidump(const std::string& path, DWORD focus_thread_id = 0);
 	// Crash-path primitive: writes directly to the final file without first
 	// materializing the dump in a std::string. exception_thread_id identifies
 	// the thread whose exception pointers are supplied when a dedicated writer

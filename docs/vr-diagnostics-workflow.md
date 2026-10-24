@@ -298,3 +298,35 @@ Remaining limits: untested devices, levels, reconnection, long-term operation, e
 ```
 
 User confirmation can establish visual acceptance within the tested scope without inventing counters or requiring another capture merely to record it. Do not report FPS or improvement percentages without measurements. When multiple changes ship together, do not claim their individual contributions have been established. Put reusable conclusions in `docs/`; keep local scripts, dumps, and failed experiments in ignored local directories.
+## Bounded crash and stall evidence
+
+New crash, emergency and watchdog dumps include an `OVLD` user stream and selected
+memory ranges for offline x64 stack unwinding. The planner includes PE headers,
+function tables and unwind records near the exception/selected watchdog thread,
+small code windows and bounded register pointees. Extra requests are capped at
+8 MiB, 256 ranges, 16 modules and 64 candidate code addresses; each full function
+table is capped at 2 MiB. These limits apply to added evidence, not the complete
+minidump. No full-memory or full-code-segment dump flag is enabled.
+
+Watchdog writers select their scene, Present, interop or backend thread. Context
+sampling briefly suspends that thread only long enough to copy its registers and
+resumes it before memory planning/dump writing. This is a pre-dump sample, not an
+atomic process snapshot. Values found on the stack nominate code addresses; they
+are not presented as a proven call chain.
+
+Inspect a new dump without game binaries or Python dependencies:
+
+```bat
+python tools/read_crash_evidence.py path/to/crash.dmp
+```
+
+The JSON distinguishes scheduled ranges from bytes actually present in the dump,
+reports capture limits and missing context, and treats older dumps as `absent`.
+The parser bounds descriptor counts and uses a read-only file mapping. The native
+`crash-evidence-tests` fixture generates real exception/watchdog dumps and tests
+stack unwinding solely from captured memory, with no image-file fallback.
+
+The [minidump callback contract](https://learn.microsoft.com/en-us/windows/win32/api/minidumpapiset/ne-minidumpapiset-minidump_callback_type)
+defines supplemental memory requests. These writers use live process handles;
+the [PSS snapshot example](https://learn.microsoft.com/en-us/previous-versions/windows/desktop/proc_snap/export-a-process-snapshot-to-a-file)
+explains why `IsProcessSnapshotCallback` must not identify them as PSS handles.

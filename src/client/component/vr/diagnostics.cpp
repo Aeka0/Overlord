@@ -1143,7 +1143,7 @@ namespace vr::diagnostics
 		append_device_creation_evidence(report, graphics);
 		report << "VR trace:\r\n" << crash_trace();
 		utils::io::write_file(stem + ".txt", report.str(), false);
-		const auto dump_written = exception::write_process_minidump(stem + ".dmp");
+		const auto dump_written = exception::write_process_minidump(stem + ".dmp", graphics.last_present_thread_id);
 		return dump_written;
 	}
 
@@ -1181,7 +1181,7 @@ namespace vr::diagnostics
 		append_device_creation_evidence(report, graphics);
 		report << "VR trace:\r\n" << crash_trace();
 		utils::io::write_file(stem + ".txt", report.str(), false);
-		return exception::write_process_minidump(stem + ".dmp");
+		return exception::write_process_minidump(stem + ".dmp", scene.thread_id);
 	}
 
 	bool write_gpu_interop_stall_report(const d3d11::graphics_status& graphics,
@@ -1220,7 +1220,7 @@ namespace vr::diagnostics
 		append_device_creation_evidence(report, graphics);
 		report << "VR trace:\r\n" << crash_trace();
 		utils::io::write_file(stem + ".txt", report.str(), false);
-		return exception::write_process_minidump(stem + ".dmp");
+		return exception::write_process_minidump(stem + ".dmp", interop.thread_id);
 	}
 
 	bool write_backend_stall_report(const d3d11::graphics_status& graphics,
@@ -1261,7 +1261,7 @@ namespace vr::diagnostics
 		append_device_creation_evidence(report, graphics);
 		report << "VR trace:\r\n" << crash_trace();
 		utils::io::write_file(stem + ".txt", report.str(), false);
-		return exception::write_process_minidump(stem + ".dmp");
+		return exception::write_process_minidump(stem + ".dmp", backend.thread_id);
 	}
 
 	bool write_live_trace_snapshot(const d3d11::graphics_status& graphics) noexcept

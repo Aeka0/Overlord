@@ -1,4 +1,5 @@
 #include "minidump.hpp"
+#include "dump_evidence.hpp"
 
 #include <DbgHelp.h>
 #pragma comment(lib, "dbghelp.lib")
@@ -14,6 +15,20 @@ namespace exception
 		// wait for a diagnostic dump already in progress, so all public writers
 		// share this try-only gate.
 		std::atomic_flag minidump_write_in_progress = ATOMIC_FLAG_INIT;
+		// Serialized by the existing try-only gate, including the emergency
+		// writer. Keep the bounded plan off a potentially exhausted crash stack.
+		evidence::plan dump_plan;
+
+		BOOL write_evidence_dump(HANDLE file, MINIDUMP_EXCEPTION_INFORMATION* exception,
+			const EXCEPTION_POINTERS* pointers, DWORD focus_thread, MINIDUMP_TYPE type) noexcept
+		{
+			evidence::prepare(dump_plan, pointers, focus_thread);
+			MINIDUMP_USER_STREAM stream{evidence::stream_type, sizeof(dump_plan.report), &dump_plan.report};
+			MINIDUMP_USER_STREAM_INFORMATION streams{1, &stream};
+			MINIDUMP_CALLBACK_INFORMATION callback{evidence::callback, &dump_plan};
+			return MiniDumpWriteDump(GetCurrentProcess(), GetCurrentProcessId(), file, type,
+				exception, &streams, &callback);
+		}
 
 		class minidump_write_gate final
 		{
@@ -75,10 +90,8 @@ namespace exception
 			                                      FILE_ATTRIBUTE_TEMPORARY | FILE_FLAG_DELETE_ON_CLOSE,
 			                                      nullptr);
 
-			if (!MiniDumpWriteDump(GetCurrentProcess(), GetCurrentProcessId(), file_handle, get_minidump_type(),
-			                       &minidump_exception_info,
-			                       nullptr,
-			                       nullptr))
+			if (!write_evidence_dump(file_handle, &minidump_exception_info, exceptioninfo,
+				GetCurrentThreadId(), get_minidump_type()))
 			{
 				MessageBoxA(nullptr, "There was an error creating the minidump! Hit OK to close the program.",
 				            "Minidump Error", MB_OK | MB_ICONERROR);
@@ -131,7 +144,7 @@ namespace exception
 		return read_file(file_handle);
 	}
 
-	bool write_process_minidump(const std::string& path)
+	bool write_process_minidump(const std::string& path, const DWORD focus_thread_id)
 	{
 		const minidump_write_gate gate;
 		if (!gate)
@@ -147,8 +160,7 @@ namespace exception
 		}
 
 		const auto close = gsl::finally([file_handle]() { CloseHandle(file_handle); });
-		return MiniDumpWriteDump(GetCurrentProcess(), GetCurrentProcessId(), file_handle,
-			get_minidump_type(), nullptr, nullptr, nullptr) != FALSE;
+		return write_evidence_dump(file_handle, nullptr, nullptr, focus_thread_id, get_minidump_type()) != FALSE;
 	}
 
 	bool write_exception_minidump(const char* const path,
@@ -175,8 +187,8 @@ namespace exception
 		MINIDUMP_EXCEPTION_INFORMATION exception_information{
 			exception_thread_id, exceptioninfo, FALSE,
 		};
-		const auto written = MiniDumpWriteDump(GetCurrentProcess(), GetCurrentProcessId(),
-			file_handle, get_minidump_type(), &exception_information, nullptr, nullptr) != FALSE;
+		const auto written = write_evidence_dump(file_handle, &exception_information, exceptioninfo,
+			exception_thread_id, get_minidump_type()) != FALSE;
 		FlushFileBuffers(file_handle);
 		CloseHandle(file_handle);
 		return written;

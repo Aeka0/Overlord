@@ -14,6 +14,12 @@ return function()
 			"./src/client/loader/tls_bootstrap.cpp", "./src/common/utils/io.cpp"}
 		includedirs {"./src/client"}
 
+	test_executable("crash-evidence-tests", "crash-evidence")
+		files {"./tests/loader/crash_evidence_tests.cpp", "./src/common/exception/dump_evidence.cpp",
+			"./src/common/exception/minidump.cpp"}
+		gsl.import()
+		links {"dbghelp"}
+
 	test_executable("vr-support-diagnostics-tests", "support-diagnostics")
 		files {"./tests/vr/support_diagnostics_tests.cpp", "./src/client/component/vr/diagnostics/support_archive.cpp",
 			"./src/common/utils/compression.cpp"}
