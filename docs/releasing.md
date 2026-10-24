@@ -39,8 +39,10 @@ input bindings, artwork, loose project scripts, the Khronos OpenXR loader and
 license notices. It excludes PDBs, user settings, logs, original game files and
 raw ZoneTool assets. Retain matching PDBs privately; they can contain local source paths.
 
-The compiled `h2_vr_sounds.ff` bundles the eleven hit/kill recordings and five
+The compiled `h2_vr_sounds.ff` bundles the seventeen hit/kill recordings and five
 fist-impact recordings, alongside the existing feedback and ducking scripts.
+The feedback set includes two MWII (2022) kill recordings and four MWIII (2023)
+hit/kill recordings; MWII reuses MW2019's hit recording.
 Editable aliases and normalized FLAC inputs live in the Git-ignored
 `.local/Sounds/h2_vr_sounds/`; original supplied punch files stay under
 `.local/Sounds/`. Only the compiled sound zone and its manifest are tracked.

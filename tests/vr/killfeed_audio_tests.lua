@@ -25,7 +25,7 @@ local function reset(selected)
         assert(script == "scripts/killfeed_ducking")
         assert(action == "trigger", "GSC owns activation and recovery together")
         table.insert(duck_calls, action)
-        return 49
+        return 50
     end
     function game:ontimeout(fn, delay)
         local timer = {fn = fn, delay = delay}
@@ -76,6 +76,21 @@ assert(sounds[5] == "kf_bocw_headshot_1" and sounds[6] == "kf_bocw_kill", "BOCW 
 reset("mw_classic"); victim = entity(1)
 hit(victim); flush(0); hit(victim); victim.death(); flush(0)
 assert(#sounds == 2 and sounds[1] == "kf_mw_classic_hit" and sounds[2] == sounds[1])
+for _, selected in ipairs({"mw2019", "mw2022", "mw2023"}) do
+    reset(selected)
+    local hit_alias = selected == "mw2023" and "kf_mw2023_hit" or "kf_mw2019_hit"
+    local head_alias = selected == "mw2023" and "kf_mw2023_hit_headshot" or hit_alias
+    victim = entity(1); hit(victim); flush(0)
+    victim = entity(2); hit(victim, nil, 10, "head"); flush(0)
+    victim = entity(3); hit(victim, nil, 10, "helmet"); flush(0)
+    victim = entity(4); hit(victim); victim.death(); flush(0)
+    victim = entity(5); hit(victim, nil, 10, "head"); victim.death(); flush(0)
+    victim = entity(6); hit(victim, nil, 10, "helmet"); victim.alive = false; flush(0)
+    assert(table.concat(sounds, ",") == table.concat({hit_alias, head_alias, head_alias,
+        "kf_" .. selected .. "_kill", "kf_" .. selected .. "_kill_headshot",
+        "kf_" .. selected .. "_kill_headshot"}, ","), selected .. " routes all hit locations and lethal outcomes")
+    assert(#duck_calls == 6, "every preset refreshes the shared ducking deadline once per feedback")
+end
 reset("mw2019")
 game.scriptcall = function() error("native script unavailable") end
 hit(entity(1)); flush(0)

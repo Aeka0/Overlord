@@ -10,7 +10,7 @@ trigger()
 {
     level.killfeed_duck_until = gettime() + 150;
     if ( isdefined( level.killfeed_duck_running ) && level.killfeed_duck_running )
-        return 49;
+        return 50;
 
     level.killfeed_duck_running = true;
     // Arm cleanup before submission: a partial activation must also expire.
@@ -30,56 +30,59 @@ recover_duck()
 activate()
 {
     volmods = [];
-    // Preserve the supplied mix amounts; never compound separate activations.
-    volmods = add_volmod( volmods, "wpn_foley_plr", 0.55 );
-    volmods = add_volmod( volmods, "wpn_foley_plr_beltfed", 0.55 );
-    volmods = add_volmod( volmods, "wpn_plr_foley_h2", 0.55 );
-    volmods = add_volmod( volmods, "wpn_plr", 0.45 );
-    volmods = add_volmod( volmods, "wpn_plr_special", 0.45 );
-    volmods = add_volmod( volmods, "iw4_wpn_plr_shot", 0.45 );
-    volmods = add_volmod( volmods, "wpn_plr_shot_first", 0.45 );
-    volmods = add_volmod( volmods, "wpn_plr_shot_special", 0.45 );
-    volmods = add_volmod( volmods, "wpn_plr_shot", 0.45 );
-    volmods = add_volmod( volmods, "wpn_plr_punch", 0.45 );
-    volmods = add_volmod( volmods, "wpn_plr_mech", 0.55 );
-    volmods = add_volmod( volmods, "wpn_plr_sub", 0.45 );
-    volmods = add_volmod( volmods, "wpn_plr_lfe", 0.45 );
-    volmods = add_volmod( volmods, "wpn_plr_tail", 0.5 );
-    volmods = add_volmod( volmods, "wpn_plr_tail_int_med", 0.5 );
-    volmods = add_volmod( volmods, "wpn_plr_tail_int_sml", 0.5 );
-    volmods = add_volmod( volmods, "wpn_plr_tail_semi", 0.5 );
-    volmods = add_volmod( volmods, "wpn_foley_npc", 0.65 );
-    volmods = add_volmod( volmods, "wpn_npc", 0.6 );
-    volmods = add_volmod( volmods, "wpn_npc_special", 0.6 );
-    volmods = add_volmod( volmods, "mp_wpn_npc", 0.6 );
-    volmods = add_volmod( volmods, "wpn_projectile", 0.6 );
-    volmods = add_volmod( volmods, "iw4_wpn_npc_shot", 0.6 );
-    volmods = add_volmod( volmods, "wpn_npc_shot", 0.6 );
-    volmods = add_volmod( volmods, "wpn_npc_mech", 0.65 );
-    volmods = add_volmod( volmods, "wpn_npc_sub", 0.6 );
-    volmods = add_volmod( volmods, "wpn_npc_tail", 0.6 );
-    volmods = add_volmod( volmods, "wpn_npc_dist", 0.6 );
-    volmods = add_volmod( volmods, "h2_wpn_npc_shot_close", 0.6 );
-    volmods = add_volmod( volmods, "h2_wpn_npc_shot_mid", 0.6 );
-    volmods = add_volmod( volmods, "h2_wpn_npc_shot_far", 0.6 );
-    volmods = add_volmod( volmods, "h2_wpn_npc_shot_tail", 0.6 );
-    volmods = add_volmod( volmods, "h2_wpn_npc_shot_first", 0.6 );
-    volmods = add_volmod( volmods, "destruct", 0.65 );
-    volmods = add_volmod( volmods, "explosion", 0.6 );
-    volmods = add_volmod( volmods, "explosion_grenade", 0.6 );
-    volmods = add_volmod( volmods, "explosion_flashbang", 0.6 );
-    volmods = add_volmod( volmods, "explosion_rocket", 0.6 );
-    volmods = add_volmod( volmods, "explosion_car", 0.6 );
-    volmods = add_volmod( volmods, "explosion_debris", 0.65 );
-    volmods = add_volmod( volmods, "bullet_impact_geo", 0.65 );
-    volmods = add_volmod( volmods, "bullet_impact_geo_metal", 0.65 );
-    volmods = add_volmod( volmods, "bullet_impact_plr", 0.65 );
-    volmods = add_volmod( volmods, "bullet_impact_npc", 0.65 );
-    volmods = add_volmod( volmods, "mp_bullet_impact_geo", 0.65 );
-    volmods = add_volmod( volmods, "mp_bullet_impact_plr", 0.65 );
-    volmods = add_volmod( volmods, "mp_bullet_impact_npc", 0.65 );
-    volmods = add_volmod( volmods, "bullet_whizby", 0.65 );
-    volmods = add_volmod( volmods, "mp_bullet_whizby", 0.65 );
+    // Slightly deepen combat ducking for every preset; never compound activations.
+    volmods = add_volmod( volmods, "wpn_foley_plr", 0.50 );
+    volmods = add_volmod( volmods, "wpn_foley_plr_beltfed", 0.50 );
+    volmods = add_volmod( volmods, "wpn_plr_foley_h2", 0.50 );
+    volmods = add_volmod( volmods, "wpn_plr", 0.40 );
+    volmods = add_volmod( volmods, "wpn_plr_special", 0.40 );
+    volmods = add_volmod( volmods, "iw4_wpn_plr_shot", 0.40 );
+    volmods = add_volmod( volmods, "wpn_plr_shot_first", 0.40 );
+    volmods = add_volmod( volmods, "wpn_plr_shot_special", 0.40 );
+    volmods = add_volmod( volmods, "wpn_plr_shot", 0.40 );
+    volmods = add_volmod( volmods, "wpn_plr_punch", 0.40 );
+    volmods = add_volmod( volmods, "wpn_plr_mech", 0.50 );
+    volmods = add_volmod( volmods, "wpn_plr_sub", 0.40 );
+    volmods = add_volmod( volmods, "wpn_plr_lfe", 0.40 );
+    volmods = add_volmod( volmods, "wpn_plr_tail", 0.45 );
+    volmods = add_volmod( volmods, "wpn_plr_tail_int_med", 0.45 );
+    volmods = add_volmod( volmods, "wpn_plr_tail_int_sml", 0.45 );
+    volmods = add_volmod( volmods, "wpn_plr_tail_semi", 0.45 );
+    volmods = add_volmod( volmods, "wpn_foley_npc", 0.60 );
+    volmods = add_volmod( volmods, "wpn_npc", 0.55 );
+    volmods = add_volmod( volmods, "wpn_npc_special", 0.55 );
+    volmods = add_volmod( volmods, "mp_wpn_npc", 0.55 );
+    volmods = add_volmod( volmods, "wpn_projectile", 0.55 );
+    volmods = add_volmod( volmods, "iw4_wpn_npc_shot", 0.55 );
+    volmods = add_volmod( volmods, "wpn_npc_shot", 0.55 );
+    volmods = add_volmod( volmods, "wpn_npc_mech", 0.60 );
+    volmods = add_volmod( volmods, "wpn_npc_sub", 0.55 );
+    volmods = add_volmod( volmods, "wpn_npc_tail", 0.55 );
+    volmods = add_volmod( volmods, "wpn_npc_dist", 0.55 );
+    volmods = add_volmod( volmods, "h2_wpn_npc_shot_close", 0.55 );
+    volmods = add_volmod( volmods, "h2_wpn_npc_shot_mid", 0.55 );
+    volmods = add_volmod( volmods, "h2_wpn_npc_shot_far", 0.55 );
+    volmods = add_volmod( volmods, "h2_wpn_npc_shot_tail", 0.55 );
+    volmods = add_volmod( volmods, "h2_wpn_npc_shot_first", 0.55 );
+    volmods = add_volmod( volmods, "destruct", 0.60 );
+    volmods = add_volmod( volmods, "explosion", 0.55 );
+    volmods = add_volmod( volmods, "explosion_grenade", 0.55 );
+    volmods = add_volmod( volmods, "explosion_flashbang", 0.55 );
+    volmods = add_volmod( volmods, "explosion_rocket", 0.55 );
+    volmods = add_volmod( volmods, "explosion_car", 0.55 );
+    volmods = add_volmod( volmods, "explosion_debris", 0.60 );
+    volmods = add_volmod( volmods, "bullet_impact_geo", 0.60 );
+    volmods = add_volmod( volmods, "bullet_impact_geo_metal", 0.60 );
+    volmods = add_volmod( volmods, "bullet_impact_plr", 0.60 );
+    volmods = add_volmod( volmods, "bullet_impact_npc", 0.60 );
+    volmods = add_volmod( volmods, "mp_bullet_impact_geo", 0.60 );
+    volmods = add_volmod( volmods, "mp_bullet_impact_plr", 0.60 );
+    volmods = add_volmod( volmods, "mp_bullet_impact_npc", 0.60 );
+    volmods = add_volmod( volmods, "bullet_whizby", 0.60 );
+    volmods = add_volmod( volmods, "mp_bullet_whizby", 0.60 );
+
+    // Music shares the same deadline and recovery as combat audio.
+    volmods = add_volmod( volmods, "music", 0.60 );
 
     return submit_volmods( volmods );
 }

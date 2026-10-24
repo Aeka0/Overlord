@@ -32,9 +32,10 @@ namespace vr::settings
 	};
 	inline constexpr choice_setting killfeed_style{
 		.name = "vr_killfeedStyle",
-		.values = {"off", "bocw", "mw_classic", "mw2019"},
+		.values = {"off", "bocw", "mw_classic", "mw2019", "mw2022", "mw2023"},
 		.default_index = 3,
-		.label_keys = {"choice.disabled", "choice.bocw", "choice.mwClassic", "choice.mw2019"}};
+		.label_keys = {"choice.disabled", "choice.bocw", "choice.mwClassic", "choice.mw2019",
+			"choice.mw2022", "choice.mw2023"}};
 	inline constexpr choice_setting cheat_health{
 	    .name = "vr_cheatHealth",
 	    .values = {"off", "demigod", "god"},

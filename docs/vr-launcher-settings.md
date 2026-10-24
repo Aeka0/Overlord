@@ -258,14 +258,18 @@ unsaved changes and the scroll position of each category. The left sidebar's Sav
 button saves all categories; Reset restores the entire draft's defaults.
 
 Other's Hit / kill audio (`vr_killfeedStyle`) defaults to Modern Warfare (2019).
-Disabled, Black Ops Cold War and Modern Warfare Classic are also available.
+Disabled, Black Ops Cold War, Modern Warfare Classic, Modern Warfare II (2022)
+and Modern Warfare III (2023) are also available.
 MW2019 replaces the hit sound with a kill or headshot-kill sound on lethal damage;
+MWII keeps MW2019's hit sound and uses its own kill and headshot-kill recordings.
+MWIII has distinct hit, headshot-hit, kill and headshot-kill recordings.
 BOCW cycles its hit variants and layers the kill sound, while Classic uses one
 sound for all hits. Only the local player's damage to living targets is considered,
-and death notifications determine kills. Feedback briefly lowers combat audio
-without changing dialogue or music. The original per-group volume levels are
-preserved. The GSC feedback script owns recovery: it holds until 150 ms after
-the last feedback and fades back over 180 ms.
+and death notifications determine kills. All presets briefly lower combat audio
+and music while preserving dialogue. Combat groups retain 40-60% volume (five
+percentage points below the previous mix); music retains 60%. The 50 groups fit
+in five batches of ten. The GSC feedback script owns recovery: it fades in over
+10 ms, holds until 150 ms after the last feedback and fades back over 180 ms.
 The selection is saved for the next game
 launch; Reset restores MW2019. There is no in-game settings menu for this feature.
 

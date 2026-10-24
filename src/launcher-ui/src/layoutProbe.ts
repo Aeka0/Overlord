@@ -486,8 +486,10 @@ export function inspectCampaignUnlock() {
 export function inspectNativeComfort() {
   const navigation = document.querySelector(".settings-navigation");
   const previous = navigation?.querySelector<HTMLButtonElement>('[aria-current="page"]');
-  const basics = navigation?.querySelector<HTMLButtonElement>("button");
-  if (!previous || !basics) throw new Error("Basics navigation is unavailable");
+  const basics = navigation?.querySelector<HTMLButtonElement>('button[data-category="basics"]');
+  const other = navigation?.querySelector<HTMLButtonElement>('button[data-category="other"]');
+  const debug = navigation?.querySelector<HTMLButtonElement>('button[data-category="debug"]');
+  if (!previous || !basics || !other || !debug) throw new Error("Settings probe navigation is unavailable");
   flushSync(() => basics.click());
   finishFiniteAnimations();
   const names = ["r_dof_limit", "r_mbLimit"];
@@ -510,17 +512,20 @@ export function inspectNativeComfort() {
     subtitleDefaultOn: false,
     subtitleDescription: false,
     riskFirst: false,
+    feedbackPresets: false,
   };
-  const other = navigation!.querySelectorAll<HTMLButtonElement>("button")[4];
   flushSync(() => other.click());
   finishFiniteAnimations();
+  const feedback = document.getElementById("vr_killfeedStyle") as HTMLSelectElement | null;
+  result.feedbackPresets = !!feedback && feedback.value === "mw2019" &&
+    [...feedback.options].map((option) => option.value).join(",") === "off,bocw,mw_classic,mw2019,mw2022,mw2023" &&
+    [...feedback.options].every((option) => !!option.text && !option.text.startsWith("choice."));
   const subtitle = document.getElementById("vr_subtitles") as HTMLInputElement | null;
   const controls = document.querySelectorAll<HTMLInputElement | HTMLSelectElement>(".setting-row input, .setting-row select");
   result.subtitleSecond = !!subtitle && controls[1] === subtitle;
   result.subtitleDefaultOn = subtitle?.type === "checkbox" && subtitle.checked && !subtitle.disabled;
   const hint = document.getElementById("hint-vr_subtitles")?.textContent;
   result.subtitleDescription = !!hint && !hint.startsWith("settings.");
-  const debug = navigation!.querySelectorAll<HTMLButtonElement>("button")[5];
   flushSync(() => debug.click());
   finishFiniteAnimations();
   const firstGroup = document.querySelector<HTMLElement>(".settings-page .setting-group");

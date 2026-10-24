@@ -2,6 +2,8 @@ local STYLE_DISABLED = 0
 local STYLE_BOCW = 1
 local STYLE_MW_CLASSIC = 2
 local STYLE_MW2019 = 3
+local STYLE_MW2022 = 4
+local STYLE_MW2023 = 5
 
 local pending_damage = {}
 local bocw_hit_index = 1
@@ -10,7 +12,7 @@ local duck_error_reported = false
 local duck_submission_reported = false
 
 local DUCK_SCRIPT = "scripts/killfeed_ducking"
-local DUCK_GROUP_COUNT = 49
+local DUCK_GROUP_COUNT = 50
 
 local function report_duck_error(action, err)
     if duck_error_reported then
@@ -26,7 +28,30 @@ local styles = {
     off = STYLE_DISABLED,
     bocw = STYLE_BOCW,
     mw_classic = STYLE_MW_CLASSIC,
-    mw2019 = STYLE_MW2019
+    mw2019 = STYLE_MW2019,
+    mw2022 = STYLE_MW2022,
+    mw2023 = STYLE_MW2023
+}
+
+-- Modern Warfare presets replace hits with kills on lethal damage. MWII shares
+-- MW2019's hit recording; only MWIII has a separate nonlethal headshot sound.
+local modern_sounds = {
+    [STYLE_MW2019] = {
+        hit = "kf_mw2019_hit",
+        kill = "kf_mw2019_kill",
+        kill_headshot = "kf_mw2019_kill_headshot"
+    },
+    [STYLE_MW2022] = {
+        hit = "kf_mw2019_hit",
+        kill = "kf_mw2022_kill",
+        kill_headshot = "kf_mw2022_kill_headshot"
+    },
+    [STYLE_MW2023] = {
+        hit = "kf_mw2023_hit",
+        hit_headshot = "kf_mw2023_hit_headshot",
+        kill = "kf_mw2023_kill",
+        kill_headshot = "kf_mw2023_kill_headshot"
+    }
 }
 
 local function get_entref(entity)
@@ -99,11 +124,12 @@ local function play_feedback(style, killed, headshot)
         end
     elseif style == STYLE_MW_CLASSIC then
         player:playlocalsound("kf_mw_classic_hit")
-    elseif style == STYLE_MW2019 then
+    elseif modern_sounds[style] ~= nil then
+        local sounds = modern_sounds[style]
         if killed then
-            player:playlocalsound(headshot and "kf_mw2019_kill_headshot" or "kf_mw2019_kill")
+            player:playlocalsound(headshot and sounds.kill_headshot or sounds.kill)
         else
-            player:playlocalsound("kf_mw2019_hit")
+            player:playlocalsound(headshot and sounds.hit_headshot or sounds.hit)
         end
     end
 end
