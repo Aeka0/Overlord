@@ -8,10 +8,54 @@ from pathlib import Path
 import struct
 
 STREAM = 0x4F564C44
+TEXTURE_STREAM = 0x4F565458
 HEADER = struct.Struct('<16Q')
 MODULE = struct.Struct('<6Q')
 RANGE = struct.Struct('<3Q')
 MAX_MODULES, MAX_RANGES = 16, 256
+
+
+def read_texture_evidence(data, entries):
+    selected = next((entry for entry in entries if entry[0] == TEXTURE_STREAM), None)
+    if not selected:
+        return {'status': 'absent'}
+    _, size, location = selected
+    event = struct.Struct('<29Q')
+    required = HEADER.size + (32 + 256 + 1) * event.size
+    if size != required or location > len(data) or size > len(data) - location:
+        raise ValueError('Truncated texture evidence stream')
+    header = HEADER.unpack_from(data, location)
+    if header[0] != 1 or header[1] != event.size or header[2] != 256 or header[3] > 256 or header[4] > 32:
+        raise ValueError('Unsupported texture evidence layout')
+    fields = ('sequence call tick thread operation device generation caller texture context pair eye result '
+              'descriptor_valid initial_data width height mips array_size format samples quality usage bind cpu misc '
+              'source command detail').split()
+    phases = {1: 'texture_begin', 2: 'texture_end', 3: 'execute_begin', 4: 'execute_end', 5: 'resources_reset',
+              6: 'device_observed', 7: 'post_aa_begin', 8: 'post_aa_end', 9: 'scope_abandoned'}
+
+    def record(offset):
+        item = dict(zip(fields, event.unpack_from(data, offset)))
+        item['phase'] = phases.get(item['operation'], 'unknown')
+        item['result_contract'] = 'HRESULT' if item['operation'] == 2 else (
+            'native boolean' if item['operation'] == 8 else 'CPU observation; no GPU completion claim')
+        item['detail_contract'] = 'AA mode' if item['operation'] in (7, 8) else 'phase-specific metadata'
+        for key in ('device', 'caller', 'texture', 'context', 'source', 'command', 'result'):
+            item[key] = hex(item[key])
+        return item
+
+    active = location + HEADER.size
+    recent = active + 32 * event.size
+    first = recent + 256 * event.size
+    return {'status': 'available', 'version': header[0], 'newest': header[5], 'dropped': header[6],
+            'texture_calls': header[7], 'texture_failures': header[8], 'active_overflow': header[9],
+            'hooked_vtables': header[10], 'hook_failures': header[11], 'identity_overflow': header[12],
+            'sampled_tick': header[14], 'busy_or_missing_records': header[15],
+            'failure_policy': 'first device error, otherwise first texture failure; not root-cause proof',
+            'ownership_contract': 'pointer identities only; no resource lifetime proof',
+            'completion_contract': 'CPU call boundaries only; no GPU retirement proof',
+            'active': [record(active + i * event.size) for i in range(header[4])],
+            'recent': [record(recent + i * event.size) for i in range(header[3])],
+            'first_failure': record(first) if header[13] else None}
 
 
 def read_evidence(data):
@@ -91,7 +135,8 @@ def read_evidence(data):
                        (8, 'candidate_count'), (16, 'unwind_chain'), (32, 'context_unavailable'),
                        (64, 'stack_scan_boundary'), (128, 'module_table_bytes')) if header[15] & flag],
             'byte_budget': header[11], 'scanned_stack_bytes': header[12], 'modules': modules,
-            'ranges': ranges, 'captured_ranges': sum(item['captured'] for item in ranges)}
+            'ranges': ranges, 'captured_ranges': sum(item['captured'] for item in ranges),
+            'graphics': read_texture_evidence(data, entries)}
 
 
 def main():

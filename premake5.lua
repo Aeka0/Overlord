@@ -180,6 +180,10 @@ for _, source in ipairs({"binary_cache", "tls_bootstrap"}) do
 end
 filter {}
 
+filter "files:src/client/component/d3d11/texture_diagnostics.cpp"
+	flags {"NoPCH"}
+filter {}
+
 linkoptions {"/IGNORE:4254", "/DYNAMICBASE:NO", "/SAFESEH:NO", "/LARGEADDRESSAWARE", "/LAST:.main", "/PDBCompress"}
 
 files {"./src/client/**.rc", "./src/client/**.hpp", "./src/client/**.cpp", "./src/client/resources/**.*"}

@@ -18,13 +18,26 @@ namespace exception
 		// Serialized by the existing try-only gate, including the emergency
 		// writer. Keep the bounded plan off a potentially exhausted crash stack.
 		evidence::plan dump_plan;
+		std::array<std::atomic<dump_supplement_provider>, 4> supplement_providers{};
 
 		BOOL write_evidence_dump(HANDLE file, MINIDUMP_EXCEPTION_INFORMATION* exception,
 			const EXCEPTION_POINTERS* pointers, DWORD focus_thread, MINIDUMP_TYPE type) noexcept
 		{
 			evidence::prepare(dump_plan, pointers, focus_thread);
-			MINIDUMP_USER_STREAM stream{evidence::stream_type, sizeof(dump_plan.report), &dump_plan.report};
-			MINIDUMP_USER_STREAM_INFORMATION streams{1, &stream};
+			std::array<MINIDUMP_USER_STREAM, 5> entries{};
+			entries[0] = {evidence::stream_type, sizeof(dump_plan.report), &dump_plan.report};
+			ULONG count = 1;
+			for (const auto& registered : supplement_providers)
+			{
+				const auto provider = registered.load(std::memory_order_acquire);
+				MINIDUMP_USER_STREAM supplement{};
+				if (!provider || !provider(supplement) || !supplement.Buffer || !supplement.BufferSize ||
+					supplement.BufferSize > 512 * 1024 || supplement.Type <= LastReservedStream) continue;
+				bool duplicate{};
+				for (ULONG index{}; index < count; ++index) duplicate |= entries[index].Type == supplement.Type;
+				if (!duplicate) entries[count++] = supplement;
+			}
+			MINIDUMP_USER_STREAM_INFORMATION streams{count, entries.data()};
 			MINIDUMP_CALLBACK_INFORMATION callback{evidence::callback, &dump_plan};
 			return MiniDumpWriteDump(GetCurrentProcess(), GetCurrentProcessId(), file, type,
 				exception, &streams, &callback);
@@ -124,6 +137,19 @@ namespace exception
 
 			return buffer;
 		}
+	}
+
+	bool register_dump_supplement(const dump_supplement_provider provider) noexcept
+	{
+		if (!provider) return false;
+		for (auto& slot : supplement_providers)
+		{
+			auto current = slot.load(std::memory_order_acquire);
+			if (current == provider) return true;
+			if (!current && slot.compare_exchange_strong(current, provider, std::memory_order_acq_rel)) return true;
+			if (current == provider) return true;
+		}
+		return false;
 	}
 
 	std::string create_minidump(const LPEXCEPTION_POINTERS exceptioninfo)

@@ -1,9 +1,15 @@
 #pragma once
 
 #include "../utils/nt.hpp"
+#include <DbgHelp.h>
 
 namespace exception
 {
+	// Register up to four process-lifetime, allocation-free snapshot providers.
+	// Writers call them under the existing try-only dump gate. Each provider
+	// returns a fixed buffer <=512 KiB; it must never wait on a producer lock.
+	using dump_supplement_provider = bool(*)(MINIDUMP_USER_STREAM&) noexcept;
+	bool register_dump_supplement(dump_supplement_provider provider) noexcept;
 	// Dump writers use one process-wide try-only gate. Concurrent calls return
 	// an empty string/false immediately instead of waiting in a crash path.
 	std::string create_minidump(LPEXCEPTION_POINTERS exceptioninfo);

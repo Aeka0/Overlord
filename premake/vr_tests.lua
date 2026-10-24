@@ -20,6 +20,13 @@ return function()
 		gsl.import()
 		links {"dbghelp"}
 
+	test_executable("d3d11-texture-diagnostics-tests", "texture-diagnostics")
+		files {"./tests/vr/texture_diagnostics_tests.cpp", "./src/client/component/d3d11/texture_diagnostics.cpp",
+			"./src/common/exception/minidump.cpp", "./src/common/exception/dump_evidence.cpp"}
+		includedirs {"./src/client"}
+		gsl.import()
+		links {"d3d11", "dxgi", "dbghelp"}
+
 	test_executable("vr-support-diagnostics-tests", "support-diagnostics")
 		files {"./tests/vr/support_diagnostics_tests.cpp", "./src/client/component/vr/diagnostics/support_archive.cpp",
 			"./src/common/utils/compression.cpp"}

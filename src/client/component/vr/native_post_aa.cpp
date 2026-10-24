@@ -5,6 +5,7 @@
 #include "native_render_contract.hpp"
 #include "diagnostics/post_aa.hpp"
 #include "component/d3d11.hpp"
+#include "component/d3d11/texture_diagnostics.hpp"
 #include "game/game.hpp"
 #include "loader/component_loader.hpp"
 #include <utils/hook.hpp>
@@ -316,8 +317,13 @@ namespace vr::native_post_aa
 			ID3D11DepthStencilView* scene_depth{};
 			std::memcpy(&scene_depth, reinterpret_cast<const void*>(native_render_contract::target_registry_base +
 				4 * native_render_contract::target_registry_stride + 2 * sizeof(void*)), sizeof(scene_depth));
+			d3d11::texture_diagnostics::cpu_scope aa_call(
+				d3d11::texture_diagnostics::phase::post_aa_begin, d3d11::texture_diagnostics::phase::post_aa_end,
+				view.device_generation, view.pair, view.eye, graphics.context.Get(), record, display.Get(), nullptr,
+				static_cast<std::uint64_t>(selected));
 			const bool drawn = selected >= mode::smaa && selected <= mode::filmic_smaa_t2x ?
 				histories.depth.preserve(graphics.context.Get(), scene_depth, draw) : draw();
+			aa_call.complete(drawn);
 			if (!drawn) return reject("native_dispatch");
 			if (*reinterpret_cast<const std::uint32_t*>(frame_address) != frame)
 				return reject("native_frame_changed");

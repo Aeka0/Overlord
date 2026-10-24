@@ -45,6 +45,7 @@
 
 #include "../console.hpp"
 #include "../d3d11.hpp"
+#include "../d3d11/texture_diagnostics.hpp"
 #include "loader/target_identity.hpp"
 
 #include <algorithm>
@@ -368,7 +369,7 @@ namespace vr::diagnostics
 		// One-shot crash/watchdog reports preserve the complete CPU ring. The
 		// periodically replaced live checkpoint uses a smaller multi-second window
 		// below so durable diagnostics do not become a renderer-adjacent I/O load.
-		return format_trace(engine_view_probe::trace_capacity);
+		return format_trace(engine_view_probe::trace_capacity) + d3d11::texture_diagnostics::format_recent();
 	}
 
 	void record_renderer_frame() noexcept
@@ -908,6 +909,7 @@ namespace vr::diagnostics
 		{
 			output << "  OpenXR SDK facade=unavailable\n";
 		}
+		output << d3d11::texture_diagnostics::format_recent(32);
 
 		return output.str();
 	}
@@ -1286,6 +1288,7 @@ namespace vr::diagnostics
 				<< static_cast<std::uint32_t>(graphics.device_removed_reason) << "\r\n";
 			append_device_creation_evidence(report, graphics);
 			report << "VR trace:\r\n" << format_trace(live_view_trace_records);
+			report << d3d11::texture_diagnostics::format_recent(8);
 			// Never truncate the last complete snapshot in place. A kernel bugcheck can
 			// interrupt buffered I/O after truncation and previously left this file as
 			// 18 KiB of zeros. Flush a sibling first, then atomically replace the final

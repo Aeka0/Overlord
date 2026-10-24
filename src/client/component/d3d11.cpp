@@ -9,6 +9,7 @@
 #include "gui/gui.hpp"
 #include "d3d11.hpp"
 #include "d3d11/swap_chain_hook.hpp"
+#include "d3d11/texture_diagnostics.hpp"
 
 #include <utils/string.hpp>
 #include <utils/hook.hpp>
@@ -1866,6 +1867,7 @@ namespace d3d11
 				candidate_device = candidate;
 			}
 			creation_lock.unlock();
+			(void)texture_diagnostics::install(candidate.device.Get(), candidate.generation);
 			// Early device observers must see the exact candidate before H2 can issue
 			// its first immediate-context call. The candidate and its generation GUID
 			// are already published above. No D3D11 creation or graphics-state mutex is

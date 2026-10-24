@@ -81,6 +81,7 @@ These are registered standalone targets. Executable paths are relative to `build
 | --- | --- | --- |
 | Native game executable cache and loader | `game-loader-tests` | `game-loader/game-loader-tests.exe` |
 | Crash and focused watchdog dump evidence | `crash-evidence-tests` | `crash-evidence/crash-evidence-tests.exe` |
+| Texture creation and CPU-submit incident records | `d3d11-texture-diagnostics-tests` | `texture-diagnostics/d3d11-texture-diagnostics-tests.exe` |
 | Native query signatures and live read-only globals | `vr-native-binding-tests` | `native-bindings/vr-native-binding-tests.exe` |
 | Campaign phases, camera policy and scripted use | `vr-campaign-policy-tests` | `campaign-policy/vr-campaign-policy-tests.exe` |
 | Hand arbitration and phase binding | `vr-hand-interaction-tests` | `hand-interaction/vr-hand-interaction-tests.exe` |

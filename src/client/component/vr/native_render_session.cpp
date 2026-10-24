@@ -8,6 +8,7 @@
 #include "native_conversion_command_list.hpp"
 #include "native_display_contract.hpp"
 #include "stabilization.hpp"
+#include "component/d3d11/texture_diagnostics.hpp"
 
 #include <d3dcompiler.h>
 #include <algorithm>
@@ -506,6 +507,8 @@ float4 main(float4 position : SV_Position) : SV_Target
 
 	void session::invalidate_locked() noexcept
 	{
+		d3d11::texture_diagnostics::record_phase(d3d11::texture_diagnostics::phase::resources_reset,
+			device_generation_, expected_pair_id_, 0, context_.Get(), device_.Get());
 		stabilization::invalidate();
 		for (auto& pair : pairs_)
 		{
@@ -978,7 +981,12 @@ float4 main(float4 position : SV_Position) : SV_Target
 			diagnostics::record_trace(diagnostics::trace_event::native_command_list_begin,
 				pair_id, (static_cast<std::uint64_t>(eye) << 56) |
 					(reinterpret_cast<std::uintptr_t>(commands.Get()) & 0x00FFFFFFFFFFFFFFull));
+			d3d11::texture_diagnostics::cpu_scope submission(
+				d3d11::texture_diagnostics::phase::execute_begin, d3d11::texture_diagnostics::phase::execute_end,
+				device_generation_, pair_id, eye, context, conversion_sources_[source_index].Get(),
+				selected->eyes[eye].color.Get(), commands.Get());
 			context->ExecuteCommandList(commands.Get(), TRUE);
+			submission.complete();
 			diagnostics::record_trace(diagnostics::trace_event::native_command_list_end,
 				pair_id, eye);
 			record_timing(status_.command_list_execute_samples,

@@ -1,5 +1,6 @@
 #include "component/vr/diagnostics.hpp"
 #include "component/d3d11.hpp"
+#include "component/d3d11/texture_diagnostics.hpp"
 #include "component/vr/engine_stereo_owner_pass.hpp"
 #include "component/vr/engine_scene_resolution.hpp"
 
@@ -36,6 +37,16 @@ namespace d3d11
 		gpu_queue_probe_cv.notify_all();
 		return result;
 	}
+}
+
+namespace d3d11::texture_diagnostics
+{
+	cpu_scope::cpu_scope(phase, phase, std::uint64_t, std::uint64_t, std::uint64_t,
+		ID3D11DeviceContext*, const void*, const void*, const void*, std::uint64_t) noexcept {}
+	cpu_scope::~cpu_scope() noexcept = default;
+	void cpu_scope::complete(std::uint64_t) noexcept {}
+	void record_phase(phase, std::uint64_t, std::uint64_t, std::uint64_t,
+		ID3D11DeviceContext*, const void*, const void*, const void*) noexcept {}
 }
 
 namespace vr::tests
