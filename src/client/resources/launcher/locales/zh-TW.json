@@ -302,7 +302,7 @@
   "settings.controllerCompatibility": "控制器相容性",
   "settings.controllerPoseMode": "控制器姿態方案",
   "settings.controllerPoseModeHint": "標準方案使用 OpenXR 握持與指向座標；舊版恢復先前的實作。兩套方案獨立儲存手部校準。姿態方案的切換在下次啟動遊戲時生效。",
-  "choice.standardControllerPose": "標準方案（試用）",
+  "choice.standardControllerPose": "標準方案",
   "choice.legacyControllerPose": "舊版方案（預設）",
   "settings.positionOffsets": "位置偏移",
   "settings.angleOffsets": "角度偏移",

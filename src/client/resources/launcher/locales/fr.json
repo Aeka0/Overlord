@@ -302,7 +302,7 @@
   "settings.controllerCompatibility": "Compatibilité des contrôleurs",
   "settings.controllerPoseMode": "Poses des contrôleurs",
   "settings.controllerPoseModeHint": "Standard utilise les coordonnées de prise et de visée OpenXR. Ancienne restaure la version précédente. Chaque option conserve son propre calibrage. Un changement prend effet au prochain lancement du jeu.",
-  "choice.standardControllerPose": "Standard (essai)",
+  "choice.standardControllerPose": "Standard",
   "choice.legacyControllerPose": "Ancienne (par défaut)",
   "settings.positionOffsets": "Décalages de position",
   "settings.angleOffsets": "Décalages angulaires",

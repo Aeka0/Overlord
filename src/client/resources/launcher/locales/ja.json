@@ -302,7 +302,7 @@
   "settings.controllerCompatibility": "コントローラーの互換性",
   "settings.controllerPoseMode": "コントローラーの姿勢処理",
   "settings.controllerPoseModeHint": "標準方式は OpenXR のグリップと照準座標を使用します。旧方式で以前の実装に戻せます。手の調整値は方式ごとに保存されます。方式の変更は次回のゲーム起動時に適用されます。",
-  "choice.standardControllerPose": "標準方式（試用）",
+  "choice.standardControllerPose": "標準方式",
   "choice.legacyControllerPose": "旧方式（既定）",
   "settings.positionOffsets": "位置オフセット",
   "settings.angleOffsets": "角度オフセット",

@@ -302,7 +302,7 @@
   "settings.controllerCompatibility": "Compatibilidad de mandos",
   "settings.controllerPoseMode": "Poses de los mandos",
   "settings.controllerPoseModeHint": "Estándar usa las coordenadas de agarre y apuntado de OpenXR. Anterior restaura la implementación previa. Cada opción guarda su propia calibración. Cambiar de modo se aplica al volver a iniciar el juego.",
-  "choice.standardControllerPose": "Estándar (prueba)",
+  "choice.standardControllerPose": "Estándar",
   "choice.legacyControllerPose": "Anterior (predeterminado)",
   "settings.positionOffsets": "Desplazamiento de posición",
   "settings.angleOffsets": "Desplazamiento angular",

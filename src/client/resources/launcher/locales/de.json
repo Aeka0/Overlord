@@ -302,7 +302,7 @@
   "settings.controllerCompatibility": "Controller-Kompatibilität",
   "settings.controllerPoseMode": "Controller-Posen",
   "settings.controllerPoseModeHint": "Standard verwendet OpenXR-Koordinaten für Griff und Zeiger. Alt stellt die bisherige Implementierung wieder her. Beide speichern ihre Handkalibrierung getrennt. Ein Wechsel gilt beim nächsten Spielstart.",
-  "choice.standardControllerPose": "Standard (Test)",
+  "choice.standardControllerPose": "Standard",
   "choice.legacyControllerPose": "Alt (Standard)",
   "settings.positionOffsets": "Positionsversatz",
   "settings.angleOffsets": "Winkelversatz",

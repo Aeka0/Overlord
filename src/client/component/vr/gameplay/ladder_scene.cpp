@@ -51,8 +51,8 @@ namespace vr::gameplay::ladders::scene
                     {
                         game::scr_string_t id{};std::array<char,32> tag{};game::DObjAnimMat bind{};
                         if(!header.boneNames || !read(header.boneNames+b,id))break;
-                        const auto* name=game::SL_ConvertToString(id);
-                        if(!name || !utils::native_memory::read_bytes(tag.data(),name,tag.size()-1) || std::string_view(tag.data())!="tag_body")continue;
+                        const auto* bone_name=game::SL_ConvertToString(id);
+                        if(!bone_name || !utils::native_memory::read_bytes(tag.data(),bone_name,tag.size()-1) || std::string_view(tag.data())!="tag_body")continue;
                         if(!header.baseMat || !read(header.baseMat+b,bind))break;
                         value.bind={{bind.trans[0],bind.trans[1],bind.trans[2]},{bind.quat[0],bind.quat[1],bind.quat[2],bind.quat[3]}};
                         if(free_climb::finite(value.bind.position) && free_climb::rotation_valid(value.bind.rotation))
@@ -149,12 +149,12 @@ namespace vr::gameplay::ladders::scene
                     // same current-tag * inverse-bind composition is used by
                     // scripted-use geometry; never freeze a rendered bone pose.
                     const scripting::entity actor{game::scr_entref_t{static_cast<unsigned short>(item.entity),0}};
-                    const auto p=actor.call("gettagorigin",{"tag_body"}).as<scripting::vector>();
+                    const auto tag_origin=actor.call("gettagorigin",{"tag_body"}).as<scripting::vector>();
                     const auto a=actor.call("gettagangles",{"tag_body"}).as<scripting::vector>();
-                    if(!free_climb::finite({p[0],p[1],p[2]}) || !free_climb::finite({a[0],a[1],a[2]}))return false;
+                    if(!free_climb::finite({tag_origin[0],tag_origin[1],tag_origin[2]}) || !free_climb::finite({a[0],a[1],a[2]}))return false;
                     const float euler[]{a[0],a[1],a[2]};float axis[3][3]{};game::AnglesToAxis(euler,axis);
                     std::array<vec,3> rotation;std::memcpy(rotation.data(),axis,sizeof(axis));
-                    const auto pose=pose_math::rigid_delta(anchor{{p[0],p[1],p[2]},from_axis(rotation)},mesh.bind);
+                    const auto pose=pose_math::rigid_delta(anchor{{tag_origin[0],tag_origin[1],tag_origin[2]},from_axis(rotation)},mesh.bind);
                     item.transform.origin=pose.position;
                     item.transform.axis={rotate(pose.rotation,{1,0,0}),rotate(pose.rotation,{0,1,0}),rotate(pose.rotation,{0,0,1})};
                 }

@@ -302,7 +302,7 @@
   "settings.controllerCompatibility": "Controller compatibility",
   "settings.controllerPoseMode": "Controller pose pipeline",
   "settings.controllerPoseModeHint": "Standard uses OpenXR grip and aim coordinates. Legacy restores the previous implementation. Each keeps separate hand calibration. Changing the pipeline takes effect on the next game launch.",
-  "choice.standardControllerPose": "Standard (trial)",
+  "choice.standardControllerPose": "Standard",
   "choice.legacyControllerPose": "Legacy (default)",
   "settings.positionOffsets": "Position offsets",
   "settings.angleOffsets": "Angle offsets",

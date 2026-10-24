@@ -302,7 +302,7 @@
   "settings.controllerCompatibility": "Совместимость контроллеров",
   "settings.controllerPoseMode": "Обработка поз контроллеров",
   "settings.controllerPoseModeHint": "Стандартный режим использует координаты хвата и прицеливания OpenXR. Прежний режим возвращает старую реализацию. Калибровка рук сохраняется отдельно. Смена режима действует при следующем запуске игры.",
-  "choice.standardControllerPose": "Стандартный (пробный)",
+  "choice.standardControllerPose": "Стандартный",
   "choice.legacyControllerPose": "Прежний (по умолчанию)",
   "settings.positionOffsets": "Смещение положения",
   "settings.angleOffsets": "Угловое смещение",
