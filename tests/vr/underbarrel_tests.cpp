@@ -1,17 +1,18 @@
 #include "support_handoff_tests.hpp"
 #include "component/vr/hand.hpp"
 using vr::hand;
-#include "component/vr/gameplay/underbarrel_feed.hpp"
-#include "component/vr/gameplay/underbarrel_supply.hpp"
+#include "component/vr/digital_button_gate.hpp"
+#include "component/vr/gameplay/native_ammunition_storage.hpp"
 #include "component/vr/gameplay/underbarrel_binding.hpp"
+#include "component/vr/gameplay/underbarrel_feed.hpp"
+#include "component/vr/gameplay/underbarrel_feedback.hpp"
+#include "component/vr/gameplay/underbarrel_presenter.hpp"
 #include "component/vr/gameplay/underbarrel_rig.hpp"
 #include "component/vr/gameplay/underbarrel_runtime.hpp"
-#include "component/vr/gameplay/underbarrel_feedback.hpp"
-#include "component/vr/gameplay/native_ammunition_storage.hpp"
-#include "component/vr/digital_button_gate.hpp"
+#include "component/vr/gameplay/underbarrel_supply.hpp"
 #include "component/vr/gameplay/weapon_carry.hpp"
-#include "component/vr/gameplay/weapons/scar/profile.hpp"
 #include "component/vr/gameplay/weapon_carry_grip.hpp"
+#include "component/vr/gameplay/weapons/scar/profile.hpp"
 #include "underbarrel_data.hpp"
 #include <iostream>
 #include <limits>
@@ -21,24 +22,193 @@ int main()
 	namespace w=vr::gameplay::weapons;namespace u=w::underbarrel;
 	int failures{},checks{};auto check=[&](bool ok,const char* label){++checks;if(!ok){++failures;std::cerr<<"FAIL "<<label<<'\n';}};
 	support_handoff_tests::run(check);
-	for(auto type:{u::kind::m203,u::kind::gp25,u::kind::shotgun})
-	{
-		auto ammo=u::import_native({{53,7},54,type},0,9);
-		if(type==u::kind::m203)ammo.open=true;
-		check(u::prefer_secondary_supply(ammo,.1f,.1f,false),"loadable empty modules prefer their own ammunition");
-		check(!u::prefer_secondary_supply(ammo,.1f,.1f,true),"missing primary magazine or exhausted primary feed takes priority for every module");
-		auto empty=ammo;empty.reserve=0;
-		check(!u::prefer_secondary_supply(empty,.1f,.1f,false),"empty secondary reserve falls back to the primary magazine");
-		auto held=ammo;held.held=1;held.loader=vr::hand::left;
-		check(!u::prefer_secondary_supply(held,.1f,.1f,false),"existing secondary escrow never becomes a new draw preference");
-		for(int loaded=1;loaded<=u::capacity(type);++loaded)
-		{
-			auto full=u::import_native(ammo.id,loaded,9);
-			check(u::prefer_secondary_supply(full,.1f,.1f,false)==(type==u::kind::shotgun && loaded<4),
-				"launchers require an empty chamber; chambered shotgun states top up their underfilled tube");
-		}
-	}
-	{
+        for (auto rear : {vr::hand::left, vr::hand::right}) {
+          const auto actor = vr::hand(1 - int(rear));
+          const u::identity id{{53, 99}, 54, u::kind::m203};
+          const auto loaded = u::import_native(id, 1, 9);
+          const auto shot =
+              u::plan(loaded, {u::operation::shot, id, loaded.revision, rear,
+                               actor, true});
+          const float clearance =
+              36.52845f / 25.4f; // Independent native tube/case geometry
+                                 // witness, in model inches.
+          for (float units : {19.685039f, 39.370079f, 78.740158f}) {
+            const float boundary = clearance / units;
+            check(
+                !u::case_unsupported(shot.next, std::nextafter(boundary, 0.f),
+                                     units, clearance) &&
+                    u::case_unsupported(shot.next, boundary, units, clearance),
+                "case releases exactly when native axial support ends, "
+                "independent of XR scale");
+            check(!u::case_unsupported(shot.next, boundary, units, 0) &&
+                      !u::case_unsupported(loaded, boundary, units, clearance),
+                  "missing geometry and a live grenade cannot trigger a "
+                  "spent-case release");
+          }
+          const auto released =
+              u::plan(shot.next, {u::operation::extract_case, id,
+                                  shot.next.revision, rear, actor});
+          check(released && u::ejects_spent_case(released) &&
+                    !released.next.spent && !released.next.open &&
+                    released.before == released.after &&
+                    u::total(released.next) == u::total(shot.next),
+                "support loss releases one case without opening the loading "
+                "gate or spending ammunition again");
+          check(!u::plan(released.next, {u::operation::extract_case, id,
+                                         released.next.revision, rear, actor}),
+                "reversing or repeating partial opening cannot manufacture "
+                "another case");
+          const auto drawn =
+              u::plan(released.next, {u::operation::draw, id,
+                                      released.next.revision, rear, actor});
+          check(drawn &&
+                    !u::plan(drawn.next, {u::operation::insert, id,
+                                          drawn.next.revision, rear, actor}),
+                "earlier case release does not permit loading a partially open "
+                "M203");
+          const auto opened =
+              u::plan(released.next, {u::operation::open, id,
+                                      released.next.revision, rear, actor});
+          check(opened && opened.next.open && !u::ejects_spent_case(opened),
+                "full opening after an early release cannot replay the dropped "
+                "case");
+          for (auto type : {u::kind::gp25, u::kind::shotgun}) {
+            const auto other =
+                u::import_native({id.host, id.definition, type}, 1, 9);
+            check(!u::plan(other, {u::operation::extract_case, other.id,
+                                   other.revision, rear, actor}),
+                  "M203 support-loss transaction is never routed to another "
+                  "module's feed");
+          }
+        }
+        for (auto rear : {vr::hand::left, vr::hand::right}) {
+          const auto actor = vr::hand(1 - int(rear));
+          const u::identity id{{53, 99}, 54, u::kind::m203};
+          auto ammo = u::import_native(id, 1, 9);
+          const auto pinchable = [&](const u::state &state,
+                                     float travel = 0.f) {
+            return u::trigger_action_available(state, travel, 1, .02f, {1, 0},
+                                               .075f);
+          };
+          check(!pinchable(ammo) &&
+                    u::visible_chamber(ammo) == u::chamber_visual::live,
+                "loaded closed M203 shows its round but does not grant a "
+                "Trigger tube pinch");
+          const auto shot = u::plan(
+              ammo, {u::operation::shot, id, ammo.revision, rear, actor, true});
+          check(shot && pinchable(shot.next) &&
+                    u::visible_chamber(shot.next) == u::chamber_visual::spent,
+                "accepted shot leaves a visible case and unlocks Trigger "
+                "manipulation");
+          const auto opened =
+              u::plan(shot.next, {u::operation::open, id, shot.next.revision,
+                                  rear, actor});
+          check(opened && u::ejects_spent_case(opened) &&
+                    u::visible_chamber(opened.next) == u::chamber_visual::empty,
+                "one opening transfers the visible case out of the chamber");
+          const auto drawn =
+              u::plan(opened.next, {u::operation::draw, id,
+                                    opened.next.revision, rear, actor});
+          check(drawn && !pinchable(drawn.next, u::authored::m203_stroke),
+                "held grenade cannot become a tube pinch");
+          const auto loaded =
+              u::plan(drawn.next, {u::operation::insert, id,
+                                   drawn.next.revision, rear, actor});
+          check(loaded && pinchable(loaded.next, u::authored::m203_stroke) &&
+                    u::visible_chamber(loaded.next) == u::chamber_visual::live,
+                "inserted grenade is visible while the open tube can be "
+                "pinched closed");
+          const auto spare =
+              u::plan(loaded.next, {u::operation::draw, id,
+                                    loaded.next.revision, rear, actor});
+          check(spare &&
+                    u::visible_chamber(spare.next) == u::chamber_visual::live,
+                "drawing another round never removes the seated round's "
+                "presentation");
+          const auto empty = u::import_native(id, 0, 9);
+          check(pinchable(empty) && !u::trigger_action_available(
+                                        empty, 0, .01f, .02f, {0, 1}, .075f),
+                "Trigger opens an empty tube but cannot turn the firing "
+                "contact into an action grab");
+          for (auto type : {u::kind::gp25, u::kind::shotgun})
+            check(!pinchable(
+                      u::import_native({id.host, id.definition, type}, 0, 9)),
+                  "M203 Trigger admission does not change other underbarrel "
+                  "mechanisms");
+
+          namespace hi = vr::gameplay::hand_interaction;
+          hi::arbiter arbiter;
+          arbiter.begin(1, 3);
+          const hi::target object{hi::domain::underbarrel, id.host, 0, 17};
+          arbiter.select_supply(actor, object);
+          arbiter.offer({actor,
+                         {object,
+                          hi::role::supply,
+                          hi::button::trigger,
+                          hi::recipe::single,
+                          {}},
+                         1,
+                         30,
+                         0,
+                         1,
+                         true,
+                         true});
+          arbiter.offer({actor,
+                         {object, hi::role::part, hi::button::trigger,
+                          hi::recipe::single, hi::capability::action},
+                         1,
+                         15,
+                         .2f,
+                         1,
+                         true,
+                         true});
+          int commits{};
+          arbiter.resolve([&](const auto &) {
+            ++commits;
+            return true;
+          });
+          const auto *session = arbiter.find(actor, object);
+          check(commits == 1 && session &&
+                    session->held.purpose == hi::role::part &&
+                    !hi::has(session->held.abilities, hi::capability::fire),
+                "overlapping tube and waist contacts consume one Trigger edge "
+                "as a mechanical action only");
+          check(!arbiter.permits(actor, {object,
+                                         hi::role::supply,
+                                         hi::button::trigger,
+                                         hi::recipe::single,
+                                         {}}),
+                "a held tube cannot take a grenade from an overlapping supply "
+                "point");
+        }
+        for (auto type : {u::kind::m203, u::kind::gp25, u::kind::shotgun}) {
+          auto ammo = u::import_native({{53, 7}, 54, type}, 0, 9);
+          if (type == u::kind::m203)
+            ammo.open = true;
+          check(u::prefer_secondary_supply(ammo, .1f, .1f, false),
+                "loadable empty modules prefer their own ammunition");
+          check(!u::prefer_secondary_supply(ammo, .1f, .1f, true),
+                "missing primary magazine or exhausted primary feed takes "
+                "priority for every module");
+          auto empty = ammo;
+          empty.reserve = 0;
+          check(!u::prefer_secondary_supply(empty, .1f, .1f, false),
+                "empty secondary reserve falls back to the primary magazine");
+          auto held = ammo;
+          held.held = 1;
+          held.loader = vr::hand::left;
+          check(
+              !u::prefer_secondary_supply(held, .1f, .1f, false),
+              "existing secondary escrow never becomes a new draw preference");
+          for (int loaded = 1; loaded <= u::capacity(type); ++loaded) {
+            auto full = u::import_native(ammo.id, loaded, 9);
+            check(u::prefer_secondary_supply(full, .1f, .1f, false) ==
+                      (type == u::kind::shotgun && loaded < 4),
+                  "launchers require an empty chamber; chambered shotgun "
+                  "states top up their underfilled tube");
+          }
+        }
+        {
 		auto ammo=u::import_native({{53,7},54,u::kind::m203},0,9);ammo.open=true;
 		const float threshold=.1f*u::action_open_fraction;
 		check(!u::prefer_secondary_supply(ammo,std::nextafter(threshold,0.f),.1f,false) &&
@@ -107,8 +277,35 @@ int main()
 		}
 		check(v.travel==.02f && v.ammo.loaded==0 && v.ammo.reserve==9 && !v.ammo.open,
 			"rendered travel cannot mutate authoritative motion, chamber or ammunition");
-		const auto expected=render(v,owner,input,wrists,units,17,true,input.sampled_at);
-		auto moved=wrists;const quat rotation{0,0,.70710678f,.70710678f};
+                if (type == u::kind::m203) {
+                  auto pinched = v;
+                  pinched.owns_support = false;
+                  pinched.maintained =
+                      vr::gameplay::hand_interaction::button::trigger;
+                  auto trigger_input = input;
+                  trigger_input.squeeze[off].down = false;
+                  trigger_input.trigger[off] = {true, true, 1, 5};
+                  check(render(pinched, owner, trigger_input, wrists, units, 17,
+                               true, trigger_input.sampled_at) > .02f,
+                        "Trigger-only tube manipulation uses the same "
+                        "per-frame slider projection without carrying support");
+                  trigger_input.trigger[off].down = false;
+                  check(render(pinched, owner, trigger_input, wrists, units, 17,
+                               true,
+                               trigger_input.sampled_at) == pinched.travel,
+                        "releasing Trigger immediately stops the mechanical "
+                        "projection");
+                  trigger_input.trigger[off].down = true;
+                  ++trigger_input.trigger[off].generation;
+                  check(render(pinched, owner, trigger_input, wrists, units, 17,
+                               true,
+                               trigger_input.sampled_at) == pinched.travel,
+                        "a reconnected Trigger cannot inherit an earlier tube "
+                        "pinch");
+                }
+                const auto expected = render(v, owner, input, wrists, units, 17,
+                                             true, input.sampled_at);
+                auto moved=wrists;const quat rotation{0,0,.70710678f,.70710678f};
 		for(auto& wrist:moved){wrist.position=add(rotate(rotation,wrist.position),{10*units,20*units,30*units});wrist.rotation=rotation;}
 		check(std::abs(render(v,owner,input,moved,units,17,true,input.sampled_at)-expected)<.00001f,
 			"display stroke is invariant under shared movement and rotation in either hand");
@@ -168,8 +365,12 @@ int main()
 		check(!u::plan(s,{u::operation::shot,{{53,100},54,kind},s.revision,rear,off,true}),"stale host generation rejected");
 		check(!u::plan(s,{u::operation::shot,{{53,99},55,kind},s.revision,rear,off,true}),"different secondary definition rejected");
 		const auto before=s;auto tx=apply(u::operation::shot,true);check(bool(tx)&&tx.spent==1,"support shot spends one");
-		check(!u::ready(s)&&s.loaded==before.loaded-1,"shot does not auto cycle");
-		check(!apply(u::operation::shot,true),"held repeat cannot fire before reloading or pump");
+                check(!u::ejects_spent_case(tx),
+                      "firing retains the M203 case instead of emitting it at "
+                      "the muzzle");
+                check(!u::ready(s) && s.loaded == before.loaded - 1,
+                      "shot does not auto cycle");
+                check(!apply(u::operation::shot,true),"held repeat cannot fire before reloading or pump");
 		check(!u::plan(s,{u::operation::draw,id,before.revision,rear,off}),"stale revision rejected");
 		if(kind==u::kind::gp25)
 		{
@@ -180,11 +381,22 @@ int main()
 		else
 		{
 			check(s.spent,"shot retains case until extraction");
-			check(bool(apply(u::operation::open)),"fired action unlocks");
-			check(!s.spent&&s.open,"open removes fired case");
-			check(!apply(u::operation::open),"duplicate extraction rejected");
-			if(kind==u::kind::m203)check(bool(apply(u::operation::draw))&&bool(apply(u::operation::insert)),"open M203 accepts one round");
-			check(!u::ready(s),"open action cannot fire even with a round inserted");
+                        const auto opened = apply(u::operation::open);
+                        check(bool(opened), "fired action unlocks");
+                        check(u::ejects_spent_case(opened) ==
+                                  (kind == u::kind::m203),
+                              "only committed M203 spent extraction enters the "
+                              "new presentation route");
+
+                        check(!s.spent && s.open, "open removes fired case");
+                        const auto repeated = apply(u::operation::open);
+                        check(!repeated && !u::ejects_spent_case(repeated),
+                              "duplicate extraction cannot replay a case");
+                        if (kind == u::kind::m203)
+                          check(bool(apply(u::operation::draw)) &&
+                                    bool(apply(u::operation::insert)),
+                                "open M203 accepts one round");
+                        check(!u::ready(s),"open action cannot fire even with a round inserted");
 			check(bool(apply(u::operation::close))&&u::ready(s),"complete close chambers and locks");
 			if(kind==u::kind::shotgun)check(bool(apply(u::operation::draw))&&bool(apply(u::operation::insert)),"shotgun tops up one after cycling");
 			check(!apply(u::operation::open),"loaded action remains locked without manual release");
@@ -197,8 +409,45 @@ int main()
 		check(!apply(u::operation::cleanup),"cleanup replay cannot duplicate ammunition");
 		check(bool(apply(u::operation::draw))&&bool(apply(u::operation::discard))&&u::total(s)==initial-1,"released round follows shared no-penalty disposition policy");
 	}
-	check(u::route(true,true,true,true,true,true,true)==u::trigger_route::existing_lease,"held grenade is not retargeted when gun and waist overlap");
-	check(u::route(true,false,true,true,true,true,true)==u::trigger_route::fire,"confirmed firing grip beats overlapping magazine and waist");
+        for (auto rear : {vr::hand::left, vr::hand::right}) {
+          const auto actor = vr::hand(1 - int(rear));
+          const u::identity id{{53, 99}, 54, u::kind::m203};
+          const auto empty = u::import_native(id, 0, 9);
+          const auto opened = u::plan(
+              empty, {u::operation::open, id, empty.revision, rear, actor});
+          check(opened && !u::ejects_spent_case(opened),
+                "initial empty chamber does not invent a spent case");
+          const auto closed =
+              u::plan(opened.next, {u::operation::close, id,
+                                    opened.next.revision, rear, actor});
+          const auto reopened =
+              u::plan(closed.next, {u::operation::open, id,
+                                    closed.next.revision, rear, actor});
+          check(reopened && !u::ejects_spent_case(reopened),
+                "closing and reopening an empty tube cannot replay brass");
+          const auto loaded = u::import_native(id, 1, 9);
+          const auto live =
+              u::plan(loaded, {u::operation::open, id, loaded.revision, rear,
+                               actor, false, true});
+          check(live && live.spent == 1 && !u::ejects_spent_case(live),
+                "manual live extraction is not shown as an empty case");
+          const auto sustained =
+              u::plan(loaded, {u::operation::shot, id, loaded.revision, rear,
+                               actor, true, false, true});
+          check(sustained && !sustained.next.spent &&
+                    !u::ejects_spent_case(sustained),
+                "sustained ammo cannot create a false spent case");
+          const auto debit = u::reconcile(loaded, id, {0, 9});
+          const auto debit_open =
+              u::plan(debit.next, {u::operation::open, id, debit.next.revision,
+                                   rear, actor});
+          check(debit_open && !u::ejects_spent_case(debit_open),
+                "external native debit is not proof of a fired case");
+        }
+        check(u::route(true, true, true, true, true, true, true) ==
+                  u::trigger_route::existing_lease,
+              "held grenade is not retargeted when gun and waist overlap");
+        check(u::route(true,false,true,true,true,true,true)==u::trigger_route::fire,"confirmed firing grip beats overlapping magazine and waist");
 	check(u::route(true,false,false,true,true,true,true)==u::trigger_route::part,"action grasp beats a nearby waist volume");
 	check(u::route(true,false,false,false,true,true,true)==u::trigger_route::secondary_supply,"empty hand grip modifier draws secondary without visiting firing grip");
 	check(u::route(true,false,false,false,true,false,true)==u::trigger_route::primary_supply,"released modifier selects primary supply");
@@ -424,14 +673,83 @@ int main()
 		check(parts.palms_valid,"both palms derive from actual glove anatomy");
 		if(kind==u::kind::m203)
 		{
-			const auto palm=u::facing(u::authored::fire_grip.rotation,parts.palm[0],0);
-			check(u::firing_facing(palm)&&!u::support_facing(palm),"native M203 inward palm is firing, never ordinary support");
-			const auto left=normalize(b[hand_begin].bind.rotation),right=normalize(b[hand_begin+3].bind.rotation);
-			const auto basis=normalize(multiply(conjugate({-left[0],left[1],-left[2],left[3]}),right));
-			const auto mirrored=vr::gameplay::hands::pose_mirror::wrist(u::authored::fire_grip,basis);
-			const auto right_palm=u::facing(mirrored.rotation,parts.palm[1],1);
-			check(u::firing_facing(right_palm)&&!u::support_facing(right_palm),"native mirrored palm retains inward classification");
-		}
+                  for (float travel : {0.f, u::authored::m203_stroke * .5f,
+                                       u::authored::m203_stroke}) {
+                    const float units = 39.37007874f;
+                    const auto live = u::chamber_pose(
+                        parts, u::chamber_visual::live, travel, units);
+                    const auto spent = u::chamber_pose(
+                        parts, u::chamber_visual::spent, travel, units);
+                    const auto shift = scale(
+                        rotate(parts.mount.rotation, u::authored::m203_axis),
+                        travel * units);
+                    check(length(sub(live.position,
+                                     add(parts.round_rest.position, shift))) <
+                                  .00001f &&
+                              length(sub(spent.position,
+                                         parts.round_rest.position)) < .00001f,
+                          "loaded grenade fills the moving tube while a fired "
+                          "case stays at the extractor");
+                    u::scene contact;
+                    contact.type = kind;
+                    contact.loading_local = parts.round_rest;
+                    contact.axis =
+                        rotate(parts.mount.rotation, u::authored::m203_axis);
+                    contact.round_in_wrist = {{}, {0, 0, 0, 1}};
+                    const auto sampled = u::sample_contact(
+                        contact, {}, {}, {{}, {0, 0, 0, 1}}, live, {},
+                        {{{1, 0, 0}, {0, 1, 0}, {0, 0, 1}}}, units, travel);
+                    check(sampled.load_distance < .00001f,
+                          "insertion contact and displayed seated round follow "
+                          "the same open tube");
+                  }
+                  u::round_presentation::extraction release{
+                      {53, 7},
+                      3,
+                      u::clock::time_point{} + std::chrono::seconds(1),
+                      {{20, -10, 7}, normalize({.1f, .2f, .3f, .9f})},
+                      39.37007874f,
+                      false};
+                  const auto flight =
+                      u::round_presentation::case_flight(release);
+                  const auto fallen = flight.path.pose(
+                      release.at + std::chrono::milliseconds(50));
+                  const auto expected =
+                      add(release.world.position,
+                          {0, 0, -.5f * 9.81f * release.units * .05f * .05f});
+                  check(flight.path.valid() &&
+                            length(flight.path.velocity) == 0 &&
+                            !flight.scattered &&
+                            length(sub(flight.path.pose(release.at).position,
+                                       release.world.position)) < .00001f &&
+                            length(sub(fallen.position, expected)) < .00001f &&
+                            fallen.rotation == release.world.rotation,
+                        "unsupported case falls from rest under world gravity "
+                        "without launch force or random spin");
+                  check(flight.path.alive(release.at +
+                                          std::chrono::milliseconds(1199)) &&
+                            !flight.path.alive(release.at +
+                                               std::chrono::milliseconds(1201)),
+                        "cosmetic case lifetime stays bounded independently of "
+                        "native reload FX");
+                  const auto palm = u::facing(u::authored::fire_grip.rotation,
+                                              parts.palm[0], 0);
+                  check(u::firing_facing(palm) && !u::support_facing(palm),
+                        "native M203 inward palm is firing, never ordinary "
+                        "support");
+                  const auto left = normalize(b[hand_begin].bind.rotation),
+                             right = normalize(b[hand_begin + 3].bind.rotation);
+                  const auto basis = normalize(multiply(
+                      conjugate({-left[0], left[1], -left[2], left[3]}),
+                      right));
+                  const auto mirrored = vr::gameplay::hands::pose_mirror::wrist(
+                      u::authored::fire_grip, basis);
+                  const auto right_palm =
+                      u::facing(mirrored.rotation, parts.palm[1], 1);
+                  check(u::firing_facing(right_palm) &&
+                            !u::support_facing(right_palm),
+                        "native mirrored palm retains inward classification");
+                }
 		check(length(sub(parts.mount.position,b[parent].bind.position))<.001f,"attachment origin aliases its real receiver mount");
 		check(parts.muzzle.position[0]>parts.mount.position[0],"module muzzle lies forward of actual attachment mount");
 		for (auto rear : {vr::hand::left, vr::hand::right})
@@ -446,50 +764,82 @@ int main()
 			barrel.type = kind;
 			barrel.contact_hand = 1 - int(rear);
 			barrel.muzzle_local = parts.muzzle;
-			const auto visible_contact = u::sample_contact(barrel,
-			                                               {},
-			                                               live.owner,
-			                                               live.gun,
-			                                               wrists[1 - int(rear)],
-			                                               {},
-			                                               {{{1, 0, 0}, {0, 1, 0}, {0, 0, 1}}},
-			                                               39.37007874f,
-			                                               0);
-			const auto visible = compose(live.gun, parts.muzzle);
-			for (const auto grasp : {u::lease::none, u::lease::firing, u::lease::support, u::lease::action})
-			{
-				auto sampled = visible_contact;
-				if (u::uses_pump_frame(kind, grasp))
-					u::sample_pump_motion(sampled, live, wrists, 0);
-				check(
-				    length(sub(sampled.muzzle.position, visible.position)) < .00001f &&
-				        dot(rotate(sampled.muzzle.rotation, {1, 0, 0}), rotate(visible.rotation, {1, 0, 0})) >
-				            .99999f,
-				    "every underbarrel grip state uses the visible barrel for firing, including a pump-to-fire transition");
-				check(
-				    sampled.firing_distance == visible_contact.firing_distance &&
-				        sampled.facing == visible_contact.facing &&
-				        sampled.support_facing == visible_contact.support_facing &&
-				        sampled.action_distance == visible_contact.action_distance &&
-				        sampled.load_distance == visible_contact.load_distance &&
-				        sampled.load_alignment == visible_contact.load_alignment,
-				    "stroke sampling never moves new-grab, firing or loading contacts away from the visible attachment");
-				if (kind == u::kind::shotgun && (grasp == u::lease::action || grasp == u::lease::support))
-				{
-					const auto pump = u::pump_frame(live, wrists);
-					const auto expected =
-					    scale(compose(inverse(pump), wrists[1 - int(rear)]).position, 1 / 39.37007874f);
-					check(length(sub(sampled.stroke_hand, expected)) < .00001f &&
-					          length(sub(sampled.stroke_hand, visible_contact.stroke_hand)) > .01f &&
-					          std::abs(sampled.action_retention_distance - length(expected)) < .00001f,
-					      "held shotgun pump stroke and retention stay in the separate rear-driven frame");
-				}
-				else
-					check(sampled.stroke_hand == visible_contact.stroke_hand &&
-					          sampled.action_retention_distance == sampled.action_distance,
-					      "launcher and unheld shotgun contacts retain the visible weapon frame");
-			}
-		}
+                        barrel.ejection_local = compose(
+                            parts.round_rest, parts.round_parts_local[1]);
+                        const auto visible_contact = u::sample_contact(
+                            barrel, {}, live.owner, live.gun,
+                            wrists[1 - int(rear)], {},
+                            {{{1, 0, 0}, {0, 1, 0}, {0, 0, 1}}}, 39.37007874f,
+                            0);
+                        const auto visible = compose(live.gun, parts.muzzle);
+                        const auto chamber =
+                            compose(live.gun, barrel.ejection_local);
+                        check(
+                            length(sub(visible_contact.ejection_world.position,
+                                       chamber.position)) < .00001f &&
+                                dot(rotate(
+                                        visible_contact.ejection_world.rotation,
+                                        {1, 0, 0}),
+                                    rotate(chamber.rotation, {1, 0, 0})) >
+                                    .99999f,
+                            "case anchor follows the actual visible attachment "
+                            "in either holding hand");
+                        for (const auto grasp :
+                             {u::lease::none, u::lease::firing,
+                              u::lease::support, u::lease::action}) {
+                          auto sampled = visible_contact;
+                          if (u::uses_pump_frame(kind, grasp))
+                            u::sample_pump_motion(sampled, live, wrists, 0);
+                          check(length(sub(sampled.muzzle.position,
+                                           visible.position)) < .00001f &&
+                                    dot(rotate(sampled.muzzle.rotation,
+                                               {1, 0, 0}),
+                                        rotate(visible.rotation, {1, 0, 0})) >
+                                        .99999f,
+                                "every underbarrel grip state uses the visible "
+                                "barrel for firing, including a pump-to-fire "
+                                "transition");
+                          check(sampled.firing_distance ==
+                                        visible_contact.firing_distance &&
+                                    sampled.facing == visible_contact.facing &&
+                                    sampled.support_facing ==
+                                        visible_contact.support_facing &&
+                                    sampled.action_distance ==
+                                        visible_contact.action_distance &&
+                                    sampled.load_distance ==
+                                        visible_contact.load_distance &&
+                                    sampled.load_alignment ==
+                                        visible_contact.load_alignment,
+                                "stroke sampling never moves new-grab, firing "
+                                "or loading contacts away from the visible "
+                                "attachment");
+                          if (kind == u::kind::shotgun &&
+                              (grasp == u::lease::action ||
+                               grasp == u::lease::support)) {
+                            const auto pump = u::pump_frame(live, wrists);
+                            const auto expected = scale(
+                                compose(inverse(pump), wrists[1 - int(rear)])
+                                    .position,
+                                1 / 39.37007874f);
+                            check(
+                                length(sub(sampled.stroke_hand, expected)) <
+                                        .00001f &&
+                                    length(sub(sampled.stroke_hand,
+                                               visible_contact.stroke_hand)) >
+                                        .01f &&
+                                    std::abs(sampled.action_retention_distance -
+                                             length(expected)) < .00001f,
+                                "held shotgun pump stroke and retention stay "
+                                "in the separate rear-driven frame");
+                          } else
+                            check(sampled.stroke_hand ==
+                                          visible_contact.stroke_hand &&
+                                      sampled.action_retention_distance ==
+                                          sampled.action_distance,
+                                  "launcher and unheld shotgun contacts retain "
+                                  "the visible weapon frame");
+                        }
+                }
 		check((parts.bolt>=0)==(kind==u::kind::shotgun),"only the shotgun binds its independent window bolt");
 		for(float units:{1.f,39.37007874f})for(float amount:{0.f,.5f,1.f,2.f,-1.f})
 		for(const auto gun:{anchor{{},{0,0,0,1}},anchor{{12,-3,7},normalize({.2f,-.3f,.1f,.8f})}})

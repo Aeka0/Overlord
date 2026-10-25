@@ -4,6 +4,13 @@
 
 namespace vr::gameplay::weapons::underbarrel
 {
+	inline bool ejects_spent_case(const transaction& tx) noexcept
+	{
+		// Opening a live round has a separate ammunition debit. It must never
+		// be presented as a spent case, nor may an empty opening create brass.
+		return tx && (tx.op == operation::open || tx.op == operation::extract_case) &&
+		       tx.next.id.type == kind::m203 && tx.ejected && tx.spent == 0;
+	}
 	inline sound_reference interaction_sound(kind type,operation op) noexcept
 	{
 		if(op!=operation::open && op!=operation::close && op!=operation::insert)return {};

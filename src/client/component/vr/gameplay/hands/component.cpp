@@ -47,6 +47,7 @@
 #include "../launcher_presenter.hpp"
 #include "../heartbeat_runtime.hpp"
 #include "../underbarrel_runtime.hpp"
+#include "../underbarrel_presenter.hpp"
 #include "../hand_interaction/runtime.hpp"
 #include "../equipment_runtime.hpp"
 #include "attachment_pose.hpp"
@@ -1425,6 +1426,18 @@ namespace vr::gameplay::hands
 				                                  spatial.units_per_meter,
 				                                  {solved.data(), size_t(layout.count)},
 				                                  &hand_motion);
+				weapons::underbarrel::round_presentation::present(
+				    object,
+				    object->timestamp,
+				    object->matrices,
+				    solver().binding.underbarrel_parts,
+				    module_grip,
+				    owner,
+				    input,
+				    hands::pose_math::as_anchor(solved[layout.gun]),
+				    view_offset,
+				    spatial.units_per_meter,
+				    gameplay && !selection_transition);
 				// New-pinch arbitration runs in the server controller. A render-time
 				// modifier must not cancel an already held primary magazine/handle.
 				const bool primary_manipulation = manipulation;

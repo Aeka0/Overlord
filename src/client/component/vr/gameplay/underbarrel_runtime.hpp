@@ -17,13 +17,14 @@ namespace vr::gameplay::weapons::underbarrel
 		controller_input::frame input{};
 		hold owner{};
 		kind type{};
+		bool digital{};
 		std::uint64_t assembly{};
 		bool gameplay{};
 		float firing_distance{10}, facing{}, action_distance{10}, waist_distance{10}, load_distance{10},
 		    load_alignment{};
 		hands::vec stroke_hand{}, axis{};
 		float stroke{}, units{};
-		hands::anchor muzzle{};
+		hands::anchor muzzle{}, ejection_world{};
 		// New grabs use action_distance in the visible weapon frame. A held
 		// shotgun pump measures only stroke/retention in its unsteered frame.
 		float action_retention_distance{10};
@@ -34,7 +35,8 @@ namespace vr::gameplay::weapons::underbarrel
 		body_supply_layout supply{};
 		// Visual round/hand placement only, never input-facing classification.
 		hands::quat wrist_basis{0, 0, 0, 1};
-		hands::anchor firing_local{}, action_local{}, round_in_wrist{}, loading_local{}, muzzle_local{};
+		hands::anchor firing_local{}, action_local{}, round_in_wrist{}, loading_local{}, muzzle_local{},
+		    ejection_local{};
 		float firing_forward_m{};
 		hands::vec rear_local{}, rest_span{};
 		float hand_distance{}, support_radius{.075f}, support_release{.22f};
@@ -76,7 +78,16 @@ namespace vr::gameplay::weapons::underbarrel
 		std::uint64_t reference{};
 		clock::time_point at{};
 		action_display motion{};
+		// Trigger pinches manipulate the tube; Grip grasps also own support.
+		hand_interaction::button maintained{hand_interaction::button::grip};
 	};
+	inline const controller_input::digital_action& grasp_input(const presentation& module,
+	                                                           const controller_input::frame& input,
+	                                                           int actor) noexcept
+	{
+		return module.maintained == hand_interaction::button::trigger ? input.trigger[actor]
+		                                                              : input.squeeze[actor];
+	}
 	inline hand module_grip_hand(const presentation& module) noexcept
 	{
 		return valid_hand(module.owner.rear) ? hand(1 - int(module.owner.rear)) : module.owner.support;
@@ -131,16 +142,22 @@ namespace vr::gameplay::weapons::underbarrel
 		const std::array<hands::anchor,2>& wrists,float units,std::uint64_t assembly,bool gameplay,clock::time_point now)noexcept
 	{
 		const auto& m=v.motion;
-		if(!gameplay || !v.active || v.fault || !v.owns_support || !owner.can_fire() || owner.id()!=v.owner.id() ||
-			owner.rear_revision!=v.owner.rear_revision || owner.rear!=v.owner.rear || v.reference!=input.reference_generation ||
-			!m.sequence || input.sequence<m.sequence || !assembly || assembly!=m.assembly || !input.focused ||
-			!std::isfinite(units) || units<=0 || units!=m.units || now<m.sampled_at || now-m.sampled_at>std::chrono::milliseconds(150) ||
-			now<input.sampled_at || now-input.sampled_at>std::chrono::milliseconds(150))return v.travel;
+		if (!gameplay || !v.active || v.fault ||
+		    (!v.owns_support && v.maintained != hand_interaction::button::trigger) || !owner.can_fire() ||
+		    owner.id() != v.owner.id() || owner.rear_revision != v.owner.rear_revision ||
+		    owner.rear != v.owner.rear || v.reference != input.reference_generation || !m.sequence ||
+		    input.sequence < m.sequence || !assembly || assembly != m.assembly || !input.focused ||
+		    !std::isfinite(units) || units <= 0 || units != m.units || now < m.sampled_at ||
+		    now - m.sampled_at > std::chrono::milliseconds(150) || now < input.sampled_at ||
+		    now - input.sampled_at > std::chrono::milliseconds(150))
+			return v.travel;
 		const int rear=int(owner.rear),off=1-rear;
-		if(!input.grip[rear].valid || !input.aim[rear].valid || !input.grip[off].valid || !input.aim[off].valid ||
-			!input.squeeze[off].active || !input.squeeze[off].down || input.squeeze[off].generation!=m.grip_generation ||
-			(v.grip!=lease::action && !(v.grip==lease::support && !v.ammo.chamber)) ||
-			(v.ammo.id.type!=kind::m203 && v.ammo.id.type!=kind::shotgun))return v.travel;
+		const auto& grasp = grasp_input(v, input, off);
+		if (!input.grip[rear].valid || !input.aim[rear].valid || !input.grip[off].valid ||
+		    !input.aim[off].valid || !grasp.active || !grasp.down || grasp.generation != m.grip_generation ||
+		    (v.grip != lease::action && !(v.grip == lease::support && !v.ammo.chamber)) ||
+		    (v.ammo.id.type != kind::m203 && v.ammo.id.type != kind::shotgun))
+			return v.travel;
 		for(const auto& wrist:wrists)
 		{
 			float norm{};for(float q:wrist.rotation){if(!std::isfinite(q))return v.travel;norm+=q*q;}
@@ -278,13 +295,17 @@ namespace vr::gameplay::weapons::underbarrel
 		s.stroke_hand = scale(local.position, 1 / units);
 		s.action_retention_distance = s.action_distance;
 		const auto round = compose(local, s.round_in_wrist);
-		s.load_distance = length(sub(round.position, s.loading_local.position)) / units;
+		auto loading = s.loading_local;
+		if (s.type == kind::m203)
+			loading.position = add(loading.position, scale(s.axis, travel * units));
+		s.load_distance = length(sub(round.position, loading.position)) / units;
 		s.load_alignment =
 		    dot(rotate(round.rotation, {1, 0, 0}), rotate(s.loading_local.rotation, {1, 0, 0}));
 		s.waist_distance = 10;
 		for (const auto& volume : body_supply_volumes(head, body_axis, units, s.supply, s.waist_radius))
 			s.waist_distance = std::min(s.waist_distance, volume.distance(wrist.position) / units);
 		s.muzzle = compose(gun, s.muzzle_local);
+		s.ejection_world = compose(gun, s.ejection_local);
 		return s;
 	}
 	hands::anchor support_anchor(const part_rig&,const hands::rig&,const hands::pose_library&,hands::anchor ordinary,

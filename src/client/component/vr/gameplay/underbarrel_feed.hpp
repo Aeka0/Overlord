@@ -65,7 +65,17 @@ namespace vr::gameplay::weapons::underbarrel
 		if(!valid(n) || total(n)!=std::int64_t(native.loaded)+native.reserve+s.held)return {};
 		return {change,n,{n.loaded,n.reserve}};
 	}
-	enum class operation { shot, draw, insert, open, close, discard, cleanup };
+	enum class operation
+	{
+		shot,
+		draw,
+		insert,
+		open,
+		close,
+		discard,
+		cleanup,
+		extract_case
+	};
 	struct request
 	{
 		operation op{};identity id{};std::uint64_t revision{};hand rear{hand::none},actor{hand::none};
@@ -79,7 +89,11 @@ namespace vr::gameplay::weapons::underbarrel
 	inline transaction plan(const state& s,request q)noexcept
 	{
 		transaction tx;
-		if(!valid(s) || q.op<operation::shot || q.op>operation::cleanup || q.id!=s.id || q.revision!=s.revision || !valid_hand(q.rear) || !valid_hand(q.actor) || q.actor==q.rear)return tx;
+		if (!valid(s) || q.op < operation::shot || q.op > operation::extract_case || q.id != s.id ||
+		    q.revision != s.revision || !valid_hand(q.rear) || !valid_hand(q.actor) || q.actor == q.rear)
+			return tx;
+		if (q.op == operation::extract_case && s.id.type != kind::m203)
+			return tx;
 		if(s.id.type==kind::shotgun)
 		{
 			// Reuse the shared pump/escrow conservation core. The module wrapper
@@ -117,6 +131,12 @@ namespace vr::gameplay::weapons::underbarrel
 			if(s.id.type==kind::gp25 || s.open || s.held || (s.chamber && !q.unlock))return tx;
 			tx.ejected=s.spent;n.spent=false;n.open=true;
 			if(s.chamber){n.chamber=false;--n.loaded;tx.spent=1;tx.ejected=true;}break;
+		case operation::extract_case:
+			if (!s.spent || s.held)
+				return tx;
+			n.spent = false;
+			tx.ejected = true;
+			break;
 		case operation::close:
 			if(!s.open || s.held)return tx;
 			n.open=false;if(s.id.type==kind::shotgun && s.loaded)n.chamber=true;break;

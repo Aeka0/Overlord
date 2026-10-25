@@ -74,7 +74,7 @@ namespace game_text::locales
 		{key::trainer_menu,u8"按<em>左手柄 X 键</em>打开菜单，设置垂直视角反转"},
 		{key::trainer_flash,u8"从<em>胸挂</em>取出闪光弹，用另一只手按住<em>扳机键</em>拔出<em>拉环</em>，再松开<em>握持键</em>投出"},
 		{key::grenade_cook,u8"拔出<em>拉环</em>后，按下<em>持雷手柄上较远的按键</em>或<em>同手扳机键</em>解除保险"},
-		{key::m203_reload,u8"发射后，按住<em>握持键</em>抓住<em>枪管</em>，<em>向前推</em>打开膛室\n在<em>腰间</em>按住<em>握持键和扳机键</em>取出榴弹，保持<em>扳机键</em>按住装入<em>膛室</em>\n再用<em>握持键</em>抓住<em>枪管</em>，<em>向后拉</em>关闭膛室"},
+		{key::m203_reload,u8"发射后，按住<em>握持键或扳机键</em>抓住<em>枪管</em>，<em>向前推</em>打开膛室\n在<em>腰间</em>按住<em>握持键和扳机键</em>取出榴弹，保持<em>扳机键</em>按住装入<em>膛室</em>\n松开<em>扳机键</em>，再用<em>握持键或扳机键</em>抓住<em>枪管</em>，<em>向后拉</em>关闭膛室"},
 		{key::knuckles_trainer_menu,u8"按<em>左手柄 A 键</em>打开菜单，设置垂直视角反转"},
 		{key::knuckles_fixed_sniper_controls,u8"<em>左摇杆</em>调整瞄准方向；按 <em>B 键</em>离开狙击位"},
 		{key::snowmobile_reverse,u8"向后推动<em>摇杆</em>倒车"},

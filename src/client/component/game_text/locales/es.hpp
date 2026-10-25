@@ -74,7 +74,7 @@ namespace game_text::locales
 		{key::trainer_flash,u8"Saca una cegadora del <em>chaleco portaequipo</em>, mantén pulsado el <em>gatillo</em> de la otra mano para quitar la <em>anilla</em> y suelta <em>agarre</em> para lanzarla"},
 		{key::grenade_cook,u8"Tras quitar la <em>anilla</em>, pulsa el <em>botón frontal más alejado del mando que sostiene la granada</em> o el <em>gatillo de esa mano</em> para soltar la palanca de seguridad"},
 		{key::trainer_menu,u8"Pulsa <em>X en el mando izquierdo</em> para abrir el menú y configurar la inversión vertical"},
-		{key::m203_reload,u8"Tras disparar, sujeta el <em>cañón</em> con <em>agarre</em> y <em>empuja adelante</em> para abrir\nMantén <em>agarre y gatillo</em> en la <em>cintura</em> para sacar una granada; mantén <em>gatillo</em> e insértala en la <em>recámara</em>\nSujeta otra vez el <em>cañón</em> con <em>agarre</em> y <em>tira atrás</em> para cerrar"},
+		{key::m203_reload,u8"Tras disparar, sujeta el <em>cañón</em> con <em>agarre o gatillo</em> y <em>empuja adelante</em> para abrir\nMantén <em>agarre y gatillo</em> en la <em>cintura</em> para sacar una granada; mantén <em>gatillo</em> e insértala en la <em>recámara</em>\nSuelta <em>gatillo</em> y sujeta otra vez el <em>cañón</em> con <em>agarre o gatillo</em> y <em>tira atrás</em> para cerrar"},
 		{key::knuckles_trainer_menu,u8"Pulsa <em>A en el mando izquierdo</em> para abrir el menú y configurar la inversión vertical"},
 		{key::knuckles_fixed_sniper_controls,u8"Usa el <em>stick izquierdo</em> para apuntar; pulsa <em>B</em> para dejar el puesto"},
 		{key::snowmobile_reverse,u8"Mueve el <em>stick</em> hacia atrás para dar marcha atrás"},

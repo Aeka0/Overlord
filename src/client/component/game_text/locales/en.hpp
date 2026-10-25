@@ -74,7 +74,7 @@ namespace game_text::locales
 		{key::trainer_flash,u8"Draw a flashbang from your <em>chest rig</em>, hold <em>Trigger</em> with the other hand to pull the <em>pin</em>, then release <em>Grip</em> to throw"},
 		{key::grenade_cook,u8"After pulling the <em>pin</em>, press the <em>farther face button on the grenade hand's controller</em> or <em>that hand's Trigger</em> to release the safety lever"},
 		{key::trainer_menu,u8"Press <em>X on the left controller</em> to open the menu and set vertical look inversion"},
-		{key::m203_reload,u8"After firing, grasp the <em>barrel</em> with <em>Grip</em> and <em>push forward</em> to open the breech\nHold <em>Grip and Trigger</em> at your <em>waist</em> to draw a grenade, keep <em>Trigger</em> held and insert it into the <em>breech</em>\nGrasp the <em>barrel</em> with <em>Grip</em> again and <em>pull back</em> to close the breech"},
+		{key::m203_reload,u8"After firing, grasp the <em>barrel</em> with <em>Grip or Trigger</em> and <em>push forward</em> to open the breech\nHold <em>Grip and Trigger</em> at your <em>waist</em> to draw a grenade, keep <em>Trigger</em> held and insert it into the <em>breech</em>\nRelease <em>Trigger</em>, then grasp the <em>barrel</em> with <em>Grip or Trigger</em> again and <em>pull back</em> to close the breech"},
 		{key::knuckles_trainer_menu,u8"Press <em>A on the left controller</em> to open the menu and set vertical look inversion"},
 		{key::knuckles_fixed_sniper_controls,u8"Use the <em>left stick</em> to aim; press <em>B</em> to leave the sniper position"},
 		{key::snowmobile_reverse,u8"Push the <em>stick</em> backward to reverse"},

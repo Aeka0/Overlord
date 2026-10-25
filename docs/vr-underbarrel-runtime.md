@@ -85,6 +85,47 @@ firing. A completed close retains support while Grip remains held, allowing a
 new opening stroke without reacquiring the hand. The native M203 owns shot
 acceptance and grenade behavior.
 
+Trigger may also pinch the M203 tube when it is empty, open or already moving,
+using the same contact and stroke checks as Grip. This is a mechanical part
+grasp: it does not acquire a firing grip or carry-support ownership. Release
+Trigger to let go; completing closure ends that pinch. A held grenade remains
+exclusive, and insertion consumes its grasp: release Trigger before pinching
+the tube again. Grip retains its existing combined support/action behavior.
+
+The chamber and held supply have separate native geometry. A loaded round
+follows the sliding tube, including its actual loading contact, so its case
+base remains visible at the rear of the open tube. A fired case stays at the
+receiver's extraction position while the barrel opens. It leaves the chamber
+once the moving tube's rear edge passes the case's front edge. This clearance is
+measured from the actual loaded skin's indexed rigid geometry, independently of
+GPU preparation, then compared with slider displacement in native units. The
+base attachment clears at approximately 36.53 mm (about 40% of its stroke).
+The existing 90-percent loading boundary remains separate.
+
+The released case enters the bounded falling-item presenter once, starting from
+rest under world gravity. It receives no rearward/upward impulse or random spin.
+Empty and repeated openings create no case, and reversing a partial opening
+cannot restore an already released case. If source geometry is unavailable, the
+existing full-open cleanup still clears the case; diagnostics report a zero
+clearance instead of substituting another skin's measurement.
+Failed native commits retain the chamber and create no dropped object.
+
+Immutable live-round and brass-only subsets come from the actual admitted
+`attach_h2_m203_vm` or `attach_h2_m203_vm_digital` attachment. Bone topology and
+native rigid geometry must validate; materials are never borrowed across skins.
+The existing rigid-model identity bridge, exact skeleton-record placement and
+drained unload lifetime are reused. The cosmetic flight lasts at most 1.2 seconds
+and does not alter ammunition or simulate gameplay collision.
+
+The previous stock reload-FX path was removed. Live captures established that
+its animation delay and zero-scale birth samples were unsuitable for immediate
+physical extraction; emitted particles also retired within about 0.2 seconds,
+with the retirement cause unresolved. The unified cartridge/case presenter uses
+the same M203 shell geometry before and after extraction and does not depend on
+those stock animation curves. `vr_underbarrel_status` includes model admission,
+case requests, released models and queue overflow. Fresh gameplay/controller/HMD
+acceptance is still required.
+
 ### Underbarrel shotgun
 
 The adapter presents the shell feed as a per-round transaction and retains the

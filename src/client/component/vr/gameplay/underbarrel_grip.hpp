@@ -88,6 +88,18 @@ namespace vr::gameplay::weapons::underbarrel
 		// not a controller calibration and must never rotate input admission.
 		return facing(controller_in_gun,hands::controller_palm_axis(hand),hand);
 	}
+	inline bool trigger_action_available(const state& ammo,
+	                                     float travel,
+	                                     float fire_distance,
+	                                     float action_distance,
+	                                     palm_facing palm,
+	                                     float support_radius) noexcept
+	{
+		if (ammo.id.type != kind::m203 || ammo.held || (ammo.chamber && !ammo.open && travel <= .001f))
+			return false;
+		const auto chosen = choose_grip(ammo, travel, fire_distance, action_distance, palm, support_radius);
+		return chosen == contact_role::action || chosen == contact_role::support;
+	}
 	inline float firing_distance(hands::vec delta,float forward_extension)noexcept
 	{
 		if(!std::isfinite(forward_extension)||forward_extension<0||forward_extension>.15f)return INFINITY;

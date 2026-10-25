@@ -74,7 +74,7 @@ namespace game_text::locales
 		{key::trainer_flash,u8"Pegue uma granada de luz no <em>colete peitoral</em>, segure o <em>gatilho</em> da outra mão para tirar o <em>pino</em> e solte <em>Grip</em> para lançar"},
 		{key::grenade_cook,u8"Após retirar o <em>pino</em>, pressione o <em>botão frontal mais distante no controle da mão com a granada</em> ou o <em>gatilho dessa mão</em> para soltar a alavanca de segurança"},
 		{key::trainer_menu,u8"Pressione <em>X no controle esquerdo</em> para abrir o menu e ajustar a inversão vertical"},
-		{key::m203_reload,u8"Após atirar, pegue o <em>cano</em> com <em>Grip</em> e <em>empurre para frente</em> para abrir\nSegure <em>Grip e gatilho</em> na <em>cintura</em> para pegar uma granada; mantenha o <em>gatilho</em> e insira na <em>câmara</em>\nPegue o <em>cano</em> novamente com <em>Grip</em> e <em>puxe para trás</em> para fechar"},
+		{key::m203_reload,u8"Após atirar, pegue o <em>cano</em> com <em>Grip ou gatilho</em> e <em>empurre para frente</em> para abrir\nSegure <em>Grip e gatilho</em> na <em>cintura</em> para pegar uma granada; mantenha o <em>gatilho</em> e insira na <em>câmara</em>\nSolte o <em>gatilho</em> e pegue o <em>cano</em> novamente com <em>Grip ou gatilho</em> e <em>puxe para trás</em> para fechar"},
 		{key::knuckles_trainer_menu,u8"Pressione <em>A no controle esquerdo</em> para abrir o menu e ajustar a inversão vertical"},
 		{key::knuckles_fixed_sniper_controls,u8"Use o <em>analógico esquerdo</em> para mirar; pressione <em>B</em> para sair da posição"},
 		{key::snowmobile_reverse,u8"Mova o <em>analógico</em> para trás para dar ré"},

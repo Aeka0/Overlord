@@ -15,6 +15,7 @@ namespace vr::gameplay::weapons::underbarrel
 		std::span<const joint_pose> firing_fingers{authored::fire_fingers};
 		std::array<int,2> round_parts{-1,-1};std::array<hands::anchor,2> round_parts_local{};
 		int bolt{-1};hands::anchor bolt_rest{}; // Shotgun bolt is a sibling of the pump, not its child.
+		bool digital{};                         // Exact admitted M203 attachment material provider.
 		explicit operator bool()const noexcept{return type!=kind::none && root>=0 && round>=0;}
 	};
 	inline constexpr std::array<std::string_view,7> m203_bones{"tag_m203","j_grenade_m203","j_m203_button","j_slider_m203","j_trigger_m203","j_grenade_main","j_grenade_shell"};
@@ -22,6 +23,43 @@ namespace vr::gameplay::weapons::underbarrel
 	inline constexpr std::array<std::string_view,5> shotgun_bones{"tag_shotgun","j_ammo_shotgun","j_plate_shotgun","j_pump_shotgun","j_reload_shotgun"};
 	inline constexpr std::array<int,7> m203_parents{-1,0,0,0,0,1,1};
 	inline constexpr std::array<int,9> gp25_parents{-1,0,0,0,0,3,3,4,4};
+	inline constexpr std::array<const char*, 2> m203_models{"attach_h2_m203_vm", "attach_h2_m203_vm_digital"};
+	enum class chamber_visual
+	{
+		empty,
+		live,
+		spent
+	};
+	inline chamber_visual visible_chamber(const state& ammo) noexcept
+	{
+		if (!valid(ammo) || ammo.id.type != kind::m203)
+			return chamber_visual::empty;
+		return ammo.chamber ? chamber_visual::live
+		       : ammo.spent ? chamber_visual::spent
+		                    : chamber_visual::empty;
+	}
+	inline bool case_unsupported(const state& ammo, float travel, float units, float clearance) noexcept
+	{
+		return valid(ammo) && ammo.id.type == kind::m203 && ammo.spent && !ammo.held &&
+		       std::isfinite(travel) && travel >= 0 && travel <= authored::m203_stroke &&
+		       std::isfinite(units) && units > 0 && units <= 10000 && std::isfinite(clearance) &&
+		       clearance > 0 && travel >= clearance / units;
+	}
+	inline hands::anchor chamber_pose(const part_rig& parts,
+	                                  chamber_visual content,
+	                                  float travel,
+	                                  float units) noexcept
+	{
+		auto result = parts.round_rest;
+		// A newly loaded round seats in the sliding tube. The extractor holds
+		// a fired case at the receiver until the opening transaction ejects it.
+		if (content == chamber_visual::live && std::isfinite(travel) && std::isfinite(units) && units > 0)
+			result.position =
+			    hands::add(result.position,
+			               hands::scale(hands::rotate(parts.mount.rotation, authored::m203_axis),
+			                            std::clamp(travel, 0.f, authored::m203_stroke) * units));
+		return result;
+	}
 	inline hands::anchor firing_anchor(const part_rig& p,const hands::rig& r,const hands::pose_library& library,
 		hands::anchor ordinary,int hand)noexcept
 	{
@@ -43,6 +81,7 @@ namespace vr::gameplay::weapons::underbarrel
 			if(parent<0 || parent>=m.begin || bones[parent].name!=tag || bones[m.begin].name!=tag ||
 				m.count!=(k==kind::m203?7:k==kind::gp25?9:5))return {};
 			out.type=k;out.root=m.begin;out.mount=compose(inverse(as_anchor(bones[r.gun].bind)),as_anchor(bones[parent].bind));
+			out.digital = m.name == m203_models[1];
 			const auto attachment=inverse(as_anchor(bones[m.begin].bind));
 			for(int i=m.begin;i<m.begin+m.count;++i)
 			{

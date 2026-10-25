@@ -74,7 +74,7 @@ namespace game_text::locales
 		{key::trainer_flash,u8"Weź granat błyskowy z <em>oporządzenia na piersi</em>, przytrzymaj <em>spust</em> drugiej ręki, aby wyciągnąć <em>zawleczkę</em>, a następnie zwolnij <em>chwyt</em>, aby rzucić"},
 		{key::grenade_cook,u8"Po wyciągnięciu <em>zawleczki</em> naciśnij <em>dalszy przycisk na przedniej części kontrolera ręki z granatem</em> lub <em>spust tej samej ręki</em>, aby zwolnić dźwignię zabezpieczającą"},
 		{key::trainer_menu,u8"Naciśnij <em>X na lewym kontrolerze</em>, aby otworzyć menu i ustawić odwrócenie pionowego widoku"},
-		{key::m203_reload,u8"Po strzale złap <em>lufę</em> przyciskiem <em>chwytu</em> i <em>pchnij do przodu</em>, aby otworzyć\nPrzytrzymaj <em>chwyt i spust</em> przy <em>pasie</em>, aby wyjąć granat; trzymaj <em>spust</em> i włóż go do <em>komory</em>\nPonownie złap <em>lufę</em> przyciskiem <em>chwytu</em> i <em>pociągnij do tyłu</em>, aby zamknąć"},
+		{key::m203_reload,u8"Po strzale złap <em>lufę</em> przyciskiem <em>chwytu lub spustu</em> i <em>pchnij do przodu</em>, aby otworzyć\nPrzytrzymaj <em>chwyt i spust</em> przy <em>pasie</em>, aby wyjąć granat; trzymaj <em>spust</em> i włóż go do <em>komory</em>\nZwolnij <em>spust</em>, a następnie ponownie złap <em>lufę</em> przyciskiem <em>chwytu lub spustu</em> i <em>pociągnij do tyłu</em>, aby zamknąć"},
 		{key::knuckles_trainer_menu,u8"Naciśnij <em>A na lewym kontrolerze</em>, aby otworzyć menu i ustawić odwrócenie pionowego widoku"},
 		{key::knuckles_fixed_sniper_controls,u8"Celuj <em>lewym drążkiem</em>; naciśnij <em>B</em>, aby opuścić stanowisko"},
 		{key::snowmobile_reverse,u8"Wychyl <em>drążek</em> do tyłu, aby cofać"},

@@ -74,7 +74,7 @@ namespace game_text::locales
 		{key::trainer_flash,u8"<em>チェストリグ</em>からフラッシュバンを取り、反対の手の<em>トリガー</em>を押したまま<em>ピン</em>を抜き、<em>グリップ</em>を離して投げる"},
 		{key::grenade_cook,u8"<em>ピン</em>を抜いた後、<em>手榴弾を持つ手のコントローラーの奥側のフェイスボタン</em>または<em>同じ手のトリガー</em>を押して安全レバーを解除"},
 		{key::trainer_menu,u8"<em>左コントローラーの X</em> でメニューを開き、視点の上下反転を設定"},
-		{key::m203_reload,u8"発射後、<em>グリップ</em>で<em>銃身</em>をつかみ、<em>前に押して</em>薬室を開く\n<em>腰</em>で<em>グリップとトリガー</em>を押して榴弾を取り、<em>トリガー</em>を押したまま<em>薬室</em>に挿入\n再び<em>グリップ</em>で<em>銃身</em>をつかみ、<em>後ろに引いて</em>閉じる"},
+		{key::m203_reload,u8"発射後、<em>グリップまたはトリガー</em>で<em>銃身</em>をつかみ、<em>前に押して</em>薬室を開く\n<em>腰</em>で<em>グリップとトリガー</em>を押して榴弾を取り、<em>トリガー</em>を押したまま<em>薬室</em>に挿入\n<em>トリガー</em>を離してから、再び<em>グリップまたはトリガー</em>で<em>銃身</em>をつかみ、<em>後ろに引いて</em>閉じる"},
 		{key::knuckles_trainer_menu,u8"<em>左コントローラーの A</em> でメニューを開き、視点の上下反転を設定"},
 		{key::knuckles_fixed_sniper_controls,u8"<em>左スティック</em>で照準方向を調整。<em>B</em> で狙撃位置から離れる"},
 		{key::snowmobile_reverse,u8"<em>スティック</em>を後ろに倒して後退"},
