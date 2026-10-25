@@ -15,7 +15,8 @@ namespace vr::gameplay::native_fx::checkpoint
 	{
 		world,
 		followed,
-		casing
+		casing,
+		extraction
 	};
 	inline constexpr std::string_view prefix = "__overlord_fx/";
 	inline constexpr std::size_t source_name_limit = 255;
@@ -40,6 +41,7 @@ namespace vr::gameplay::native_fx::checkpoint
 		if (!valid_source(source)) return {};
 		std::string result(prefix);
 		if (kind == variant::world) result += "world/";
+		else if (kind == variant::extraction) result += "extract/";
 		else
 		{
 			if (kind == variant::casing && !attached)
@@ -58,6 +60,11 @@ namespace vr::gameplay::native_fx::checkpoint
 		value.remove_prefix(prefix.size());
 		identity result;
 		if (value.starts_with("world/")) value.remove_prefix(6);
+		else if (value.starts_with("extract/"))
+		{
+			result.kind = variant::extraction;
+			value.remove_prefix(8);
+		}
 		else if ((value.starts_with("follow/") || value.starts_with("casing/")) && value.size() >= 16 &&
 		         value[15] == '/')
 		{

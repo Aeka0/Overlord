@@ -74,6 +74,8 @@ namespace vr::gameplay::weapons::model1887
 		p.port_shell = port_shell;
 		p.shell_fingers = shell_fingers;
 		p.sound_key = sound;
+		p.case_eject_notetrack = "model1887_reload";
+		p.case_eject_from_origin = true;
 		// Captured receiver tag_brass, native units. Offset the shell root so
 		// feedback's centre composition recovers the exact native marker.
 		hands::anchor brass{{6.52105301f, 0, 4.91204975f},

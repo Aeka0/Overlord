@@ -81,6 +81,7 @@ namespace vr::gameplay::weapons::spas12
 	    .pump_rest = pump_rest,
 	    .bolt_open = bolt_open,
 	    .port_shell = port_shell,
+	    .case_eject_notetrack = "spas12_shelleject",
 	};
 	// Oilrig live assets: the arctic receiver's 17 bones, parents and all bind
 	// transforms exactly match the base. Keep separate model/native admission.

@@ -15,6 +15,7 @@ using vr::hand;
 #include "opaque_mesh_tests.hpp"
 #include "native_fx_world_space_tests.hpp"
 #include "native_fx_checkpoint_tests.hpp"
+#include "native_weapon_fx_notetrack_tests.hpp"
 #include "spent_case_profile_tests.hpp"
 #include <limits>
 #include "component/vr/gameplay/immutable_surface_cache.hpp"
@@ -27,6 +28,7 @@ int main()
 	const auto check=[&](bool ok,const char* name) { if (!ok) { ++failed; std::cerr << "FAIL: " << name << '\n'; } };
 	native_fx_world_space_tests(check);
 	native_fx_checkpoint_tests(check);
+	native_weapon_fx_notetrack_tests(check);
 	spent_case_profile_tests(check);
 	{
 		struct descriptor{std::uint32_t version{},mask{};std::array<int,4> groups{};const int* borrowed{};};

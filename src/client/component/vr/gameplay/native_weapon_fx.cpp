@@ -1,5 +1,6 @@
 #include <std_include.hpp>
 #include "native_weapon_fx.hpp"
+#include "native_weapon_fx_notetrack.hpp"
 #include "native_fx_world_space.hpp"
 #include "native_fx_checkpoint.hpp"
 #include "native_spent_case_assets.hpp"
@@ -53,7 +54,8 @@ namespace vr::gameplay::weapons::native_weapon_fx
 				return nullptr;
 			return effect;
 		}
-		game::FxEffectDef* world_shell(game::FxEffectDef* source, unsigned case_variant = 0) noexcept
+		game::FxEffectDef* world_shell(game::FxEffectDef* source, unsigned case_variant = 0,
+		                             bool extraction = false) noexcept
 		{
 			if(!source)return nullptr;
 			const std::lock_guard lock(shell_mutex);
@@ -69,7 +71,7 @@ namespace vr::gameplay::weapons::native_weapon_fx
 					return nullptr;
 				}
 			}
-			auto* effect = shell_effects.get(source, replacement, surface_effect);
+			auto* effect = shell_effects.get(source, replacement, surface_effect, extraction);
 			if(effect && published_shell_definitions!=shell_effects.size())
 			{
 				const auto definitions=shell_effects.checkpoint_definitions();
@@ -185,6 +187,7 @@ namespace vr::gameplay::weapons::native_weapon_fx
 			const std::lock_guard lock(shell_mutex);
 			native_fx::checkpoint::remove(native_fx::checkpoint::variant::world);
 			native_fx::checkpoint::remove(native_fx::checkpoint::variant::casing);
+			native_fx::checkpoint::remove(native_fx::checkpoint::variant::extraction);
 			shell_effects.clear();
 			published_shell_definitions = 0;
 			case_assets.clear();
@@ -214,18 +217,31 @@ namespace vr::gameplay::weapons::native_weapon_fx
 			(!extraction && !valid(event.muzzle))) return;
 		auto* flash=extraction ? nullptr : utils::hook::invoke<game::FxEffectDef*>(flash_query,token,false);
 		game::FxEffectDef* brass{};
-		const auto* def=game::weapon_defs[token];
+		bool rebase_extraction{};
+		const auto weapon = native_weapon_read::get(token);
+		const auto* def=weapon.definition;
 		if (event.has_brass && valid(event.brass) && def && (extraction ? def->boltAction : !def->boltAction))
 		{
 			if (event.last_shot) brass=utils::hook::invoke<game::FxEffectDef*>(last_brass_query,token,false);
 			if (!brass) brass=utils::hook::invoke<game::FxEffectDef*>(brass_query,token,false);
+			if (!brass && extraction && event.tube_definition &&
+			    event.tube_definition->matches_native(weapon.name.data(), def->clipSize))
+			{
+				brass = native_fx::notetrack_effect(def, event.tube_definition->case_eject_notetrack,
+				    event.tube_definition->case_eject_from_origin ? "tag_origin" : "tag_brass",
+				    [](game::scr_string_t id, std::string_view expected)
+				    {
+					    const auto* name = game::SL_ConvertToString(id);
+					    return name && std::string_view(name, strnlen_s(name, 128)) == expected;
+				    });
+				rebase_extraction = brass && event.tube_definition->case_eject_from_origin;
+			}
 		}
 		const int time=game::CG_GetGameTime(0);
 		if (flash) emit(flash,time,event.muzzle);
 		unsigned case_variant{};
 		if (!event.secondary_definition && !event.vehicle)
 		{
-			const auto weapon = native_weapon_read::get(token);
 			if (weapon)
 				case_variant =
 				    spent_case::variant_for(weapon.name.data(),
@@ -233,7 +249,7 @@ namespace vr::gameplay::weapons::native_weapon_fx
 				                                ? event.definition->rigid_magazine_source
 				                                : "");
 		}
-		brass = world_shell(brass, case_variant);
+		brass = world_shell(brass, case_variant, rebase_extraction);
 		if (brass) emit(brass,time,event.brass);
 		// Counters mean calls admitted to the native bounded queue, not a claim
 		// that every particle survived native culling/resource limits.
@@ -256,10 +272,12 @@ namespace vr::gameplay::weapons::native_weapon_fx
 		if(!effect)return false;
 		emit(effect,game::CG_GetGameTime(0),pose);return true;
 	}
-	game::FxEffectDef* restore_definition(game::FxEffectDef* source, unsigned case_variant) noexcept
+	game::FxEffectDef* restore_definition(game::FxEffectDef* source, unsigned case_variant, bool extraction) noexcept
 	{
 		if (!case_variant)
-			return world_shell(source);
+			return world_shell(source, 0, extraction);
+		if (extraction)
+			return nullptr;
 		bool prepared{};
 		{
 			const std::lock_guard lock(shell_mutex);

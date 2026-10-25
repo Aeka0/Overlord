@@ -4,6 +4,22 @@
 template<class Check> void native_fx_checkpoint_tests(const Check& check)
 {
 	using namespace vr::gameplay::native_fx::checkpoint;
+	const auto extraction=name(variant::extraction,"vfx/shelleject/shelleject_1887");
+	const auto extracted_id=parse(extraction);
+	check(extracted_id && extracted_id->kind==variant::extraction &&
+	      extracted_id->source=="vfx/shelleject/shelleject_1887" &&
+	      extraction!=name(variant::world,extracted_id->source),
+	      "manual extraction restore cannot fall back to animation-relative timing and origin");
+	{
+		registry extracted_registry;
+		game::FxEffectDef effect{};effect.name=extraction.c_str();
+		const std::array<game::FxEffectDef*,1> values{&effect};
+		check(extracted_registry.publish(values),"extraction definition enters checkpoint dictionary");
+		extracted_registry.remove(variant::world);
+		check(extracted_registry.size()==1,"world retirement does not erase another variant");
+		extracted_registry.remove(variant::extraction);
+		check(!extracted_registry.size(),"extraction definitions retire before their storage");
+	}
 	check(valid_effect_handle(0x4d58) && valid_effect_handle(0x8fc0) && valid_effect_handle(0x9fec) &&
 		!valid_effect_handle(0x9fff) && !valid_effect_handle(0xa000) && !valid_effect_handle(1),
 		"restored effect handles stay aligned and within the captured 2048-slot native pool");

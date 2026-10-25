@@ -6,6 +6,57 @@
 template<class Check> void native_fx_world_space_tests(const Check& check)
 {
 	using vr::gameplay::native_fx::world_space_cache;
+	{
+		// Captured M1887 root: one model, tag_origin offset, 150ms animation
+		// delay and initial zero scale. Physical extraction already owns time/port.
+		game::XModel casing{};
+		game::FxElemVelStateSample motion{};
+		std::array<game::FxElemVisStateSample,2> samples{};
+		samples[1].base.scale=1;
+		samples[0].base.color[3]=samples[1].base.color[3]=1;
+		game::FxElemDef element{};
+		element.flags=0x5480242;
+		element.elemType=game::FX_ELEM_TYPE_MODEL;
+		element.spawn.oneShot.count.base=1;
+		element.spawnDelayMsec.base=150;
+		element.spawnOrigin[0].base=9; element.spawnOrigin[1].base=6; element.spawnOrigin[2].base=-3;
+		element.visualCount=1; element.visuals.instance.model=&casing;
+		element.velSamples=&motion; element.visSamples=samples.data(); element.visStateIntervalCount=1;
+		game::FxElemDef child_element=element;
+		child_element.spawnDelayMsec.base=25;
+		game::FxEffectDef child{}; child.name="vfx/shelleject/shotgun_1887_resting";
+		child.elemDefCountOneShot=1; child.elemDefs=&child_element;
+		element.effectOnImpact.handle=&child;
+		game::FxEffectDef source{}; source.name="vfx/shelleject/shelleject_1887";
+		source.elemDefCountOneShot=1; source.elemDefs=&element;
+		world_space_cache cache;
+		auto* ordinary=cache.get(&source);
+		auto* extracted=cache.get(&source,{},nullptr,true);
+		check(extracted && ordinary && extracted!=ordinary,
+		      "physical extraction has a distinct immutable FX identity");
+		if(extracted && ordinary)
+		{
+			const auto& e=extracted->elemDefs[0];
+			check(!e.spawnDelayMsec.base && !e.spawnOrigin[0].base && !e.spawnOrigin[1].base && !e.spawnOrigin[2].base &&
+			      e.visSamples[0].base.scale==1 && e.visSamples[1].base.scale==1 &&
+			      e.visuals.instance.model==&casing && e.velSamples==&motion && e.visSamples[0].base.color[3]==1,
+			      "physical extraction rebases only root timing/origin/visibility while preserving model and flight");
+			check(element.spawnDelayMsec.base==150 && element.spawnOrigin[0].base==9 && samples[0].base.scale==0 &&
+			      ordinary->elemDefs[0].spawnDelayMsec.base==150 &&
+			      e.effectOnImpact.handle->elemDefs[0].spawnDelayMsec.base==25 &&
+			      e.effectOnImpact.handle==ordinary->elemDefs[0].effectOnImpact.handle,
+			      "shared native sources and child scheduling remain unchanged");
+			check(cache.get(&source,{},nullptr,true)==extracted,
+			      "repeated manual extraction reuses the retained descriptor");
+			const auto id=vr::gameplay::native_fx::checkpoint::parse(extracted->name);
+			check(id && id->kind==vr::gameplay::native_fx::checkpoint::variant::extraction && id->source==source.name,
+			      "extraction checkpoint name retains the rebased presentation policy");
+		}
+		element.spawnDelayMsec.amplitude=1;
+		check(!cache.get(&source,{},nullptr,true),"random animation delay cannot be rebased as deterministic extraction");
+		element.spawnDelayMsec.amplitude=0; element.spawnOrigin[0].amplitude=1;
+		check(!cache.get(&source,{},nullptr,true),"random spawn geometry is not silently collapsed to a point");
+	}
 	game::XModel model{};
 	game::FxElemVelStateSample velocity{};
 	std::array<game::FxElemDef,3> elements{};

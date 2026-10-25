@@ -6,6 +6,23 @@ namespace lever_reload_tests
 	template<class Check> void run(Check check)
 	{
 		namespace w=vr::gameplay::weapons;namespace t=w::tube;using namespace std::chrono_literals;
+		check(w::model1887::feed.case_eject_notetrack=="model1887_reload" &&
+		      w::model1887::feed.case_eject_from_origin,
+		      "M1887 selects its native origin-attached extraction effect");
+		{
+			namespace h=vr::gameplay::hands;
+			for (const auto rotation : {h::quat{0,0,0,1}, h::normalize(h::quat{.2f,.7f,.1f,.4f}), h::quat{1,0,0,0}})
+			{
+				const h::anchor gun{{10,20,30},rotation};
+				const auto shell=h::pose_math::compose(gun,w::tube_ejection_pose(w::model1887::feed));
+				const auto casing=w::tube_case_ejection_pose(w::model1887::feed,shell,39.37007874f);
+				const auto expected=h::pose_math::compose(gun,h::anchor{{6.52105301f,0,4.91204975f},{0,0,0,1}});
+				check(h::length(h::sub(casing.position,expected.position))<.0001f &&
+				      h::length(h::sub(h::rotate(casing.rotation,{1,0,0}),h::rotate(gun.rotation,{1,0,0})))<.0001f &&
+				      h::length(h::sub(h::rotate(casing.rotation,{0,1,0}),h::rotate(gun.rotation,{0,1,0})))<.0001f,
+				      "M1887 case uses actual brass position and receiver axes for rotated and inverted guns");
+			}
+		}
 		struct fixture
 		{
 			t::state state=t::import_native(w::model1887::feed.ammunition,40,1,{5,20});

@@ -70,6 +70,16 @@ opening ejects once; closure feeds once. Deliberately opening a live chamber
 uses the existing ammunition disposition path. Empty and partial strokes never
 manufacture ammunition. The native five-round total budget is preserved; this
 recipe does not opt into a sixth round.
+
+Spent-case presentation resolves the native `model1887_reload` FX note, because
+both ordinary view-shell fields are empty. This effect is authored at
+`tag_origin`, with a 150 ms animation delay, a fixed spawn offset and initially
+hidden model scale. The shared private shell adapter rebases its root to the
+committed extraction time and receiver's brass position, using receiver axes.
+It exposes the original model immediately while preserving native flight,
+collision and landing effects. Live-round presentation is unchanged. The
+rebased root has its own checkpoint identity and follows the existing drained
+zone-unload lifetime. Offline coverage does not establish headset appearance.
 
 During a spin the mechanism can close before the cosmetic tail finishes. Once
 the action is closed and chambered, a fresh Trigger press can fire and immediately

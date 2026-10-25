@@ -8,6 +8,10 @@ namespace pump_reload_tests
 	template<class Check> void run(Check check)
 	{
 		namespace w=vr::gameplay::weapons;namespace t=w::tube;using namespace std::chrono_literals;
+		check(w::spas12::feed.case_eject_notetrack=="spas12_shelleject" &&
+		      w::spas12::arctic_feed.case_eject_notetrack=="spas12_shelleject" &&
+		      w::winchester1200::feed.case_eject_notetrack=="w1200_rechamber",
+		      "pump profiles route spent cases through their native extraction FX notes");
 		struct fixture
 		{
 			const w::tube_profile& profile;t::state state;w::hold owner;t::controller control;

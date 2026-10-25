@@ -57,7 +57,8 @@ namespace vr::gameplay::native_fx::checkpoint
 			auto* result = id->kind == variant::followed
 			                   ? native_followed_fx::restore_definition(source, id->attached)
 			                   : weapons::native_weapon_fx::restore_definition(
-			                         source, id->kind == variant::casing ? id->attached : 0);
+			                         source, id->kind == variant::casing ? id->attached : 0,
+			                         id->kind == variant::extraction);
 			if (!result) reject("presentation definition unavailable");
 			else ++restored_variants;
 			return result;

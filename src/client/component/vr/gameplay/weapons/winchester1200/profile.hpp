@@ -80,6 +80,7 @@ namespace vr::gameplay::weapons::winchester1200
 	    .pump_rest = pump_rest,
 	    .bolt_open = bolt_open,
 	    .port_shell = port_shell,
+	    .case_eject_notetrack = "w1200_rechamber",
 	};
 	inline bool suppress_equip(std::string_view n) noexcept
 	{

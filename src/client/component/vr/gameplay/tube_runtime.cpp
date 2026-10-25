@@ -67,7 +67,7 @@ namespace vr::gameplay::weapons::tube
 				feedback::event event{kind,v.owner,scene.input.reference_generation,now,world.position};
 				event.explicit_sound=v.definition->sound_key(tx.feedback);event.tube_definition=v.definition;
 				event.mechanical_instance=v.ammo.instance_generation;
-				if(tx.case_ejected){event.has_brass=true;event.brass=scene.ejection_world;event.brass.position=hands::add(event.brass.position,hands::rotate(event.brass.rotation,hands::scale(v.definition->shell_center,scene.units*.0254f)));}
+				if(tx.case_ejected){event.has_brass=true;event.brass=tube_case_ejection_pose(*v.definition,scene.ejection_world,scene.units);}
 				feedback::publish(event);
 			}
 			return true;

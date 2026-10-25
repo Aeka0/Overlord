@@ -25,9 +25,20 @@ namespace vr::gameplay::weapons
 		const lever::profile* lever{};
 		std::optional<hands::anchor> ejection_shell;
 		float bolt_return_seconds{}; // Presentation only; uses the shared spring-return transition.
+		std::string_view case_eject_notetrack{}; // Explicit native FX note when viewShellEjectEffect is absent.
+		bool case_eject_from_origin{}; // tag_origin FX needs receiver axes and rebased spawn timing/position.
 		bool matches_native(std::string_view name,int capacity)const noexcept
 		{return capacity==ammunition.capacity && std::find(native_variants.begin(),native_variants.end(),name)!=native_variants.end();}
 	};
 	inline hands::anchor tube_ejection_pose(const tube_profile& p)noexcept
 	{return p.ejection_shell.value_or(hands::anchor{hands::sub(p.port_center,p.shell_center),{0,0,0,1}});}
+	inline hands::anchor tube_case_ejection_pose(const tube_profile& p, hands::anchor shell, float units) noexcept
+	{
+		shell.position = hands::add(shell.position,
+		    hands::rotate(shell.rotation, hands::scale(p.shell_center, units * .0254f)));
+		if (p.case_eject_from_origin)
+			shell.rotation = hands::normalize(hands::multiply(shell.rotation,
+			    hands::conjugate(tube_ejection_pose(p).rotation)));
+		return shell;
+	}
 }

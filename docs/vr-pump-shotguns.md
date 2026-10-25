@@ -20,6 +20,15 @@ SPAS-12 (`spas12`, `spas12_reflex`) and W1200 (`winchester1200`) extend the indi
 
 Both control hands are supported. Cases are emitted through the native oriented weapon FX at full extraction; unspent ejected shells use the existing rigid-shell presentation. Gun, pump, bolt, carrier and shell remain separate bones. Pump movement also updates the support anchor used by pose solving and carry contact tests.
 
+The native pump definitions leave both view-shell ejection fields empty. Their
+view cases come from animation FX notes: `spas12_shelleject` and
+`w1200_rechamber`, both attached to `tag_brass`. When the ordinary field is
+absent, committed physical extraction resolves that exact note in the owned
+weapon's bounded FX map and passes it through the shared world-depth shell
+adapter. W1200's separate `w1200_rechamber_empty` reload effect is not used.
+Missing, ambiguous or differently attached notes omit the cosmetic case;
+live-shell presentation and ammunition transactions are unchanged.
+
 ## Source data
 
 | Adapter | Receiver | Pump / bolt / carrier | Pump stroke |
