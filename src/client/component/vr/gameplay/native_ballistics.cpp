@@ -5,6 +5,7 @@
 #include "official_cheats.hpp"
 #include "native_shield.hpp"
 #include "hei_round.hpp"
+#include "native_tracer.hpp"
 #include "native_launcher_fire.hpp"
 #include "muzzle_clearance.hpp"
 #include "weapon_carry_runtime.hpp"
@@ -161,6 +162,7 @@ namespace vr::gameplay::weapons::native_ballistics
 		else
 		{
 			hei_round::shot_scope addition{id};
+			tracers::owner_scope tracer_owner{id};
 			utils::hook::invoke<void>(bullet_address,entity,spread,&packet,entity,command_time,-1.f);
 			addition.complete();
 		}

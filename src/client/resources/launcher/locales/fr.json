@@ -339,5 +339,15 @@
   "settings.playerAttributes": "Attributs du joueur",
   "settings.weaponHandling": "Manipulation des armes",
   "settings.debugAudioOutput": "Diagnostic de la sortie audio",
-  "settings.debugAudioOutputHint": "Enregistre le périphérique de sortie, le volume et la mise en sourdine du jeu pour diagnostiquer une absence de son. Nécessite de redémarrer le jeu."
+  "settings.debugAudioOutputHint": "Enregistre le périphérique de sortie, le volume et la mise en sourdine du jeu pour diagnostiquer une absence de son. Nécessite de redémarrer le jeu.",
+  "settings.tracerCustomization": "Traçantes",
+  "settings.tracerStyle": "Style des traçantes",
+  "settings.tracerStyleHint": "Original n’ajoute pas de traçante à chaque balle. Les autres styles en produisent à chaque tir.",
+  "choice.tracerNative": "Original",
+  "choice.tracerBlaze": "Blaze",
+  "choice.tracerCerulean": "Cerulean",
+  "choice.tracerRoyal": "Royal",
+  "choice.tracerAnime": "Anime",
+  "choice.tracer1776": "1776",
+  "choice.tracerRainbow": "Arc-en-ciel"
 }

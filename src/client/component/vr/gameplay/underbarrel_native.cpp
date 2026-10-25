@@ -7,6 +7,7 @@
 #include "native_ammunition.hpp"
 #include "native_ammunition_storage.hpp"
 #include "native_ballistics.hpp"
+#include "native_tracer.hpp"
 #include "native_launcher_fire.hpp"
 #include "hei_round.hpp"
 #include "native_scripted_control.hpp"
@@ -142,7 +143,10 @@ namespace vr::gameplay::weapons::underbarrel::native
 		if(grenade_requested)
 			hei_round::projectile_fired(native_launcher_fire::fire(entity,grenade_packet));
 		else if(expected.module.id.type==kind::shotgun)
+		{
+			tracers::owner_scope tracer_owner{{packet.weapon, expected.module.id.host.generation}, expected.module.id.host};
 			utils::hook::invoke<void>(native_ballistics::bullet_address,entity,spread,&packet,entity,command,-1.f);
+		}
 		else (void)native_launcher_fire::fire(entity,packet);
 		return true; // Never refund after entering native damage/scripts.
 	}

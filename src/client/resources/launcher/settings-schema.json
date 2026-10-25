@@ -417,6 +417,14 @@
     "description": "settings.meleeWeaponHint"
   },
   {
+    "name": "vr_tracerStyle",
+    "category": "personalization",
+    "group": "settings.tracerCustomization",
+    "label": "settings.tracerStyle",
+    "type": "choice",
+    "description": "settings.tracerStyleHint"
+  },
+  {
     "name": "vr_supportGripLock",
     "category": "gameplay",
     "group": "settings.weaponInteraction",

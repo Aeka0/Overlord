@@ -9,6 +9,7 @@
 #include "loader/component_loader.hpp"
 #include "shot_geometry.hpp"
 #include "native_ballistics.hpp"
+#include "native_tracer.hpp"
 #include "native_shield.hpp"
 #include "muzzle_clearance.hpp"
 #include "weapon_carry_runtime.hpp"
@@ -112,6 +113,8 @@ namespace vr::gameplay::weapons
 				else
 					++spread_rejected;
 			}
+			tracers::owner_scope tracer_owner{active_shot && active_shot->entity == entity
+				? active_shot->pose.owner.id() : weapon_identity{}};
 			utils::hook::invoke<void>(bullet_address, entity, spread, parameters, attacker,
 				event_parameter, range_override);
 		}

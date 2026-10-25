@@ -2,7 +2,7 @@
 
 Build both configurations from the same checkout first. This updates only the
 four binaries, application manifests, covers, matching vr_input package and
-compiled VR sound zone with its feedback scripts;
+compiled VR resource zones with their feedback scripts;
 user profiles stay put.
 """
 from __future__ import annotations
@@ -18,6 +18,7 @@ import shutil
 import uuid
 
 SOUND_RESOURCES = ('h2-mod/zone/h2_vr_sounds.ff', 'h2-mod/zone/h2_vr_melee.ff',
+                   'h2-mod/zone/h2_vr_tracers.ff',
                    'h2-mod/scripts/killfeed/__init__.lua',
                    'h2-mod/scripts/killfeed_ducking.gsc')
 

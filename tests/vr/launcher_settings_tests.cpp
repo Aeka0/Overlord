@@ -92,6 +92,22 @@ int main(int argc, char** argv)
 		require(!launcher_localization::supported("unknown") && !launcher_localization::supported(""),
 			"Unsupported locale IDs cannot be saved");
 		const auto catalog = choice_catalog();
+		{
+			const auto& field = vr::settings::tracer_style;
+			require(catalog[field.name].size() == 7 && read_values("")[field.name] == "native",
+				"Seven tracer presets retain the unmodified native default");
+			for (unsigned i = 0; i < 7; ++i)
+			{
+				auto values = defaults(); values[field.name] = field.values[i];
+				require(read_values(update_config("bind X vr_recenter\n", values)) == values,
+					"Every tracer preset round trips through the saved profile");
+				require(read_values(std::string("seta ")+field.name+" "+std::to_string(i))[field.name] == field.values[i],
+					"Native numeric enum saves reload as the same tracer preset");
+			}
+			require(read_values("seta vr_tracerStyle 1776\n")[field.name] == "native" &&
+				read_values("seta vr_tracerStyle independence_1776\n")[field.name] == "independence_1776",
+				"1776 display name stays distinct from enum ordinals");
+		}
 		require(catalog.size()==vr::settings::choices.size(), "Choice catalog exposes every native setting");
 		for(const auto& field:vr::settings::choices)
 			for(std::size_t i=0;i<field.values.size() && field.values[i];++i)

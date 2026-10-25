@@ -339,5 +339,15 @@
   "settings.playerAttributes": "Player attributes",
   "settings.weaponHandling": "Weapon handling",
   "settings.debugAudioOutput": "Audio output diagnostics",
-  "settings.debugAudioOutputHint": "Record the game output device, volume and mute state to investigate missing audio. Requires a game restart."
+  "settings.debugAudioOutputHint": "Record the game output device, volume and mute state to investigate missing audio. Requires a game restart.",
+  "settings.tracerCustomization": "Tracers",
+  "settings.tracerStyle": "Tracer style",
+  "settings.tracerStyleHint": "Native does not add tracers to every round. All other styles trigger tracers on every shot.",
+  "choice.tracerNative": "Native",
+  "choice.tracerBlaze": "Blaze",
+  "choice.tracerCerulean": "Cerulean",
+  "choice.tracerRoyal": "Royal",
+  "choice.tracerAnime": "Anime",
+  "choice.tracer1776": "1776",
+  "choice.tracerRainbow": "Rainbow"
 }

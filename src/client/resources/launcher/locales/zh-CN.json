@@ -339,5 +339,15 @@
   "settings.playerAttributes": "玩家属性",
   "settings.weaponHandling": "武器操作",
   "settings.debugAudioOutput": "音频输出诊断",
-  "settings.debugAudioOutputHint": "记录游戏的输出设备、音量和静音状态，用于排查无声问题。重启游戏后生效。"
+  "settings.debugAudioOutputHint": "记录游戏的输出设备、音量和静音状态，用于排查无声问题。重启游戏后生效。",
+  "settings.tracerCustomization": "曳光效果",
+  "settings.tracerStyle": "曳光样式",
+  "settings.tracerStyleHint": "原生不会每发都添加曳光特效，其余样式 100% 触发。",
+  "choice.tracerNative": "原生",
+  "choice.tracerBlaze": "战火",
+  "choice.tracerCerulean": "天蓝",
+  "choice.tracerRoyal": "奢华",
+  "choice.tracerAnime": "动漫",
+  "choice.tracer1776": "1776",
+  "choice.tracerRainbow": "彩虹"
 }

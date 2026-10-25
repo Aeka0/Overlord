@@ -223,6 +223,7 @@ local function copy_client_resources(destination)
 		'{MKDIR} "' .. path.join(destination, "h2-mod/zone") .. '"',
 			'{COPYFILE} "%{wks.location}/../data/zone/h2_vr_sounds.ff" "' .. path.join(destination, "h2-mod/zone/h2_vr_sounds.ff") .. '"',
 			'{COPYFILE} "%{wks.location}/../data/zone/h2_vr_melee.ff" "' .. path.join(destination, "h2-mod/zone/h2_vr_melee.ff") .. '"',
+			'{COPYFILE} "%{wks.location}/../data/zone/h2_vr_tracers.ff" "' .. path.join(destination, "h2-mod/zone/h2_vr_tracers.ff") .. '"',
 		'{MKDIR} "' .. path.join(destination, "steamvr") .. '"',
 		'{COPYFILE} "%{wks.location}/../assets/steamvr/cover.png" "' .. path.join(destination, "steamvr/cover.png") .. '"',
 		'{COPYFILE} "%{wks.location}/../assets/steamvr/cover-small.png" "' .. path.join(destination, "steamvr/cover-small.png") .. '"',

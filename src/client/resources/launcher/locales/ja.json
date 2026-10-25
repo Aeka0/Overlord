@@ -339,5 +339,15 @@
   "settings.playerAttributes": "プレイヤー属性",
   "settings.weaponHandling": "武器操作",
   "settings.debugAudioOutput": "音声出力の診断",
-  "settings.debugAudioOutputHint": "ゲームの出力デバイス、音量、ミュート状態を記録し、音が出ない問題を調査します。ゲームの再起動が必要です。"
+  "settings.debugAudioOutputHint": "ゲームの出力デバイス、音量、ミュート状態を記録し、音が出ない問題を調査します。ゲームの再起動が必要です。",
+  "settings.tracerCustomization": "曳光弾",
+  "settings.tracerStyle": "曳光弾スタイル",
+  "settings.tracerStyleHint": "標準では毎発に曳光を追加しません。他のスタイルは毎発必ず発生します。",
+  "choice.tracerNative": "標準",
+  "choice.tracerBlaze": "Blaze",
+  "choice.tracerCerulean": "Cerulean",
+  "choice.tracerRoyal": "Royal",
+  "choice.tracerAnime": "Anime",
+  "choice.tracer1776": "1776",
+  "choice.tracerRainbow": "レインボー"
 }

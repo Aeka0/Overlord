@@ -339,5 +339,15 @@
   "settings.playerAttributes": "플레이어 속성",
   "settings.weaponHandling": "무기 조작",
   "settings.debugAudioOutput": "오디오 출력 진단",
-  "settings.debugAudioOutputHint": "소리가 나지 않는 문제를 조사하기 위해 게임의 출력 장치, 음량 및 음소거 상태를 기록합니다. 게임을 다시 시작해야 적용됩니다."
+  "settings.debugAudioOutputHint": "소리가 나지 않는 문제를 조사하기 위해 게임의 출력 장치, 음량 및 음소거 상태를 기록합니다. 게임을 다시 시작해야 적용됩니다.",
+  "settings.tracerCustomization": "예광 효과",
+  "settings.tracerStyle": "예광 스타일",
+  "settings.tracerStyleHint": "기본은 매 발마다 예광 효과를 추가하지 않습니다. 다른 스타일은 매 발마다 100% 발동합니다.",
+  "choice.tracerNative": "기본",
+  "choice.tracerBlaze": "Blaze",
+  "choice.tracerCerulean": "Cerulean",
+  "choice.tracerRoyal": "Royal",
+  "choice.tracerAnime": "Anime",
+  "choice.tracer1776": "1776",
+  "choice.tracerRainbow": "무지개"
 }

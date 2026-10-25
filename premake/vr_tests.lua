@@ -9,6 +9,14 @@ return function()
 		targetdir ("%{wks.location}/bin/%{cfg.platform}/%{cfg.buildcfg}/vr-tests/" .. output_directory)
 	end
 
+	test_executable("vr-tracer-tests", "tracer")
+		files {"./tests/vr/tracer_tests.cpp"}
+		includedirs {"./src/client"}
+
+	-- Optional offline asset preparation; never linked into the client.
+	test_executable("vr-tracer-hdr-tool", "tracer-assets")
+		files {"./tools/decode_tracer_hdr.cpp"}
+
 	test_executable("game-loader-tests", "game-loader")
 		files {"./tests/loader/game_loader_tests.cpp", "./src/client/loader/binary_cache.cpp",
 			"./src/client/loader/tls_bootstrap.cpp", "./src/common/utils/io.cpp"}

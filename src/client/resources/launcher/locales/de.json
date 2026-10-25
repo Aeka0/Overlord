@@ -339,5 +339,15 @@
   "settings.playerAttributes": "Spielerattribute",
   "settings.weaponHandling": "Waffenhandhabung",
   "settings.debugAudioOutput": "Audioausgabe-Diagnose",
-  "settings.debugAudioOutputHint": "Zeichnet Ausgabegerät, Lautstärke und Stummschaltung des Spiels auf, um fehlenden Ton zu untersuchen. Erfordert einen Spielneustart."
+  "settings.debugAudioOutputHint": "Zeichnet Ausgabegerät, Lautstärke und Stummschaltung des Spiels auf, um fehlenden Ton zu untersuchen. Erfordert einen Spielneustart.",
+  "settings.tracerCustomization": "Leuchtspuren",
+  "settings.tracerStyle": "Leuchtspur-Stil",
+  "settings.tracerStyleHint": "Original erzeugt nicht bei jedem Schuss eine Leuchtspur. Alle anderen Stile tun dies bei jedem Schuss.",
+  "choice.tracerNative": "Original",
+  "choice.tracerBlaze": "Blaze",
+  "choice.tracerCerulean": "Cerulean",
+  "choice.tracerRoyal": "Royal",
+  "choice.tracerAnime": "Anime",
+  "choice.tracer1776": "1776",
+  "choice.tracerRainbow": "Regenbogen"
 }

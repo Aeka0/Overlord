@@ -5,6 +5,7 @@
 #include "../../diagnostics.hpp"
 #include "../native_weapon_sound.hpp"
 #include "../weapon_feedback.hpp"
+#include "../native_tracer.hpp"
 #include "../../controller_haptics.hpp"
 #include "component/gsc/script_extension.hpp"
 #include "component/gsc/script_loading.hpp"
@@ -341,6 +342,7 @@ namespace vr::gameplay::vehicles::native
 				diagnostics::record_trace(diagnostics::trace_event::vehicle_shot, 1, s.owner.weapon);
 				{
 					scripting::stack_isolation isolated;
+					weapons::tracers::owner_scope tracer_owner{s.owner.id()};
 					for (auto it = args.rbegin(); it != args.rend(); ++it)
 						scripting::push_value(*it);
 					game::scr_VmPub->outparamcount = game::scr_VmPub->inparamcount;

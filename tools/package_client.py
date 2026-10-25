@@ -105,6 +105,7 @@ def collect(configuration: str, base_data: Path | None = None) -> dict[str, Path
     tree(build / "h2-mod/ui_scripts/vr_gameplay", "h2-mod/ui_scripts/vr_gameplay", {".lua"})
     add(build / "h2-mod/zone/h2_vr_sounds.ff", "h2-mod/zone/h2_vr_sounds.ff")
     add(build / "h2-mod/zone/h2_vr_melee.ff", "h2-mod/zone/h2_vr_melee.ff")
+    add(build / "h2-mod/zone/h2_vr_tracers.ff", "h2-mod/zone/h2_vr_tracers.ff")
     for name in ["LICENSE", "THIRD_PARTY_NOTICES.md"]:
         add(ROOT / name, name)
     add(ROOT / "docs/client-installation.md", "README.md")
@@ -119,7 +120,7 @@ def collect(configuration: str, base_data: Path | None = None) -> dict[str, Path
         base_data = base_data.resolve()
         zone = base_data / "zone"
         expected = {source.stem + ".ff" for source in (ROOT / "data/zone_source").glob("*.csv")
-                    if source.stem not in {"h2_vr_sounds", "h2_vr_melee"}}  # Already bundled with the client.
+                    if source.stem not in {"h2_vr_sounds", "h2_vr_melee", "h2_vr_tracers"}}  # Already bundled with the client.
         found = set()
         for source in sorted(zone.rglob("*.ff")):
             if source.name not in expected:

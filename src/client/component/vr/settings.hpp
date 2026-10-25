@@ -26,9 +26,9 @@ namespace vr::settings
 	struct choice_setting
 	{
 		const char* name;
-		std::array<const char*, 7> values; // Null terminated for native enum registration.
+		std::array<const char*, 8> values; // Seven choices plus native enum terminator.
 		int default_index{};
-		std::array<const char*, 7> label_keys{}; // Launcher localization keys, paired with values.
+		std::array<const char*, 8> label_keys{}; // Launcher localization keys, paired with values.
 	};
 	inline constexpr choice_setting killfeed_style{
 		.name = "vr_killfeedStyle",
@@ -74,6 +74,11 @@ namespace vr::settings
 	inline constexpr choice_setting body_pose_mode{.name = "vr_bodyPoseMode",
 	                                              .values = {"inferred", "head_locked"},
 	                                              .label_keys = {"choice.inferredBody", "choice.headLockedBody"}};
+	inline constexpr choice_setting tracer_style{
+		.name = "vr_tracerStyle",
+		.values = {"native", "blaze", "cerulean", "royal", "anime", "independence_1776", "rainbow"},
+		.label_keys = {"choice.tracerNative", "choice.tracerBlaze", "choice.tracerCerulean", "choice.tracerRoyal",
+			"choice.tracerAnime", "choice.tracer1776", "choice.tracerRainbow"}};
 	inline constexpr std::array choices{
 	    runtime_backend,
 	    handedness,
@@ -82,6 +87,7 @@ namespace vr::settings
 	    controller_pose_mode,
 	    weapon_grip_mode,
 	    melee_weapon,
+	    tracer_style,
 	    killfeed_style,
 	    choice_setting{
 	        .name = turn_mode, .values = {"smooth", "snap"}, .label_keys = {"choice.smooth", "choice.snap"}},

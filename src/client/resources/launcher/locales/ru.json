@@ -339,5 +339,15 @@
   "settings.playerAttributes": "Параметры игрока",
   "settings.weaponHandling": "Обращение с оружием",
   "settings.debugAudioOutput": "Диагностика аудиовыхода",
-  "settings.debugAudioOutputHint": "Записывает устройство вывода, громкость и состояние отключения звука игры для диагностики отсутствия звука. Требуется перезапуск игры."
+  "settings.debugAudioOutputHint": "Записывает устройство вывода, громкость и состояние отключения звука игры для диагностики отсутствия звука. Требуется перезапуск игры.",
+  "settings.tracerCustomization": "Трассеры",
+  "settings.tracerStyle": "Стиль трассеров",
+  "settings.tracerStyleHint": "Оригинал не добавляет трассер к каждой пуле. Остальные стили создают трассер при каждом выстреле.",
+  "choice.tracerNative": "Оригинал",
+  "choice.tracerBlaze": "Blaze",
+  "choice.tracerCerulean": "Cerulean",
+  "choice.tracerRoyal": "Royal",
+  "choice.tracerAnime": "Anime",
+  "choice.tracer1776": "1776",
+  "choice.tracerRainbow": "Радуга"
 }

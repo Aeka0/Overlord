@@ -59,6 +59,22 @@ test("melee selection has a localized Personalization page between Gameplay and 
     assert.equal(collect({ vr_meleeWeapon: value }, fixture).vr_meleeWeapon, value);
   assert.throws(() => collect({ vr_meleeWeapon: "sas" }, fixture));
 });
+test("tracer presets expose seven localized Personalization choices", () => {
+  const field = fields.find((entry) => entry.name === "vr_tracerStyle")!;
+  assert.equal(field.category, "personalization");
+  assert.equal(field.type, "choice");
+  for (const catalog of Object.values(catalogs))
+    for (const key of [field.group, field.label, field.description!, "choice.tracerNative",
+      "choice.tracerBlaze", "choice.tracerCerulean", "choice.tracerRoyal", "choice.tracerAnime",
+      "choice.tracer1776", "choice.tracerRainbow"])
+      assert.ok(catalog[key]);
+  const values = ["native", "blaze", "cerulean", "royal", "anime", "independence_1776", "rainbow"];
+  const fixture = { ...state, values: { vr_tracerStyle: "native" },
+    choices: { vr_tracerStyle: values.map((value) => ({ value, labelKey: "" })) } } as SettingsState;
+  for (const value of values)
+    assert.equal(collect({ vr_tracerStyle: value }, fixture).vr_tracerStyle, value);
+  assert.throws(() => collect({ vr_tracerStyle: "1776" }, fixture));
+});
 test("CPU wait timing is an optional localized Debug toggle", () => {
   const field = fields.find((entry) => entry.name === "vr_debugWaitTiming");
   assert.ok(field);

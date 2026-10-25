@@ -339,5 +339,15 @@
   "settings.playerAttributes": "Atributos del jugador",
   "settings.weaponHandling": "Manejo de armas",
   "settings.debugAudioOutput": "Diagnóstico de salida de audio",
-  "settings.debugAudioOutputHint": "Registra el dispositivo de salida, el volumen y el silencio del juego para investigar la falta de sonido. Requiere reiniciar el juego."
+  "settings.debugAudioOutputHint": "Registra el dispositivo de salida, el volumen y el silencio del juego para investigar la falta de sonido. Requiere reiniciar el juego.",
+  "settings.tracerCustomization": "Trazadoras",
+  "settings.tracerStyle": "Estilo de trazadora",
+  "settings.tracerStyleHint": "Original no añade trazadoras a todas las balas. Los demás estilos las activan en cada disparo.",
+  "choice.tracerNative": "Original",
+  "choice.tracerBlaze": "Blaze",
+  "choice.tracerCerulean": "Cerulean",
+  "choice.tracerRoyal": "Royal",
+  "choice.tracerAnime": "Anime",
+  "choice.tracer1776": "1776",
+  "choice.tracerRainbow": "Arcoíris"
 }
