@@ -7,7 +7,7 @@
 namespace launcher_game_language
 {
 	// Only the UI thread accesses the future. The worker owns its CASC handle
-	// and never calls the engine or WebView2. Polling never waits on disk IO.
+	// and performs preference IO. Detection is advisory and never rejects a pack.
 	class service
 	{
 	public:

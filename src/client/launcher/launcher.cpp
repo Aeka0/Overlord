@@ -17,7 +17,6 @@ struct launcher::impl
 	launcher_game_language::service languages_;
 	std::string session_;
 	bool language_busy_{};
-	std::optional<bool> language_available_;
 	bool settings_loaded_{};
 	bool launched_{};
 	std::optional<int> pending_launch_;
@@ -87,11 +86,6 @@ struct launcher::impl
 	{
 		auto result = json::parse(raw);
 		language_busy_ = result.value("pending", false);
-		if (!language_busy_ && result.value("ok", false))
-		{
-			const auto selected = result.at("language");
-			language_available_ = std::any_of(result.at("choices").begin(), result.at("choices").end(), [&](const auto& choice) { return choice.at("value") == selected; });
-		}
 		return result;
 	}
 
@@ -165,7 +159,6 @@ struct launcher::impl
 					if (!id.is_string() || (id != "shaders" && id != "shadows")) throw std::runtime_error("Invalid startup acknowledgement.");
 				if (launched_ || !services_.idle() || !settings_loaded_) throw std::runtime_error("launcher.busy");
 				if (language_busy_) throw std::runtime_error("language.gameScanning");
-				if (language_available_ == false) throw std::runtime_error("language.gameCurrentUnavailable");
 				// Keep the fresh launch gate on the ordered file worker. The UI
 				// thread only spawns after approval and cannot enqueue mutations
 				// in between; closing/reloading the window discards that approval.

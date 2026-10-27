@@ -471,8 +471,7 @@ function Launcher({ data }: { data: Bootstrap }) {
       if (report.issues.length) {
         setPreflightNotice(null);
         setPreflight(report);
-      } else if (gameLanguage.available === false) setPage("language");
-      else await startGame(report);
+      } else await startGame(report);
     } catch (error) {
       setNotice({ key: errorKey(error), error: true });
     } finally {
@@ -525,20 +524,15 @@ function Launcher({ data }: { data: Bootstrap }) {
     setChecking(true);
     setPreflightNotice(null);
     try {
-      if (gameLanguage.available === false) {
+      if (
+        preflight.gameAvailable &&
+        controller.dirty &&
+        !(await controller.save())
+      ) {
         setPreflight(null);
-        setPage("language");
-      } else {
-        if (
-          preflight.gameAvailable &&
-          controller.dirty &&
-          !(await controller.save())
-        ) {
-          setPreflight(null);
-          return;
-        }
-        await startGame(preflight);
+        return;
       }
+      await startGame(preflight);
     } catch (error) {
       setPreflightNotice({ key: errorKey(error), error: true });
     } finally {
@@ -855,6 +849,10 @@ function Launcher({ data }: { data: Bootstrap }) {
                 description={t("language.gameHint")}
               >
                 <select
+                  className="game-language-select"
+                  data-detected={gameLanguage.result?.choices.find(
+                    (choice) => choice.value === gameLanguage.result?.language,
+                  )?.detected}
                   aria-label={t("language.game")}
                   value={gameLanguage.result?.language || ""}
                   disabled={
@@ -870,7 +868,11 @@ function Launcher({ data }: { data: Bootstrap }) {
                     {t("language.gameChoose")}
                   </option>
                   {gameLanguage.result?.choices.map((choice) => (
-                    <option key={choice.value} value={choice.value}>
+                    <option
+                      key={choice.value}
+                      value={choice.value}
+                      data-detected={choice.detected}
+                    >
                       {choice.label}
                     </option>
                   ))}

@@ -14,8 +14,6 @@ namespace launcher_game_language
 	{
 		using nlohmann::json;
 		constexpr size_t max_config_bytes = 1024 * 1024;
-		constexpr size_t max_files = 100000;
-		constexpr DWORD max_spans = 4096;
 		constexpr auto pending = R"({"pending":true})";
 		std::string failure(const char* key) { return json{{"ok", false}, {"errorKey", key}}.dump(); }
 
@@ -33,72 +31,38 @@ namespace launcher_game_language
 			return value;
 		}
 
-		bool readable(HANDLE storage, const CASC_FIND_DATA& entry, const std::atomic<bool>& cancelled)
+		json scan_choices(const std::filesystem::path& root, const std::atomic<bool>& cancelled)
 		{
-			if (!entry.bFileAvailable || !entry.FileSize || !entry.dwSpanCount || entry.dwSpanCount > max_spans) return false;
-			HANDLE file{};
-			if (!CascOpenFile(storage, entry.szFileName, CASC_LOCALE_ALL, CASC_OPEN_BY_NAME, &file)) return false;
-			const auto close = gsl::finally([&] { CascCloseFile(file); });
-			std::vector<CASC_FILE_SPAN_INFO> spans(entry.dwSpanCount);
-			if (!CascGetFileInfo(file, CascFileSpanInfo, spans.data(), spans.size() * sizeof(spans[0]), nullptr)) return false;
-			// Resolve every span against local data archives, including its tail.
-			// Metadata or a shared startup zone alone is not an installed language.
-			for (const auto& span : spans)
-			{
-				if (cancelled.load()) throw std::runtime_error("cancelled");
-				if (span.EndOffset <= span.StartOffset || span.EndOffset > entry.FileSize) return false;
-				for (const auto position : {span.StartOffset, span.EndOffset - 1})
-				{
-					char byte{}; DWORD read{};
-					if (!CascSetFilePointer64(file, static_cast<LONGLONG>(position), nullptr, FILE_BEGIN) ||
-						!CascReadFile(file, &byte, 1, &read) || read != 1) return false;
-				}
-			}
-			return true;
-		}
+			json choices = json::array();
+			for (const auto& language : languages)
+				choices.push_back({{"value", language.name}, {"label", language.label}, {"detected", false}});
 
-		json installed(const std::filesystem::path& root, const std::atomic<bool>& cancelled)
-		{
 			HANDLE storage{};
 			CASC_OPEN_STORAGE_ARGS args{};
 			args.Size = sizeof(args);
 			args.dwLocaleMask = CASC_LOCALE_ALL;
-			// Neither ONLINE nor ALLOW_DOWNLOAD is set. Never consult a CDN.
-			if (!CascOpenStorageEx(root.c_str(), &args, false, &storage)) throw std::runtime_error("storage");
+			// Offline metadata is only a sorting hint. An unreadable storage leaves
+			// every official language selectable with detected=false.
+			if (!CascOpenStorageEx(root.c_str(), &args, false, &storage)) return choices;
 			const auto close = gsl::finally([&] { CascCloseStorage(storage); });
-			json choices = json::array();
-			size_t total{};
-			for (const auto& language : languages)
+			for (size_t i = 0; i < languages.size(); ++i)
 			{
 				if (cancelled.load()) throw std::runtime_error("cancelled");
-				const auto prefix = std::string(language.name) + "\\" + language.code + "_";
+				const auto& language = languages[i];
+				const auto common = std::string(language.name) + "\\" + language.code + "_common.ff";
 				CASC_FIND_DATA entry{};
-				const auto search = CascFindFirstFile(storage, (prefix + "*").c_str(), &entry, nullptr);
+				const auto search = CascFindFirstFile(storage, common.c_str(), &entry, nullptr);
 				if (search == INVALID_HANDLE_VALUE || !search) continue;
 				const auto close_search = gsl::finally([&] { CascFindClose(search); });
-				bool complete = true, startup = false, common = false, audio = false;
-				do
-				{
-					if (++total > max_files) throw std::runtime_error("inventory");
-					const std::string_view name(entry.szFileName);
-					startup |= name == prefix + "code_post_gfx.ff";
-					common |= name == prefix + "common.ff";
-					audio |= name.ends_with(".pak");
-					if (!readable(storage, entry, cancelled)) { complete = false; break; }
-				} while (CascFindNextFile(search, &entry));
-				if (complete && startup && common && audio)
-					choices.push_back({{"value", language.name}, {"label", language.label}});
+				// Detect local language content without auditing every map/audio file
+				// or reading payload spans. This is not an installation guarantee.
+				choices[i]["detected"] = entry.bFileAvailable && entry.FileSize != 0;
 			}
 			return choices;
 		}
 
 		std::string execute(const std::filesystem::path& root, const std::string& requested, const std::atomic<bool>& cancelled)
 		{
-			json choices;
-			try { choices = installed(root, cancelled); }
-			catch (...) { return failure("language.gameLoadError"); }
-			if (!requested.empty() && std::none_of(choices.begin(), choices.end(), [&](const auto& c) { return c.at("value") == requested; }))
-				return failure("language.gameUnavailable");
 			try
 			{
 				if (cancelled.load()) return failure("language.gameLoadError");
@@ -112,7 +76,10 @@ namespace launcher_game_language
 				}
 				const auto selected = config.contains("language") && config["language"].is_string()
 					? config["language"].get<std::string>() : "english";
-				return json{{"ok", true}, {"language", selected}, {"choices", choices}, {"saved", !requested.empty()}}.dump();
+				json result{{"ok", true}, {"language", selected}, {"saved", !requested.empty()}};
+				// Saving an official language never scans or checks its installation.
+				if (requested.empty()) result["choices"] = scan_choices(root, cancelled);
+				return result.dump();
 			}
 			catch (...) { return failure(requested.empty() ? "language.gameLoadError" : "language.gameSaveError"); }
 		}
@@ -134,7 +101,7 @@ namespace launcher_game_language
 	std::string service::scan() { return start({}); }
 	std::string service::save(const std::string& language)
 	{
-		if (!official(language)) return failure("language.gameUnavailable");
+		if (!official(language)) return failure("language.gameUnsupported");
 		return start(language);
 	}
 	std::string service::poll()

@@ -45,9 +45,9 @@ The package helper copies the applicable dependency license files from the
 pinned checkouts. Preserve them when distributing a client overlay. The root
 GPL does not relicense the original game's content or third-party fonts.
 
-CascLib is linked statically for offline inspection of installed official game
-language packs. Its upstream checkout is unmodified; the launcher never enables
-online storage or downloads. See [CascLib](https://github.com/ladislav-zezula/CascLib).
+CascLib is linked statically for advisory offline game-language detection.
+The launcher never enables online storage or downloads, and undetected language
+packs remain selectable. See [CascLib](https://github.com/ladislav-zezula/CascLib).
 
 ## Launcher dependencies
 

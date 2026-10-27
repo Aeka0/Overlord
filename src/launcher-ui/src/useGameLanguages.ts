@@ -1,17 +1,21 @@
 import { useEffect, useRef, useState } from "react";
 import { bridge } from "./bridge";
 import { errorKey } from "./i18n";
+import { prioritizeGameLanguages, type GameLanguageChoice } from "./model";
 import type { Notice } from "./useSettings";
 
 interface Result {
   ok?: boolean;
   pending?: boolean;
   language: string;
-  choices: Array<{ value: string; label: string }>;
+  choices?: GameLanguageChoice[];
   saved?: boolean;
 }
 export function useGameLanguages(enabled: boolean) {
-  const [result, setResult] = useState<Result | null>(null);
+  const [result, setResult] = useState<{
+    language: string;
+    choices: GameLanguageChoice[];
+  } | null>(null);
   const [busy, setBusy] = useState(false);
   const [notice, setNotice] = useState<Notice | null>(null);
   const busyRef = useRef(false);
@@ -40,19 +44,13 @@ export function useGameLanguages(enabled: boolean) {
         response = await bridge!.request<Result>("languages.poll");
       }
       if (!live.current || current !== generation.current) return;
-      setResult(response);
-      const available = response.choices.some(
-        (choice) => choice.value === response.language,
-      );
-      setNotice(
-        response.saved
-          ? { key: "language.gameSaved" }
-          : !response.choices.length
-            ? { key: "language.gameEmpty", error: true }
-            : !available
-              ? { key: "language.gameCurrentUnavailable", error: true }
-              : null,
-      );
+      setResult((current) => ({
+        language: response.language,
+        choices: response.choices
+          ? prioritizeGameLanguages(response.choices)
+          : current?.choices ?? [],
+      }));
+      setNotice(response.saved ? { key: "language.gameSaved" } : null);
     } catch (error) {
       if (live.current && current === generation.current)
         setNotice({ key: errorKey(error), error: true });
@@ -78,8 +76,5 @@ export function useGameLanguages(enabled: boolean) {
     notice,
     scan: () => run(),
     save: (language: string) => run(language),
-    available: result
-      ? result.choices.some((choice) => choice.value === result.language)
-      : null,
   };
 }

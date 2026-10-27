@@ -1,4 +1,4 @@
-# Launcher and installed game languages
+# Launcher and game languages
 
 The launcher provides English, Simplified Chinese, Traditional Chinese, Russian,
 French, German, Spanish, Japanese and Korean. The locale resources cover settings,
@@ -20,36 +20,34 @@ Game language is independent. The language page writes the existing
 Other fields are preserved, malformed or oversized configuration is not
 overwritten, and atomic replacement uses Unicode Windows paths.
 
-## Offline availability contract
+## Game language selection
 
-`launcher/game_language_catalog.hpp` admits only the native official language
-names with official language-pack roots; the MOD's Czech and Turkish extensions
-are excluded. `launcher/game_language.cpp` opens the installation's CASC/TVFS
-storage using the pinned, unmodified CascLib submodule. Neither online storage
-nor permission to download missing metadata is enabled.
+`launcher/game_language_catalog.hpp` lists every native official language;
+the MOD's Czech and Turkish extensions are excluded. Every listed language can
+be selected regardless of installed content. A lightweight, offline CASC scan
+looks for local `<language>/<code>_common.ff` entries. Detected languages appear
+first; undetected languages follow in a dimmer color and remain selectable.
+The scan does not read payload spans or audit every map/audio file. If storage
+cannot be opened, all languages remain listed as undetected. The launcher never
+requires English or blocks launch based on detection results. The selected
+language pack must be correctly installed to display properly.
 
-For each official language, every file listed under its language/code prefix
-must be local. Each file's spans must resolve in local archives, and the first
-and last byte of every span must be readable. Startup, common and audio content
-must all be present. A Battle.net tag, empty directory, shared startup resource
-or MOD localization file alone does not establish availability. This is an
-installation check, not a full payload-integrity scan.
-
-Enumeration runs on a launcher-owned worker, outside WebView2 and outside the game
-runtime. The UI polls completion without waiting on disk and offers a refresh
-button. Saving reopens the storage and repeats admission before writing. A
-missing saved language is reported without selecting or writing a substitute.
-Failed writes retain the previous selection. Launching waits for an outstanding
-scan or save, and a confirmed missing saved language requires selecting an
-installed pack first. Scanning never writes game settings.
+Scanning, loading preferences and saving a selection run on a launcher-owned worker,
+outside WebView2 and the game runtime. The UI polls completion without waiting
+on disk. Saving validates only the official language name and configuration
+format before atomically writing the preference; saving does not rescan or
+validate installed content. Failed writes retain the previous selection.
+The refresh button reruns the advisory scan without changing the preference.
+Launching waits for pending language IO to finish.
 
 ## Validation
 
 React launcher tests cover locale coverage, native unit conversion, incomplete
-numeric drafts, inverse settings and stale-document message rejection.
+numeric drafts, inverse settings, stale-document message rejection and detected
+language ordering without filtering undetected choices.
 The C++ launcher tests cover Windows language-tag mapping and preference parsing.
 Game-text and prompt tests format all 65 existing keys in the 14 complete
 official game catalogs, while retaining native fallthrough tests for partial
 MOD-only and unknown locales.
-Real installation probing is read-only; actual game language switching and
-headset layout require a subsequent live acceptance pass.
+Actual game language switching and headset layout require a subsequent live
+acceptance pass.

@@ -9,6 +9,7 @@ import {
   categories,
   SettingError,
   visible,
+  prioritizeGameLanguages,
   type SettingsState,
 } from "../src/model";
 import { catalogs } from "../src/i18n";
@@ -41,6 +42,20 @@ const state = {
     ],
   },
 } as unknown as SettingsState;
+test("detected game languages come first while every undetected language remains selectable", () => {
+  const choices = [
+    { value: "english", label: "English", detected: false },
+    { value: "french", label: "Français", detected: true },
+    { value: "german", label: "Deutsch", detected: true },
+    { value: "italian", label: "Italiano", detected: false },
+  ];
+  const sorted = prioritizeGameLanguages(choices);
+  assert.deepEqual(sorted.map((choice) => choice.value), ["french", "german", "english", "italian"]);
+  assert.equal(sorted.length, choices.length);
+  assert.deepEqual(prioritizeGameLanguages(choices.map((choice) => ({ ...choice, detected: false }))),
+    choices.map((choice) => ({ ...choice, detected: false })));
+  assert.equal(choices[0].value, "english");
+});
 test("melee selection has a localized Personalization page between Gameplay and Cheats", () => {
   assert.equal(categories.indexOf("personalization"), categories.indexOf("gameplay") + 1);
   assert.equal(categories.indexOf("cheats"), categories.indexOf("personalization") + 1);

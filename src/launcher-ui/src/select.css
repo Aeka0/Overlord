@@ -1,5 +1,14 @@
 /* InspireDeputy's menu treatment, using Chromium's native top-layer picker.
  * Keep selection, keyboard navigation and viewport placement browser-owned. */
+.game-language-select option[data-detected="true"] {
+  color: var(--text);
+}
+
+.game-language-select[data-detected="false"],
+.game-language-select option[data-detected="false"] {
+  color: color-mix(in srgb, var(--muted), var(--background) 30%);
+}
+
 @supports (appearance: base-select) {
   select,
   select::picker(select) {

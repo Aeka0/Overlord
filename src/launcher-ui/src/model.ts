@@ -2,6 +2,14 @@ import fieldsJson from "../../client/resources/launcher/settings-schema.json";
 
 export type Values = Record<string, string | number | boolean>;
 export type Draft = Record<string, string | boolean>;
+export interface GameLanguageChoice {
+  value: string;
+  label: string;
+  detected: boolean;
+}
+export function prioritizeGameLanguages(choices: GameLanguageChoice[]) {
+  return [...choices].sort((a, b) => Number(b.detected) - Number(a.detected));
+}
 export interface NumberLimit {
   min: number;
   max: number;
