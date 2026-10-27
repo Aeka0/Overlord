@@ -174,8 +174,6 @@ namespace patches
 
 			utils::hook::nop(0x14037B8AE, 7);
 
-			dvars::register_bool("g_soldierPronouns", false, game::DVAR_FLAG_SAVED, "Show soldier pronouns");
-
 			// unlock safeArea_*
 			utils::hook::jump(0x1403DEEEA, 0x1403DEEF8);
 			utils::hook::jump(0x1403DEF11, 0x1403DEF3C);

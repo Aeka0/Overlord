@@ -112,40 +112,6 @@ LUI.MenuBuilder.m_types_build["settings_menu"] = function(a1)
         }
     )
 
-    LUI.Options.CreateOptionButton(
-        menu,
-        "cg_drawSpeed",
-        "@LUA_MENU_DRAW_SPEED",
-        "@LUA_MENU_DRAW_SPEED_DESC",
-        {
-            {
-                text = "@LUA_MENU_ENABLED",
-                value = true
-            },
-            {
-                text = "@LUA_MENU_DISABLED",
-                value = false
-            }
-        }
-    )
-
-    LUI.Options.CreateOptionButton(
-        menu,
-        "cg_speedGraph",
-        "@LUA_MENU_DRAW_SPEEDGRAPH",
-        "@LUA_MENU_DRAW_SPEEDGRAPH_DESC",
-        {
-            {
-                text = "@LUA_MENU_ENABLED",
-                value = true
-            },
-            {
-                text = "@LUA_MENU_DISABLED",
-                value = false
-            }
-        }
-    )
-
     createdivider(menu, "@LUA_MENU_RENDERING")
 
     LUI.Options.CreateOptionButton(
@@ -199,25 +165,6 @@ LUI.MenuBuilder.m_types_build["settings_menu"] = function(a1)
         "intro",
         "@LUA_MENU_INTRO",
         "@LUA_MENU_INTRO_DESC",
-        {
-            {
-                text = "@LUA_MENU_DISABLED",
-                value = false
-            },
-            {
-                text = "@LUA_MENU_ENABLED",
-                value = true
-            },
-        }
-    )
-
-    createdivider(menu, "@PLATFORM_UI_MISCELLANEOUS_OPTIONS")
-
-    LUI.Options.CreateOptionButton(
-        menu,
-        "g_soldierPronouns",
-        "@LUA_MENU_SOLDIER_PRONOUNS",
-        "@LUA_MENU_SOLDIER_PRONOUNS_DESC",
         {
             {
                 text = "@LUA_MENU_DISABLED",

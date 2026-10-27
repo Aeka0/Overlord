@@ -256,6 +256,12 @@ namespace gsc
 
 		void load_script(const std::string& name)
 		{
+			// Older loose data or fastfiles may still contain this retired name override.
+			if (name == "scripts/names")
+			{
+				return;
+			}
+
 			if (!game::Scr_LoadScript(name.data()))
 			{
 				return;
