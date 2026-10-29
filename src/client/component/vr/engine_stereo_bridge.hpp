@@ -3,6 +3,7 @@
 #include <array>
 #include <cstdint>
 #include <cstddef>
+#include <cmath>
 
 namespace vr::engine_stereo_bridge
 {
@@ -12,6 +13,16 @@ namespace vr::engine_stereo_bridge
 		float tan_right{};
 		float tan_down{};
 		float tan_up{};
+
+		// Off-axis optics need not cross the optical axis or resemble a tested
+		// headset. Validate the finite, ordered ranges used by projection math.
+		[[nodiscard]] bool valid() const noexcept
+		{
+			const auto width=tan_right-tan_left, height=tan_up-tan_down;
+			return std::isfinite(tan_left) && std::isfinite(tan_right) &&
+				std::isfinite(tan_down) && std::isfinite(tan_up) &&
+				std::isfinite(width) && std::isfinite(height) && width>0 && height>0;
+		}
 
 		[[nodiscard]] float symmetric_tan_half_x() const noexcept;
 		[[nodiscard]] float symmetric_tan_half_y() const noexcept;

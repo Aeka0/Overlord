@@ -57,22 +57,6 @@ namespace vr::engine_stereo_bridge
 			});
 		}
 
-		bool valid_projection(const eye_projection& projection) noexcept
-		{
-			const auto half_x = projection.symmetric_tan_half_x();
-			const auto half_y = projection.symmetric_tan_half_y();
-			return std::isfinite(projection.tan_left) &&
-				std::isfinite(projection.tan_right) &&
-				std::isfinite(projection.tan_down) &&
-				std::isfinite(projection.tan_up) &&
-				projection.tan_left < 0.0f && projection.tan_right > 0.0f &&
-				projection.tan_down < 0.0f && projection.tan_up > 0.0f &&
-				projection.tan_left < projection.tan_right &&
-				projection.tan_down < projection.tan_up &&
-				half_x >= 0.1f && half_x <= 10.0f &&
-				half_y >= 0.1f && half_y <= 10.0f;
-		}
-
 		void invalidate_views_locked() noexcept
 		{
 			views_available = false;
@@ -145,7 +129,7 @@ namespace vr::engine_stereo_bridge
 		const std::array<eye_projection, 2>& projections) noexcept
 	{
 		if (frame_id == 0 || !finite_vector(left_position) || !finite_vector(right_position) ||
-			!valid_projection(projections[0]) || !valid_projection(projections[1]))
+			!projections[0].valid() || !projections[1].valid())
 		{
 			invalidate_views();
 			return false;

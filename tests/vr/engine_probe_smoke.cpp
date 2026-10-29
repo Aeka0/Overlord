@@ -978,6 +978,33 @@ namespace
 		return pair;
 	}
 
+	void expect_general_projection_ranges()
+	{
+		using namespace vr::engine_stereo_bridge;
+		for (const eye_projection optics : {eye_projection{.1f,.8f,.2f,1.1f},
+			eye_projection{-25,25,-25,25}, eye_projection{-.01f,.01f,-.01f,.01f}})
+		{
+			const auto pair=make_finalized_binding_pair({10,20,30},{optics,optics});
+			eye_projection decoded;
+			vr::tests::require(vr::engine_stereo_view::read_projection(pair.eyes[0],decoded),
+				"off-axis/wide/narrow optics were rejected during projection readback");
+			const auto read=[&](unsigned index){float value;std::memcpy(&value,pair.eyes[0].bytes.data()+0x40+4*index,4);return value;};
+			for (const auto edge : {std::pair{optics.tan_left,-1.f},std::pair{optics.tan_right,1.f}})
+				vr::tests::require(std::abs(edge.first*read(0)+read(8)-edge.second)<.0001f,
+					"admitted optical edges changed their NDC positions");
+			vr::tests::require(std::abs(decoded.tan_left-optics.tan_left)<.0001f &&
+				std::abs(decoded.tan_up-optics.tan_up)<.0001f,"projection readback changed optical bounds");
+			std::array<render_config,2> configs;
+			vr::tests::require(get_render_configs(configs),"projection publication was lost");
+			vr::engine_stereo_view::culling_union_slot culling;
+			vr::tests::require(vr::engine_stereo_view::derive_culling_union(pair.eyes[0].bytes.data(),configs,culling),
+				"culling union retained a typical-device FOV restriction");
+		}
+		const eye_projection degenerate{1,1,-1,1};
+		vr::tests::require(!publish_view_family(500,{-0.03f,0,0},{0.03f,0,0},{degenerate,degenerate}),
+			"zero-width optics must still be rejected");
+	}
+
 	void expect_symmetric_eye_finalization()
 	{
 		// Issue #34: VDXR can report identical symmetric FOVs. H2's combined
@@ -2127,6 +2154,7 @@ int main()
 		expect_same_frame_view_family_contract();
 		expect_render_target_observation_contract();
 		expect_record_local_asymmetric_eye_slots();
+		expect_general_projection_ranges();
 		expect_symmetric_eye_finalization();
 		expect_isolated_backend_scene_record_clones();
 		expect_scene_clone_rejects_mixed_camera_generations();

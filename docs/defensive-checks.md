@@ -38,3 +38,19 @@ Validation: Debug and RelWithDebInfo builds and runs of `vr-runtime-mock-smoke`
 and `vr-spatial-panel-tests` passed. The former transfers a 4096×2160 menu and
 checks its diagnostic thumbnail; the latter draws to an actual 8193×16 WARP
 target. Full native HUD capture and headset acceptance remain live-test work.
+
+## Optical projection ranges
+
+`eye_projection::valid()` now supplies one finite, ordered-frustum rule for
+view publication, eye/culling construction and projection readback. Removed
+the zero-crossing requirement and empirical tangent-width/half-FOV limits.
+Native float projection coefficients must still be finite, with positive
+perspective scales and near distance. Projection-center sums use double
+intermediates to avoid overflowing finite float bounds during construction.
+
+Validation: `vr-engine-stereo-probe-smoke` passed in Debug and RelWithDebInfo,
+including positive-offset, wide and narrow optics, NDC-edge/readback checks,
+culling construction and rejection of a zero-width frustum. This does not add
+canted-eye rendering: H2's current native adapter still requires the supported
+eye-orientation relationship. Removing that separate guard would silently
+flatten unsupported optics; it was retained.
