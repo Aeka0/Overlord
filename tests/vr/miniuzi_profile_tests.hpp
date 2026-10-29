@@ -2,6 +2,7 @@
 #include "component/vr/gameplay/weapons/miniuzi/profile.hpp"
 #include "component/vr/gameplay/weapons/tmp/profile.hpp"
 #include "component/vr/gameplay/weapon_profiles.hpp"
+#include "component/vr/gameplay/weapon_carry_pose.hpp"
 #include "component/vr/gameplay/weapon_reload_profiles.hpp"
 #include "component/vr/gameplay/weapon_mechanics_profiles.hpp"
 #include "component/vr/gameplay/physical_reload_rig.hpp"
@@ -23,9 +24,21 @@ namespace miniuzi_profile_tests
 			check(!native_reload_profile(name,32),"unreviewed Mini Uzi aliases and variants cannot inherit physical authority");
 		// README.md / stock_support.hpp: headset feedback moved the contact to
 		// (10, 3, -5) cm and yawed the MP9 donor five degrees clockwise about +Z.
-		check(grip.aiming==aim_rule::two_hand && grip.authored_rear==1 && grip.fixed_support_position &&
+		check(grip.aiming==aim_rule::two_hand && grip.authored_rear==1 &&
+			grip.support_mirror_center==&miniuzi::stock_contact_center &&
 			length(sub(scale(grip.wrists[0].position,2.54f),vec{10,3,-5}))<.0001f,
-			"Mini Uzi uses the authored stock contact shared by both hands");
+			"Mini Uzi uses the authored stock contact");
+		// stock_support.hpp: the folded stock spans Y=-3.44226384..0.16743934 cm.
+		// The right hand reflects about that hardware centre, not the left wrist.
+		check(std::abs(miniuzi::stock_contact_center[1]*2.54f-(-3.44226384f+0.16743934f)/2)<.00001f,
+			"Mini Uzi stock mirror centre is the folded stock section midpoint");
+		{
+			const auto left=carry::support_grip(grip,0,{0,0,0,1}),right=carry::support_grip(grip,1,{0,0,0,1});
+			check(left.position==grip.wrists[0].position && right.position[0]==left.position[0] &&
+				right.position[2]==left.position[2] &&
+				std::abs((left.position[1]+right.position[1])/2-miniuzi::stock_contact_center[1])<.00001f,
+				"either hand wraps the folded stock from its own side at the same clearance");
+		}
 		const float half_yaw=-5.f*3.14159265359f/360.f;
 		const auto fitted_rotation=multiply(quat{0,0,std::sin(half_yaw),std::cos(half_yaw)},tmp::wrists[0].rotation);
 		for (const auto axis:{vec{1,0,0},vec{0,1,0},vec{0,0,1}})
