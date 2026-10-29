@@ -25,7 +25,7 @@ namespace vr::gameplay::scripted_arms
         if(wrist<0 || wrist>=rig.count || root==wrist || !descendant(root,wrist,rig) ||
             !finite_twist_pose({local.rotation,local.position,2.f}))return false;
         for(int b=0;b<rig.count;++b)if(!finite_twist_pose(pose[b]))return false;
-        pose_math::move_part(rig,root,pose_math::compose(pose_math::as_anchor(pose[wrist]),local),pose);
+        pose_math::move_part(rig,root,pose_math::compose(pose_math::as_anchor(pose[wrist], rig.model_scale),local),pose);
         return true;
     }
     // Blend local transforms after IK. Blending wrists alone would immediately

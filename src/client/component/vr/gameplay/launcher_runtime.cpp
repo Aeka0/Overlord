@@ -86,7 +86,7 @@ namespace vr::gameplay::weapons::launcher
 			const auto* live=f.find(i.scene.owner.id());const auto& s=i.scene;
 			if(!live || !s.definition || !s.binding.valid || live->assembly!=s.assembly || !valid_hand(live->owner.rear) || f.body.units_per_meter<=0)return false;
 			const int off=1-int(live->owner.rear);if((f.valid_hands&3)!=3)return false;
-			const anchor wrist{f.wrists[off].position,normalize(multiply(f.wrists[off].rotation,s.binding.wrist))};
+			const anchor wrist{f.wrists[off].position,normalize(multiply(f.wrists[off].rotation,s.binding.wrist)),f.wrists[off].scale};
 			const auto grasp=off?hands::pose_mirror::object_in_wrist({},s.definition->rocket_in_wrist,s.binding.mirror):s.definition->rocket_in_wrist;
 			const auto rocket=compose(compose(inverse(live->gun),wrist),grasp);
 			delta=tail_contact(*s.definition,rocket,f.body.units_per_meter);

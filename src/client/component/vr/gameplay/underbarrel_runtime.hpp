@@ -234,8 +234,8 @@ namespace vr::gameplay::weapons::underbarrel
 		if (rear < 0 || rear > 1)
 			return {};
 		const auto& driver = wrists[rear];
-		return {hands::sub(driver.position, hands::rotate(driver.rotation, local.wrists[rear].position)),
-		        driver.rotation};
+		return {hands::sub(driver.position, hands::rotate(driver.rotation, hands::scale(local.wrists[rear].position,local.gun.scale))),
+		        driver.rotation,local.gun.scale};
 	}
 	inline bool uses_pump_frame(kind type, lease grasp) noexcept
 	{
@@ -272,7 +272,7 @@ namespace vr::gameplay::weapons::underbarrel
 		s.owner = owner;
 		s.units = units;
 		const auto local =
-		    compose(inverse(gun), {wrist.position, normalize(multiply(wrist.rotation, s.wrist_basis))});
+		    compose(inverse(gun), {wrist.position, normalize(multiply(wrist.rotation, s.wrist_basis)),wrist.scale});
 		const auto physical = multiply(conjugate(gun.rotation), wrist.rotation);
 		const auto scores = controller_facing(physical, s.contact_hand);
 		s.support_facing = scores.support;

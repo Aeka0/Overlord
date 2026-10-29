@@ -72,7 +72,7 @@ namespace vr::gameplay::weapons
 						if (!finite(pose[i].position) || norm<.5f || norm>1.5f) { reset(); return false; }
 					}
 				}
-				const auto root=scale(add(compose(as_anchor(pose[r.parent[b.bones[0]]]),p.links[0].rest.local).position,view_offset),1/units);
+				const auto root=scale(add(compose(as_anchor(pose[r.parent[b.bones[0]]], r.model_scale),p.links[0].rest.local).position,view_offset),1/units);
 				if (!finite(root)) { reset(); return false; }
 				float dt=std::chrono::duration<float>(at-at_).count();
 				const bool changed=definition_!=&p || owner_!=owner || reference_!=reference || indices_!=b.bones ||
@@ -94,7 +94,7 @@ namespace vr::gameplay::weapons
 				const auto force=sub(vec{0,0,-9.81f},acceleration);
 				for (size_t n=0;n<b.count;++n)
 				{
-					const auto& link=p.links[n]; const auto parent=as_anchor(pose[r.parent[b.bones[n]]]);
+					const auto& link=p.links[n]; const auto parent=as_anchor(pose[r.parent[b.bones[n]]], r.model_scale);
 					const auto direction=rotate(link.rest.local.rotation,unit(n+1<b.count ? p.links[n+1].rest.local.position : p.tip));
 					const auto torque=scale(cross(direction,rotate(conjugate(parent.rotation),force)),p.force_gain);
 					if (advance)

@@ -6,11 +6,12 @@ namespace vr::gameplay::hands
 	inline constexpr size_t hand_contact_count=21; // 15 joints, five tips, palm.
 	struct contact_rig
 	{
-		int wrist{-1}; std::array<int,15> fingers{}; bool valid{};
+		int wrist{-1}; std::array<int,15> fingers{}; bool valid{}; float model_scale{1.f};
 	};
 	inline contact_rig bind_contacts(const rig& r,std::span<const bone_definition> bones,int side) noexcept
 	{
 		contact_rig out;
+		out.model_scale=r.model_scale;
 		if (side<0 || side>1 || r.count<=0 || r.count>256 || bones.size()!=size_t(r.count)) return out;
 		for (int i=0;i<r.count;++i) if (r.parent[i]<-1 || r.parent[i]>=i) return out;
 		out.wrist=r.arms[side].wrist;
@@ -53,7 +54,7 @@ namespace vr::gameplay::hands
 		out[20]=scale(add(out[3],out[12]),.35f);
 		for (auto& point:out)
 		{
-			point=add(raw.position,rotate(raw.rotation,point));
+			point=transform_point(raw,scale(point,1.f/r.model_scale));
 			for (float x:point) if (!std::isfinite(x)) return false;
 		}
 		return true;

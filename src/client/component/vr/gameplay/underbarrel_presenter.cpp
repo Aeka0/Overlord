@@ -271,7 +271,7 @@ namespace vr::gameplay::weapons::underbarrel::round_presentation
 				auto& model = geometry(f);
 				const auto pose = compose(f.world, inverse(bind(model)));
 				game::GfxScaledPlacement place{};
-				place.scale = 1;
+				place.scale = pose.scale;
 				std::copy(pose.position.begin(), pose.position.end(), place.base.origin);
 				std::copy(pose.rotation.begin(), pose.rotation.end(), place.base.quat);
 				float color[]{1, 1, 1, 1};

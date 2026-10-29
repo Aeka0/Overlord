@@ -3,10 +3,12 @@
 #include "spatial_math.hpp"
 #include "movie_presentation.hpp"
 #include "menu_backdrop.hpp"
+#include "pose_filter.hpp"
 
 #if H2V_OPENXR_HEADERS_AVAILABLE
 namespace vr::openxr
 {
+	static_assert(menu_surface::surface_count == diagnostics::menu_sources::capacity);
 	void menu_layers::observe_backdrop(const head_pose_bridge::tracking_pose& head,
 	                                   std::uint64_t device) noexcept
 	{
@@ -101,6 +103,7 @@ namespace vr::openxr
 	                                                     const presentation_input& presentation)
 	{
 		const auto& [session, space, graphics, chain, head, curved, menu_format] = presentation;
+		source_readback_.poll(graphics);
 		XrResult result{XR_SUCCESS};
 		std::string error;
 		const char* operation = "native menu validation";
@@ -184,6 +187,11 @@ namespace vr::openxr
 		const float elapsed = last_time_ && now >= last_time_ ? float(now - last_time_) * .001f : 0;
 		last_time_ = now;
 		const auto prior = surfaces_;
+		diagnostic.session = current.session;
+		diagnostic.revision = current.revision;
+		diagnostic.image_session = images->owner.session;
+		diagnostic.image_revision = images->owner.revision;
+		diagnostic.device_generation = graphics.generation;
 		const unsigned active = current.count ? current.count - 1 : menu_surface::surface_count;
 		menu_surface::geometry active_geometry;
 		bool active_ready = false;
@@ -318,6 +326,25 @@ namespace vr::openxr
 			const XrSwapchainSubImage sub{swap.handle, {{0, 0}, {int(swap.width), int(swap.height)}}, 0};
 			const auto flags = movie && background ? XrCompositionLayerFlags{0}
 			                                       : XR_COMPOSITION_LAYER_BLEND_TEXTURE_SOURCE_ALPHA_BIT;
+			auto& observed = diagnostic.geometry[count_];
+			observed.slot = index;
+			observed.source_sequence = image->sequence;
+			observed.source_tick = image->timestamp; observed.flags = flags;
+			observed.source_width = image->width; observed.source_height = image->height;
+			observed.cylinder = geometry.radius != 0;
+			observed.position = center; observed.orientation = rotation;
+			observed.width = geometry.width; observed.height = geometry.height;
+			observed.radius = geometry.radius; observed.distance = geometry.distance;
+			const auto surface_center = menu_surface::add(anchor_.position,
+				menu_surface::mul(anchor_.forward, geometry.distance));
+			const auto relative = spatial_math::sub(surface_center, head.position_meters);
+			observed.head_center = pose_filter::rotate(pose_filter::transpose(head.orientation), relative);
+			const auto distance = spatial_math::length(relative);
+			observed.facing = distance > 1e-6f ? menu_surface::dot(relative, anchor_.forward) / distance : 0;
+			observed.head_ray_hit = menu_surface::intersect(geometry, head.position_meters,
+				{-head.orientation[0][2], -head.orientation[1][2], -head.orientation[2][2]}).valid;
+			source_readback_.observe(graphics, image->texture.Get(), blit_, transfer.source_encoding,
+				diagnostic, observed);
 			if (geometry.radius)
 			{
 				auto& layer = cylinders_[index];
@@ -405,6 +432,7 @@ namespace vr::openxr
 			target = {};
 		}
 		blit_.reset();
+		source_readback_.reset();
 		anchor_ = {};
 		pointer_owner_.reset();
 		movie_pool_ = {};

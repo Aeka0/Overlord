@@ -4,6 +4,7 @@
 #include "rigid_part_visibility.hpp"
 #include "immutable_surface_cache.hpp"
 #include "skinned_part_visibility.hpp"
+#include "first_person_mesh_size.hpp"
 #include "component/scene_surface_indices.hpp"
 #include "component/scheduler_context.hpp"
 #include <utils/native_memory.hpp>
@@ -22,6 +23,8 @@ namespace vr::gameplay::weapons::viewmodel_visibility
 		constexpr std::uintptr_t skin_site=0x14071F879, skin_target=0x14071E020;
 		std::atomic_bool alive{true}, hidden_ready{}, rigid_ready{}, skin_ready{};
 		thread_local const void* skin_owner{};
+		thread_local float skin_size{1.f};
+		thread_local bool size_failed{};
 		std::atomic_uint64_t filtered{}, rejected{};
 		struct frame
 		{
@@ -124,21 +127,28 @@ namespace vr::gameplay::weapons::viewmodel_visibility
 		}
 		void rigid_stub(const void* object, void* packet, void* history)
 		{
-			// The original builder owns this packet. No MOD lock across native work.
+			const auto size=object==skin_owner?skin_size:first_person_mesh_size::for_object(object);
+			if(size!=1.f)size_failed |= !first_person_mesh_size::prepare_packet(packet,size,first_person_mesh_size::packet_data::inverse_bind);
+			// Keep native visibility/group packing order. Only the inverse bind
+			// changes before matrix construction; surface substitution stays after it.
 			utils::hook::invoke<void>(rigid_target,object,packet,history);
 			frame value;
-			if (!find(object,value)) return;
 			const game::XSurface* source{}; std::uint8_t bone_base{};
-			if (!read(packet,0x28,source) || !read(packet,0x10,bone_base)) return;
-			const bool hidden=source && std::find(value.hidden_surfaces.begin(),value.hidden_surfaces.end(),source)!=value.hidden_surfaces.end();
-			if (!hidden && (value.mode==part_visibility::surface ||
-				std::all_of(value.bits.begin(),value.bits.end(),[](auto b) { return b==0; }))) return;
-			auto bits=value.bits;if (hidden) bits.fill(UINT_MAX);
-			if (const auto* replacement=filtered_surface(source,bone_base,bits))
+			if (find(object,value) && read(packet,0x28,source) && read(packet,0x10,bone_base))
 			{
-				std::memcpy(static_cast<std::byte*>(packet)+0x28,&replacement,sizeof(replacement));
-				++filtered;
+				const bool hidden=source && std::find(value.hidden_surfaces.begin(),value.hidden_surfaces.end(),source)!=value.hidden_surfaces.end();
+				if (hidden || (value.mode!=part_visibility::surface &&
+					!std::all_of(value.bits.begin(),value.bits.end(),[](auto b) { return b==0; })))
+				{
+					auto bits=value.bits;if (hidden) bits.fill(UINT_MAX);
+					if (const auto* replacement=filtered_surface(source,bone_base,bits))
+					{
+						std::memcpy(static_cast<std::byte*>(packet)+0x28,&replacement,sizeof(replacement));
+						++filtered;
+					}
+				}
 			}
+			if(size!=1.f)size_failed |= !first_person_mesh_size::prepare_packet(packet,size,first_person_mesh_size::packet_data::surface);
 		}
 		bool skin_stub(void* begin,void* end,unsigned surfaces,unsigned vertices,void* history)
 		{
@@ -179,6 +189,15 @@ namespace vr::gameplay::weapons::viewmodel_visibility
 					else ++rejected;
 				}
 			}
+			const float size=skin_size;
+			if (size_failed) return false;
+			if (size!=1.f && last>first)
+			{
+				const auto plan=plan_skin_packets({static_cast<const std::byte*>(begin),last-first},surfaces);
+				if (!plan.valid) return false;
+				for (size_t i=0;i<plan.count;++i)
+					if (!first_person_mesh_size::prepare_packet(static_cast<std::byte*>(begin)+plan.skinned[i],size)) return false;
+			}
 			return utils::hook::invoke<bool>(skin_target,begin,end,surfaces,vertices,history);
 		}
 		bool verify_call(std::uintptr_t site, std::uintptr_t target)
@@ -189,8 +208,13 @@ namespace vr::gameplay::weapons::viewmodel_visibility
 			return static_cast<bool>(utils::hook_validation::verify_masked_bytes(reinterpret_cast<void*>(site),{call.data(),mask.data(),5}));
 		}
 	}
-	const void* skin_object(const void* object) noexcept
-	{ const auto old=skin_owner; skin_owner=object; return old; }
+	skin_state skin_object(const void* object) noexcept
+	{
+		const skin_state old{skin_owner,skin_size,size_failed};
+		skin_owner=object;skin_size=first_person_mesh_size::for_object(object);size_failed=false;return old;
+	}
+	void restore_skin_object(skin_state previous) noexcept
+	{skin_owner=previous.object;skin_size=previous.model_scale;size_failed=previous.size_failed;}
 	bool prepare_skinned_part(game::XModel* source,std::string_view name,bool subtree)
 	{return prepare_skinned_parts(source,std::span(&name,1),subtree);}
 	bool prepare_skinned_parts(game::XModel* source,std::span<const std::string_view> names,bool subtree)
@@ -290,9 +314,10 @@ namespace vr::gameplay::weapons::viewmodel_visibility
 				// descriptors. New zones must not exhaust the immutable subset cache.
 				{ const std::lock_guard lock(frames_mutex); frames={};sequence=0; }
 				const std::lock_guard lock(variants_mutex);
-				variants.clear();
+			variants.clear();
 				for (auto& v:skin_variants) v.reset();
 				skin_variant_count=0;
+				first_person_mesh_size::clear_after_drain();
 			});
 			constexpr std::uint8_t getter[]{0x0f,0x10,0x81,0xb8,0x00,0x00,0x00,0x0f,0x11,0x02};
 			std::array<std::uint8_t,sizeof(getter)> mask{}; mask.fill(0xff);

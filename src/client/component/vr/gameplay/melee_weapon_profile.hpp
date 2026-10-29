@@ -64,11 +64,22 @@ namespace vr::gameplay::equipment::melee_weapons
 		}
 		return right?hands::pose_mirror::object_in_wrist({},out,mirror):out;
 	}
-	inline anchor stowed(const chest_slots& chest,kind value) noexcept
+	inline anchor stowed(const chest_slots& chest,kind value,float model_scale=1.f) noexcept
 	{
-		if(value==kind::ghost || value==kind::bayonet)return knife_profile::stowed(chest,value==kind::bayonet);
-		const auto& p=get(value);auto out=hands::pose_math::compose(chest.anchors[0],{{},p.slot_rotation});
-		out.position=sub(out.position,rotate(out.rotation,p.grip_center));return out;
+		const auto& p=get(value);
+		anchor out;
+		if(value==kind::ghost || value==kind::bayonet)out=knife_profile::stowed(chest,value==kind::bayonet);
+		else
+		{
+			out=hands::pose_math::compose(chest.anchors[0],{{},p.slot_rotation});
+			out.position=sub(out.position,rotate(out.rotation,p.grip_center));
+		}
+		if(model_scale!=1.f)
+		{
+			const auto centre=transform_point(out,p.grip_center);out.scale=model_scale;
+			out.position=sub(centre,rotate(out.rotation,scale(p.grip_center,model_scale)));
+		}
+		return out;
 	}
 	inline std::array<anchor,11> baton_pose(float seconds,bool held) noexcept
 	{

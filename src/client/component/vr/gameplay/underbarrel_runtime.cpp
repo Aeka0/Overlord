@@ -947,7 +947,7 @@ namespace vr::gameplay::weapons::underbarrel
 	                                  hands::part_hand_frame* hand_motion) noexcept
 	{
 		using namespace hands;if(!enabled() || !parts || !owner.can_fire() || !library.valid || units<=0 || !std::isfinite(units) || solved.size()<size_t(rig.count))return {};
-		const int rear=int(owner.rear),off=1-rear;const auto gun=as_anchor(solved[rig.gun]);
+		const int rear=int(owner.rear),off=1-rear;const auto gun=as_anchor(solved[rig.gun], rig.model_scale);
 		auto fire=firing_anchor(parts,rig,library,ordinary_supports[off],off);
 		auto rack=parts.type==kind::shotgun ? compose(parts.mount,authored::pump_grip) : ordinary_supports[off];
 		auto round=parts.type==kind::m203 ? authored::m203_round_in_wrist : parts.type==kind::gp25 ? authored::gp25_round_in_wrist : authored::shotgun_round_in_wrist;
@@ -995,7 +995,7 @@ namespace vr::gameplay::weapons::underbarrel
 		(void)pose_action(parts,rig,gun,v.travel,units,solved);
 		if(pose_owned && v.active && v.ammo.held && v.ammo.loader==hand(off))
 		{
-			const auto held_round=compose(as_anchor(solved[rig.arms[off].wrist]),round);
+			const auto held_round=compose(as_anchor(solved[rig.arms[off].wrist], rig.model_scale),round);
 			move_part(rig,parts.round,held_round,solved);
 			for(int n=0;n<2;++n)if(parts.round_parts[n]>=0)move_part(rig,parts.round_parts[n],compose(held_round,parts.round_parts_local[n]),solved);
 			const auto fingers=parts.type==kind::shotgun?std::span<const joint_pose>(authored::shell_fingers):parts.type==kind::gp25?std::span<const joint_pose>(authored::gp25_fingers):std::span<const joint_pose>(authored::grenade_fingers);

@@ -83,7 +83,7 @@ namespace vr::gameplay::weapons
 	{
 		using namespace hands;using namespace hands::pose_math;
 		g.attached_magazine_pose=grasp.index;
-		const anchor contact_wrist{wrist.position,normalize(multiply(controller,magazine_wrist_basis(p,grasp,basis,knife)))};
+		const anchor contact_wrist{wrist.position,normalize(multiply(controller,magazine_wrist_basis(p,grasp,basis,knife))),wrist.scale};
 		g.magazine=magazine_contacts(p,gun,contact_wrist,free_magazine,units,&grasp.contact);
 		// Button-release profiles without a separate latch box use the authored
 		// seated wrist as their spherical contact. No render-snapped hand input.

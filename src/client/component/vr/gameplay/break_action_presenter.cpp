@@ -81,7 +81,7 @@ namespace vr::gameplay::weapons::break_action
 			if(!alive || !game::CL_IsCgameInitialized())return;
 			std::array<frame,15> frames;std::array<drop,16> released;{const std::lock_guard lock(mutex);frames=latest;released=drops;}
 			const auto input=controller_input::latest();const auto now=clock::now();
-			const auto draw=[&](scene_models::rigid_part& model,anchor target,unsigned n,float radius){target=compose(target,inverse(bind(model)));game::GfxScaledPlacement place{};place.scale=1;
+			const auto draw=[&](scene_models::rigid_part& model,anchor target,unsigned n,float radius){target=compose(target,inverse(bind(model)));game::GfxScaledPlacement place{};place.scale=target.scale;
 				std::copy(target.position.begin(),target.position.end(),place.base.origin);std::copy(target.rotation.begin(),target.rotation.end(),place.base.quat);
 				float color[]{1,1,1,1};scene_models::submit(model.model(),&place,0,&lighting[n],color,color,color,radius);};
 			for(unsigned n=0;n<frames.size();++n){const auto& f=frames[n];if(f.model && f.model->level==level && f.view.active && !f.view.fault && f.view.ammo.loader_hand!=hand::none &&
@@ -103,8 +103,8 @@ namespace vr::gameplay::weapons::break_action
 		if(!alive || !parts.valid || !grip.break_open || !valid_hand(owner.holding_hand()) || !std::isfinite(units) || units<=0 || solved.size()<size_t(r.count))return {};
 		const auto& p=*grip.break_open;auto* model=model_for(&p);if(!model)return {};
 		const auto v=current(owner.id());if(v.active && v.definition!=&p)return {};
-		const int rear=int(owner.holding_hand()),off=1-rear;const auto gun=as_anchor(solved[r.gun]);const auto inverse_gun=inverse(gun);const auto basis=library.mirror_basis[r.arms[off].wrist];
-		const anchor wrist{targets[off].position,normalize(multiply(targets[off].rotation,free_hand_rotation(grip,off)))};
+		const int rear=int(owner.holding_hand()),off=1-rear;const auto gun=as_anchor(solved[r.gun], r.model_scale);const auto inverse_gun=inverse(gun);const auto basis=library.mirror_basis[r.arms[off].wrist];
+		const anchor wrist{targets[off].position,normalize(multiply(targets[off].rotation,free_hand_rotation(grip,off))),r.model_scale};
 		const auto raw=compose(inverse_gun,wrist);const auto grasp=off ? hands::pose_mirror::part(p.barrel_grip,basis) : p.barrel_grip;
 		const auto shell_grip=off ? hands::pose_mirror::object_in_wrist({},p.shell_in_wrist,basis) : p.shell_in_wrist;
 		const auto raw_shell=compose(raw,shell_grip);const auto shell_tip=compose(raw_shell,{p.shell_tip,{0,0,0,1}}).position;
@@ -132,7 +132,7 @@ namespace vr::gameplay::weapons::break_action
 		}
 		if(hand_motion)hand_motion->apply(off,!posed ? part_hand_attachment::free :
 			v.barrel_held ? part_hand_attachment::barrel : part_hand_attachment::shell);
-		const auto shell=compose(as_anchor(solved[r.arms[off].wrist]),shell_grip);
+		const auto shell=compose(as_anchor(solved[r.arms[off].wrist], r.model_scale),shell_grip);
 		scene_frame scene{input,owner,g,assembly,gameplay,shell,{},units,&p,manipulation,gun};scene.shell_world.position=add(scene.shell_world.position,offset);scene.gun_world.position=add(gun.position,offset);
 		scene.binding={free_hand_rotation(grip,off),basis,true};
 		for(unsigned n=0;n<p.ammunition.capacity;++n)scene.chambers_world[n]=compose(compose(scene.gun_world,barrel_local),p.chamber_in_barrel[n]);

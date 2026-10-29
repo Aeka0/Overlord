@@ -314,6 +314,8 @@
   "settings.worldScale": "Échelle du monde",
   "settings.worldSize": "Taille du monde",
   "settings.worldSizeHint": "100% correspond à la taille par défaut. Une valeur plus élevée fait paraître le monde plus grand ; une valeur plus basse, plus petit. Affecte aussi les déplacements suivis et la portée des interactions. S’applique au prochain lancement du jeu.",
+  "settings.firstPersonSize": "Taille des mains et des armes",
+  "settings.firstPersonSizeHint": "Ajuste ensemble les mains, les armes, les points de prise et les pièces de rechargement à la première personne. 100% est la taille d’origine, 80% correspond à 0,8x et 20% à 0,2x. Les positions suivies des poignets restent fixes. S’applique au prochain lancement du jeu.",
   "unit.percent": "%",
   "settings.calibrationHint": "Choisissez le traitement des poses et un préréglage avant de régler l’alignement. Les commandes correspondent au traitement choisi ; vr_input_status indique celui utilisé en jeu. Changer de traitement exige de relancer le jeu.",
   "settings.positionOffsetsHint": "Les décalages de position sont exprimés en mètres. Appuyez sur ~ en jeu pour ouvrir la console et remplacez <valeur> par le nombre souhaité. Fermez la console pour voir immédiatement le changement en jeu.",

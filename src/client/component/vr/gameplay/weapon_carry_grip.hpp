@@ -31,9 +31,9 @@ namespace vr::gameplay::weapons::carry
 		    p.acquire_meters <= 0)
 			return false;
 		const auto separation = hands::length(hands::sub(other, rear)) / units;
-		if (!std::isfinite(separation) || (p.aiming == aim_rule::two_hand && separation < .08f))
+		if (!std::isfinite(separation) || (p.aiming == aim_rule::two_hand && separation < .08f*gun.scale))
 			return false;
-		const auto contact = hands::add(gun.position, hands::rotate(gun.rotation, local.position));
+		const auto contact = hands::transform_point(gun, local.position);
 		const auto distance = hands::length(hands::sub(other, contact)) / units;
 		return std::isfinite(distance) && distance <= p.acquire_meters;
 	}
@@ -65,7 +65,7 @@ namespace vr::gameplay::weapons::carry
 			return {};
 		const auto distance = [&](hands::anchor local)
 		{
-			const auto contact = hands::add(gun.position, hands::rotate(gun.rotation, local.position));
+			const auto contact = hands::transform_point(gun, local.position);
 			return hands::length(hands::sub(point, contact)) / (.15f * units);
 		};
 		const float fixed_distance = distance(fixed);

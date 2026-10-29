@@ -203,9 +203,9 @@ namespace vr::gameplay::weapons::physical_reload
 				game::GfxScaledPlacement placement{};
 				std::copy(world.position.begin(),world.position.end(),placement.base.origin);
 				std::copy(world.rotation.begin(),world.rotation.end(),placement.base.quat);
-				placement.scale = 1;
+				placement.scale = world.scale;
 				float color[4]{1,1,1,1};
-				// Pad frustum admission only; never scale the mesh or shared asset.
+				// Frustum padding is independent of the selected model size.
 				// The independent hands do not request the bit-0 foreground effect.
 				// Held and falling magazines share their scene depth, so fingers can occlude them.
 				scene_models::submit(asset.model,&placement,0,&lighting_handles[index],color,color,color,.25f*units);
@@ -281,7 +281,7 @@ namespace vr::gameplay::weapons::physical_reload
 				{
 					auto world=hand_frame.partition_model[piece];world.position=add(world.position,hand_frame.partition_origin);
 					world=compose(world,asset.in_part[piece]);game::GfxScaledPlacement placement{};
-					std::copy(world.position.begin(),world.position.end(),placement.base.origin);std::copy(world.rotation.begin(),world.rotation.end(),placement.base.quat);placement.scale=1;
+					std::copy(world.position.begin(),world.position.end(),placement.base.origin);std::copy(world.rotation.begin(),world.rotation.end(),placement.base.quat);placement.scale=world.scale;
 					float color[4]{1,1,1,1};scene_models::submit(asset.models[piece],&placement,0,&lighting_handles[23+hand_frame.slot*2+piece],color,color,color,.25f*hand_frame.units);
 				}
 			}
@@ -398,14 +398,14 @@ namespace vr::gameplay::weapons::physical_reload
 		// The caller still presents its independent cosmetic assembly policy.
 		if (!presentation_available(profile,grip_profile.viewmodel.visibility) ||
 			(state.active && state.definition != profile)) return {};
-		const auto gun = as_anchor(solved[r.gun]);
+		const auto gun = as_anchor(solved[r.gun], r.model_scale);
 		const auto attached = compose(gun,definition.magazine_rest);
 		// Raw corrected controller targets drive ALL interactions; IK/snap results
 		// only drive presentation. Feeding a snapped hand back would stick the
 		// slide or fabricate insertion and suppress breakaway.
 		const bool paired=knife_held || (state.magazine_leased() && state.knife_magazine_grasp) || (state.slide_held && state.knife_slide_grasp);
 		const auto ordinary_basis=paired && paired_wrist ? *paired_wrist : ordinary_wrist;
-		const anchor wrist{targets[off].position,normalize(multiply(targets[off].rotation,ordinary_basis))};
+		const anchor wrist{targets[off].position,normalize(multiply(targets[off].rotation,ordinary_basis)),r.model_scale};
 		const auto wrist_in_gun = compose(inverse(gun),wrist);
 		const auto magazine_pose=select_magazine_grip(definition,wrist_in_gun.rotation,off,basis,knife_grasp,state.magazine_leased(),state.magazine_pose,
 			controller_in_body(targets[off].rotation,body_reference),state.ammo.magazine_inserted && (state.magazine_seated || state.magazine_grabbed));
@@ -413,9 +413,9 @@ namespace vr::gameplay::weapons::physical_reload
 			controller_in_body(targets[off].rotation,body_reference),true);
 		const auto in_wrist=magazine_pose.in_wrist;
 		const anchor magazine_wrist{wrist.position,normalize(multiply(targets[off].rotation,
-			magazine_wrist_basis(definition,magazine_pose,ordinary_basis,knife_grasp)))};
+			magazine_wrist_basis(definition,magazine_pose,ordinary_basis,knife_grasp))),r.model_scale};
 		const auto raw_mag = compose(magazine_wrist,in_wrist);
-		auto mag = compose(as_anchor(solved[r.arms[off].wrist]),in_wrist);
+		auto mag = compose(as_anchor(solved[r.arms[off].wrist], r.model_scale),in_wrist);
 		const auto hand_local = scale(wrist_in_gun.position,1/units);
 		const auto* manual=definition.interaction.manual_bolt;
 		const auto held_style=state.slide_grip.pose<slide_grips.size()?state.slide_grip.pose:0;
@@ -593,7 +593,7 @@ namespace vr::gameplay::weapons::physical_reload
 					s.available=manipulation && !knife_held && !state.slide_held && !state.magazine_leased() && owner.support!=hand(off);
 					if(next.contact.belt.push.valid)
 					{
-						const auto point=compose(as_anchor(solved[r.arms[off].wrist]),{next.contact_in_wrist.back(),{0,0,0,1}}).position;
+						const auto point=compose(as_anchor(solved[r.arms[off].wrist], r.model_scale),{next.contact_in_wrist.back(),{0,0,0,1}}).position;
 						s.visual=scale(compose(inverse(s.hinge),{point,{0,0,0,1}}).position,1/units);s.visual_valid=true;
 					}
 					cover_debug::publish(s);
@@ -646,7 +646,7 @@ namespace vr::gameplay::weapons::physical_reload
 			{
 				const auto& p=*definition.interaction.manual_magazine;
 				const auto travel=std::clamp(dot(sub(hand_local,state.magazine_grab_start),p.pull_axis),0.f,p.pull_travel);
-				presented_magazine.position=add(attached.position,rotate(gun.rotation,scale(p.pull_axis,travel*units)));
+				presented_magazine.position=add(attached.position,rotate(gun.rotation,scale(p.pull_axis,travel*units*gun.scale)));
 				move_part(r,parts.magazine,presented_magazine,solved);
 			}
 			else if (seating)
@@ -707,7 +707,7 @@ namespace vr::gameplay::weapons::physical_reload
 				move_part(r,parts.slide,compose(gun,local),solved);
 			}
 			if(definition.handle_fold && parts.fold_end>=0)
-				move_part(r,parts.fold_end,folded_handle_pose(as_anchor(solved[parts.slide]),*definition.handle_fold,handle_unfold,handle_fold_return.hand()),solved);
+				move_part(r,parts.fold_end,folded_handle_pose(as_anchor(solved[parts.slide], r.model_scale),*definition.handle_fold,handle_unfold,handle_fold_return.hand()),solved);
 			if (definition.bolt && parts.bolt>=0)
 			{
 				const bool firing=!definition.handle_child_of_bolt && !independent && !state.slide_held && !slide_return.active() &&
@@ -761,7 +761,7 @@ namespace vr::gameplay::weapons::physical_reload
 				state.magazine_seated || state.magazine_grabbed ? seated_magazine :
 				state.ammo.magazine_hand!=hand::none ? magazine : free;
 			hand_motion->apply(off,attachment);
-			mag=compose(as_anchor(solved[r.arms[off].wrist]),in_wrist);
+			mag=compose(as_anchor(solved[r.arms[off].wrist], r.model_scale),in_wrist);
 			next.held_world=mag;next.held_world.position=add(mag.position,view_offset);
 		}
 		publish_scene(next);
@@ -770,7 +770,7 @@ namespace vr::gameplay::weapons::physical_reload
 			// Compare against the final rendered hand, including manipulation poses.
 			std::array<vec,hands::hand_contact_count> points;
 			const auto centre=compose(inverse(gun),slap_diagnostic.contact_model).position;
-			slap_diagnostic.visual_valid=hands::contact_points(slap_hand,solved,compose(inverse(gun),as_anchor(solved[r.arms[off].wrist])),points);
+			slap_diagnostic.visual_valid=hands::contact_points(slap_hand,solved,compose(inverse(gun),as_anchor(solved[r.arms[off].wrist], r.model_scale)),points);
 			if (slap_diagnostic.visual_valid) for (size_t i=0;i<points.size();++i) slap_diagnostic.visual[i]=scale(sub(points[i],centre),1/units);
 			hk_slap_debug::publish(slap_diagnostic);
 		}
@@ -790,7 +790,7 @@ namespace vr::gameplay::weapons::physical_reload
 		}
 		if(state.active && !state.fault && definition.magazine_fill() && state.ammo.magazine_inserted)
 		{
-			held.counted_inserted=true;held.inserted_model=as_anchor(solved[parts.magazine]);held.inserted_origin=view_offset;
+			held.counted_inserted=true;held.inserted_model=as_anchor(solved[parts.magazine], r.model_scale);held.inserted_origin=view_offset;
 			// Replace only this magazine subtree with the same immutable count
 			// view used in a hand or after a drop; never hide another gun's rounds.
 			for (int bone = 0; bone < r.count; ++bone)
@@ -805,7 +805,7 @@ namespace vr::gameplay::weapons::physical_reload
 		if(state.active && !state.fault && partition_mesh(definition) && partition_assets::get(profile))
 		{
 			const int root=definition.bolt_partition?parts.partition_root:parts.slide;
-			held.partitioned_mesh=true;held.partition_origin=view_offset;held.partition_model[0]=as_anchor(solved[root]);
+			held.partitioned_mesh=true;held.partition_origin=view_offset;held.partition_model[0]=as_anchor(solved[root], r.model_scale);
 			held.partition_model[1]=definition.bolt_partition ?
 				compose(gun,partition_bolt_pose(definition,presented_travel,retained_internal_bolt(definition.ammunition,state.ammo),
 					state.slide_held?-1.f:shot_age,units)) :
@@ -831,7 +831,7 @@ namespace vr::gameplay::weapons::physical_reload
 					const int root=roots[i];
 					if(!guide.bones[i].geometry || root<0 || root>=r.count || (hidden[root/32]&(0x80000000u>>(root%32))) ||
 						(i==2 && !chambering_guide::catch_needed(definition,state.ammo)))continue;
-					sample.add(guide.bones[i],as_anchor(solved[root]));
+					sample.add(guide.bones[i],as_anchor(solved[root], r.model_scale));
 				}
 				if(held.partitioned_mesh)for(size_t i=0;i<guide.partition.size();++i)sample.add(guide.partition[i],held.partition_model[i]);
 			}

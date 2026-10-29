@@ -70,7 +70,7 @@ namespace vr::gameplay::falling_item_presentation
 		const auto now=clock::now();if(!model || !reference || !flight.path.alive(now))return;
 		const auto world=flight.pose(now);
 		const auto index=submissions.acquire({model,flight,world,reference},now);if(!index)return;
-		game::GfxScaledPlacement placed{};placed.scale=1;
+		game::GfxScaledPlacement placed{};placed.scale=world.scale;
 		std::copy(world.position.begin(),world.position.end(),placed.base.origin);
 		std::copy(world.rotation.begin(),world.rotation.end(),placed.base.quat);
 		float white[]{1,1,1,1};scene_models::submit(model,&placed,0,submissions.handle(*index),white,white,white,padding);

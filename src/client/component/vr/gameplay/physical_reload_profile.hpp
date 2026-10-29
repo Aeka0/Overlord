@@ -351,13 +351,11 @@ namespace vr::gameplay::weapons
 	}
 	inline hands::anchor compose_reload(hands::anchor a, hands::anchor b) noexcept
 	{
-		using namespace hands;
-		return {add(a.position, rotate(a.rotation, b.position)), normalize(multiply(a.rotation, b.rotation))};
+		return spatial_math::compose(a,b);
 	}
 	inline hands::anchor inverse_reload(hands::anchor a) noexcept
 	{
-		const auto q = hands::conjugate(hands::normalize(a.rotation));
-		return {hands::rotate(q, hands::scale(a.position, -1)), q};
+		return spatial_math::inverse(a);
 	}
 	inline hands::vec magazine_tip_in_well(const reload_profile& p,
 	                                       hands::anchor gun,

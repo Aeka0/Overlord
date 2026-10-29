@@ -64,6 +64,14 @@ game launch. This changes the shared head/stereo/controller spatial scale,
 including tracked displacement and interaction reach. It does not add a player
 height offset. In-game console changes still require `vr_reinit`.
 
+Calibration also exposes Hands and weapon size, from 20% to 100% (original
+size). This saves `vr_firstPersonScale` directly: 80% is `0.8`, 20% is `0.2`.
+It sizes first-person meshes, grip positions and detachable reload parts together,
+with tracked wrists and anatomical reach retained. World size remains independent.
+Restart the game to apply it; `vr_reinit` does not change an already selected size.
+See [first-person size](vr-first-person-size.md) for the transform/render contract
+and remaining headset acceptance.
+
 ## Disable risk settings before launch
 
 Clicking **Launch game** runs a fresh check beside the launcher executable.

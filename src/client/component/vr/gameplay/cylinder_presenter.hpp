@@ -51,13 +51,13 @@ namespace vr::gameplay::weapons::cylinder
 		// receiver still needs assembled parts rather than animation bind offsets.
 		auto swing=p.swing_closed;
 		swing.rotation=hands::blend_quat(swing.rotation,p.swing_open.rotation,std::clamp(opening,0.f,1.f));
-		move_part(r,parts.swing,compose(as_anchor(solved[r.gun]),swing),solved);
-		move_part(r,parts.barrel,compose(as_anchor(solved[parts.swing]),parts.cylinder_in_swing),solved);
-		move_part(r,parts.ammo,compose(as_anchor(solved[parts.barrel]),p.ammo_in_cylinder),solved);
+		move_part(r,parts.swing,compose(as_anchor(solved[r.gun], r.model_scale),swing),solved);
+		move_part(r,parts.barrel,compose(as_anchor(solved[parts.swing], r.model_scale),parts.cylinder_in_swing),solved);
+		move_part(r,parts.ammo,compose(as_anchor(solved[parts.barrel], r.model_scale),p.ammo_in_cylinder),solved);
 		for (size_t i=0;i<6;++i)
 		{
-			move_part(r,parts.cases[i],compose(as_anchor(solved[parts.ammo]),parts.case_in_ammo[i]),solved);
-			move_part(r,parts.tips[i],compose(as_anchor(solved[parts.cases[i]]),parts.tip_in_case[i]),solved);
+			move_part(r,parts.cases[i],compose(as_anchor(solved[parts.ammo], r.model_scale),parts.case_in_ammo[i]),solved);
+			move_part(r,parts.tips[i],compose(as_anchor(solved[parts.cases[i]], r.model_scale),parts.tip_in_case[i]),solved);
 		}
 	}
 	inline part_mask hidden_parts(const part_rig& parts,const presentation& v) noexcept

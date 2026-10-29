@@ -65,7 +65,7 @@ namespace vr::gameplay::equipment::special
 			{
 				const auto other=unsigned(state.support);const auto a=rotate(root.rotation,sub(authored::wrists[other].position,authored::wrists[h].position));
 				const auto b=sub(wrists[other].position,wrists[h].position);
-				if(length(b)>1 && length(a)>1){root.rotation=normalize(multiply(from_to(a,b),root.rotation));root.position=sub(wrists[h].position,rotate(root.rotation,authored::wrists[h].position));}
+				if(length(b)>1 && length(a)>1){root.rotation=normalize(multiply(from_to(a,b),root.rotation));root.position=sub(wrists[h].position,rotate(root.rotation,scale(authored::wrists[h].position,root.scale)));}
 			}
 			return root;
 		}
@@ -121,7 +121,7 @@ namespace vr::gameplay::equipment::special
 		{
 			snapshot s;{const std::lock_guard lock(mutex);s=published;submitted=s;}
 			if(!running() || !scripted_control::predicted_allowed() || !s.assets || !fresh(s.at) || s.assets->weapon!=s.selected.slot.weapon)return;
-			const auto draw=[&](game::XModel* model,anchor at,unsigned index){game::GfxScaledPlacement placement{};placement.scale=1;
+			const auto draw=[&](game::XModel* model,anchor at,unsigned index){game::GfxScaledPlacement placement{};placement.scale=at.scale;
 				std::copy(at.position.begin(),at.position.end(),placement.base.origin);std::copy(at.rotation.begin(),at.rotation.end(),placement.base.quat);
 				const auto flags=index<2?scene_models::no_cast_shadow:0u;
 				float white[4]{1,1,1,1};scene_models::submit(model,&placement,flags,&lighting[index],white,white,white,8.f);};
@@ -151,7 +151,7 @@ namespace vr::gameplay::equipment::special
 			else
 			{
 				if(!s.grip.held())return result::omit;const auto h=unsigned(s.grip.primary);
-				root=compose({add(solved.wrists[h].position,origin),solved.wrists[h].rotation},inverse(authored::wrists[h]));
+				root=compose(hands::attachments::wrist_frame(solved,h,origin),inverse(authored::wrists[h]));
 			}
 			std::copy(root.position.begin(),root.position.end(),current.origin);std::copy(root.rotation.begin(),root.rotation.end(),current.quat);previous=current;return result::replace;
 		}

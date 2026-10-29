@@ -40,6 +40,7 @@ namespace vr::gameplay::weapons::ads_comfort
 		int root{-1};
 		// Optics without lens metadata use native bounds in root-local units.
 		std::array<hands::vec,8> corners{};
+		float model_scale{1.f};
 	};
 	inline bool finite(hands::vec value) noexcept
 	{
@@ -85,7 +86,7 @@ namespace vr::gameplay::weapons::ads_comfort
 		vec rear{};float depth{};
 		if(optic.optic.lens)
 		{
-			rear=add(from_head,rotate(rotation,scale(optic.optic.lens->center_meters,units)));
+			rear=add(from_head,rotate(rotation,scale(optic.optic.lens->center_meters,units*optic.model_scale)));
 			depth=dot(rear,forward);
 		}
 		else
@@ -93,7 +94,7 @@ namespace vr::gameplay::weapons::ads_comfort
 			for(size_t i=0;i<optic.corners.size();++i)
 			{
 				const auto corner=optic.corners[i];if(!finite(corner)) return {};
-				const auto point=add(from_head,rotate(rotation,corner));
+				const auto point=add(from_head,rotate(rotation,scale(corner,optic.model_scale)));
 				const float along=dot(point,forward);
 				if(i==0 || along<depth) depth=along;
 				rear=add(rear,scale(point,1.f/float(optic.corners.size())));

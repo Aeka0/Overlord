@@ -18,7 +18,7 @@ namespace vr::gameplay::weapons
 		auto targets=raw_targets;
 		// Use the same basis as apply_poses, including mirrored support grips.
 		const auto basis=blend_quat(hands::free_hand_rotation(grip,off),grip.wrists[off].rotation,grip_amount);
-		targets[off]={desired_wrist.position,normalize(multiply(desired_wrist.rotation,conjugate(basis)))};
+		targets[off]={desired_wrist.position,normalize(multiply(desired_wrist.rotation,conjugate(basis))),desired_wrist.scale};
 		std::array<bone,256> result{}; std::array<bool,2> limited{};
 		std::array<float,2> amounts{}; amounts[rear]=1;amounts[off]=grip_amount;
 		if (!solve(r,solved,targets,shoulders,body_axis,rear,result,limited,&grip.wrists[rear].position) ||

@@ -279,7 +279,7 @@ namespace vr::gameplay::weapons::carry
 						continue;
 				}
 				game::GfxScaledPlacement placement{};
-				placement.scale = 1;
+				placement.scale = world.scale;
 				std::copy(world.position.begin(), world.position.end(), placement.base.origin);
 				std::copy(world.rotation.begin(), world.rotation.end(), placement.base.quat);
 				// Legacy held fallback only; waist weapons own native skeletons.
@@ -346,7 +346,7 @@ namespace vr::gameplay::weapons::carry
 				                          wrists[h].position,
 				                          wrists[1 - h].position,
 				                          hands::sub(out.supports[1 - h].position, local.position));
-			out.gun = {hands::sub(position, hands::rotate(rotation, local.position)), rotation};
+			out.gun = {hands::sub(position, hands::rotate(rotation, hands::scale(local.position,out.gun.scale))), rotation, out.gun.scale};
 			out.support_available = true;
 			out.has_moving_control = false;
 			if (out.authored && out.authored->tube && out.authored->tube->lever)

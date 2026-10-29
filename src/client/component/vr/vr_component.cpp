@@ -1,5 +1,6 @@
 #include <std_include.hpp>
 #include "settings.hpp"
+#include "first_person_size.hpp"
 
 #include "loader/component_loader.hpp"
 
@@ -55,6 +56,7 @@ namespace vr
 		game::dvar_t* vr_engine_probe_trace{};
 		game::dvar_t* vr_head_tracking{};
 		game::dvar_t* vr_world_scale{};
+		game::dvar_t* vr_first_person_scale{};
 		game::dvar_t* vr_engine_swap_eyes{};
 		game::dvar_t* vr_desktop_fov{};
 		game::dvar_t* vr_desktop_eye{};
@@ -755,6 +757,8 @@ namespace vr
 				engine_stereo_bridge::set_world_scale(vr_world_scale->current.value);
 				head_pose_bridge::set_world_scale(vr_world_scale->current.value);
 			}
+			if (vr_first_person_scale)
+				first_person_size::requested.store(vr_first_person_scale->current.value, std::memory_order_relaxed);
 			engine_stereo_bridge::set_swap_eyes(vr_engine_swap_eyes != nullptr &&
 				vr_engine_swap_eyes->current.enabled);
 
@@ -831,6 +835,10 @@ namespace vr
 			vr_world_scale = dvars::register_float(settings::world_scale.name, settings::world_scale.default_value,
 				settings::world_scale.min, settings::world_scale.max, game::DVAR_FLAG_SAVED,
 				"Game units per VR meter for head tracking and stereo; apply with vr_reinit");
+			vr_first_person_scale = dvars::register_float(settings::first_person_scale.name,
+				settings::first_person_scale.default_value, settings::first_person_scale.min,
+				settings::first_person_scale.max, game::DVAR_FLAG_SAVED,
+				"First-person hands, weapons and their interaction geometry size; restart the game to apply");
 			vr_engine_swap_eyes = dvars::register_bool("vr_engineSwapEyes", false, game::DVAR_FLAG_SAVED,
 				"Swap the engine stereo left and right eye assignment; apply with vr_reinit");
 			vr_desktop_fov = dvars::register_float("vr_desktopFov", desktop_mirror::default_horizontal_fov,

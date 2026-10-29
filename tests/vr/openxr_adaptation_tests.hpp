@@ -1,5 +1,6 @@
 #include "component/vr/hud_controller.hpp"
 #pragma once
+#include "component/vr/diagnostics/menu_sources.hpp"
 #include "component/vr/controller_profile_retry.hpp"
 #include "component/vr/input_history.hpp"
 #include "component/vr/controller_haptics.hpp"
@@ -578,6 +579,8 @@ namespace openxr_adaptation_tests
 	template <class Loader>
 	void frontend_menu(Loader& loader, const d3d11::device_snapshot& graphics, bool curved)
 	{
+		const auto capture_request = vr::diagnostics::menu_sources::request();
+		const auto cancel_capture = gsl::finally([capture_request] { vr::diagnostics::menu_sources::cancel(capture_request); });
 		configure(loader, graphics, vr::tests::mock::scenario::happy);
 		loader.set_synthetic_checks(FALSE);
 		loader.set_cylinder_supported(curved);
@@ -597,13 +600,13 @@ namespace openxr_adaptation_tests
 		auto images = std::make_shared<vr::native_menu::images>();
 		images->owner = vr::tests::menu_state;
 		auto image = std::make_shared<vr::native_hud_capture::frame>();
-		image->width = 64;
-		image->height = 32;
+		image->width = curved ? 64 : 1024;
+		image->height = image->width / 2;
 		image->generation = graphics.generation;
 		image->timestamp = GetTickCount64();
 		image->sequence = 1;
-		D3D11_TEXTURE2D_DESC description{64,
-		                                 32,
+		D3D11_TEXTURE2D_DESC description{image->width,
+		                                 image->height,
 		                                 1,
 		                                 1,
 		                                 DXGI_FORMAT_R8G8B8A8_UNORM,
@@ -643,6 +646,12 @@ namespace openxr_adaptation_tests
 			submission.last_world_layers == 0 && submission.last_menu_layers > 0 &&
 			std::string_view(submission.menu.state) == "ready",
 			"menu-only layers must not be diagnosed as submitted stereo world content");
+		const auto& geometry = submission.menu.geometry[0];
+		vr::tests::require(geometry.slot == 0 && geometry.source_sequence == 1 &&
+			geometry.source_width == image->width && geometry.source_height == image->height &&
+			geometry.head_center[2] < -2.9f && geometry.facing > .99f && geometry.head_ray_hit &&
+			geometry.cylinder == curved,
+			"menu diagnostics must describe the submitted geometry in the current head frame");
 		const auto pixel = loader.statistics().last_menu_pixel;
 		vr::tests::require((pixel & 255) > 85 && (pixel & 255) < 100 && ((pixel >> 24) & 255) >= 127 &&
 		                       ((pixel >> 24) & 255) <= 128,
@@ -657,6 +666,31 @@ namespace openxr_adaptation_tests
 			std::string_view(unavailable.menu.state) == "menu_images_missing" && !vr::tests::menu_pointer.ready,
 			"successful zero-layer menu frames must retain the missing publication gate");
 		runtime.on_present_post(missing, S_OK);
+		for (unsigned frame = 4; frame < 24 && !vr::diagnostics::menu_sources::snapshot(capture_request).sources[0]; ++frame)
+		{
+			const auto event = present(graphics, frame);
+			runtime.on_present(event);
+			runtime.on_present_post(event, S_OK);
+			Sleep(1);
+		}
+		const auto captured = vr::diagnostics::menu_sources::snapshot(capture_request);
+		const auto& source = captured.sources[0];
+		const unsigned thumbnail_width = curved ? 64 : 256, thumbnail_height = thumbnail_width / 2;
+		vr::tests::require(source && std::string_view(source->state) == "ready" &&
+			source->width == thumbnail_width && source->height == thumbnail_height &&
+			source->rgba.size() == thumbnail_width*thumbnail_height*4 && static_cast<unsigned char>(source->rgba[3]) >= 127 &&
+			static_cast<unsigned char>(source->rgba[0]) > 85 && static_cast<unsigned char>(source->rgba[0]) < 100,
+			"one support request must read back the native menu transfer without a world source");
+		vr::tests::require(vr::diagnostics::menu_sources::format(captured).find("hmd_display_proof=no") != std::string::npos &&
+			vr::diagnostics::menu_sources::tga(*source).size() == 18+thumbnail_width*thumbnail_height*4,
+			"source evidence must retain alpha and explicitly distinguish native pixels from physical display output");
+		const auto next_capture = vr::diagnostics::menu_sources::request();
+		const auto next = present(graphics, 24);
+		runtime.on_present(next);
+		runtime.on_present_post(next, S_OK);
+		vr::tests::require(!vr::diagnostics::menu_sources::snapshot(next_capture).sources[0],
+			"a new request with no menu source must never reuse the preceding request's image");
+		vr::diagnostics::menu_sources::cancel(next_capture);
 		runtime.shutdown();
 	}
 	template <class Loader> void canted_native_views(Loader& loader, const d3d11::device_snapshot& graphics)

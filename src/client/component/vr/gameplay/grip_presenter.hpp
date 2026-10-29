@@ -65,7 +65,7 @@ namespace vr::gameplay::weapons
 				return {};
 			}
 			const auto gun = solved[rig.gun];
-			const auto authored_span = sub(profile.wrists[other].position, offset);
+			const auto authored_span = scale(sub(profile.wrists[other].position, offset),rig.model_scale);
 			const auto two_hand = aimed_rotation(profile.aiming, targets[rear].rotation,
 				targets[rear].position, targets[other].position, authored_span);
 			// Acquire at the one-hand pose, retain at the solved two-hand pose.
@@ -75,7 +75,7 @@ namespace vr::gameplay::weapons
 			const auto anchor = add(solved[rig.arms[rear].wrist].position, rotate(check_rotation, authored_span));
 			float distance = length(sub(targets[other].position, anchor)) / units_per_meter;
 			if (profile.aiming == aim_rule::two_hand &&
-				length(sub(targets[other].position, targets[rear].position)) / units_per_meter < .08f)
+				length(sub(targets[other].position, targets[rear].position)) / units_per_meter < .08f*rig.model_scale)
 				distance = profile.release_meters + 1; // Coincident/crossing hands cannot define a stable rifle axis.
 			const auto proposed = authoritative_support ? hand::none : lease_.consume(input, owner, assembly, gameplay && offhand_available, distance,
 													profile.acquire_meters, profile.release_meters, now);
@@ -93,9 +93,9 @@ namespace vr::gameplay::weapons
 				const auto retained_aim = multiply(targets[rear].rotation, support_delta_);
 				targets[rear].rotation = blend_quat(targets[rear].rotation, retained_aim, blend_);
 				const auto gun_position =
-					sub(solved[rig.arms[rear].wrist].position, rotate(targets[rear].rotation, offset));
+					sub(solved[rig.arms[rear].wrist].position, rotate(targets[rear].rotation, scale(offset,rig.model_scale)));
 				const auto attached =
-					add(gun_position, rotate(targets[rear].rotation, profile.wrists[other].position));
+					add(gun_position, rotate(targets[rear].rotation, scale(profile.wrists[other].position,rig.model_scale)));
 				targets[other].position =
 					add(targets[other].position, scale(sub(attached, targets[other].position), blend_));
 				targets[other].rotation = blend_quat(targets[other].rotation, targets[rear].rotation, blend_);

@@ -22,6 +22,7 @@ namespace vr::gameplay::hands
 	using spatial_math::rotate;
 	using spatial_math::scale;
 	using spatial_math::sub;
+	using spatial_math::transform_point;
 	using spatial_math::unit;
 	using spatial_math::vec;
 
@@ -43,6 +44,7 @@ namespace vr::gameplay::hands
 		std::array<bool, 256> weapon_bones{};
 		int gun{-1}, weapon_tag{-1}, count{};
 		int muzzle{-1}, rear_grip_wrist{-1}, laser{-1};
+		float model_scale{1.f};
 	};
 	inline bool descendant(int index, int root, const rig& r)
 	{
@@ -325,8 +327,9 @@ namespace vr::gameplay::hands
 				const auto rear_wrist =
 				    authored_rear_offset
 				        ? add(source[r.gun].position,
-				              rotate(normalize(source[r.gun].rotation), *authored_rear_offset))
-				        : source[r.rear_grip_wrist].position;
+				              rotate(normalize(source[r.gun].rotation), scale(*authored_rear_offset, r.model_scale)))
+				        : r.model_scale==1.f ? source[r.rear_grip_wrist].position : add(source[r.gun].position,
+				              scale(sub(source[r.rear_grip_wrist].position,source[r.gun].position),r.model_scale));
 				result[r.weapon_tag] = transformed(source[r.weapon_tag], rear_wrist, end, hand_delta);
 				for (int i = 0; i < r.count; ++i)
 					if (r.weapon_bones[i])

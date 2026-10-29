@@ -16,6 +16,7 @@ namespace vr::gameplay::weapons::optics
 		int root{-1};
 		std::array<const game::XSurface*,8> hidden{};
 		std::uintptr_t reticle_image{};
+		float model_scale{1.f};
 	};
 	// Bind asset identity once per admitted assembly; GPU readiness is sampled by
 	// present()/the final eye consumer. Never mutate native assets.

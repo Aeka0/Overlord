@@ -314,6 +314,8 @@
   "settings.worldScale": "World scale",
   "settings.worldSize": "World size",
   "settings.worldSizeHint": "100% is the default size. Higher values make the world look larger; lower values make it look smaller. Also affects tracked movement and interaction reach. Applies on the next game launch.",
+  "settings.firstPersonSize": "Hands and weapon size",
+  "settings.firstPersonSizeHint": "Sizes first-person hands, weapons, grips and reload parts together. 100% is the original size, 80% is 0.8x and 20% is 0.2x. Tracked wrist positions stay fixed. Applies on the next game launch.",
   "unit.percent": "%",
   "settings.calibrationHint": "Choose a pose pipeline and preset, then adjust alignment. Commands below match the selected pipeline; use vr_input_status in-game to check the running pipeline. Changing pipelines requires a game restart.",
   "settings.positionOffsetsHint": "Position offsets use meters. Press ~ in-game to open the console and replace <value> with the desired number. Close the console and return to gameplay to see the change immediately.",

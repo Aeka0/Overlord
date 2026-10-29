@@ -1,4 +1,6 @@
 #include <std_include.hpp>
+#include "first_person_mesh_size.hpp"
+#include "../first_person_size.hpp"
 #include "component/vr/gameplay/weapon_pose_library.hpp"
 #include "shield_geometry.hpp"
 #include "hand_interaction/runtime.hpp"
@@ -119,7 +121,7 @@ namespace vr::gameplay::equipment
 						}
 						if(!matches)continue;
 						auto skeletal=std::make_unique<scene_models::skeletal_model>();
-						if(!skeletal->create(candidate,refine_baton_pose))continue;
+						if(!skeletal->create(candidate,refine_baton_pose,first_person_mesh_size::publish))continue;
 						baton_model=std::move(skeletal);models[variant]=candidate;continue;
 					}
                     auto subset=std::make_unique<scene_models::rigid_part>();
@@ -166,7 +168,7 @@ namespace vr::gameplay::equipment
 				if(!sequences::chest_equipment_visible())return;
 				head_pose_bridge::spatial_frame body;
 				if (!head_pose_bridge::get_spatial_frame(body) || body.generation!=s.reference || !fresh(body.captured_at,clock::now())) return;
-				const auto chest=locate_chest(body);if (!chest.valid) return;s.world=melee_weapons::stowed(chest,s.variant);
+				const auto chest=locate_chest(body);if (!chest.valid) return;s.world=melee_weapons::stowed(chest,s.variant,first_person_size::value());
 			}
 			if(s.variant==melee_weapons::kind::baton)
 			{
@@ -180,10 +182,10 @@ namespace vr::gameplay::equipment
 					std::copy(world.position.begin(),world.position.end(),bones[i].trans);
 					std::copy(world.rotation.begin(),world.rotation.end(),bones[i].quat);bones[i].transWeight=2;
 				}
-				if(baton_model->submit(bones,scene_models::no_cast_shadow))++submitted;
+				if(baton_model->submit(bones,scene_models::no_cast_shadow,s.world.scale))++submitted;
 				return;
 			}
-			game::GfxScaledPlacement placement{};placement.scale=1;
+			game::GfxScaledPlacement placement{};placement.scale=s.world.scale;
 			std::copy(s.world.position.begin(),s.world.position.end(),placement.base.origin);
 			std::copy(s.world.rotation.begin(),s.world.rotation.end(),placement.base.quat);
 			float color[4]{1,1,1,1};scene_models::submit(asset,&placement,scene_models::no_cast_shadow,&lighting[unsigned(s.variant)],color,color,color,8.f);
@@ -210,12 +212,12 @@ namespace vr::gameplay::equipment
 			if (held)
 			{
 				const auto h=unsigned(s.knife.holder);
-				world=compose({add(pose.wrists[h].position,origin),normalize(pose.wrists[h].rotation)},melee_weapons::attachment(s.variant,s.knife.grip,pose.mirror_basis[h],h==1,pose.knife_poses[h]));
+				world=compose(hands::attachments::wrist_frame(pose,h,origin),melee_weapons::attachment(s.variant,s.knife.grip,pose.mirror_basis[h],h==1,pose.knife_poses[h]));
 			}
 			else
 			{
 				const auto body=hands::attachments::body_frame(pose,origin);
-				const auto chest=locate_chest(body);if (!chest.valid) return result::omit;world=melee_weapons::stowed(chest,s.variant);++chest_prepared;
+				const auto chest=locate_chest(body);if (!chest.valid) return result::omit;world=melee_weapons::stowed(chest,s.variant,first_person_size::value());++chest_prepared;
 			}
 			std::copy(world.position.begin(),world.position.end(),current.origin);std::copy(world.rotation.begin(),world.rotation.end(),current.quat);previous=current;++prepared;return result::replace;
 		}
@@ -234,16 +236,16 @@ namespace vr::gameplay::equipment
 			if(held)
 			{
 				const auto h=unsigned(s.knife.holder);
-				target=compose({add(pose.wrists[h].position,origin),normalize(pose.wrists[h].rotation)},
+				target=compose(hands::attachments::wrist_frame(pose,h,origin),
 					melee_weapons::attachment(s.variant,s.knife.grip,pose.mirror_basis[h],h==1,pose.knife_poses[h]));
 			}
 			else
 			{
 				const auto chest=locate_chest(hands::attachments::body_frame(pose,origin));if(!chest.valid)return false;
-				target=melee_weapons::stowed(chest,s.variant);++chest_prepared;
+				target=melee_weapons::stowed(chest,s.variant,first_person_size::value());++chest_prepared;
 			}
 			const anchor submitted_root{{bones[0].trans[0],bones[0].trans[1],bones[0].trans[2]},
-				{bones[0].quat[0],bones[0].quat[1],bones[0].quat[2],bones[0].quat[3]}};
+				{bones[0].quat[0],bones[0].quat[1],bones[0].quat[2],bones[0].quat[3]},s.world.scale};
 			const auto delta=compose(target,inverse(submitted_root));
 			for(auto& bone:bones)
 			{
@@ -357,7 +359,7 @@ namespace vr::gameplay::equipment
 			}
 			if (best<2)
 			{
-				const auto wrist=anchor{wrists[best].position,normalize(multiply(wrists[best].rotation,s.basis[best]))};
+				const auto wrist=anchor{wrists[best].position,normalize(multiply(wrists[best].rotation,s.basis[best])),wrists[best].scale};
 				const auto forward=compose(wrist,melee_weapons::attachment(s.variant,knife_grip::forward,s.mirror[best],best==1));
 				const auto reverse=compose(wrist,melee_weapons::attachment(s.variant,knife_grip::reverse,s.mirror[best],best==1));
 				const auto stowed=rotate(s.chest.anchors[0].rotation,{1,0,0});
@@ -369,11 +371,11 @@ namespace vr::gameplay::equipment
 		}
 		if (s.chest.valid)
 		{
-			s.world=melee_weapons::stowed(s.chest,s.variant);
+			s.world=melee_weapons::stowed(s.chest,s.variant,first_person_size::value());
 			if (vr::valid_hand(s.knife.holder))
 			{
 				const auto h=unsigned(s.knife.holder);s.visible=s.visible && (valid_hands&(1u<<h));claimed|=1u<<h;
-				s.world=compose({wrists[h].position,normalize(multiply(wrists[h].rotation,s.basis[h]))},in_hand(s,h));
+				s.world=compose({wrists[h].position,normalize(multiply(wrists[h].rotation,s.basis[h])),wrists[h].scale},in_hand(s,h));
 			}
 		}
 		{const std::lock_guard lock(mutex);published.knife=s.knife;published.bayonet=s.bayonet;published.variant=s.variant;published.selection=s.selection;published.drawn_at=s.drawn_at;published.chest=s.chest;published.world=s.world;published.visible=s.visible;published.reference=s.reference;published.at=s.at;}

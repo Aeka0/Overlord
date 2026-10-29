@@ -1,4 +1,5 @@
 #include <std_include.hpp>
+#include "menu_sources.hpp"
 #include "support_bundle.hpp"
 #include "support_archive.hpp"
 #include "report_paths.hpp"
@@ -97,6 +98,8 @@ namespace vr::diagnostics::support
 		{
 			const auto complete=gsl::finally([]{manual_pending=false;});
 			if(stopping)return;
+			const auto menu_request = menu_sources::request();
+			const auto retire_menu_request = gsl::finally([menu_request] { menu_sources::cancel(menu_request); });
 			auto result=reserve_archive();
 			try
 			{
@@ -123,6 +126,11 @@ namespace vr::diagnostics::support
 				}
 				else result->note("status-2.txt","cancelled_on_shutdown");
 				result->add("console-recent.txt",console::diagnostic_history());
+				const auto menus = menu_sources::snapshot(menu_request);
+				result->add("openxr-menu-sources.txt", menu_sources::format(menus));
+				for (std::size_t index{}; index < menus.sources.size(); ++index)
+					if (const auto& source = menus.sources[index]; source && !source->rgba.empty())
+						result->add("openxr-menu-source-" + std::to_string(index) + ".tga", menu_sources::tga(*source));
 				// Fresh evidence has priority over potentially large historical dumps.
 				add_existing(*result);
 				const auto path=result->finish();

@@ -54,6 +54,14 @@ commands or enables heavyweight probes. `support_archive.cpp` owns bounded file
 selection/staging and final ZIP publication, independently of game/runtime/UI
 state. Only a successfully closed ZIP is renamed into the uploadable result.
 
+`menu_sources` adds bounded native-menu source thumbnails to that same support
+request. `openxr_menu` owns its graphics resources and polls them on the Present
+owner with `DO_NOT_WAIT`; publication uses a try-lock and carries only immutable
+CPU pixels and capture identity to the archive worker. The worker computes pixel
+ranges and writes TGA files. No runtime-owned image is sampled, and no graphics
+work occurs during report formatting. Menu geometry in the normal status report
+is copied from the actual submitted SDK layer and current head pose.
+
 `screen_display.hpp` supplies bounded producer snapshots for fixed scope,
 Javelin, their native HUD capture and the shared auxiliary view. Producers and
 readers use try-locks; dropped observations are explicit. They retain CPU values

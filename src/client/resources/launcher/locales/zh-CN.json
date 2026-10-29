@@ -314,6 +314,8 @@
   "settings.worldScale": "世界比例",
   "settings.worldSize": "世界大小",
   "settings.worldSizeHint": "100% 为默认大小。数值越大，世界看起来越大；数值越小，世界看起来越小。同时影响追踪位移和交互可达距离，下次启动游戏时生效。",
+  "settings.firstPersonSize": "手臂与武器尺寸",
+  "settings.firstPersonSizeHint": "同时调整第一人称手部、武器、握点和换弹部件的尺寸。100% 为原始尺寸，80% 即 0.8 倍，20% 即 0.2 倍。手腕追踪位置保持不变，下次启动游戏时生效。",
   "unit.percent": "%",
   "settings.calibrationHint": "先选择姿态方案和预置，再调整对齐。下方指令对应当前选择的方案；游戏内可用 vr_input_status 确认正在使用的方案。姿态方案切换需重启游戏。",
   "settings.positionOffsetsHint": "位置偏移以米为单位。在游戏中按 ~ 打开控制台，将指令中的 <数值> 换成所需值；关闭控制台返回游戏即可实时查看。",

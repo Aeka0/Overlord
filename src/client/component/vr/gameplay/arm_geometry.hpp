@@ -7,6 +7,7 @@ namespace vr::gameplay::hands
   std::array<vec,3> joints{}; // Actual solved shoulder, elbow, wrist in world space.
   float units_per_meter{};
   bool valid{};
+  float model_scale{1.f};
  };
  inline arm_geometry capture_arm(const rig& r,std::span<const bone> pose,int hand,vec origin,float units) noexcept
  {
@@ -20,6 +21,6 @@ namespace vr::gameplay::hands
    for(float x:out.joints[i])if(!std::isfinite(x) || std::abs(x)>1e7f)return {};
   }
   for(unsigned i=0;i<2;++i)if(length(sub(out.joints[i+1],out.joints[i]))<.001f)return {};
-  out.units_per_meter=units;out.valid=true;return out;
+  out.units_per_meter=units;out.valid=true;out.model_scale=r.model_scale;return out;
  }
 }

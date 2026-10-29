@@ -49,6 +49,19 @@ are explicitly historical, not assumed to match the new process. Per-file and
 total evidence limits are 8 MiB and 24 MiB; game assets and whole profiles are
 not included. Nothing is uploaded automatically.
 
+OpenXR reports also record each submitted menu layer's exact SDK pose, dimensions,
+source identity and central point in the current head frame (-Z forward). The
+`head_ray_hit` value tests only the head's forward ray; it is not a full-FOV or
+physical visibility verdict. During the same five-second request, the Present
+owner reads back at most one native-source thumbnail per menu slot, capped at
+256 pixels per side. `openxr-menu-sources.txt` records alpha/RGB ranges and
+capture identity; `openxr-menu-source-*.tga` retain those RGBA8 sRGB pixels with
+the production alpha convention. These use the existing transfer shader and
+nonblocking GPU polling. They do not read runtime-owned swapchain images or
+establish what the HMD displayed. Missing/pending capture remains explicit;
+prior requests' images cannot satisfy a new request. Ordinary gameplay does not
+enable pixel readback.
+
 The default destination is the game's `diagnose` folder; an unwritable game
 folder falls back to the user's local application data or temporary directory.
 An incomplete ZIP is never presented as complete. If packaging fails, the

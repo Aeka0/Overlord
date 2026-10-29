@@ -8,7 +8,7 @@ namespace vr::gameplay::hands::pose_mirror
 	inline hands::anchor wrist(hands::anchor source,hands::quat basis,hands::vec contact={}) noexcept
 	{
 		return {hands::add(contact,position(hands::sub(source.position,contact))),
-			hands::normalize(hands::multiply(rotation(source.rotation),basis))};
+			hands::normalize(hands::multiply(rotation(source.rotation),basis)),source.scale};
 	}
 	inline hands::vec local_point(hands::vec source,hands::quat basis) noexcept
 	{return hands::rotate(hands::conjugate(basis),position(source));}

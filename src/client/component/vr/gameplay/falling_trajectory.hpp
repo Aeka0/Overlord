@@ -8,7 +8,7 @@ namespace vr::gameplay::motion
 	using hands::anchor;using hands::vec;
 	inline constexpr auto flight_lifetime=std::chrono::milliseconds(1200);
 	inline anchor translate_local(anchor origin,vec translation) noexcept
-	{origin.position=hands::add(origin.position,hands::rotate(origin.rotation,translation));return origin;}
+	{origin.position=hands::transform_point(origin,translation);return origin;}
 	inline anchor free_drop(anchor exit,vec velocity,float seconds,float units) noexcept
 	{exit.position=hands::add(exit.position,hands::scale(velocity,seconds));exit.position[2]-=.5f*9.81f*units*seconds*seconds;return exit;}
 	struct release_impulse
@@ -22,11 +22,12 @@ namespace vr::gameplay::motion
 		const float speed=hands::length(impulse.angular_velocity);
 		if(speed>1e-6f && seconds>0)
 		{
-			const auto offset=hands::rotate(exit.rotation,impulse.pivot);
+			const auto pivot=hands::scale(impulse.pivot,exit.scale);
+			const auto offset=hands::rotate(exit.rotation,pivot);
 			const auto axis=hands::scale(impulse.angular_velocity,std::sin(.5f*speed*seconds)/speed);
 			const hands::quat turn{axis[0],axis[1],axis[2],std::cos(.5f*speed*seconds)};
 			exit.rotation=hands::normalize(hands::multiply(turn,exit.rotation));
-			exit.position=hands::add(exit.position,hands::sub(offset,hands::rotate(exit.rotation,impulse.pivot)));
+			exit.position=hands::add(exit.position,hands::sub(offset,hands::rotate(exit.rotation,pivot)));
 		}
 		return exit;
 	}
@@ -53,7 +54,7 @@ namespace vr::gameplay::motion
 			if(detached || rail_seconds<=0 || !alive(now))return;
 			if(attached){auto candidate=*this;candidate.start=*attached;if(candidate.valid())start=*attached;}
 			exit=translate_local(start,rail);
-			velocity=hands::scale(hands::rotate(start.rotation,rail),1/rail_seconds);
+			velocity=hands::scale(hands::rotate(start.rotation,rail),start.scale/rail_seconds);
 			if(std::chrono::duration<float>(now-born).count()>=rail_seconds)detached=true;
 		}
 		anchor pose(clock::time_point now)const noexcept
@@ -65,7 +66,7 @@ namespace vr::gameplay::motion
 				// Rendering may pass the rail deadline before the next simulation
 				// publication. Continue analytically instead of freezing at the mouth.
 				const auto release=detached?exit:translate_local(start,rail);
-				const auto speed=detached?velocity:hands::scale(hands::rotate(start.rotation,rail),1/rail_seconds);
+				const auto speed=detached?velocity:hands::scale(hands::rotate(start.rotation,rail),start.scale/rail_seconds);
 				return free_motion(release,speed,impulse,age-rail_seconds,units);
 			}
 			return free_motion(start,velocity,impulse,age,units);

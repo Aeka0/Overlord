@@ -87,7 +87,7 @@ namespace vr::gameplay::reload_items
 		}
 		hi::target target(key id)noexcept{return hi::object(hi::domain::reload_item,{id.slot+1,id.generation});}
 		anchor held_pose(const metadata& m,const anchor& raw)noexcept
-		{return compose({raw.position,normalize(multiply(raw.rotation,m.basis))},m.grasp.in_wrist);}
+		{return compose({raw.position,normalize(multiply(raw.rotation,m.basis)),raw.scale},m.grasp.in_wrist);}
 		void publish(const hi::frame* frame=nullptr)noexcept
 		{
 			const std::lock_guard lock(publication);published.at=clock::now();published.reference=reference;published.enabled=running();
@@ -163,7 +163,7 @@ namespace vr::gameplay::reload_items
 							game::trace_t hit{};game::Bounds volume{};
 							for(int axis=0;axis<3;++axis)
 							{
-								vec side{};side[axis]=box.half[axis]*live->motion.units;const auto projected=rotate(placed.rotation,side);
+								vec side{};side[axis]=box.half[axis]*live->motion.units*placed.scale;const auto projected=rotate(placed.rotation,side);
 								for(int n=0;n<3;++n)volume.halfSize[n]+=std::abs(projected[n]);
 							}
 							const auto previous=source.traced?source.previous_center:compose(copy.motion.start,local).position;
@@ -183,7 +183,7 @@ namespace vr::gameplay::reload_items
 			if(m.magazine)
 			{
 				const auto gun=compose(falling,inverse(m.magazine->magazine_rest));
-				const auto wrist=compose(inverse(gun),{raw.position,normalize(multiply(raw.rotation,binding.basis[actor]))});
+				const auto wrist=compose(inverse(gun),{raw.position,normalize(multiply(raw.rotation,binding.basis[actor])),raw.scale});
 				return w::select_magazine_grip(*m.magazine,wrist.rotation,actor,binding.mirror[actor],false,false,0,controller_in_body(raw.rotation,body));
 			}
 			const auto pose=actor?vr::gameplay::hands::pose_mirror::object_in_wrist({},m.loader->loader_in_wrist,binding.mirror[actor]):m.loader->loader_in_wrist;
@@ -257,8 +257,8 @@ namespace vr::gameplay::reload_items
 				if(m.loader || !m.magazine->magazine_contacts)
 				{auto centre=box.pose;centre.position=scale(centre.position,item.motion.units);grasp.contact=compose(grasp.in_wrist,centre).position;}
 				const auto basis=m.magazine?w::magazine_wrist_basis(*m.magazine,grasp,binding.basis[h],false):binding.basis[h];
-				const auto contact=compose({frame.wrists[h].position,normalize(multiply(frame.wrists[h].rotation,basis))},{grasp.contact,{0,0,0,1}}).position;
-				pr::box_motion motion;motion.frame={scale(sub(root.position,contact),1/item.motion.units),root.rotation};motion.regions={box,box};
+				const auto contact=compose({frame.wrists[h].position,normalize(multiply(frame.wrists[h].rotation,basis)),frame.wrists[h].scale},{grasp.contact,{0,0,0,1}}).position;
+				pr::box_motion motion;motion.frame={scale(sub(root.position,contact),1/item.motion.units),root.rotation,root.scale};motion.regions={box,box};
 				if(!m.probes[h].test(item.id.generation,motion,frame.input.sampled_at))continue;
 				const float distance=pr::closest_box(motion,0).distance;if(distance>=best)continue;
 				best=distance;proposed[h]=item.id;proposed_grasps[h]=grasp;proposed_basis[h]=basis;
@@ -354,7 +354,7 @@ namespace vr::gameplay::reload_items
 					const auto ticket=submissions.acquire({r,root},now);if(!ticket)continue;
 				for(size_t part=0;part<visual.count;++part)
 				{
-					const auto world=compose(root,visual.pieces[part].in_item);game::GfxScaledPlacement place{};place.scale=1;
+					const auto world=compose(root,visual.pieces[part].in_item);game::GfxScaledPlacement place{};place.scale=world.scale;
 					std::copy(world.position.begin(),world.position.end(),place.base.origin);std::copy(world.rotation.begin(),world.rotation.end(),place.base.quat);
 					float white[]{1,1,1,1};scene_models::submit(visual.pieces[part].model,&place,0,submissions.handle(*ticket,part),white,white,white,.25f*i.motion.units);
 				}
@@ -405,7 +405,7 @@ namespace vr::gameplay::reload_items
 					pose.reference!=frozen.value.reference || pose.reload_items[h]!=frozen.value.pose_revision ||
 					!read(preparing.record,engine_stereo_view::h2_current_model_placement_origin_offset,origin))return result::omit;
 				for(float x:origin)if(!std::isfinite(x) || std::abs(x)>1e7f)return result::omit;
-				root=compose({add(pose.wrists[h].position,origin),pose.wrists[h].rotation},frozen.source.grasp.in_wrist);
+				root=compose(hands::attachments::wrist_frame(pose,h,origin),frozen.source.grasp.in_wrist);
 			}
 			else return result::omit;
 			const auto world=compose(root,visual.pieces[part].in_item);

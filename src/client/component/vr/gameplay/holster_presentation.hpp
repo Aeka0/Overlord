@@ -32,9 +32,9 @@ namespace vr::gameplay::weapons::carry
  // A stowed skeleton uses the same view asset as the hand, so it needs no
  // learned view/world muzzle bridge and never inherits a left-hand mirror.
  inline bool place_stowed_weapon(const instance& item,const profile& source,
-  const head_pose_bridge::spatial_frame& body,const holster_layout& layout,hands::anchor& world) noexcept
+  const head_pose_bridge::spatial_frame& body,const holster_layout& layout,hands::anchor& world,float model_scale=1.f) noexcept
  {
   const auto grip=source.control_grips ? (*source.control_grips)[1].position : source.wrists[1].position;
-  return place_stowed({item.id,item.at,{hands::scale(grip,-1),{0,0,0,1}}},body,layout,world);
+  return place_stowed({item.id,item.at,{hands::scale(grip,-model_scale),{0,0,0,1},model_scale}},body,layout,world);
  }
 }

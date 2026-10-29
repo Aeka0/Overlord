@@ -30,7 +30,7 @@ namespace vr::gameplay::weapons::physical_reload
 			!std::isfinite(units) || units<=0 || !mechanics::valid(p.ammunition,ammo))return {};
 		// These use independent geometry presenters and are not waist-admitted.
 		if(p.interaction.belt || partition_mesh(p))return {};
-		const auto gun=as_anchor(solved[r.gun]);
+		const auto gun=as_anchor(solved[r.gun], r.model_scale);
 		const auto magazine=compose(gun,p.magazine_rest);
 		move_part(r,parts.magazine,magazine,solved);
 		if(p.receiver_parented_bullets)move_part(r,parts.bullets,compose(magazine,parts.bullets_in_magazine),solved);
@@ -42,7 +42,7 @@ namespace vr::gameplay::weapons::physical_reload
 		if(p.handle_fold && p.handle_fold->end_bone.empty())slide=folded_handle_pose(slide,*p.handle_fold,0,1);
 		move_part(r,parts.slide,compose(gun,slide),solved);
 		if(p.handle_fold && parts.fold_end>=0)
-			move_part(r,parts.fold_end,folded_handle_pose(as_anchor(solved[parts.slide]),*p.handle_fold,0,1),solved);
+			move_part(r,parts.fold_end,folded_handle_pose(as_anchor(solved[parts.slide], r.model_scale),*p.handle_fold,0,1),solved);
 		if(p.bolt && parts.bolt>=0)
 		{
 			auto bolt=p.bolt->rest;

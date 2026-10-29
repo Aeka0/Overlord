@@ -82,7 +82,7 @@ namespace vr::gameplay::weapon_render_pose
 			const auto previous = weapons::viewmodel_visibility::skin_object(object);
 			sequences::body::apply(object, matrices);
 			vehicles::mask_native(object, matrices);
-			const auto restore = gsl::finally([&] { weapons::viewmodel_visibility::skin_object(previous); });
+			const auto restore = gsl::finally([&] { weapons::viewmodel_visibility::restore_skin_object(previous); });
 			const auto obj = reinterpret_cast<std::uintptr_t>(object);
 			// Stored skeletons have no firing/hand witness. In particular, an
 			// object that was held earlier must not bind its previous muzzle epoch.

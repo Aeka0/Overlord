@@ -17,11 +17,11 @@ namespace vr::gameplay::weapons::shield
  {
   using namespace hands;
   if(p.panels.empty() || p.panels.size()>64 || !finite(world.position) || !finite(start) || !finite(end) ||
-   !std::isfinite(limit) || limit<=0 || limit>1)return {};
+   !std::isfinite(limit) || limit<=0 || limit>1 || !std::isfinite(world.scale) || world.scale<=0)return {};
   float norm{};for(float x:world.rotation){if(!std::isfinite(x))return {};norm+=x*x;}
   if(std::abs(norm-1)>0.002f)return {};
   const auto inverse=conjugate(world.rotation);
-  const auto origin=rotate(inverse,sub(start,world.position)),delta=rotate(inverse,sub(end,start));
+  const auto origin=scale(rotate(inverse,sub(start,world.position)),1/world.scale),delta=scale(rotate(inverse,sub(end,start)),1/world.scale);
   const auto distance=length(delta);if(!std::isfinite(distance) || distance<.0001f)return {};
   contact result;result.fraction=limit;
   for(const auto& t:p.panels)
@@ -42,7 +42,7 @@ namespace vr::gameplay::weapons::shield
  inline bool valid_surface(const profile& p,hands::anchor world) noexcept
  {
   using namespace hands;
-  if(p.panels.empty() || p.panels.size()>64 || !finite(world.position))return false;
+  if(p.panels.empty() || p.panels.size()>64 || !finite(world.position) || !std::isfinite(world.scale) || world.scale<=0)return false;
   float norm{};for(float x:world.rotation){if(!std::isfinite(x))return false;norm+=x*x;}if(std::abs(norm-1)>.002f)return false;
   for(const auto& panel:p.panels)
   {
@@ -112,9 +112,9 @@ namespace vr::gameplay::weapons::shield
   constexpr std::array radii{.035f,.025f};
   for(unsigned part=0;part<2;++part)
   {
-   const auto a=rotate(inverse,sub(arm.joints[part],world.position)),b=rotate(inverse,sub(arm.joints[part+1],world.position));
+   const auto a=scale(rotate(inverse,sub(arm.joints[part],world.position)),1/world.scale),b=scale(rotate(inverse,sub(arm.joints[part+1],world.position)),1/world.scale);
    if(length(sub(a,b))<.001f)return clipping::invalid;
-   const float radius=radii[part]*arm.units_per_meter;
+   const float radius=radii[part]*arm.units_per_meter*arm.model_scale/world.scale;
    for(const auto& panel:p.panels)if(segment_panel_distance_squared(a,b,panel)<=radius*radius)
     return part==0?clipping::upper_arm:clipping::forearm;
   }

@@ -28,7 +28,7 @@ namespace vr::gameplay::weapons::break_action
 		const presentation& v,float hinge,std::span<hands::bone> solved) noexcept
 	{
 		using namespace hands;using namespace hands::pose_math;
-		const auto gun=as_anchor(solved[r.gun]),barrel=compose(gun,barrel_pose(p,hinge));
+		const auto gun=as_anchor(solved[r.gun], r.model_scale),barrel=compose(gun,barrel_pose(p,hinge));
 		move_part(r,parts.barrel,barrel,solved);
 		move_part(r,parts.lock,compose(gun,hinge_pose(p.lock_closed,p.lock_open,v.active && v.ammo.phase==action::opening?1.f:0.f)),solved);
 		for(size_t n=0;n<p.followers.size();++n)move_part(r,parts.followers[n],compose(gun,hinge_pose(p.followers[n].closed,p.followers[n].open,hinge)),solved);

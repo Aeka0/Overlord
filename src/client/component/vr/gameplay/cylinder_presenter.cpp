@@ -113,7 +113,7 @@ namespace vr::gameplay::weapons::cylinder
 		}
 		void draw(scene_models::rigid_part& part,anchor world,size_t handle,float units)
 		{
-			game::GfxScaledPlacement p{}; p.scale=1;
+			game::GfxScaledPlacement p{}; p.scale=world.scale;
 			std::copy(world.position.begin(),world.position.end(),p.base.origin);
 			std::copy(world.rotation.begin(),world.rotation.end(),p.base.quat);
 			float color[4]{1,1,1,1};
@@ -278,12 +278,12 @@ namespace vr::gameplay::weapons::cylinder
 			if (v.ammo.loader_hand!=hand::none) hands::pose_mirror::fingers(r,library,grip,p.loader_fingers,off,solved,off==1);
 		}
 		pose_parts(r,parts,p,progress,solved);
-		const auto barrel=as_anchor(solved[parts.barrel]);
+		const auto barrel=as_anchor(solved[parts.barrel], r.model_scale);
 		const auto face=compose(barrel,p.face_in_cylinder);
-		const anchor raw_wrist{targets[off].position,normalize(multiply(targets[off].rotation,free_hand_rotation(grip,off)))};
+		const anchor raw_wrist{targets[off].position,normalize(multiply(targets[off].rotation,free_hand_rotation(grip,off))),r.model_scale};
 		const auto raw_loader=compose(raw_wrist,in_wrist);
 		if(hand_motion)hand_motion->apply(off,v.active && !v.fault && manipulation && v.ammo.loader_hand==hand(off) ? hands::part_hand_attachment::loader : hands::part_hand_attachment::free);
-		const auto visual_loader=compose(as_anchor(solved[r.arms[off].wrist]),in_wrist);
+		const auto visual_loader=compose(as_anchor(solved[r.arms[off].wrist], r.model_scale),in_wrist);
 		const auto tip=compose(raw_loader,{p.loader_tip,{0,0,0,1}});
 		const auto contact_point=scale(compose(inverse(face),tip).position,1/units);
 		float waist=10;

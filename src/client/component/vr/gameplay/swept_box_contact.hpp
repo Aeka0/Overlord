@@ -15,6 +15,7 @@ namespace vr::gameplay::weapons::physical_reload
 	};
 	inline bool valid_box_pose(const hands::anchor& pose) noexcept
 	{
+		if (!std::isfinite(pose.scale) || pose.scale<=0) return false;
 		float square{};
 		for(float v:pose.position)if(!std::isfinite(v) || std::abs(v)>10000)return false;
 		for(float v:pose.rotation){if(!std::isfinite(v))return false;square+=v*v;}
@@ -32,9 +33,9 @@ namespace vr::gameplay::weapons::physical_reload
 		return true;
 	}
 	inline vec box_point(hands::anchor frame,vec local) noexcept
-	{return hands::add(frame.position,hands::rotate(frame.rotation,local));}
+	{return hands::transform_point(frame,local);}
 	inline vec box_inverse_point(hands::anchor frame,vec point) noexcept
-	{return hands::rotate(hands::conjugate(frame.rotation),hands::sub(point,frame.position));}
+	{return hands::transform_point(spatial_math::inverse(frame),point);}
 	struct box_proximity { float distance; vec local; };
 	inline box_proximity closest_box(const box_motion& motion,size_t region) noexcept
 	{
@@ -50,7 +51,7 @@ namespace vr::gameplay::weapons::physical_reload
 	{
 		if(a.region_count!=b.region_count || !a.region_count || a.region_count>a.regions.size())return false;
 		for(size_t i=0;i<a.region_count;++i)
-			if(a.regions[i].pose.position!=b.regions[i].pose.position || a.regions[i].pose.rotation!=b.regions[i].pose.rotation || a.regions[i].half!=b.regions[i].half)return false;
+			if(a.regions[i].pose.position!=b.regions[i].pose.position || a.regions[i].pose.rotation!=b.regions[i].pose.rotation || a.regions[i].pose.scale!=b.regions[i].pose.scale || a.regions[i].half!=b.regions[i].half)return false;
 		return true;
 	}
 	struct box_sweep
@@ -64,9 +65,9 @@ namespace vr::gameplay::weapons::physical_reload
 			half_angle=std::acos(std::clamp(cosine,0.f,1.f));sine=std::sin(half_angle);
 			float radius{};for(size_t i=0;i<std::min(to.region_count,to.regions.size());++i)
 			{
-				const auto& box=to.regions[i];radius=std::max(radius,hands::length(box.pose.position)+hands::length(box.half));
+				const auto& box=to.regions[i];radius=std::max(radius,hands::length(box.pose.position)+hands::length(box.half)*box.pose.scale);
 			}
-			bound=hands::length(hands::sub(to.frame.position,from.frame.position))+2*half_angle*radius;
+			bound=hands::length(hands::sub(to.frame.position,from.frame.position))+2*half_angle*radius*std::max(from.frame.scale,to.frame.scale);
 		}
 		box_motion at(float fraction) const noexcept
 		{

@@ -1,5 +1,6 @@
 #include <std_include.hpp>
 #include "notebook_model.hpp"
+#include "first_person_mesh_size.hpp"
 #include "component/scene_models.hpp"
 #include "weapon_carry_runtime.hpp"
 #include "game/game.hpp"
@@ -19,7 +20,7 @@ namespace vr::gameplay::equipment::special::notebook
 			if(i){const auto distance=asset->parentList[i-1];if(!distance || distance>i)return false;group[i]=group[i-distance];}
 			if(i==5)group[i]=1;else if(i==6 || i==10)group[i]=2;
 		}
-		if(!skeleton.create(asset))return false;source=asset;return true;
+		if(!skeleton.create(asset,nullptr,first_person_mesh_size::publish))return false;source=asset;return true;
 	}
 	bool model::submit(anchor root,float angle)
 	{
@@ -33,6 +34,6 @@ namespace vr::gameplay::equipment::special::notebook
 			const auto at=compose(root,local);auto& b=bones[i];
 			std::copy(at.rotation.begin(),at.rotation.end(),b.quat);std::copy(at.position.begin(),at.position.end(),b.trans);b.transWeight=2;
 		}
-		const bool accepted=skeleton.submit(bones,scene_models::no_cast_shadow);if(accepted)++submissions;else ++rejected;return accepted;
+		const bool accepted=skeleton.submit(bones,scene_models::no_cast_shadow,root.scale);if(accepted)++submissions;else ++rejected;return accepted;
 	}
 }

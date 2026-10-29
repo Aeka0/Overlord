@@ -34,6 +34,6 @@ namespace vr::gameplay::weapons
 		if(!valid_fold(fold) || !std::isfinite(amount) || hand<0 || hand>1)return slide;
 		if(fold.end_bone.empty() && !fold.mesh){slide.rotation=folded_handle_rotation(slide.rotation,&fold,amount,hand);return slide;}
 		auto local=fold.pivot;local.rotation=folded_handle_rotation(local.rotation,&fold,amount,hand);
-		return {add(slide.position,rotate(slide.rotation,local.position)),normalize(multiply(slide.rotation,local.rotation))};
+		return spatial_math::compose(slide,local);
 	}
 }

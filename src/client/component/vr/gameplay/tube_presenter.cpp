@@ -83,7 +83,7 @@ namespace vr::gameplay::weapons::tube
 		if(!alive || !parts.valid || !grip.tube || !valid_hand(owner.holding_hand()) || !std::isfinite(units) || units<=0 || solved.size()<size_t(r.count))return {};
 		const auto& p=*grip.tube;auto v=current(owner.id());v.lever=displayed_lever_pose(v,owner,input.reference_generation,now);const int rear=int(owner.holding_hand()),off=1-rear;
 		unsigned posed_hands{};
-		auto gun=as_anchor(solved[r.gun]);
+		auto gun=as_anchor(solved[r.gun], r.model_scale);
 		if(p.lever && v.active && owner.can_fire())
 		{
 			const auto motion=lever::gun_offset(*p.lever,v.lever,owner.rear);
@@ -109,7 +109,7 @@ namespace vr::gameplay::weapons::tube
 		if(!rotary(p.ammunition) && !levered(p.ammunition) && (p.rack_grips.empty() || p.rack_grips.size()>max_part_grips || p.rack_grips.size()!=p.interaction.rack.slide_pose_count))return {};
 		std::array<part_grip_pose,max_part_grips> rack_poses{};
 		for(size_t i=0;i<p.rack_grips.size();++i)rack_poses[i]=off ? hands::pose_mirror::part(p.rack_grips[i],library.mirror_basis[r.arms[off].wrist]) : p.rack_grips[i];
-		const anchor raw{targets[off].position,normalize(multiply(targets[off].rotation,free_hand_rotation(grip,off)))};
+		const anchor raw{targets[off].position,normalize(multiply(targets[off].rotation,free_hand_rotation(grip,off))),r.model_scale};
 		const auto raw_local=compose(inverse_gun,raw);const auto shell_local=compose(raw_local,shell_in_wrist);
 		const auto centre=compose(shell_local,{p.shell_center,{0,0,0,1}}).position;
 		float travel=v.active && v.ammo.phase==action::locked_open ? p.interaction.rack.locked_travel : 0;
@@ -171,7 +171,7 @@ namespace vr::gameplay::weapons::tube
 		else move_part(r,parts.lifter,compose(gun,loading || cover_open ? p.lifter_loaded : p.lifter_rest),solved);
 		if(hand_motion)hand_motion->apply(off,!v.active || v.fault ? part_hand_attachment::free :
 			v.rack_held ? part_hand_attachment::rack : v.ammo.loader_hand==hand(off) ? part_hand_attachment::shell : part_hand_attachment::free);
-		const auto visual_shell=compose(as_anchor(solved[r.arms[off].wrist]),shell_in_wrist);
+		const auto visual_shell=compose(as_anchor(solved[r.arms[off].wrist], r.model_scale),shell_in_wrist);
 		part_mask hidden{};
 		// Source animations contain duplicate display rounds. The feed owns one
 		// live shell entity; neither duplicate may leak from a native reload pose.
@@ -194,7 +194,7 @@ namespace vr::gameplay::weapons::tube
 			sample.object=reinterpret_cast<std::uintptr_t>(object);sample.matrices=reinterpret_cast<std::uintptr_t>(matrices);sample.epoch=epoch;
 			sample.owner=owner;sample.instance=v.ammo.instance_generation;sample.reference=input.reference_generation;sample.at=input.sampled_at;sample.tube=&p;
 			if(v.active && !v.fault && gameplay && input.focused && v.reference==input.reference_generation &&
-				parts.bolt>=0 && chambering_guide::needed(p,v.ammo,v.rack_held))sample.add(guide.bones[0],as_anchor(solved[parts.bolt]));
+				parts.bolt>=0 && chambering_guide::needed(p,v.ammo,v.rack_held))sample.add(guide.bones[0],as_anchor(solved[parts.bolt], r.model_scale));
 			chambering_guide::publish(sample);
 		}
 		if(interaction::debug::body_enabled() && gameplay && input.focused)

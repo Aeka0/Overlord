@@ -3,7 +3,8 @@
 #include <array>
 #include <cmath>
 
-// Shared rigid geometry. Vectors retain the caller's units. Quaternions use
+// Shared geometry with optional uniform model size. Vectors retain the caller's
+// units; the default scale is rigid. Quaternions use
 // xyzw active rotations; from_axis accepts row basis vectors. Hand solving,
 // presentation and native adapters share these operations without skeleton or
 // weapon dependencies. Preserve the existing zero-length normalization rules.
@@ -15,6 +16,7 @@ namespace vr::spatial_math
 	{
 		vec position{};
 		quat rotation{0, 0, 0, 1};
+		float scale{1.f};
 	};
 	inline vec add(const vec a, const vec b)
 	{
@@ -120,12 +122,17 @@ namespace vr::spatial_math
 	}
 	inline anchor compose(anchor a, anchor b) noexcept
 	{
-		return {add(a.position, rotate(a.rotation, b.position)), normalize(multiply(a.rotation, b.rotation))};
+		return {add(a.position, rotate(a.rotation, scale(b.position, a.scale))),
+		        normalize(multiply(a.rotation, b.rotation)), a.scale * b.scale};
 	}
 	inline anchor inverse(anchor a) noexcept
 	{
 		const auto q = conjugate(normalize(a.rotation));
-		return {rotate(q, scale(a.position, -1)), q};
+		return {rotate(q, scale(a.position, -1.f / a.scale)), q, 1.f / a.scale};
+	}
+	inline vec transform_point(anchor a, vec point) noexcept
+	{
+		return add(a.position, rotate(a.rotation, scale(point, a.scale)));
 	}
 	// rigid_part retains source-model vertices. A desired bone pose therefore
 	// needs the inverse source bind exactly once before native rigid submission.

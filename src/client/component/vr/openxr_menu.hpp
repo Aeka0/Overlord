@@ -4,6 +4,7 @@
 #include "native_hud_capture.hpp"
 #include "texture_blit.hpp"
 #include "composition_diagnostics.hpp"
+#include "diagnostics/menu_sources.hpp"
 
 #if H2V_OPENXR_HEADERS_AVAILABLE
 namespace vr::openxr
@@ -26,6 +27,7 @@ namespace vr::openxr
 		menu_surface::anchor anchor_;
 		menu_surface::pointer_owner pointer_owner_;
 		texture_blit::renderer blit_;
+		diagnostics::menu_sources::readback source_readback_;
 		std::uint64_t session_{}, reference_{}, generation_{}, last_time_{}, movie_sequence_{};
 		bool movie_{};
 		unsigned count_{};

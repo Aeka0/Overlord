@@ -275,6 +275,22 @@ test("world size percentages invert native scale without drifting saved precisio
   for (const value of ["", "0", "-1", "NaN", "Infinity", String(bounds.max + 1), "1".repeat(1000)])
     assert.throws(() => collect({ vr_worldScale: value }, fixture), SettingError);
 });
+test("first-person size percentages save model size without changing world scale", () => {
+  const fixture = {
+    ...state,
+    values: { vr_firstPersonScale: 1, vr_worldScale: 39.370079 },
+    limits: {
+      vr_firstPersonScale: { min: 0.2, max: 1, step: 0.01, displayScale: 0.01 },
+      vr_worldScale: { min: 0.01, max: 10000, step: 1, displayScale: 39.370079, displayReciprocal: true },
+    },
+  } as SettingsState;
+  for (const percent of [20, 80, 100]) {
+    const draft = makeDraft(fixture.values, fixture.limits);
+    const saved = collect({ ...draft, vr_firstPersonScale: String(percent) }, fixture);
+    assert.equal(saved.vr_firstPersonScale, percent / 100);
+    assert.equal(saved.vr_worldScale, fixture.values.vr_worldScale);
+  }
+});
 test("guide changes leave unrelated incomplete draft text untouched", () => {
   const draft = {
     ...makeDraft(state.values, state.limits),

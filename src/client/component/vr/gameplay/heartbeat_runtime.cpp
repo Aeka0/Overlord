@@ -222,7 +222,7 @@ namespace vr::gameplay::weapons::heartbeat
 	{
 		if(!enabled() || !parts.valid || !library.valid || solved.size()<size_t(layout.count) || !std::isfinite(units) || units<=0 || !equivalent_mode(owner.weapon))return;
 		const auto id=owner.id();if(!id || !carry::contains(id))return;
-		const auto gun=as_anchor(solved[layout.gun]);float amount{},tilt{};hand actor{hand::none};
+		const auto gun=as_anchor(solved[layout.gun], layout.model_scale);float amount{},tilt{};hand actor{hand::none};
 		{
 			const std::lock_guard lock(mutex);
 			records.retain([](weapon_identity key){return carry::contains(key);});

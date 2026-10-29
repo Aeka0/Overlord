@@ -28,7 +28,11 @@ namespace vr::gameplay::hands
 			if(library.part[i]>=0)
 			{
 				const auto& part=profile.equip_rest[library.part[i]];
-				if(equip_parts || part.mode==part_pose_mode::fixed_attachment)local=part.local;
+				if(equip_parts || part.mode==part_pose_mode::fixed_attachment)
+				{
+					local=part.local;
+					local.position=scale(local.position,r.model_scale);
+				}
 			}
 			pose[i].position=add(pose[parent].position,rotate(pose[parent].rotation,local.position));
 			pose[i].rotation=normalize(multiply(pose[parent].rotation,local.rotation));

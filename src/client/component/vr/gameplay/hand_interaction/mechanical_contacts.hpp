@@ -13,7 +13,7 @@ namespace vr::gameplay::hand_interaction
 			(f.valid_hands&(1u<<unsigned(live->owner.holding_hand()))) && (!require_other || (f.valid_hands&(1u<<(1-unsigned(live->owner.holding_hand()))))) && f.body.units_per_meter>0?live:nullptr;
 	}
 	template<class Scene> inline hands::anchor wrist(const Scene& s,const frame& f,int h)noexcept
-	{return {f.wrists[h].position,hands::normalize(hands::multiply(f.wrists[h].rotation,s.binding.wrist))};}
+	{return {f.wrists[h].position,hands::normalize(hands::multiply(f.wrists[h].rotation,s.binding.wrist)),f.wrists[h].scale};}
 	inline bool sample(weapons::cylinder::scene_frame& s,const weapons::cylinder::presentation& v,const frame& f)noexcept
 	{
 		using namespace hands;using namespace weapons;using namespace hands::pose_math;
@@ -34,7 +34,7 @@ namespace vr::gameplay::hand_interaction
 		const auto* live=bound(s,f,!s.definition || !tube::levered(s.definition->ammunition));if(!live)return false;const auto& p=*s.definition;const int off=1-int(live->owner.holding_hand());const float units=f.body.units_per_meter;
 		const auto& binding=s.has_shell_bindings?s.shell_bindings[off]:s.binding;
 		if(!binding.valid || p.rack_grips.size()>max_part_grips)return false;
-		const auto raw=(f.valid_hands&(1u<<off))?anchor{f.wrists[off].position,normalize(multiply(f.wrists[off].rotation,binding.wrist))}:live->gun;const auto local=compose(inverse(live->gun),raw);
+		const auto raw=(f.valid_hands&(1u<<off))?anchor{f.wrists[off].position,normalize(multiply(f.wrists[off].rotation,binding.wrist)),f.wrists[off].scale}:live->gun;const auto local=compose(inverse(live->gun),raw);
 		const auto grasp=off?hands::pose_mirror::object_in_wrist({},p.shell_in_wrist,binding.mirror):p.shell_in_wrist;
 		const auto shell=compose(local,grasp);const auto centre=compose(shell,{p.shell_center,{0,0,0,1}}).position;
 		std::array<part_grip_pose,max_part_grips> grips{};for(size_t i=0;i<p.rack_grips.size();++i)grips[i]=off?hands::pose_mirror::part(p.rack_grips[i],binding.mirror):p.rack_grips[i];

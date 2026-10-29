@@ -28,7 +28,10 @@ namespace vr::gameplay::hands::attachments
 		hands::vec head_forward{}, head_up{};       // Full center-eye axes, from the same solve.
 		hands::vec render_origin{}; // World origin used by these exact committed bone matrices.
 		unsigned knife_hands{}; // Reject a later DObj whose knife hand was hidden/unposed.
+		float model_scale{1.f};
 	};
+	inline anchor wrist_frame(const solved& pose,unsigned hand,vec origin={}) noexcept
+	{return {add(pose.wrists[hand].position,origin),normalize(pose.wrists[hand].rotation),pose.model_scale};}
 	// Rigid body attachments share the exact skin record's body and placement
 	// origin. Never combine its relative head with a later global camera origin.
 	inline head_pose_bridge::spatial_frame body_frame(const solved& pose,vec origin) noexcept

@@ -7,9 +7,9 @@ namespace vr::gameplay::hands::pose_math
 	using spatial_math::compose;
 	using spatial_math::inverse;
 	using spatial_math::rigid_delta;
-	inline anchor as_anchor(const bone& b) noexcept
+	inline anchor as_anchor(const bone& b, float model_scale = 1.f) noexcept
 	{
-		return {b.position, normalize(b.rotation)};
+		return {b.position, normalize(b.rotation), model_scale};
 	}
 	inline void move_part(const rig& r, int root, anchor target, std::span<bone> pose) noexcept
 	{

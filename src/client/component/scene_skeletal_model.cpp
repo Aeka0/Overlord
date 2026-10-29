@@ -50,6 +50,8 @@ namespace scene_models
 		const void* accepted{};
 		bool visible{},created{};
 		pose_provider provider{};
+		pose_observer observer{};
+		float model_scale{1.f};
 	};
 	static_assert(skeletal_model::scene_begin+skeletal_model::capacity<=4032);
 	skeletal_model::skeletal_model()=default;
@@ -61,12 +63,12 @@ namespace scene_models
 		{const std::lock_guard lock(registry_mutex);objects[data_->slot]=nullptr;registry[data_->slot]=nullptr;}
 		if(data_->created)utils::hook::invoke<void>(free_object,data_->object.data());
 	}
-	bool skeletal_model::create(game::XModel* model,pose_provider provider)
+	bool skeletal_model::create(game::XModel* model,pose_provider provider,pose_observer observer)
 	{
 		if(data_ || !skeleton_hook_ready || !scheduler::is_executing(scheduler::pipeline::main) || !native_ready() || !model || !model->numBones || !model->baseMat || model->numRootBones!=1)return false;
 		const std::lock_guard lock(registry_mutex);
 		const auto free=std::find(registry.begin(),registry.end(),nullptr);if(free==registry.end())return false;
-		auto next=std::make_unique<storage>();next->count=model->numBones;next->slot=unsigned(free-registry.begin());next->provider=provider;
+		auto next=std::make_unique<storage>();next->count=model->numBones;next->slot=unsigned(free-registry.begin());next->provider=provider;next->observer=observer;
 		struct model_entry{game::XModel* model;std::uint32_t tag{};std::uint8_t collision{};std::byte pad[3]{};};
 		static_assert(sizeof(model_entry)==16);const model_entry entry{model};
 		utils::hook::invoke<void>(create_object,&entry,1,nullptr,next->object.data(),0);next->created=true;
@@ -111,12 +113,17 @@ namespace scene_models
 			}
 			for(unsigned i=0;i<data.count;++i)for(unsigned axis=0;axis<3;++axis)posed[i].trans[axis]-=offset[axis];
 			std::copy_n(posed.begin(),data.count,matrices);
+			if (refined && data.observer)
+			{
+				std::uint32_t epoch{};std::memcpy(&epoch,data.object.data()+0xb0,sizeof(epoch));
+				data.observer(data.object.data(),matrices,epoch,data.model_scale);
+			}
 			data.accepted=refined?matrices:nullptr;return;
 		}
 	}
-	bool skeletal_model::submit(std::span<const game::DObjAnimMat> bones,unsigned flags)
+	bool skeletal_model::submit(std::span<const game::DObjAnimMat> bones,unsigned flags,float model_scale)
 	{
-		if(!data_ || bones.size()!=data_->count)return false;
+		if(!data_ || bones.size()!=data_->count || !std::isfinite(model_scale) || model_scale<=0)return false;
 		for(const auto& b:bones)
 		{
 			float norm{};for(float x:b.quat){if(!std::isfinite(x))return false;norm+=x*x;}
@@ -124,7 +131,7 @@ namespace scene_models
 			for(float x:b.trans)if(!std::isfinite(x) || std::abs(x)>1e7f)return false;
 		}
 		auto& data=*data_;
-		{const std::lock_guard lock(data.mutex);std::copy(bones.begin(),bones.end(),data.bones.begin());data.accepted=nullptr;}
+		{const std::lock_guard lock(data.mutex);std::copy(bones.begin(),bones.end(),data.bones.begin());data.accepted=nullptr;data.model_scale=model_scale;}
 		const std::array<float,3> origin{bones[0].trans[0],bones[0].trans[1],bones[0].trans[2]};
 		data.pose.previous_origin=data.visible?data.pose.origin:origin;data.pose.origin=origin;
 		alignas(16) std::array<std::uint32_t,8> bits{};

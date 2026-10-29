@@ -64,7 +64,7 @@ namespace vr::gameplay::weapons::drop_presentation
 				{
 					const auto& part=v.model.parts[n];
 					const auto world=hands::pose_math::compose(v.world,part.local);
-					game::GfxScaledPlacement p{};p.scale=1;
+					game::GfxScaledPlacement p{};p.scale=world.scale;
 					std::copy(world.position.begin(),world.position.end(),p.base.origin);
 					std::copy(world.rotation.begin(),world.rotation.end(),p.base.quat);
 					float color[4]{1,1,1,1};

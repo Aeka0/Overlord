@@ -30,9 +30,7 @@ namespace vr::gameplay::weapons
 	}
 	inline hands::anchor carry_with_handle(hands::anchor rest,hands::anchor moved,hands::anchor value) noexcept
 	{
-		const auto delta=hands::normalize(hands::multiply(moved.rotation,hands::conjugate(rest.rotation)));
-		return {hands::add(moved.position,hands::rotate(delta,hands::sub(value.position,rest.position))),
-			hands::normalize(hands::multiply(delta,value.rotation))};
+		return spatial_math::compose(moved,spatial_math::compose(spatial_math::inverse(rest),value));
 	}
 	inline std::array<hands::vec,2> handle_bounds(hands::anchor rest,hands::anchor moved,hands::vec low,hands::vec high) noexcept
 	{

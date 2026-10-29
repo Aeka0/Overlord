@@ -59,7 +59,7 @@ namespace vr::gameplay::equipment::special::flare
         std::atomic<const char*> reason{"waiting for Whisky Hotel"};
         bool fresh(clock::time_point at){const auto now=clock::now();return now>=at && now-at<=150ms;}
         anchor bind(const game::DObjAnimMat& b){return {{b.trans[0],b.trans[1],b.trans[2]},normalize({b.quat[0],b.quat[1],b.quat[2],b.quat[3]})};}
-        anchor wrist(const anchor& raw,const snapshot& s,unsigned h){return {raw.position,normalize(multiply(raw.rotation,s.basis[h]))};}
+        anchor wrist(const anchor& raw,const snapshot& s,unsigned h){return {raw.position,normalize(multiply(raw.rotation,s.basis[h])),raw.scale};}
         anchor held_root(const std::array<anchor,2>& wrists,const snapshot& s)
         {const auto h=unsigned(held.holder);return compose(wrist(wrists[h],s,h),authored::attachment(h,s.mirror[h]));}
         hi::target target(unsigned part=0,std::uint64_t revision=0)
@@ -153,7 +153,7 @@ namespace vr::gameplay::equipment::special::flare
             {
                 const auto bone=p?(s.value.cap_removed?s.cap_root:attached_cap(s,base)):base;
                 const auto at=rigid_delta(bone,s.asset->bind[p]);
-                game::GfxScaledPlacement placement{};placement.scale=1;
+                game::GfxScaledPlacement placement{};placement.scale=at.scale;
                 std::copy(at.position.begin(),at.position.end(),placement.base.origin);std::copy(at.rotation.begin(),at.rotation.end(),placement.base.quat);
                 // The tube and detached cap can leave the player independently.
                 const bool carried=p && s.value.cap_removed?vr::valid_hand(s.cap_hand):
@@ -182,7 +182,7 @@ namespace vr::gameplay::equipment::special::flare
             if(part==1 && s.value.cap_removed)
             {
                 const auto h=unsigned(s.cap_hand);if(h>1)return result::omit;
-                at=compose({add(pose.wrists[h].position,origin),pose.wrists[h].rotation},s.cap_grasp);
+                at=compose(hands::attachments::wrist_frame(pose,h,origin),s.cap_grasp);
             }
             else
             {
@@ -190,7 +190,7 @@ namespace vr::gameplay::equipment::special::flare
                 else if(s.value.held())
                 {
                     const auto h=unsigned(s.value.holder);
-                    at=compose({add(pose.wrists[h].position,origin),pose.wrists[h].rotation},authored::attachment(h,pose.mirror_basis[h]));
+                    at=compose(hands::attachments::wrist_frame(pose,h,origin),authored::attachment(h,pose.mirror_basis[h]));
                 }
                 else return result::omit;
                 if(part)
@@ -201,7 +201,7 @@ namespace vr::gameplay::equipment::special::flare
                         // Once the hand has snapped on, use this exact skin
                         // record. During acquisition the attached cap stays put.
                         const auto h=unsigned(s.value.opener);
-                        at=compose({add(pose.wrists[h].position,origin),pose.wrists[h].rotation},s.cap_grasp);
+                        at=compose(hands::attachments::wrist_frame(pose,h,origin),s.cap_grasp);
                     }
                     else at=attached_cap(s,at);
                 }
@@ -395,12 +395,12 @@ namespace vr::gameplay::equipment::special::flare
             if(s.value.opener==hand(h) && s.value.held())
             {
                 const auto rear=unsigned(s.value.holder);
-                const auto base=compose({solved[r.arms[rear].wrist].position,normalize(multiply(targets[rear].rotation,s.basis[rear]))},authored::attachment(rear,s.mirror[rear]));
+                const auto base=compose({solved[r.arms[rear].wrist].position,normalize(multiply(targets[rear].rotation,s.basis[rear])),r.model_scale},authored::attachment(rear,s.mirror[rear]));
                 auto cap=s.asset->cap;const auto local=compose(inverse(base),wrist(targets[h],s,h));
                 cap.position[2]+=std::clamp(local.position[2]-s.value.pull_start[2],0.f,units*.04f);
                 auto desired=compose(compose(base,cap),inverse(s.cap_grasp));
                 const float t=std::clamp(std::chrono::duration<float>(input.sampled_at-s.cap_grasp_at).count()/.09f,0.f,1.f);
-                const float amount=t*t*(3-2*t);const auto before=as_anchor(solved[r.arms[h].wrist]);
+                const float amount=t*t*(3-2*t);const auto before=as_anchor(solved[r.arms[h].wrist], r.model_scale);
                 desired.position=add(scale(before.position,1-amount),scale(desired.position,amount));
                 desired.rotation=blend_quat(before.rotation,desired.rotation,amount);
                 (void)weapons::constrain_part_hand(r,parts.library,hands::native_hand_schema::definition,targets,shoulders,axes,int(rear),desired,solved);

@@ -260,9 +260,9 @@ namespace vr::gameplay::grenades
 			++pins;
 			queue_sound(item, false);
 			auto root = item.root;
-			root.position = add(root.position, rotate(root.rotation, item.pull_delta));
+			root.position = transform_point(root,item.pull_delta);
 			const auto seconds = std::max(.05f, (now - item.pin_started) * .001f);
-			auto velocity = rotate(root.rotation, scale(item.pull_delta, 1 / seconds));
+			auto velocity = rotate(root.rotation, scale(item.pull_delta, root.scale / seconds));
 			const float speed = length(velocity), limit = f.body.units_per_meter * 2;
 			if (speed > limit)
 				velocity = scale(velocity, limit / speed);
@@ -308,7 +308,7 @@ namespace vr::gameplay::grenades
 				{
 					if(!a->pieces[b] || (item.value.spent && (a->pin_mask&(1u<<b))) || (item.value.stage==phase::cooking && (a->lever_mask&(1u<<b))))continue;
 					auto local=a->local[b];if(a->pin_mask&(1u<<b))local.position=add(local.position,item.pull_delta);
-					const auto world=compose(item.root,local);game::GfxScaledPlacement placement{};placement.scale=1;
+					const auto world=compose(item.root,local);game::GfxScaledPlacement placement{};placement.scale=world.scale;
 					std::copy(world.position.begin(),world.position.end(),placement.base.origin);std::copy(world.rotation.begin(),world.rotation.end(),placement.base.quat);
 					float color[4]{1,1,1,1};scene_models::submit(a->pieces[b]->model(),&placement,scene_models::no_cast_shadow,&lighting[slot][b],color,color,color,8.f);
 				}
@@ -323,11 +323,11 @@ namespace vr::gameplay::grenades
 				{
 					const auto pivot=compose(root,{a->lever_pivot,{0,0,0,1}}).position;
 					root.rotation=normalize(multiply(root.rotation,{0,std::sin(seconds*9.f),0,std::cos(seconds*9.f)}));
-					root.position=sub(pivot,rotate(root.rotation,a->lever_pivot));
+					root.position=sub(pivot,rotate(root.rotation,scale(a->lever_pivot,root.scale)));
 				}
 				for(unsigned b=0;b<a->count;++b)if(a->pieces[b] && (pin.mask&(1u<<b)))
 				{
-					const auto world=compose(root,a->local[b]);game::GfxScaledPlacement placement{};placement.scale=1;
+					const auto world=compose(root,a->local[b]);game::GfxScaledPlacement placement{};placement.scale=world.scale;
 					std::copy(world.position.begin(),world.position.end(),placement.base.origin);std::copy(world.rotation.begin(),world.rotation.end(),placement.base.quat);
 					float color[4]{1,1,1,1};scene_models::submit(a->pieces[b]->model(),&placement,0,&debris_lighting[unsigned(pin.type)][b],color,color,color,8.f);
 				}
@@ -361,7 +361,7 @@ namespace vr::gameplay::grenades
 						!attachments::for_record(p.record,camera,pose) || pose.reference!=item.value.reference ||
 						!utils::native_memory::read_bytes(origin.data(),static_cast<const std::byte*>(p.record)+engine_stereo_view::h2_current_model_placement_origin_offset,sizeof(origin)))return result::omit;
 					const auto h=unsigned(item.value.holder);if(h>1)return result::omit;
-					const auto root=compose({add(pose.wrists[h].position,origin),pose.wrists[h].rotation},authored::attachment(item.value.type,pose.mirror_basis[h],h==0));
+					const auto root=compose(hands::attachments::wrist_frame(pose,h,origin),authored::attachment(item.value.type,pose.mirror_basis[h],h==0));
 					auto local=a->local[b];
 					if(a->pin_mask&(1u<<b))
 					{
@@ -370,7 +370,7 @@ namespace vr::gameplay::grenades
 						{
 							const auto off=unsigned(item.value.puller);auto point=authored::left_pinch[unsigned(item.value.type)];
 							if(off==1)point=hands::pose_mirror::local_point(point,pose.mirror_basis[off]);
-							const auto contact=compose({add(pose.wrists[off].position,origin),pose.wrists[off].rotation},{point,{0,0,0,1}}).position;
+							const auto contact=compose(hands::attachments::wrist_frame(pose,off,origin),{point,{0,0,0,1}}).position;
 							travel=pin_slide(a->pin,compose(inverse(root),{contact,{0,0,0,1}}).position,pose.units);
 						}
 						else if (item.value.mouth_puller)
@@ -707,12 +707,12 @@ namespace vr::gameplay::grenades
 				if(puller)
 				{
 					const auto a=s.assets[unsigned(item.value.type)];const auto rear=unsigned(item.value.holder);if(!a || rear>1)continue;
-					const auto root=compose({solved[r.arms[rear].wrist].position,normalize(multiply(targets[rear].rotation,parts.basis[rear]))},authored::attachment(item.value.type,s.mirror[rear],rear==0));
+					const auto root=compose({solved[r.arms[rear].wrist].position,normalize(multiply(targets[rear].rotation,parts.basis[rear])),r.model_scale},authored::attachment(item.value.type,s.mirror[rear],rear==0));
 					const auto travel=pin_slide(item.pull_start,compose(inverse(root),targets[h]).position,units);
 					const auto rotation=normalize(multiply(root.rotation,item.pull_rotation));
 					auto point=authored::left_pinch[unsigned(item.value.type)];if(h==1)point=hands::pose_mirror::local_point(point,s.mirror[h]);
 					const auto contact=compose(root,{add(a->pin,travel),{0,0,0,1}}).position;
-					const anchor desired{sub(contact,rotate(rotation,point)),rotation};
+					const anchor desired{sub(contact,rotate(rotation,scale(point,r.model_scale))),rotation,r.model_scale};
 					(void)weapons::constrain_part_hand(r,parts.library,hands::native_hand_schema::definition,targets,shoulders,axes,int(rear),desired,solved);
 				}
 				else move_part(r,r.arms[h].wrist,{solved[r.arms[h].wrist].position,normalize(multiply(targets[h].rotation,parts.basis[h]))},solved);
@@ -723,10 +723,10 @@ namespace vr::gameplay::grenades
 				for(int b=r.arms[h].wrist+1;b<r.count;++b)if(descendant(b,r.arms[h].wrist,r) && r.parent[b]>=0)
 				{
 					const int parent=r.parent[b];
-					const auto from=compose(inverse(as_anchor(before[parent])),as_anchor(before[b]));
-					const auto to=compose(inverse(as_anchor(desired[parent])),as_anchor(desired[b]));
+					const auto from=compose(inverse(as_anchor(before[parent], r.model_scale)),as_anchor(before[b], r.model_scale));
+					const auto to=compose(inverse(as_anchor(desired[parent], r.model_scale)),as_anchor(desired[b], r.model_scale));
 					const auto local=anchor{add(scale(from.position,1-amount),scale(to.position,amount)),blend_quat(from.rotation,to.rotation,amount)};
-					const auto world=compose(as_anchor(solved[parent]),local);solved[b].position=world.position;solved[b].rotation=world.rotation;
+					const auto world=compose(as_anchor(solved[parent], r.model_scale),local);solved[b].position=world.position;solved[b].rotation=world.rotation;
 				}
 			}
 		}

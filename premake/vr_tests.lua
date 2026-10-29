@@ -61,6 +61,7 @@ return function()
 		"./src/client/component/vr/openxr_input.cpp",
 		"./src/client/component/vr/steamvr_controller_reference.cpp",
 		"./src/client/component/vr/openxr_menu.cpp",
+		"./src/client/component/vr/diagnostics/menu_sources.cpp",
 		"./src/client/component/vr/texture_blit.cpp",
 		"./src/client/component/vr/native_stereo_source.cpp",
 		"./src/client/component/vr/openxr_runtime.hpp",
@@ -192,6 +193,13 @@ return function()
 	test_executable("vr-empty-hand-pose-tests", "empty-hand-pose")
 		files {"./tests/vr/empty_hand_pose_tests.cpp", "./src/client/component/vr/gameplay/empty_hand_pose.hpp"}
 		includedirs {"./src/client"}
+
+	test_executable("vr-first-person-size-tests", "first-person-size")
+		files {"./tests/vr/first_person_size_tests.cpp",
+			"./src/client/component/vr/gameplay/first_person_mesh_size.cpp"}
+		includedirs {"./tests/vr", "./src/client"}
+		gsl.import()
+		links {"d3d11", "dxgi"}
 
 	test_executable("vr-hand-rig-tests", "hand-rig")
 		files {"./tests/vr/hand_rig_tests.cpp", "./src/client/component/vr/gameplay/hands/rig_builder.hpp"}

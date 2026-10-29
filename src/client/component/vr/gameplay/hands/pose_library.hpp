@@ -99,7 +99,7 @@ namespace vr::gameplay::hands
 					}
 					const auto inverse = conjugate(normalize(bones[r.parent[i]].bind.rotation));
 					out.rest_local[i] = {
-						rotate(inverse, sub(bones[i].bind.position, bones[r.parent[i]].bind.position)),
+						scale(rotate(inverse, sub(bones[i].bind.position, bones[r.parent[i]].bind.position)), r.model_scale),
 						normalize(multiply(inverse, normalize(bones[i].bind.rotation)))};
 					for (auto x : out.rest_local[i].position)
 						if (!std::isfinite(x))

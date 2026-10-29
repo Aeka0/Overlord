@@ -11,6 +11,7 @@ headset acceptance where those boundaries matter.
 | --- | --- |
 | Install a client overlay | [Client installation](client-installation.md) |
 | Generate projects, build, and select focused validation | [Build and validation](development.md) |
+| Review implemented performance work and its evidence | [Performance optimizations](performance-optimizations.md) |
 | Prepare a public release | [Release preparation](releasing.md) |
 | Review source and asset redistribution boundaries | [Source and asset provenance](source-provenance.md) |
 | Add or revise localized game text | [In-game text and VR action prompts](game-text-i18n.md) |

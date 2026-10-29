@@ -167,6 +167,15 @@
     "description": "settings.worldSizeHint"
   },
   {
+    "name": "vr_firstPersonScale",
+    "category": "calibration",
+    "group": "settings.firstPersonSize",
+    "label": "settings.firstPersonSize",
+    "type": "number",
+    "unit": "unit.percent",
+    "description": "settings.firstPersonSizeHint"
+  },
+  {
     "name": "vr_controllerPoseMode",
     "category": "calibration",
     "group": "settings.controllerCompatibility",

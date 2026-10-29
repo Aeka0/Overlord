@@ -314,6 +314,8 @@
   "settings.worldScale": "월드 배율",
   "settings.worldSize": "월드 크기",
   "settings.worldSizeHint": "100%가 기본 크기입니다. 값을 높이면 월드가 더 크게, 낮추면 더 작게 보입니다. 추적된 이동량과 상호작용 도달 거리에도 영향을 줍니다. 다음 게임 실행 시 적용됩니다.",
+  "settings.firstPersonSize": "손과 무기 크기",
+  "settings.firstPersonSizeHint": "1인칭 손, 무기, 잡는 지점과 재장전 부품의 크기를 함께 조정합니다. 100%는 원래 크기, 80%는 0.8배, 20%는 0.2배입니다. 추적된 손목 위치는 유지됩니다. 다음 게임 실행 시 적용됩니다.",
   "unit.percent": "%",
   "settings.calibrationHint": "자세 처리 방식과 프리셋을 먼저 선택한 뒤 정렬을 조정하세요. 아래 명령은 선택한 방식에 해당합니다. 게임에서 사용 중인 방식은 vr_input_status로 확인할 수 있습니다. 방식 변경에는 게임 재시작이 필요합니다.",
   "settings.positionOffsetsHint": "위치 오프셋의 단위는 미터입니다. 게임에서 ~로 콘솔을 열고 <값>을 원하는 숫자로 바꾸세요. 콘솔을 닫고 게임으로 돌아오면 변경을 즉시 확인할 수 있습니다.",

@@ -71,7 +71,7 @@ namespace vr::gameplay::weapons::launcher
 			if(!alive || !game::CL_IsCgameInitialized())return;std::array<frame,15> frames;std::array<drop,16> released;{const std::lock_guard lock(mutex);frames=latest;released=drops;}
 			const auto input=controller_input::latest();const auto now=controller_input::clock::now();
 			for(unsigned n=0;n<frames.size();++n){const auto& f=frames[n];if(!f.visible || !f.mesh || f.mesh!=model.load() || !input.focused || f.view.reference!=input.reference_generation || now<f.view.at || now-f.view.at>150ms)continue;
-				const auto pose=compose(f.world,inverse(bind(*f.mesh)));game::GfxScaledPlacement place{};place.scale=1;
+				const auto pose=compose(f.world,inverse(bind(*f.mesh)));game::GfxScaledPlacement place{};place.scale=pose.scale;
 				std::copy(pose.position.begin(),pose.position.end(),place.base.origin);std::copy(pose.rotation.begin(),pose.rotation.end(),place.base.quat);
 				float color[]{1,1,1,1};scene_models::submit(f.mesh->rocket.model(),&place,0,&lighting[n],color,color,color,40.f);}
 			for(unsigned n=0;n<released.size();++n){const auto& d=released[n];const float age=std::chrono::duration<float>(now-d.at).count();
@@ -87,7 +87,7 @@ namespace vr::gameplay::weapons::launcher
 	{
 		if(!alive || !ready() || !parts.valid || !grip.launcher || !valid_hand(owner.rear) || !std::isfinite(units) || units<=0 || solved.size()<size_t(r.count))return {};
 		const auto& p=*grip.launcher;auto* mesh=model.load();if(p.manual_loading() && !mesh)return {};
-		const int off=1-int(owner.rear);const auto basis=library.mirror_basis[r.arms[off].wrist];const auto gun=as_anchor(solved[r.gun]);
+		const int off=1-int(owner.rear);const auto basis=library.mirror_basis[r.arms[off].wrist];const auto gun=as_anchor(solved[r.gun], r.model_scale);
 		if(gameplay)publish_scene({owner,&p,assembly,{free_hand_rotation(grip,off),basis,true}});
 		const auto v=current(owner.id());if(!v.active)return {};if(!p.manual_loading())return {true,{},0};
 		// Native rocket visibility/animation must not duplicate the instance-owned round.
@@ -96,7 +96,7 @@ namespace vr::gameplay::weapons::launcher
 		const auto grasp=off?hands::pose_mirror::object_in_wrist({},p.rocket_in_wrist,basis):p.rocket_in_wrist;
 		if(held && manipulation && v.rocket.actor==hand(off)){hands::pose_mirror::fingers(r,library,grip,p.rocket_fingers,off,solved,off==1);posed=1u<<off;}
 		if(hand_motion)hand_motion->apply(off,posed ? hands::part_hand_attachment::rocket : hands::part_hand_attachment::free);
-		const auto local=held?compose(as_anchor(solved[r.arms[off].wrist]),grasp):compose(gun,p.rocket_rest);
+		const auto local=held?compose(as_anchor(solved[r.arms[off].wrist], r.model_scale),grasp):compose(gun,p.rocket_rest);
 		auto world=local;world.position=add(world.position,offset);frame f{v,mesh,reinterpret_cast<std::uintptr_t>(object),reinterpret_cast<std::uintptr_t>(matrices),epoch,local,world,gameplay && v.active && !v.fault && (held || v.loaded),held};
 		const std::lock_guard lock(mutex);auto* slot=&latest[0];for(auto& candidate:latest)if(candidate.view.owner.id()==owner.id()){slot=&candidate;break;}else if(!candidate.visible || candidate.view.at<slot->view.at)slot=&candidate;
 		if(slot->view.owner.id()==owner.id() && slot->held && !f.held && !f.view.loaded && gameplay && slot->view.reference==input.reference_generation)

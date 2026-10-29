@@ -450,6 +450,15 @@ int main(int argc, char** argv)
 				"Enemy combat settings persist independently at all boundaries");
 		}
 		const auto* throw_name=vr::settings::grenade_throw_speed.name;
+		const auto* size_name=vr::settings::first_person_scale.name;
+		require(initial[size_name]==1.0,"First-person size keeps the original default");
+		for (double size:{.2,.8,1.0})
+		{
+			auto edited=initial;edited[size_name]=size;
+			const auto saved=read_values(update_config("",edited));
+			require(validate(edited) && saved[size_name]==size && saved[vr::settings::world_scale.name]==initial[vr::settings::world_scale.name],
+				"First-person size persists independently of world scale");
+		}
 		const auto* world_name = vr::settings::world_scale.name;
 		require(initial[world_name] == setting_number(vr::settings::world_scale.default_value),
 			"World size defaults to the existing native spatial scale");

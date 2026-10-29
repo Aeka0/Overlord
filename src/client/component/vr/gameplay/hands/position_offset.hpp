@@ -3,6 +3,7 @@
 #include "../../head_pose_bridge.hpp"
 #include "../../controller_input.hpp"
 #include "../../settings.hpp"
+#include "../../first_person_size.hpp"
 
 namespace vr::gameplay::hands
 {
@@ -70,8 +71,10 @@ namespace vr::gameplay::hands
 		const auto& selected_aim=raw?input.runtime_aim[hand]:input.aim[hand];
 		if (!selected_grip.valid || !selected_aim.valid) return false;
 		head_pose_bridge::world_pose grip,aim;
-		return head_pose_bridge::tracking_to_world(body,selected_grip.tracking,grip) &&
+		const bool valid = head_pose_bridge::tracking_to_world(body,selected_grip.tracking,grip) &&
 			head_pose_bridge::tracking_to_world(body,selected_aim.tracking,aim) &&
 			make_wrist_target(grip,aim,view_offset,body.units_per_meter,hand,offsets,output);
+		if (valid) output.scale = first_person_size::value();
+		return valid;
 	}
 }

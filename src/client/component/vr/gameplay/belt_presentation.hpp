@@ -15,7 +15,7 @@ namespace vr::gameplay::weapons::belt_feed
 		const auto delta=compose_reload(hinge_pose(rest,axis,angle,amount),inverse_reload(rest));
 		const auto wrist=compose_reload(delta,hand.wrist);
 		const auto rotation=part_grip_capture::relaxed_rotation(raw.rotation,wrist.rotation);
-		const auto point=compose_reload({raw.position,rotation},{hand.contact_in_wrist,{0,0,0,1}}).position;
+		const auto point=compose_reload({raw.position,rotation,raw.scale},{hand.contact_in_wrist,{0,0,0,1}}).position;
 		const auto initial=compose_reload(hand.wrist,{hand.contact_in_wrist,{0,0,0,1}}).position;
 		const auto pivot=inverse_reload(rest);
 		auto from=compose_reload(pivot,{initial,{0,0,0,1}}).position,to=compose_reload(pivot,{point,{0,0,0,1}}).position;

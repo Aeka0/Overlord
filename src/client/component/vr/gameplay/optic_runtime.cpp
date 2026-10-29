@@ -497,14 +497,14 @@ namespace vr::gameplay::weapons::optics
 		result.center = {
 		    true,
 		    hands::add(root.position,
-		               hands::rotate(rotation, hands::scale(bound_lens.lens->center_meters, units))),
+		               hands::rotate(rotation, hands::scale(bound_lens.lens->center_meters, units*bound_lens.model_scale))),
 		    view_offset};
 		result.axis = {hands::rotate(rotation, {1, 0, 0}),
 		               hands::rotate(rotation, {0, 1, 0}),
 		               hands::rotate(rotation, {0, 0, 1})};
-		result.radius = bound_lens.lens->radius_meters * units;
+		result.radius = bound_lens.lens->radius_meters * units * bound_lens.model_scale;
 		result.pupil_radius = bound_lens.lens->pupil_radius;
-		result.scene_clearance = bound_lens.lens->scene_clearance_meters * units;
+		result.scene_clearance = bound_lens.lens->scene_clearance_meters * units * bound_lens.model_scale;
 		result.thermal = bound_lens.lens->thermal;
 		result.magnification = magnification && magnification->current.value >= 1
 		                           ? magnification->current.value

@@ -72,6 +72,21 @@ namespace vr::diagnostics::detail
 				<< " missing=" << menu.missing << " invalid=" << menu.invalid
 				<< " generation_mismatch=" << menu.generation_mismatch << " stale_cursor=" << menu.stale_cursor
 				<< " owner_mismatch=" << menu.owner_mismatch << '\n';
+			output << "  openxr_menu_geometry: session=" << menu.session << " revision=" << menu.revision
+				<< " image_session=" << menu.image_session << " image_revision=" << menu.image_revision
+				<< " device=" << menu.device_generation << " coordinates=head_local_minus_z_forward hmd_display_proof=no\n";
+			for (std::size_t index{}; index < menu.layers && index < menu.geometry.size(); ++index)
+			{
+				const auto& layer = menu.geometry[index];
+				output << "    layer[" << index << "]: slot=" << layer.slot << " shape=" << (layer.cylinder ? "cylinder" : "quad")
+					<< " source=" << layer.source_sequence << " source_tick=" << layer.source_tick << " flags=" << layer.flags
+					<< " source_size=" << layer.source_width << 'x' << layer.source_height
+					<< " position=" << layer.position[0] << ',' << layer.position[1] << ',' << layer.position[2]
+					<< " orientation=" << layer.orientation[0] << ',' << layer.orientation[1] << ',' << layer.orientation[2] << ',' << layer.orientation[3]
+					<< " size_m=" << layer.width << 'x' << layer.height << " radius_m=" << layer.radius << " distance_m=" << layer.distance
+					<< " head_center=" << layer.head_center[0] << ',' << layer.head_center[1] << ',' << layer.head_center[2]
+					<< " facing=" << layer.facing << " head_ray_hit=" << yes_no(layer.head_ray_hit) << '\n';
+			}
 		}
 		output << "  sdk_headers_available=" << yes_no(runtime_status.sdk_headers_available);
 		output << " state=" << to_string(runtime_status.state) << '\n';
