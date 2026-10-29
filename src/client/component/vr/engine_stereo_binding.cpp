@@ -81,17 +81,10 @@ namespace vr::engine_stereo_binding
 
 		bool valid_publication(const frontend_publication& value) noexcept
 		{
-			if (value.frontend == 0 || value.record == 0 ||
-				value.frontend_epoch == 0 || value.frontend_transaction_id == 0 ||
-				!engine_stereo_view::validate_finalized(value.views))
-			{
-				return false;
-			}
-			const auto& left = value.views.eyes[0];
-			const auto& right = value.views.eyes[1];
-			return left.pair_id != 0 && left.pair_id == right.pair_id &&
-				left.publication == right.publication && left.output_eye == 0 &&
-				right.output_eye == 1 && left.view_eye != right.view_eye;
+			// validate_finalized includes pair/publication identity and eye routing.
+			return value.frontend != 0 && value.record != 0 &&
+				value.frontend_epoch != 0 && value.frontend_transaction_id != 0 &&
+				engine_stereo_view::validate_finalized(value.views);
 		}
 	}
 

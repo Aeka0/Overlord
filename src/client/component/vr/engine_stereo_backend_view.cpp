@@ -32,8 +32,9 @@ namespace vr::engine_stereo_backend_view
 		const engine_stereo_binding::backend_claim& claim,
 		const std::uintptr_t record) noexcept
 	{
-		if (output || !claim || record == 0 || claim.record != record ||
-			!engine_stereo_view::validate_finalized(claim.views))
+		// The binding ring already validated this immutable publication before
+		// producing the claim. Only this consumer's ownership changes here.
+		if (output || !claim || record == 0 || claim.record != record)
 		{
 			return false;
 		}

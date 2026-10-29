@@ -86,7 +86,8 @@ namespace vr::engine_stereo_binding
 	[[nodiscard]] bool has_publications() noexcept;
 
 	// Claim the oldest publication matching the exact record/frontend identity.
-	// The returned eye slots are private backend-local copies.
+	// The returned eye slots are validated private backend-local copies. Consumers
+	// check their own record/lifetime boundaries, not the unchanged matrix payload.
 	[[nodiscard]] backend_claim acquire(std::uintptr_t record,
 		std::uintptr_t frontend) noexcept;
 	// Sole scene-owner consumer after bootstrap. H2 reuses record addresses;

@@ -1051,11 +1051,12 @@ namespace vr::engine_stereo_owner_pass
 		region_capture::phase_scope region_admission(region_capture::phase::admission, natural_record, claim.frontend);
 		if (output || active_transaction != nullptr || !claim || natural_record == nullptr ||
 			!graphics || claim.record != reinterpret_cast<std::uintptr_t>(natural_record) ||
-			claim.record_type != native_render_contract::expected_world_record_type ||
-			!engine_stereo_view::validate_finalized(claim.views))
+			claim.record_type != native_render_contract::expected_world_record_type)
 		{
 			return false;
 		}
+		// The claimed publication was validated by the binding ring. The clone
+		// boundary below also checks its inputs; do not scan the same pair twice.
 		engine_stereo_view::scene_record_pair cloned_records{};
 		// No active eye transaction, private snapshot or MOD GPU lock exists yet.
 		// A frontend view publication is not proof its async surface payload is

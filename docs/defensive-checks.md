@@ -54,3 +54,26 @@ culling construction and rejection of a zero-width frustum. This does not add
 canted-eye rendering: H2's current native adapter still requires the supported
 eye-orientation relationship. Removing that separate guard would silently
 flatten unsupported optics; it was retained.
+
+## Repeated backend validation
+
+Backend view-copy and world-owner entry no longer rescan the finalized matrices
+in a claim already admitted by the binding ring. The owner path also immediately
+passes those unchanged views to the scene-clone boundary, which retains its
+input validation. Publication no longer repeats pair identity/routing checks
+already performed by `validate_finalized`.
+
+Native finalizer, public publication/clone entry points, record identity, CPU
+completion, GPU lifetime and restore checks remain. This removes redundant
+work without introducing a second validation cache or weakening the producer
+boundary. No FPS improvement is claimed without measurement.
+
+Validation: Debug and RelWithDebInfo runs of `vr-engine-stereo-probe-smoke` and
+`vr-runtime-mock-smoke` passed after the final changes, including invalid
+publication rejection, scene cloning, backend copy and error/retirement cases.
+
+The complete `client` target also built successfully in Debug and
+RelWithDebInfo with v142 after all four corrections. The local build used the
+VS2019 generator supported by the installed CMake and the launcher's existing
+Node override; no tracked build-system or dependency changes were required.
+Neither client was deployed or run in the game/headset during this review.
