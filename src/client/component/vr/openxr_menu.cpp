@@ -1,4 +1,5 @@
 #include <std_include.hpp>
+#include "texture_extent.hpp"
 #include "openxr_menu.hpp"
 #include "spatial_math.hpp"
 #include "movie_presentation.hpp"
@@ -55,8 +56,7 @@ namespace vr::openxr
 		}
 		D3D11_TEXTURE2D_DESC description{};
 		source->GetDesc(&description);
-		if (!description.Width || !description.Height || description.Width > 8192 ||
-		    description.Height > 8192 || description.MipLevels != 1 || description.ArraySize != 1 ||
+		if (!texture_extent::valid(description.Width, description.Height) || description.MipLevels != 1 || description.ArraySize != 1 ||
 		    description.SampleDesc.Count != 1)
 		{
 			error = "native video descriptor is unsupported";

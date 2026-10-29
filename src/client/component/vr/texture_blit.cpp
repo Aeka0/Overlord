@@ -1,4 +1,5 @@
 #include <std_include.hpp>
+#include "texture_extent.hpp"
 #include "texture_blit.hpp"
 #include "native_conversion_command_list.hpp"
 #include <d3dcompiler.h>
@@ -147,7 +148,7 @@ float4 main(float4 position : SV_Position, float2 uv : TEXCOORD0) : SV_Target
 	bool renderer::draw(const draw_request& request, std::string& error)
 	{
 		const auto& [graphics, source, destination, width, height, format, dim] = request;
-		if (!graphics || !source || !destination || !width || !height || width > 8192 || height > 8192)
+		if (!graphics || !source || !destination || !texture_extent::valid(width,height))
 		{
 			error = "invalid texture blit arguments";
 			return false;

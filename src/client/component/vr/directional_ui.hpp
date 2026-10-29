@@ -1,4 +1,5 @@
 #pragma once
+#include "texture_extent.hpp"
 #include "spatial_panel.hpp"
 #include "native_hud_quad.hpp"
 #include <cstdint>
@@ -37,7 +38,7 @@ namespace vr::directional_ui
 		std::array<float,2> tangent{};
 		for (unsigned i=0;i<2;++i)
 		{
-			if (!std::isfinite(marker.viewport[i]) || marker.viewport[i]<16 || marker.viewport[i]>8192) return false;
+			if (!std::isfinite(marker.viewport[i]) || marker.viewport[i]<16 || marker.viewport[i]>texture_extent::maximum_dimension) return false;
 			tangent[i]=marker.viewport[i]/(2*reference_m*pixels_per_meter);
 			if (!std::isfinite(tangent[i]) || tangent[i]<=0 || tangent[i]>10) return false;
 		}
@@ -78,7 +79,7 @@ namespace vr::directional_ui
 	{
 		if (!finite(marker.world) || !std::isfinite(units) || units<=0) return false;
 		for (unsigned i=0;i<2;++i)
-			if (!std::isfinite(marker.viewport[i]) || marker.viewport[i]<16 || marker.viewport[i]>8192 ||
+			if (!std::isfinite(marker.viewport[i]) || marker.viewport[i]<16 || marker.viewport[i]>texture_extent::maximum_dimension ||
 				!std::isfinite(marker.anchor[i]) || std::abs(marker.anchor[i])>32768 ||
 				!std::isfinite(marker.tangent[i]) || marker.tangent[i]<=0 || marker.tangent[i]>10) return false;
 		const vec3 origin{camera[0],camera[1],camera[2]}, forward{camera[3],camera[4],camera[5]},

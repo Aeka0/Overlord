@@ -1,4 +1,5 @@
 #pragma once
+#include "texture_extent.hpp"
 #include "native_hud_quad.hpp"
 #include "spatial_panel.hpp"
 #include <array>
@@ -142,7 +143,7 @@ namespace vr::narrative_ui
 		float x, float y, float width, float height) noexcept
 	{
 		if (!std::isfinite(x) || !std::isfinite(y) || !std::isfinite(width) || !std::isfinite(height) ||
-			width < 16 || height < 16 || width > 8192 || height > 8192) return false;
+			width < 16 || height < 16 || width > texture_extent::maximum_dimension || height > texture_extent::maximum_dimension) return false;
 		// Verify all four corners, not just an AABB (a diamond is not coverage).
 		constexpr float tolerance = .5f;
 		float left = 32768, top = 32768, right = -32768, bottom = -32768;

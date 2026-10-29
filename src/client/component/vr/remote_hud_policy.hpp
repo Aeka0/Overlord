@@ -1,4 +1,5 @@
 #pragma once
+#include "texture_extent.hpp"
 #include "engine_stereo_bridge.hpp"
 #include "spatial_panel.hpp"
 #include <string_view>
@@ -26,7 +27,7 @@ namespace vr::remote_hud
 	inline bool material(std::string_view name)noexcept{return target_material(name) || instrument_material(name);}
 	inline std::array<float,2> instrument_tangents(unsigned width,unsigned height)noexcept
 	{
-		if(!width || !height || width>8192 || height>8192)return {};
+		if(!texture_extent::valid(width,height))return {};
 		// A readable 80-degree instrument canvas, independent of the native
 		// missile zoom. Target markers retain the original optical projection.
 		constexpr float half_width=.839099631f;

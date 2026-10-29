@@ -1,4 +1,5 @@
 #pragma once
+#include "texture_extent.hpp"
 
 #include <cstddef>
 #include <cstdint>
@@ -16,8 +17,7 @@ namespace vr::engine_scene_resolution
 	// Never clamp the runtime's recommendation into an accepted lower resolution.
 	constexpr bool valid(const extent size) noexcept
 	{
-		return size.width > 0 && size.height > 0 &&
-			size.width <= 16384 && size.height <= 16384;
+		return texture_extent::valid(size.width,size.height);
 	}
 
 	// H2 0x14074F670 calculates these fields; 0x1407502D0 stores them in

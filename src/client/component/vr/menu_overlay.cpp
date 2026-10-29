@@ -1,4 +1,5 @@
 #include <std_include.hpp>
+#include "texture_extent.hpp"
 #include "menu_overlay.hpp"
 #include "native_hud_capture.hpp"
 
@@ -35,7 +36,7 @@ namespace vr::menu_overlay
 		try
 		{
 			D3D11_TEXTURE2D_DESC desc;source->GetDesc(&desc);
-			if(!desc.Width||!desc.Height||desc.Width>8192||desc.Height>8192||std::uint64_t(desc.Width)*desc.Height>16777216||
+			if(!texture_extent::valid(desc.Width,desc.Height)||
 				desc.SampleDesc.Count!=1||desc.ArraySize!=1||desc.MipLevels!=1)return false;
 			if(desc.Format!=DXGI_FORMAT_R8G8B8A8_UNORM&&desc.Format!=DXGI_FORMAT_R8G8B8A8_UNORM_SRGB&&
 				desc.Format!=DXGI_FORMAT_B8G8R8A8_UNORM&&desc.Format!=DXGI_FORMAT_B8G8R8A8_UNORM_SRGB)return false;

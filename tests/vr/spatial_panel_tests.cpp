@@ -773,6 +773,17 @@ int main(int argc,char** argv)
 	ID3D11ShaderResourceView* saved = ink_view.Get(); context->PSSetShaderResources(5, 1, &saved);
 	renderer panel;
 	check(panel.draw(context.Get(), bg_view.Get(), ink_view.Get(), output_view.Get(), fullscreen, size, size, 0, 1), "WARP no-blur pass");
+	{
+		// A thin but valid target exercises the old 8192-side rejection without
+		// allocating an enormous square fixture or changing the source artwork.
+		auto wide_desc=desc;wide_desc.Width=8193;wide_desc.Height=16;
+		Microsoft::WRL::ComPtr<ID3D11Texture2D> wide;
+		Microsoft::WRL::ComPtr<ID3D11RenderTargetView> wide_view;
+		check(SUCCEEDED(device->CreateTexture2D(&wide_desc,nullptr,&wide)) &&
+			SUCCEEDED(device->CreateRenderTargetView(wide.Get(),nullptr,&wide_view)),"wide panel allocation");
+		check(panel.draw(context.Get(),bg_view.Get(),ink_view.Get(),wide_view.Get(),fullscreen,8193,16,0,1),
+			"device-supported panel width must not be rejected by an 8192 heuristic");
+	}
 	D3D11_VIEWPORT restored{}; unsigned viewport_count=1;
 	context->RSGetViewports(&viewport_count, &restored);
 	check(std::memcmp(&sentinel, &restored, sizeof(sentinel)) == 0, "native viewport restored");

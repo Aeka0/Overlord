@@ -24,3 +24,17 @@ Validation: `vr-runtime-mock-smoke` passed in Debug and RelWithDebInfo. Cases
 cover repeated waits on either eye, automatic continuation in the same session,
 menu wait recovery, and retained ownership after actual API/cleanup failures.
 This is mock/WARP evidence, not real compositor or headset acceptance.
+
+## Texture dimensions
+
+Native UI capture, OpenXR eyes/menu/movie transfer, SteamVR movie capture and
+spatial composition now share the D3D11 16384-side limit in `texture_extent.hpp`.
+The 8M/16M/32M pixel heuristics and inconsistent 8192-side checks no longer
+reject valid source/target dimensions. HUD/scope geometry uses the same bound.
+The existing bounded pools, descriptor/device checks and actual allocation
+results remain authoritative. No automatic downscaling was added.
+
+Validation: Debug and RelWithDebInfo builds and runs of `vr-runtime-mock-smoke`
+and `vr-spatial-panel-tests` passed. The former transfers a 4096×2160 menu and
+checks its diagnostic thumbnail; the latter draws to an actual 8193×16 WARP
+target. Full native HUD capture and headset acceptance remain live-test work.

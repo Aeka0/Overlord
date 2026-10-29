@@ -1,4 +1,5 @@
 #pragma once
+#include "texture_extent.hpp"
 #include "engine_stereo_bridge.hpp"
 #include "scripted_position.hpp"
 #include "spatial_panel.hpp"
@@ -49,7 +50,7 @@ namespace vr::screen_scope
 		bool project(const engine_stereo_bridge::eye_projection& eye,float eye_left_meters,
 			unsigned width,unsigned height,spatial_panel::projected_quad& output) const noexcept
 		{
-			if(!valid_ || !width || !height || width>8192 || height>8192 ||
+			if(!valid_ || !texture_extent::valid(width,height) ||
 				!std::isfinite(eye_left_meters) || std::abs(eye_left_meters)>.1f)return false;
 			std::array<float,4> unused{};
 			if(!window(eye,1,1,unused))return false;

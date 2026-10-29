@@ -1,4 +1,5 @@
 #include <std_include.hpp>
+#include "texture_extent.hpp"
 
 #include "openxr_d3d11.hpp"
 
@@ -208,10 +209,9 @@ namespace vr::openxr
 		output.width = view.recommendedImageRectWidth;
 		output.height = view.recommendedImageRectHeight;
 		output.sample_count = 1; // H2 and the transport ring use single-sample color.
-		if (output.width == 0 || output.height == 0 || output.width > 8192 || output.height > 8192 ||
-		    std::uint64_t(output.width) * output.height > 33554432)
+		if (!texture_extent::valid(output.width, output.height))
 		{
-			error = "OpenXR returned invalid recommended eye dimensions";
+			error = "OpenXR eye dimensions exceed D3D11 Texture2D limits";
 			return false;
 		}
 		const XrSwapchainCreateInfo create_info{XR_TYPE_SWAPCHAIN_CREATE_INFO,

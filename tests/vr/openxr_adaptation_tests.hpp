@@ -600,8 +600,8 @@ namespace openxr_adaptation_tests
 		auto images = std::make_shared<vr::native_menu::images>();
 		images->owner = vr::tests::menu_state;
 		auto image = std::make_shared<vr::native_hud_capture::frame>();
-		image->width = curved ? 64 : 1024;
-		image->height = image->width / 2;
+		image->width = curved ? 64 : 4096;
+		image->height = curved ? 32 : 2160;
 		image->generation = graphics.generation;
 		image->timestamp = GetTickCount64();
 		image->sequence = 1;
@@ -666,14 +666,14 @@ namespace openxr_adaptation_tests
 		runtime.on_present_post(shown, S_OK);
 		vr::tests::menu_images.reset();
 		vr::tests::menu_state.timestamp = GetTickCount64();
-		const auto missing = present(graphics, 3);
+		const auto missing = present(graphics, 4);
 		runtime.on_present(missing);
 		const auto unavailable = runtime.get_status().frame_submission;
 		vr::tests::require(unavailable.world == 0 && unavailable.menu_only == 1 && unavailable.empty > submission.empty &&
 			std::string_view(unavailable.menu.state) == "menu_images_missing" && !vr::tests::menu_pointer.ready,
 			"successful zero-layer menu frames must retain the missing publication gate");
 		runtime.on_present_post(missing, S_OK);
-		for (unsigned frame = 4; frame < 24 && !vr::diagnostics::menu_sources::snapshot(capture_request).sources[0]; ++frame)
+		for (unsigned frame = 5; frame < 24 && !vr::diagnostics::menu_sources::snapshot(capture_request).sources[0]; ++frame)
 		{
 			const auto event = present(graphics, frame);
 			runtime.on_present(event);
@@ -682,7 +682,7 @@ namespace openxr_adaptation_tests
 		}
 		const auto captured = vr::diagnostics::menu_sources::snapshot(capture_request);
 		const auto& source = captured.sources[0];
-		const unsigned thumbnail_width = curved ? 64 : 256, thumbnail_height = thumbnail_width / 2;
+		const unsigned thumbnail_width = curved ? 64 : 256, thumbnail_height = curved ? 32 : 135;
 		vr::tests::require(source && std::string_view(source->state) == "ready" &&
 			source->width == thumbnail_width && source->height == thumbnail_height &&
 			source->rgba.size() == thumbnail_width*thumbnail_height*4 && static_cast<unsigned char>(source->rgba[3]) >= 127 &&

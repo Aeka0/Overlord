@@ -1,4 +1,5 @@
 #include <std_include.hpp>
+#include "texture_extent.hpp"
 #include "spatial_panel_renderer.hpp"
 #include "presentation_options.hpp"
 #include "native_conversion_command_list.hpp"
@@ -319,7 +320,7 @@ float4 recording_ps(Vertex v) : SV_Target {
 		const image_layer* layers, unsigned count, unsigned width, unsigned height) noexcept
 	{
 		if (!context || context->GetType()!=D3D11_DEVICE_CONTEXT_IMMEDIATE || !destination || !layers ||
-			!count || count>64 || !width || !height || width>8192 || height>8192) return false;
+			!count || count>64 || !texture_extent::valid(width,height)) return false;
 		Microsoft::WRL::ComPtr<ID3D11Device> device, owner; context->GetDevice(&device); destination->GetDevice(&owner);
 		if (owner.Get()!=device.Get() || !ensure(device.Get())) return false;
 		for (unsigned i=0;i<count;++i)
