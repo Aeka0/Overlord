@@ -210,28 +210,41 @@ namespace
 		runtime.shutdown();
 	}
 
-	void expect_wait_timeout_result(mock_loader_control& loader, const d3d11::device_snapshot& graphics)
+	void expect_wait_timeout_result(mock_loader_control& loader, const d3d11::device_snapshot& graphics,
+		const unsigned delayed_eye)
 	{
-		configure(loader, graphics, vr::tests::mock::scenario::wait_timeout);
+		configure(loader, graphics, vr::tests::mock::scenario::happy);
 		vr::openxr::runtime_backend runtime;
 		runtime.set_desired_enabled(true);
 		runtime.set_scene_mode(vr::scene_mode::synthetic);
 		vr::tests::require(runtime.initialize(graphics), "wait-timeout scenario failed to initialize");
+		if (delayed_eye) loader.fail_once(vr::tests::mock::failure_point::wait_swapchain_image, XR_SUCCESS);
+		loader.fail_once(vr::tests::mock::failure_point::wait_swapchain_image, XR_TIMEOUT_EXPIRED);
+		loader.fail_once(vr::tests::mock::failure_point::wait_swapchain_image, XR_TIMEOUT_EXPIRED);
 		loader.queue_session_state(XR_SESSION_STATE_READY);
 		runtime.on_present(graphics, 1);
 		const auto status = runtime.get_status();
-		vr::tests::require(status.state == vr::runtime_state::recoverable_error,
-			std::format("wait timeout did not become recoverable_error (actual={})",
+		vr::tests::require(status.state == vr::runtime_state::running && status.applied_enabled,
+			std::format("wait timeout stopped the session (actual={})",
 				vr::to_string(status.state)));
 		vr::tests::require(status.last_xr_result == XR_TIMEOUT_EXPIRED &&
 			status.last_xr_result_name == "XR_TIMEOUT_EXPIRED",
 			"frame cleanup or xrEndFrame overwrote the wait timeout XrResult");
-		vr::tests::require(status.last_error.find("xrWaitSwapchainImage") != std::string::npos,
-			"wait timeout error did not retain the failing operation");
+		vr::tests::require(status.last_error.empty() && status.last_compositor_error.find("xrWaitSwapchainImage") != std::string::npos,
+			"pending wait must be diagnostic rather than a session error");
 		const auto statistics = loader.statistics();
-		vr::tests::require(statistics.images_acquired == 1 && statistics.images_waited == 1 &&
-			statistics.images_released == 1,
-			"wait timeout did not leave the acquired image eligible for a later legal wait/release");
+		vr::tests::require(statistics.images_acquired == delayed_eye + 1 && statistics.images_waited == delayed_eye &&
+			statistics.images_released == delayed_eye && statistics.sessions_destroyed == 0,
+			"wait timeout released an unready image or destroyed the session");
+		runtime.on_present(graphics, 2);
+		vr::tests::require(loader.statistics().images_acquired == delayed_eye + 1 && loader.statistics().frames_waited == 1,
+			"repeated timeout reacquired an image or replaced the prediction");
+		runtime.on_present(graphics, 3);
+		vr::tests::require(runtime.get_status().state == vr::runtime_state::running &&
+			runtime.get_status().last_compositor_error.empty() &&
+			loader.statistics().projection_frames == 1 && loader.statistics().images_acquired == 2 &&
+			loader.statistics().images_released == 2 && runtime.get_status().session_generation == status.session_generation,
+			"ready images did not resume in the original session/frame");
 		runtime.shutdown();
 	}
 
@@ -358,11 +371,14 @@ namespace
 	void expect_destroy_acquired_rejected(mock_loader_control& loader,
 		const d3d11::device_snapshot& graphics)
 	{
-		configure(loader, graphics, vr::tests::mock::scenario::wait_timeout);
+		configure(loader, graphics, vr::tests::mock::scenario::happy);
 		vr::openxr::runtime_backend runtime;
 		runtime.set_desired_enabled(true);
 		runtime.set_scene_mode(vr::scene_mode::synthetic);
 		vr::tests::require(runtime.initialize(graphics), "acquired-destroy scenario failed to initialize");
+		// Fail rendering, immediate settlement and teardown. Timeouts now defer
+		// frames, so use real API errors to exercise retained failed ownership.
+		loader.fail_once(vr::tests::mock::failure_point::wait_swapchain_image, XR_ERROR_RUNTIME_FAILURE);
 		loader.fail_once(vr::tests::mock::failure_point::wait_swapchain_image, XR_ERROR_RUNTIME_FAILURE);
 		loader.fail_once(vr::tests::mock::failure_point::wait_swapchain_image, XR_ERROR_RUNTIME_FAILURE);
 		loader.queue_session_state(XR_SESSION_STATE_READY);
@@ -611,7 +627,8 @@ int main()
 		expect_recreate_waits_for_ready(loader, graphics);
 		expect_session_end_failure(loader, graphics);
 		expect_tracking_recovery(loader, graphics);
-		expect_wait_timeout_result(loader, graphics);
+		expect_wait_timeout_result(loader, graphics, 0);
+		expect_wait_timeout_result(loader, graphics, 1);
 		expect_positive_wait_result(loader, graphics);
 		expect_frame_root_cause(loader, graphics,
 			vr::tests::mock::failure_point::acquire_swapchain_image, "xrAcquireSwapchainImage");

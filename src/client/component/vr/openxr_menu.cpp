@@ -258,6 +258,12 @@ namespace vr::openxr
 			if (target.swapchain.width != image->width || target.swapchain.height != image->height ||
 			    target.format != format)
 			{
+				const auto settled = settle_acquired_image(xr, target.swapchain);
+				if (!settled)
+				{
+					operation = settled.operation; result = settled.code;
+					return failure();
+				}
 				operation = "xrDestroySwapchain";
 				if (target.swapchain.handle != XR_NULL_HANDLE &&
 				    !destroy_eye_swapchain(xr, target.swapchain, result))
@@ -279,18 +285,24 @@ namespace vr::openxr
 				target.format = format;
 			}
 			auto& swap = target.swapchain;
-			const XrSwapchainImageAcquireInfo acquire{XR_TYPE_SWAPCHAIN_IMAGE_ACQUIRE_INFO};
-			operation = "xrAcquireSwapchainImage";
-			result = xr.acquire_swapchain_image(swap.handle, &acquire, &swap.acquired_index);
-			if (XR_FAILED(result))
-				return failure();
-			swap.acquired = true;
-			const XrSwapchainImageWaitInfo wait{XR_TYPE_SWAPCHAIN_IMAGE_WAIT_INFO, nullptr, 10'000'000};
-			operation = "xrWaitSwapchainImage";
-			result = xr.wait_swapchain_image(swap.handle, &wait);
-			if (XR_FAILED(result) || result == XR_TIMEOUT_EXPIRED)
-				return failure();
-			swap.waited = true;
+			if (!swap.acquired)
+			{
+				const XrSwapchainImageAcquireInfo acquire{XR_TYPE_SWAPCHAIN_IMAGE_ACQUIRE_INFO};
+				operation = "xrAcquireSwapchainImage";
+				result = xr.acquire_swapchain_image(swap.handle, &acquire, &swap.acquired_index);
+				if (XR_FAILED(result))
+					return failure();
+				swap.acquired = true;
+			}
+			if (!swap.waited)
+			{
+				const XrSwapchainImageWaitInfo wait{XR_TYPE_SWAPCHAIN_IMAGE_WAIT_INFO, nullptr, 10'000'000};
+				operation = "xrWaitSwapchainImage";
+				result = xr.wait_swapchain_image(swap.handle, &wait);
+				if (XR_FAILED(result) || result == XR_TIMEOUT_EXPIRED)
+					return failure();
+				swap.waited = true;
+			}
 			if (swap.acquired_index >= swap.render_targets.size())
 			{
 				result = XR_ERROR_RUNTIME_FAILURE;
@@ -413,20 +425,7 @@ namespace vr::openxr
 		for (auto& target : surfaces_)
 		{
 			auto& eye = target.swapchain;
-			if (eye.acquired)
-			{
-				if (!eye.waited)
-				{
-					const XrSwapchainImageWaitInfo wait{
-					    XR_TYPE_SWAPCHAIN_IMAGE_WAIT_INFO, nullptr, 10'000'000};
-					result = xr.wait_swapchain_image(eye.handle, &wait);
-					if (XR_FAILED(result) || result == XR_TIMEOUT_EXPIRED)
-						return {result, "xrWaitSwapchainImage"};
-					eye.waited = true;
-				}
-				if (!release_acquired_image(xr, eye, result))
-					return {result, "xrReleaseSwapchainImage"};
-			}
+			if (const auto settled = settle_acquired_image(xr, eye); !settled) return settled;
 			if (eye.handle != XR_NULL_HANDLE && !destroy_eye_swapchain(xr, eye, result))
 				return {result, "xrDestroySwapchain"};
 			target = {};

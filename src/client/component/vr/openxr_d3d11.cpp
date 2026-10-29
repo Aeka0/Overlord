@@ -288,6 +288,21 @@ namespace vr::openxr
 		return true;
 	}
 
+	call_result settle_acquired_image(const dispatch_table& dispatch, eye_swapchain& eye) noexcept
+	{
+		if (!eye.acquired) return {};
+		if (!eye.waited)
+		{
+			const XrSwapchainImageWaitInfo wait{XR_TYPE_SWAPCHAIN_IMAGE_WAIT_INFO, nullptr, 10'000'000};
+			const auto result = dispatch.wait_swapchain_image(eye.handle, &wait);
+			if (XR_FAILED(result) || result == XR_TIMEOUT_EXPIRED) return {result, "xrWaitSwapchainImage"};
+			eye.waited = true;
+		}
+		XrResult result{};
+		if (!release_acquired_image(dispatch, eye, result)) return {result, "xrReleaseSwapchainImage"};
+		return {};
+	}
+
 	bool destroy_eye_swapchain(const dispatch_table& dispatch,
 	                           eye_swapchain& eye,
 	                           XrResult& last_result,

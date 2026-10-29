@@ -38,6 +38,7 @@ namespace vr::openxr
 		std::string& error, XrResult& last_result);
 	[[nodiscard]] bool release_acquired_image(const dispatch_table& dispatch, eye_swapchain& eye,
 		XrResult& last_result) noexcept;
+	[[nodiscard]] call_result settle_acquired_image(const dispatch_table& dispatch, eye_swapchain& eye) noexcept;
 	[[nodiscard]] bool destroy_eye_swapchain(const dispatch_table& dispatch, eye_swapchain& eye,
 		XrResult& last_result, bool destroy_handle = true) noexcept;
 }

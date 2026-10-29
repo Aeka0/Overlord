@@ -634,7 +634,14 @@ namespace openxr_adaptation_tests
 		const auto first = present(graphics, 1);
 		runtime.on_present(first);
 		runtime.on_present_post(first, S_OK);
-		const auto shown = present(graphics, 2);
+		loader.fail_once(vr::tests::mock::failure_point::wait_swapchain_image, XR_TIMEOUT_EXPIRED);
+		const auto pending = present(graphics, 2);
+		runtime.on_present(pending);
+		runtime.on_present_post(pending, S_OK);
+		vr::tests::require(runtime.get_status().applied_enabled && loader.statistics().images_acquired == 1 &&
+			loader.statistics().images_released == 0 && loader.statistics().sessions_destroyed == 0,
+			"a pending menu image must retain its lease/session without publishing partial layers");
+		const auto shown = present(graphics, 3);
 		runtime.on_present(shown);
 		vr::tests::require((curved ? loader.statistics().cylinder_frames : loader.statistics().quad_frames) ==
 		                           1 &&

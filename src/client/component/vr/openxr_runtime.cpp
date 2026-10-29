@@ -166,6 +166,7 @@ namespace vr::openxr
 		struct prediction
 		{
 			bool sdk_frame_open{}, views_valid{}, native_pair_admitted{}, ui_only{}, menu_layers_ready{};
+			std::array<bool, 2> eyes_rendered{};
 			unsigned pending_presents{};
 			std::uint64_t pair{};
 			XrFrameState state{};
@@ -360,7 +361,7 @@ namespace vr::openxr
 				publish_status_locked();
 				return;
 			}
-			if (maintain_session(graphics) && !prediction_.sdk_frame_open && begin_prediction(frame))
+			if (maintain_session(graphics) && (prediction_.sdk_frame_open || begin_prediction(frame)))
 				(void)render_synthetic();
 			publish_status_locked();
 		}
@@ -995,18 +996,9 @@ namespace vr::openxr
 
 		bool settle_eye(eye_swapchain& eye, XrResult& result) noexcept
 		{
-			if (!eye.acquired)
-				return true;
-			if (!eye.waited)
-			{
-				const XrSwapchainImageWaitInfo wait_info{
-				    XR_TYPE_SWAPCHAIN_IMAGE_WAIT_INFO, nullptr, 10'000'000};
-				result = dispatch_.wait_swapchain_image(eye.handle, &wait_info);
-				if (XR_FAILED(result) || result == XR_TIMEOUT_EXPIRED)
-					return false;
-				eye.waited = true;
-			}
-			return release_acquired_image(dispatch_, eye, result);
+			const auto settled = settle_acquired_image(dispatch_, eye);
+			result = settled.code;
+			return bool(settled);
 		}
 
 		bool teardown_locked(const bool final_shutdown) noexcept
@@ -1307,6 +1299,8 @@ namespace vr::openxr
 				    runtime_state::fatal_for_vr, "native OpenXR pair retirement", XR_ERROR_RUNTIME_FAILURE);
 			if (count)
 				++status_.submitted_frames;
+			status_.last_compositor_error.clear();
+			set_result(result);
 			status_.state = runtime_state::running;
 			return true;
 		}
@@ -1599,26 +1593,35 @@ namespace vr::openxr
 		                XrResult& result,
 		                std::string& error)
 		{
-			const XrSwapchainImageAcquireInfo acquire{XR_TYPE_SWAPCHAIN_IMAGE_ACQUIRE_INFO};
-			result = dispatch_.acquire_swapchain_image(eye.handle, &acquire, &eye.acquired_index);
-			if (XR_FAILED(result))
+			// Retain this prediction across a compositor wait. A previously released
+			// eye is already complete; a pending eye must wait on its existing index.
+			if (prediction_.eyes_rendered[index]) return true;
+			if (!eye.acquired)
 			{
-				error = "xrAcquireSwapchainImage";
-				return false;
+				const XrSwapchainImageAcquireInfo acquire{XR_TYPE_SWAPCHAIN_IMAGE_ACQUIRE_INFO};
+				result = dispatch_.acquire_swapchain_image(eye.handle, &acquire, &eye.acquired_index);
+				if (XR_FAILED(result))
+				{
+					error = "xrAcquireSwapchainImage";
+					return false;
+				}
+				eye.acquired = true;
+				++status_.eyes[index].acquired;
 			}
-			eye.acquired = true;
-			++status_.eyes[index].acquired;
-			const XrSwapchainImageWaitInfo wait{XR_TYPE_SWAPCHAIN_IMAGE_WAIT_INFO, nullptr, 10'000'000};
+			if (!eye.waited)
 			{
-				const wait_timing::scope timing(wait_timing::site::xr_wait_image);
-				result = dispatch_.wait_swapchain_image(eye.handle, &wait);
+				const XrSwapchainImageWaitInfo wait{XR_TYPE_SWAPCHAIN_IMAGE_WAIT_INFO, nullptr, 10'000'000};
+				{
+					const wait_timing::scope timing(wait_timing::site::xr_wait_image);
+					result = dispatch_.wait_swapchain_image(eye.handle, &wait);
+				}
+				if (XR_FAILED(result) || result == XR_TIMEOUT_EXPIRED)
+				{
+					error = "xrWaitSwapchainImage";
+					return false;
+				}
+				eye.waited = true;
 			}
-			if (XR_FAILED(result) || result == XR_TIMEOUT_EXPIRED)
-			{
-				error = "xrWaitSwapchainImage";
-				return false;
-			}
-			eye.waited = true;
 			if (eye.acquired_index >= eye.render_targets.size())
 			{
 				result = XR_ERROR_RUNTIME_FAILURE;
@@ -1661,10 +1664,19 @@ namespace vr::openxr
 			eye.acquired = eye.waited = false;
 			++status_.eyes[index].released;
 			++status_.compositor_render_count;
+			prediction_.eyes_rendered[index] = true;
 			return true;
 		}
 		bool frame_failure(const char* operation, XrResult result)
 		{
+			if (result == XR_TIMEOUT_EXPIRED)
+			{
+				// OpenXR defines this as an incomplete wait, not a failed session.
+				// Keep both the native pair lease and the SDK frame for the next Present.
+				set_result(result);
+				status_.last_compositor_error = std::string(operation) + " deferred: image wait pending";
+				return false;
+			}
 			// Cleanup can itself fail. Preserve the initiating operation before
 			// settling images/ending the frame, then restore its current error below.
 			status_.failures.record(GetTickCount64(),status_.session_generation,status_.frame_context_id,result,
