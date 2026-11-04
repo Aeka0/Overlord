@@ -349,5 +349,13 @@
   "choice.tracerRoyal": "奢華",
   "choice.tracerAnime": "動漫",
   "choice.tracer1776": "1776",
-  "choice.tracerRainbow": "彩虹"
+  "choice.tracerRainbow": "彩虹",
+  "settings.independentHandAngles": "左右手分別調整",
+  "settings.independentHandAnglesHint": "為每支控制器單獨設定角度。首次開啟會複製共用角度，切換模式會保留已儲存的左右手設定。",
+  "settings.leftHandAngles": "左手角度",
+  "settings.leftHandAnglesHint": "以度為單位調整實體左控制器，以及該手持有的武器和彈匣。",
+  "settings.rightHandAngles": "右手角度",
+  "settings.rightHandAnglesHint": "以度為單位調整實體右控制器，以及該手持有的武器和彈匣。",
+  "settings.resetHandAngles": "重設這隻手",
+  "settings.mirrorOtherHand": "鏡像另一隻手"
 }

@@ -349,5 +349,13 @@
   "choice.tracerRoyal": "Royal",
   "choice.tracerAnime": "Anime",
   "choice.tracer1776": "1776",
-  "choice.tracerRainbow": "Arc-en-ciel"
+  "choice.tracerRainbow": "Arc-en-ciel",
+  "settings.independentHandAngles": "Régler chaque main séparément",
+  "settings.independentHandAnglesHint": "Réglez les angles de chaque manette physique. La première activation copie les angles communs ; changer de mode conserve les réglages enregistrés.",
+  "settings.leftHandAngles": "Angles de la main gauche",
+  "settings.leftHandAnglesHint": "Angles en degrés de la manette gauche, y compris les armes et chargeurs tenus.",
+  "settings.rightHandAngles": "Angles de la main droite",
+  "settings.rightHandAnglesHint": "Angles en degrés de la manette droite, y compris les armes et chargeurs tenus.",
+  "settings.resetHandAngles": "Réinitialiser cette main",
+  "settings.mirrorOtherHand": "Refléter l’autre main"
 }

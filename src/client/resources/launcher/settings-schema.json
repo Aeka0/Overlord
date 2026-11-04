@@ -262,6 +262,30 @@
     "row": "settings.positionOffsets"
   },
   {
+    "name": "vr_standardHandAnglesIndependent",
+    "category": "calibration",
+    "group": "settings.alignment",
+    "label": "settings.independentHandAngles",
+    "description": "settings.independentHandAnglesHint",
+    "type": "toggle",
+    "visibleWhen": [
+      "vr_controllerPoseMode",
+      "standard"
+    ]
+  },
+  {
+    "name": "vr_handAnglesIndependent",
+    "category": "calibration",
+    "group": "settings.alignment",
+    "label": "settings.independentHandAngles",
+    "description": "settings.independentHandAnglesHint",
+    "type": "toggle",
+    "visibleWhen": [
+      "vr_controllerPoseMode",
+      "legacy"
+    ]
+  },
+  {
     "name": "vr_standardHandAnglePitch",
     "category": "calibration",
     "group": "settings.alignment",
@@ -272,7 +296,13 @@
       "vr_controllerPoseMode",
       "standard"
     ],
-    "row": "settings.angleOffsets"
+    "row": "settings.angleOffsets",
+    "visibleWhenAll": [
+      [
+        "vr_standardHandAnglesIndependent",
+        false
+      ]
+    ]
   },
   {
     "name": "vr_handAnglePitch",
@@ -285,7 +315,13 @@
       "vr_controllerPoseMode",
       "legacy"
     ],
-    "row": "settings.angleOffsets"
+    "row": "settings.angleOffsets",
+    "visibleWhenAll": [
+      [
+        "vr_handAnglesIndependent",
+        false
+      ]
+    ]
   },
   {
     "name": "vr_standardHandAngleYaw",
@@ -298,7 +334,13 @@
       "vr_controllerPoseMode",
       "standard"
     ],
-    "row": "settings.angleOffsets"
+    "row": "settings.angleOffsets",
+    "visibleWhenAll": [
+      [
+        "vr_standardHandAnglesIndependent",
+        false
+      ]
+    ]
   },
   {
     "name": "vr_handAngleYaw",
@@ -311,7 +353,13 @@
       "vr_controllerPoseMode",
       "legacy"
     ],
-    "row": "settings.angleOffsets"
+    "row": "settings.angleOffsets",
+    "visibleWhenAll": [
+      [
+        "vr_handAnglesIndependent",
+        false
+      ]
+    ]
   },
   {
     "name": "vr_standardHandAngleRoll",
@@ -324,7 +372,13 @@
       "vr_controllerPoseMode",
       "standard"
     ],
-    "row": "settings.angleOffsets"
+    "row": "settings.angleOffsets",
+    "visibleWhenAll": [
+      [
+        "vr_standardHandAnglesIndependent",
+        false
+      ]
+    ]
   },
   {
     "name": "vr_handAngleRoll",
@@ -337,7 +391,253 @@
       "vr_controllerPoseMode",
       "legacy"
     ],
-    "row": "settings.angleOffsets"
+    "row": "settings.angleOffsets",
+    "visibleWhenAll": [
+      [
+        "vr_handAnglesIndependent",
+        false
+      ]
+    ]
+  },
+  {
+    "name": "vr_standardLeftHandAnglePitch",
+    "category": "calibration",
+    "group": "settings.alignment",
+    "label": "settings.pitch",
+    "type": "number",
+    "unit": "unit.degrees",
+    "visibleWhen": [
+      "vr_controllerPoseMode",
+      "standard"
+    ],
+    "visibleWhenAll": [
+      [
+        "vr_standardHandAnglesIndependent",
+        true
+      ]
+    ],
+    "row": "settings.leftHandAngles",
+    "calibrationHand": "left"
+  },
+  {
+    "name": "vr_leftHandAnglePitch",
+    "category": "calibration",
+    "group": "settings.alignment",
+    "label": "settings.pitch",
+    "type": "number",
+    "unit": "unit.degrees",
+    "visibleWhen": [
+      "vr_controllerPoseMode",
+      "legacy"
+    ],
+    "visibleWhenAll": [
+      [
+        "vr_handAnglesIndependent",
+        true
+      ]
+    ],
+    "row": "settings.leftHandAngles",
+    "calibrationHand": "left"
+  },
+  {
+    "name": "vr_standardLeftHandAngleYaw",
+    "category": "calibration",
+    "group": "settings.alignment",
+    "label": "settings.yaw",
+    "type": "number",
+    "unit": "unit.degrees",
+    "visibleWhen": [
+      "vr_controllerPoseMode",
+      "standard"
+    ],
+    "visibleWhenAll": [
+      [
+        "vr_standardHandAnglesIndependent",
+        true
+      ]
+    ],
+    "row": "settings.leftHandAngles",
+    "calibrationHand": "left"
+  },
+  {
+    "name": "vr_leftHandAngleYaw",
+    "category": "calibration",
+    "group": "settings.alignment",
+    "label": "settings.yaw",
+    "type": "number",
+    "unit": "unit.degrees",
+    "visibleWhen": [
+      "vr_controllerPoseMode",
+      "legacy"
+    ],
+    "visibleWhenAll": [
+      [
+        "vr_handAnglesIndependent",
+        true
+      ]
+    ],
+    "row": "settings.leftHandAngles",
+    "calibrationHand": "left"
+  },
+  {
+    "name": "vr_standardLeftHandAngleRoll",
+    "category": "calibration",
+    "group": "settings.alignment",
+    "label": "settings.roll",
+    "type": "number",
+    "unit": "unit.degrees",
+    "visibleWhen": [
+      "vr_controllerPoseMode",
+      "standard"
+    ],
+    "visibleWhenAll": [
+      [
+        "vr_standardHandAnglesIndependent",
+        true
+      ]
+    ],
+    "row": "settings.leftHandAngles",
+    "calibrationHand": "left"
+  },
+  {
+    "name": "vr_leftHandAngleRoll",
+    "category": "calibration",
+    "group": "settings.alignment",
+    "label": "settings.roll",
+    "type": "number",
+    "unit": "unit.degrees",
+    "visibleWhen": [
+      "vr_controllerPoseMode",
+      "legacy"
+    ],
+    "visibleWhenAll": [
+      [
+        "vr_handAnglesIndependent",
+        true
+      ]
+    ],
+    "row": "settings.leftHandAngles",
+    "calibrationHand": "left"
+  },
+  {
+    "name": "vr_standardRightHandAnglePitch",
+    "category": "calibration",
+    "group": "settings.alignment",
+    "label": "settings.pitch",
+    "type": "number",
+    "unit": "unit.degrees",
+    "visibleWhen": [
+      "vr_controllerPoseMode",
+      "standard"
+    ],
+    "visibleWhenAll": [
+      [
+        "vr_standardHandAnglesIndependent",
+        true
+      ]
+    ],
+    "row": "settings.rightHandAngles",
+    "calibrationHand": "right"
+  },
+  {
+    "name": "vr_rightHandAnglePitch",
+    "category": "calibration",
+    "group": "settings.alignment",
+    "label": "settings.pitch",
+    "type": "number",
+    "unit": "unit.degrees",
+    "visibleWhen": [
+      "vr_controllerPoseMode",
+      "legacy"
+    ],
+    "visibleWhenAll": [
+      [
+        "vr_handAnglesIndependent",
+        true
+      ]
+    ],
+    "row": "settings.rightHandAngles",
+    "calibrationHand": "right"
+  },
+  {
+    "name": "vr_standardRightHandAngleYaw",
+    "category": "calibration",
+    "group": "settings.alignment",
+    "label": "settings.yaw",
+    "type": "number",
+    "unit": "unit.degrees",
+    "visibleWhen": [
+      "vr_controllerPoseMode",
+      "standard"
+    ],
+    "visibleWhenAll": [
+      [
+        "vr_standardHandAnglesIndependent",
+        true
+      ]
+    ],
+    "row": "settings.rightHandAngles",
+    "calibrationHand": "right"
+  },
+  {
+    "name": "vr_rightHandAngleYaw",
+    "category": "calibration",
+    "group": "settings.alignment",
+    "label": "settings.yaw",
+    "type": "number",
+    "unit": "unit.degrees",
+    "visibleWhen": [
+      "vr_controllerPoseMode",
+      "legacy"
+    ],
+    "visibleWhenAll": [
+      [
+        "vr_handAnglesIndependent",
+        true
+      ]
+    ],
+    "row": "settings.rightHandAngles",
+    "calibrationHand": "right"
+  },
+  {
+    "name": "vr_standardRightHandAngleRoll",
+    "category": "calibration",
+    "group": "settings.alignment",
+    "label": "settings.roll",
+    "type": "number",
+    "unit": "unit.degrees",
+    "visibleWhen": [
+      "vr_controllerPoseMode",
+      "standard"
+    ],
+    "visibleWhenAll": [
+      [
+        "vr_standardHandAnglesIndependent",
+        true
+      ]
+    ],
+    "row": "settings.rightHandAngles",
+    "calibrationHand": "right"
+  },
+  {
+    "name": "vr_rightHandAngleRoll",
+    "category": "calibration",
+    "group": "settings.alignment",
+    "label": "settings.roll",
+    "type": "number",
+    "unit": "unit.degrees",
+    "visibleWhen": [
+      "vr_controllerPoseMode",
+      "legacy"
+    ],
+    "visibleWhenAll": [
+      [
+        "vr_handAnglesIndependent",
+        true
+      ]
+    ],
+    "row": "settings.rightHandAngles",
+    "calibrationHand": "right"
   },
   {
     "name": "vr_adsComfort",

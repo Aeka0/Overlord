@@ -28,6 +28,7 @@
 #include "weapon_holsters.hpp"
 #include "official_cheats.hpp"
 #include "holster_presentation.hpp"
+#include "holster_feedback.hpp"
 #include "hands/attachment_pose.hpp"
 #include "weapon_carry_grip.hpp"
 #include "grip_edges.hpp"
@@ -108,6 +109,7 @@ namespace vr::gameplay::weapons::carry
 		std::array<std::atomic_uint64_t, 4> render_misses{}; // record, epoch/part, ownership, origin
 		hold presented{};
 		grip_edge_gate edges;
+		back_slot_feedback slot_feedback;
 		scripted_control::selection_pause script_pause;
 		identity preferred{};
 		std::uint32_t expected_selection{}, last_selection{};
@@ -162,6 +164,7 @@ namespace vr::gameplay::weapons::carry
 			interaction::suspend();
 			owned.clear();
 			edges = {};
+			slot_feedback.reset();
 			preferred = {};
 			last_sequence = 0;
 			motion_history.reset();
@@ -379,6 +382,21 @@ namespace vr::gameplay::weapons::carry
 			out.reference = input.reference_generation;
 			out.at = input.sampled_at;
 			out.support_candidate = hand::none;
+			return out;
+		}
+		struct release_check { hands::anchor world{}; bool geometry{}, clear{}; };
+		release_check check_release(const instance& item, const scene& held_pose,
+		                            const head_pose_bridge::spatial_frame& body)
+		{
+			release_check out;
+			const auto model = native_carry::geometry(item.id.weapon);
+			const bool blade = held_pose.authored && held_pose.authored->melee;
+			out.geometry = held_pose.owner.id() == item.id && model.valid &&
+			                      (blade || (held_pose.has_muzzle && model.has_muzzle));
+			out.world = blade ? held_pose.gun
+			              : hands::pose_math::compose(held_pose.gun,
+				                hands::pose_math::compose(held_pose.muzzle, hands::pose_math::inverse(model.muzzle)));
+			out.clear = out.geometry && native_carry::clearance(item.id.weapon, out.world, body.head_position);
 			return out;
 		}
 		hold projection() noexcept
@@ -892,19 +910,11 @@ namespace vr::gameplay::weapons::carry
 				}
 				const auto before_release = v->owner;
 				const auto dropped_pose = pose(*v, wrists, input, valid_hands);
-				const auto model = native_carry::geometry(id.weapon);
-				const bool blade = dropped_pose.authored && dropped_pose.authored->melee;
-				const bool geometry = dropped_pose.owner.id() == id && model.valid &&
-				                      (blade || (dropped_pose.has_muzzle && model.has_muzzle));
-				const auto world =
-				    blade ? dropped_pose.gun
-				          : hands::pose_math::compose(
-				                dropped_pose.gun,
-				                hands::pose_math::compose(dropped_pose.muzzle,
-				                                          hands::pose_math::inverse(model.muzzle)));
-				const bool clear = geometry && native_carry::clearance(id.weapon, world, body.head_position);
+				const auto placement = check_release(*v, dropped_pose, body);
+				const auto& world = placement.world;
+				const bool clear = placement.clear;
 				const std::string clearance_detail =
-				    geometry ? native_carry::status() : "held pose or muzzle geometry unavailable";
+				    placement.geometry ? native_carry::status() : "held pose or muzzle geometry unavailable";
 				const auto r = owned.release(
 				    id,
 				    event.released,
@@ -1063,6 +1073,7 @@ namespace vr::gameplay::weapons::carry
 		if (!scheduler::is_executing(scheduler::pipeline::server))
 			return nullptr;
 		tick();
+		if (!batch_ready) slot_feedback.reset();
 		return batch_ready ? &batch : nullptr;
 	}
 	void collect_interactions()
@@ -1338,6 +1349,34 @@ namespace vr::gameplay::weapons::carry
 		const auto& wrists = batch.frame.wrists;
 		const auto valid_hands = batch.frame.valid_hands;
 		const auto& layout = batch.layout;
+		const auto& slots = batch.frame.holsters;
+		unsigned near_hands{};
+		if (slots.valid)
+		{
+			auto area = slots.volumes[2];
+			area.radius += .04f * body.units_per_meter;
+			for (unsigned h = 0; h < 2; ++h)
+				if ((valid_hands & (1u << h)) && area.contains(batch.hand_positions[h])) near_hands |= 1u << h;
+		}
+		const auto operated = batch.edges.pressed | batch.edges.released | batch.edges.consumed;
+		const bool blocked = sequences::for_player(batch.player).block_carry;
+		const auto cues = slot_feedback.update(batch.frame.input, near_hands, operated, [&](hand actor)
+		{
+			const auto h = unsigned(actor);
+			if (blocked || !input.squeeze[h].active || (batch.edges.deferred & (1u << h))) return false;
+			const auto candidate = back_slot_candidate(owned, actor, slots, batch.hand_positions[h],
+			                                           !cheats::green_beret());
+			if (candidate.action == outcome::unchanged ||
+			    !hand_interaction::permits(actor, hand_interaction::domain::carry, candidate.subject,
+			                              hand_interaction::recipe::single, hand_interaction::role::control))
+				return false;
+			if (candidate.action == outcome::drawn)
+				return !input.squeeze[h].down && draw_contact(owned, slots, wrists[h].position) == location::back;
+			const auto* held = owned.find(candidate.subject);
+			return check_release(*held, pose(*held, wrists, input, valid_hands), body).clear;
+		});
+		for (unsigned h = 0; h < 2; ++h)
+			if (cues & (1u << h)) feedback::carry_readiness(hand(h), input);
 		models_frame models;
 		models.at = input.sampled_at;
 		models.units = body.units_per_meter;

@@ -448,8 +448,11 @@ namespace vr::controllers
 				remote_axes_verified,remote_axis_commands.load(),remote_stick_commands.load());
 			const auto input = controller_input::latest_interaction();
 			const auto head = head_pose_bridge::get_status();
-			console::info("[VR input] hand_angle_pitch=%.2f yaw=%.2f roll=%.2f settling=%d runtime_aim_preserved=1\n",
-				input.orientation_degrees[0],input.orientation_degrees[1],input.orientation_degrees[2],input.orientation_settling);
+			console::info("[VR input] hand_angle_mode=%s settling=%d runtime_aim_preserved=1\n",
+				input.orientation_independent?"independent":"shared",input.orientation_settling);
+			for (unsigned h=0;h<2;++h)
+				console::info("[VR input] hand=%s angle_pitch=%.2f yaw=%.2f roll=%.2f\n",h?"right":"left",
+					input.orientation_degrees[h][0],input.orientation_degrees[h][1],input.orientation_degrees[h][2]);
 			console::info("[VR input] pose_pipeline=%s\n", controller_pose_pipeline::name(input.pose_pipeline));
 			console::info("[VR input] wrist_calibration=grip_local_point inward/back/up_m=%.4f/%.4f/%.4f\n",
 				input.position_offsets_meters[0],input.position_offsets_meters[1],input.position_offsets_meters[2]);

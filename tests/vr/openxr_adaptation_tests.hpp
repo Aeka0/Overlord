@@ -118,7 +118,7 @@ namespace openxr_adaptation_tests
 				runtime.get_status().controller_reference_ids[0].empty() &&
 				runtime.get_status().controller_pose_reference_error.empty(),
 				"standard pipeline published legacy calibration metadata");
-				tests::require(input.orientation_degrees == controller_calibration::defaults_for(controller_pose_pipeline::mode::standard).orientation,
+				tests::require(input.orientation_degrees == controller_calibration::defaults_for(controller_pose_pipeline::mode::standard).effective_angles(),
 					"standard input consumed legacy angle calibration");
 				tests::require(input.position_offsets_meters == controller_calibration::defaults_for(controller_pose_pipeline::mode::standard).position,
 					"standard input consumed legacy position calibration");

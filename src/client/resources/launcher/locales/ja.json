@@ -349,5 +349,13 @@
   "choice.tracerRoyal": "Royal",
   "choice.tracerAnime": "Anime",
   "choice.tracer1776": "1776",
-  "choice.tracerRainbow": "レインボー"
+  "choice.tracerRainbow": "レインボー",
+  "settings.independentHandAngles": "左右の手を個別に調整",
+  "settings.independentHandAnglesHint": "各コントローラーの角度を設定します。初回は共通の角度をコピーし、モードを切り替えても保存済みの左右の設定を保持します。",
+  "settings.leftHandAngles": "左手の角度",
+  "settings.leftHandAnglesHint": "左コントローラーと、その手で持つ武器やマガジンの角度を度単位で調整します。",
+  "settings.rightHandAngles": "右手の角度",
+  "settings.rightHandAnglesHint": "右コントローラーと、その手で持つ武器やマガジンの角度を度単位で調整します。",
+  "settings.resetHandAngles": "この手をリセット",
+  "settings.mirrorOtherHand": "反対の手を反転コピー"
 }

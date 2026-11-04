@@ -38,6 +38,8 @@ export interface Field {
   unit?: string;
   inverted?: boolean;
   visibleWhen?: [string, string | boolean];
+  visibleWhenAll?: Array<[string, string | boolean]>;
+  calibrationHand?: "left" | "right";
   row?: string;
 }
 export const fields = fieldsJson as Field[];
@@ -140,6 +142,7 @@ export function collect(
 }
 export function visible(field: Field, draft: Draft) {
   return (
-    !field.visibleWhen || draft[field.visibleWhen[0]] === field.visibleWhen[1]
+    (!field.visibleWhen || draft[field.visibleWhen[0]] === field.visibleWhen[1]) &&
+    (!field.visibleWhenAll || field.visibleWhenAll.every(([key, value]) => draft[key] === value))
   );
 }

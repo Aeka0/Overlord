@@ -66,4 +66,32 @@ template<class Check> void controller_orientation_tests(Check check)
 		adjusted.aim[0].tracking.orientation==base.aim[0].tracking.orientation,
 		"position calibration marks physical history discontinuity without changing aim angles");
 	check(!position_change.apply(raw,{}, {0,0,.501f}).aim[0].valid,"malformed position calibration cannot publish an actionable hand pose");
+	configuration selected;
+	selected.orientation={-4,12,3};selected.hands={angles{},angles{0,20,0}};
+	check(selected.effective_angles()==hand_angles{selected.orientation,selected.orientation},
+		"shared mode ignores retained independent settings");
+	selected.independent=true;
+	calibration separate;const auto right_only=separate.apply_hands(raw,selected.effective_angles());
+	check(right_only.aim[0].tracking.orientation==identity && near(-right_only.aim[1].tracking.orientation[0][2],-.34202014f),
+		"right gun yaw leaves the left magazine controller at its exact default orientation");
+	check(right_only.orientation_degrees==selected.hands && right_only.grip[0].tracking.orientation==identity &&
+		right_only.runtime_aim[1].tracking.orientation==identity && right_only.trigger[1].presses==raw.trigger[1].presses,
+		"per-hand calibration preserves grip pivots, runtime witnesses and input ownership");
+	raw.sampled_at+=1ms;selected.hands[0]={0,-15,0};
+	const auto edited=separate.apply_hands(raw,selected.effective_angles());
+	check(edited.orientation_settling && edited.aim[1].tracking.orientation==right_only.aim[1].tracking.orientation &&
+		near(-edited.aim[0].tracking.orientation[0][2],.25881905f) && edited.trigger[1].down,
+		"editing left angles fences motion history without moving the right weapon or releasing it");
+	for(float invalid:{181.f,std::numeric_limits<float>::quiet_NaN()})
+	{
+		calibration malformed;const hand_angles degrees{angles{invalid,0,0},angles{0,20,0}};
+		const auto output=malformed.apply_hands(raw,degrees);
+		check(!output.aim[0].valid && output.aim[1].valid && output.aim[1].tracking.orientation==right_only.aim[1].tracking.orientation,
+			"a malformed left calibration rejects only the left hand");
+		raw.sampled_at+=250ms;
+		check(!malformed.apply_hands(raw,degrees).orientation_settling,"an invalid hand cannot continually reset the healthy hand's motion history");
+	}
+	raw.aim[0].valid=false;
+	check(!separate.apply_hands(raw,selected.effective_angles()).aim[0].valid,
+		"independent angles do not fabricate missing tracking");
 }

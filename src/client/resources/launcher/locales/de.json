@@ -349,5 +349,13 @@
   "choice.tracerRoyal": "Royal",
   "choice.tracerAnime": "Anime",
   "choice.tracer1776": "1776",
-  "choice.tracerRainbow": "Regenbogen"
+  "choice.tracerRainbow": "Regenbogen",
+  "settings.independentHandAngles": "Hände getrennt einstellen",
+  "settings.independentHandAnglesHint": "Winkel für jeden physischen Controller festlegen. Beim ersten Aktivieren werden die gemeinsamen Winkel kopiert; gespeicherte Handwerte bleiben beim Moduswechsel erhalten.",
+  "settings.leftHandAngles": "Winkel der linken Hand",
+  "settings.leftHandAnglesHint": "Winkel in Grad für den linken Controller sowie gehaltene Waffen und Magazine.",
+  "settings.rightHandAngles": "Winkel der rechten Hand",
+  "settings.rightHandAnglesHint": "Winkel in Grad für den rechten Controller sowie gehaltene Waffen und Magazine.",
+  "settings.resetHandAngles": "Diese Hand zurücksetzen",
+  "settings.mirrorOtherHand": "Andere Hand spiegeln"
 }

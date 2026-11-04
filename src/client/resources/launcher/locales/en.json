@@ -349,5 +349,13 @@
   "choice.tracerRoyal": "Royal",
   "choice.tracerAnime": "Anime",
   "choice.tracer1776": "1776",
-  "choice.tracerRainbow": "Rainbow"
+  "choice.tracerRainbow": "Rainbow",
+  "settings.independentHandAngles": "Adjust hands separately",
+  "settings.independentHandAnglesHint": "Set angles for each physical controller. First use copies the shared angles; switching modes keeps your saved hand settings.",
+  "settings.leftHandAngles": "Left hand angles",
+  "settings.leftHandAnglesHint": "Degrees for the physical left controller, including its held weapons and magazines.",
+  "settings.rightHandAngles": "Right hand angles",
+  "settings.rightHandAnglesHint": "Degrees for the physical right controller, including its held weapons and magazines.",
+  "settings.resetHandAngles": "Reset this hand",
+  "settings.mirrorOtherHand": "Mirror other hand"
 }

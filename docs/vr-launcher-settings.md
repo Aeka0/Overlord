@@ -483,8 +483,8 @@ the selected `vr_handOffset*` or `vr_standardHandOffset*` bank now defines the
 complete calibrated wrist point and its rotation centre.
 
 
-The three angle controls also live under **Basics > Controller alignment**.
-They rotate both hands and their held weapons about the controller's local axes:
+In shared mode, the three angle controls under **Calibration > Controller
+alignment** rotate both hands and their held weapons about the controller's local axes:
 positive pitch tilts up, positive yaw turns left, positive roll tilts the right
 side down. Negative pitch lowers the aim; zero on all three restores the runtime
 aim orientation. Angle calibration does not change the position correction.
@@ -492,6 +492,23 @@ Console commands use the same names, for example
 `vr_handAnglePitch -20`, and take effect on the next input frame.
 Live changes reset melee motion history for 200 ms so calibration cannot be
 mistaken for a strike; the calibrated model remains visible and held.
+
+Under **Calibration > Controller alignment**, **Adjust hands separately** enables
+physical left/right pitch/yaw/roll. The first activation copies the shared angles;
+later toggles keep each mode's saved values. **Reset this hand** restores only
+that hand to zero. **Mirror other hand** copies pitch and reverses yaw/roll once.
+The settings follow the controller through hand exchanges, dual weapons and
+magazine handling. Position offsets use the existing shared grip-local point.
+
+Legacy uses `vr_handAnglesIndependent` and `vr_leftHandAnglePitch/Yaw/Roll` /
+`vr_rightHandAnglePitch/Yaw/Roll`. Standard uses
+`vr_standardHandAnglesIndependent` and `vr_standardLeftHandAnglePitch/Yaw/Roll` /
+`vr_standardRightHandAnglePitch/Yaw/Roll`. These slash lists denote separate
+commands, for example `vr_rightHandAngleYaw 15`; enable the bank with
+`vr_handAnglesIndependent 1`. Console edits take effect on the next input frame.
+The launcher saves `vr_handAnglesInitialized` / `vr_standardHandAnglesInitialized`
+to remember its first-time copy. `vr_input_status` reports the active mode and
+effective angles for each physical hand.
 
 
 

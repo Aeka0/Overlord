@@ -13,6 +13,7 @@
 #include <memory>
 #include "weapon_identity_tests.hpp"
 #include "holster_presentation_tests.hpp"
+#include "holster_feedback_tests.hpp"
 #include "weapon_carry_motion_tests.hpp"
 #include "weapon_grip_mode_tests.hpp"
 
@@ -22,6 +23,7 @@ namespace weapon_carry_tests
 	{
 		weapon_identity_tests::run(check);
 		holster_presentation_tests::run(check);
+		holster_feedback_tests::run(check);
 		weapon_carry_motion_tests::run(check);
 		weapon_grip_mode_tests::run(check);
 		using namespace vr::gameplay::weapons;

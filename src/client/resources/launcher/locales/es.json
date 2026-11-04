@@ -349,5 +349,13 @@
   "choice.tracerRoyal": "Royal",
   "choice.tracerAnime": "Anime",
   "choice.tracer1776": "1776",
-  "choice.tracerRainbow": "Arcoíris"
+  "choice.tracerRainbow": "Arcoíris",
+  "settings.independentHandAngles": "Ajustar cada mano por separado",
+  "settings.independentHandAnglesHint": "Configura los ángulos de cada mando físico. Al activar esta opción por primera vez se copian los ángulos compartidos; cambiar de modo conserva los ajustes guardados.",
+  "settings.leftHandAngles": "Ángulos de la mano izquierda",
+  "settings.leftHandAnglesHint": "Grados para el mando izquierdo y las armas y cargadores que sostiene.",
+  "settings.rightHandAngles": "Ángulos de la mano derecha",
+  "settings.rightHandAnglesHint": "Grados para el mando derecho y las armas y cargadores que sostiene.",
+  "settings.resetHandAngles": "Restablecer esta mano",
+  "settings.mirrorOtherHand": "Reflejar la otra mano"
 }

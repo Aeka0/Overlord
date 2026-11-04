@@ -349,5 +349,13 @@
   "choice.tracerRoyal": "Royal",
   "choice.tracerAnime": "Anime",
   "choice.tracer1776": "1776",
-  "choice.tracerRainbow": "무지개"
+  "choice.tracerRainbow": "무지개",
+  "settings.independentHandAngles": "양손 개별 조정",
+  "settings.independentHandAnglesHint": "각 컨트롤러의 각도를 설정합니다. 처음 활성화하면 공통 각도를 복사하며, 모드를 전환해도 저장된 양손 설정을 유지합니다.",
+  "settings.leftHandAngles": "왼손 각도",
+  "settings.leftHandAnglesHint": "왼쪽 컨트롤러와 해당 손으로 든 무기 및 탄창의 각도를 도 단위로 조정합니다.",
+  "settings.rightHandAngles": "오른손 각도",
+  "settings.rightHandAnglesHint": "오른쪽 컨트롤러와 해당 손으로 든 무기 및 탄창의 각도를 도 단위로 조정합니다.",
+  "settings.resetHandAngles": "이 손 초기화",
+  "settings.mirrorOtherHand": "반대 손 대칭 복사"
 }

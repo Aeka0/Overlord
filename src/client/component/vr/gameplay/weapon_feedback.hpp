@@ -80,6 +80,7 @@ namespace vr::gameplay::weapons::feedback
 	// A confirmed inventory operation may leave the hand empty. Its pulse is
 	// hand-owned, not validated against a weapon's continuing held lease.
 	void carry_confirmation(hand actor,const controller_input::frame& input) noexcept;
+	void carry_readiness(hand actor,const controller_input::frame& input) noexcept;
 	void melee_confirmation(const hold& owner,const controller_input::frame& input,const std::array<float,3>& position) noexcept;
 	void fist_confirmation(hand actor,std::uint64_t revision,const controller_input::frame& input,const std::array<float,3>& position) noexcept;
 }

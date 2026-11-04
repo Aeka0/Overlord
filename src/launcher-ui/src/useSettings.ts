@@ -147,6 +147,22 @@ export function useSettings(initial: SettingsState) {
       }, 180),
     );
   }
+  async function update(values: Values) {
+    const patch = makeDraft(values, stateRef.current.limits);
+    const previous = { ...draftRef.current };
+    const revisions: Record<string, number> = {};
+    for (const [key, value] of Object.entries(patch)) {
+      const timer = timers.current.get(key);
+      if (timer) clearTimeout(timer);
+      timers.current.delete(key);
+      revisions[key] = edit(key, value);
+    }
+    const success = await save(Object.keys(patch));
+    if (!success)
+      for (const [key, value] of Object.entries(patch))
+        revert(key, value, previous[key], revisions[key]);
+    return success;
+  }
   function flushField(key: string) {
     const timer = timers.current.get(key);
     if (timer) {
@@ -198,6 +214,7 @@ export function useSettings(initial: SettingsState) {
     edit,
     replace,
     save,
+    update,
     autoSave,
     flushField,
     reset,

@@ -349,6 +349,8 @@ input[aria-invalid="true"] {
 }
 .setting-control:has(.calibration-row) {
   flex: 1;
+  flex-direction: column;
+  align-items: stretch;
   min-width: 0;
   max-width: 420px;
 }
@@ -380,6 +382,12 @@ input[aria-invalid="true"] {
   display: flex;
   flex-direction: column;
   min-width: 0;
+}
+.calibration-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 12px;
 }
 .calibration-axis > label {
   flex: 1;

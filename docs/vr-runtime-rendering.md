@@ -326,6 +326,13 @@ Existing custom legacy calibration is not automatically interpreted as standard
 grip calibration. Select the appropriate preset or adjust the standard bank.
 All gameplay consumers resolve the same selected calibration catalog.
 
+Each bank also saves an independent-hand angle switch and separate physical
+left/right pitch/yaw/roll values. Shared angles remain the default. Calibration
+resolves the two effective angle triplets before the common input publication
+and stabilization stage, so gameplay and presentation use the same corrected
+poses. The launcher seeds from shared angles once, supports single-hand reset
+and an explicit one-time mirror, and retains both modes' values on later switches.
+
 Both calibration banks default to zero position and angle adjustment and share
 one **None** preset. Zero selects the grip origin in the selected coordinate
 frame, without an additional wrist baseline. Inward is mirrored between hands;

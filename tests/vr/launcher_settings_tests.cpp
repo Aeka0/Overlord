@@ -523,6 +523,12 @@ int main(int argc, char** argv)
 		require(debug_selection(json{{vr::debug_options::names[0], "true"}}) ==
 			vr::debug_options::selection{}, "Runtime probe selection rejects string booleans");
 		require(initial.dump().size() < max_payload_bytes, "Complete settings fit the bounded bridge payload");
+		{
+			auto calibrated=initial;
+			for(const auto* bank:{&vr::settings::independent_hand_angles,&vr::settings::standard_independent_hand_angles})
+				for(const auto& hand:*bank) for(const auto& field:hand) calibrated[field.name]=-123.123456;
+			require(calibrated.dump().size()<max_payload_bytes,"Full-precision independent angles fit the existing bridge payload limit");
+		}
 		require(initial[vr::settings::camera_bob] == true, "Movement camera bob defaults on");
 		require(initial[vr::settings::recording_mode.name] == false, "Recording guide defaults off in launcher and runtime");
 		require(initial[vr::settings::recording_dim.name] == 65, "Recording exterior defaults to stronger 65 percent dimming");
@@ -569,6 +575,25 @@ int main(int argc, char** argv)
 			"Changing defaults must not overwrite a saved custom point");
 		for (bool standard : {false, true})
 		{
+			const unsigned bank=standard?0:1;
+			const auto& independent=vr::settings::hand_angles_independent[bank];
+			const auto& initialized=vr::settings::hand_angles_initialized[bank];
+			const auto& hands=standard?vr::settings::standard_independent_hand_angles:vr::settings::independent_hand_angles;
+			require(initial[independent.name]==false && initial[initialized.name]==false,
+				"Existing profiles retain shared calibration until explicitly enabled");
+			auto custom=initial;
+			custom[independent.name]=true;custom[initialized.name]=true;
+			custom[hands[0][1].name]=0;custom[hands[1][1].name]=17;
+			require(read_values(update_config("bind X vr_recenter\n",custom))==custom,
+				"Independent angles and their initialization state survive profile round trip");
+			custom[independent.name]=false;
+			require(read_values(update_config("",custom))[hands[1][1].name]==17,
+				"Returning to shared mode retains the saved right hand angles");
+			const auto separate_preset=controller_presets(standard,true)[0]["values"];
+			require(separate_preset.size()==9 && !separate_preset.contains(independent.name),
+				"Independent None resets position and both hands without changing calibration mode");
+			for(const auto& hand:hands) for(const auto& field:hand)
+				require(separate_preset[field.name]==0,"Independent None resets every physical hand angle");
 			const auto presets = controller_presets(standard);
 			require(presets.size() == 1 && presets[0]["id"] == "none" && presets[0]["label"] == "None",
 				"Both calibration banks expose only the shared None preset");

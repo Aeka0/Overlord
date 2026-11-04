@@ -18,6 +18,8 @@ def main() -> None:
     parser.add_argument("--output", type=Path, default=ROOT / "output/launcher-smoke")
     parser.add_argument("--size", choices=("1040x720", "760x560", "640x480"), default="1040x720")
     parser.add_argument("--page", choices=("settings", "home"), default="settings")
+    parser.add_argument("--independent-hands", action="store_true", help="Check the separate left/right calibration layout")
+    parser.add_argument("--pose-pipeline", choices=("legacy", "standard"), default="legacy")
     args = parser.parse_args()
     if os.name != "nt":
         parser.error("The native launcher probe requires Windows")
@@ -27,7 +29,9 @@ def main() -> None:
     fixture = Path(tempfile.mkdtemp(prefix="probe-", dir=output)).resolve()
     if not fixture.is_relative_to(output):
         raise ValueError("Probe directory must stay under its output directory")
-    report = output / (client.stem + "-" + args.page + "-" + args.size + ".json")
+    report = output / (client.stem + "-" + args.page + "-" + args.size +
+                       ("-standard" if args.pose_pipeline == "standard" else "") +
+                       ("-independent" if args.independent_hands else "") + ".json")
     try:
         executable = fixture / client.name
         shutil.copyfile(client, executable)
@@ -36,6 +40,13 @@ def main() -> None:
         profile.write_text('seta r_ssaaSamples "1"\nseta 0x70BF1633 "4"\n'
                            'seta r_preloadShadersFrontendAllow "1"\nseta r_preloadShaders "0"\n'
                            'seta sm_cacheSunShadow "Enabled"\nseta sm_cacheSpotShadows "Disabled"\n', encoding="utf-8")
+        with profile.open("a", encoding="utf-8") as config:
+            config.write(f'seta vr_controllerPoseMode "{args.pose_pipeline}"\n')
+            if args.independent_hands:
+                stem = 'vr_standardHand' if args.pose_pipeline == 'standard' else 'vr_hand'
+                right = 'vr_standardRightHand' if args.pose_pipeline == 'standard' else 'vr_rightHand'
+                config.write(f'seta {stem}AnglesIndependent "1"\nseta {stem}AnglesInitialized "1"\n'
+                             f'seta {right}AngleYaw "17"\n')
         probe_report = fixture / "renderer.json"
         result = subprocess.run([str(executable), "-launcher-smoke", str(probe_report), "-launcher-probe-size", args.size, "-launcher-probe-page", args.page],
                                 cwd=fixture, creationflags=subprocess.CREATE_NO_WINDOW,
@@ -60,6 +71,11 @@ def main() -> None:
             raise RuntimeError('The controller preset edits fields that are not displayed by the launcher')
         if args.page == 'settings' and not data.get('nativeComfort', {}).get('ok'):
             raise RuntimeError('Comfort switches or the second Other subtitle option did not render correctly')
+        if args.independent_hands and args.page == 'settings':
+            prefixes = ('vr_standardLeftHand', 'vr_standardRightHand') if args.pose_pipeline == 'standard' else ('vr_leftHand', 'vr_rightHand')
+            expected_angles = {f'{prefix}Angle{axis}' for prefix in prefixes for axis in ('Pitch', 'Yaw', 'Roll')}
+            if not expected_angles.issubset(data.get('controlNames', [])):
+                raise RuntimeError('Independent controller angle controls did not render')
         print(f"Launcher renderer passed ({args.page}, {args.size}): {data['settings']} settings, page layout, borderless frame and embedded assets")
         print(f"Report: {report}")
     finally:

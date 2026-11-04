@@ -37,6 +37,14 @@ namespace vr::gameplay::weapons::feedback
 		game::dvar_t *sound_enabled{}, *haptic_gain{};
 		std::atomic<float> published_haptic_gain{};
 		bool sound_ready{};
+		void carry_pulse(hand actor, const controller_input::frame& input, float seconds, float amplitude) noexcept
+		{
+			const auto gain = published_haptic_gain.load();
+			if (!alive || !valid_hand(actor) || gain <= 0 || !input.focused) return;
+			controller_haptics::request(static_cast<int>(actor),
+			    {seconds, 110.f, amplitude * gain, input.reference_generation, input.sampled_at});
+			++pulses;
+		}
 		void tick()
 		{
 			std::array<event, 16> batch;
@@ -161,10 +169,11 @@ namespace vr::gameplay::weapons::feedback
 	}
 	void carry_confirmation(hand actor,const controller_input::frame& input) noexcept
 	{
-		const auto gain=published_haptic_gain.load();
-		if (!alive || !valid_hand(actor) || gain<=0 || !input.focused) return;
-		controller_haptics::request(static_cast<int>(actor),{.022f,110.f,.14f*gain,input.reference_generation,input.sampled_at});
-		++pulses;
+		carry_pulse(actor, input, .022f, .14f);
+	}
+	void carry_readiness(hand actor,const controller_input::frame& input) noexcept
+	{
+		carry_pulse(actor, input, .012f, .08f);
 	}
 	void melee_confirmation(const hold& owner,const controller_input::frame& input,const std::array<float,3>& position) noexcept
 	{

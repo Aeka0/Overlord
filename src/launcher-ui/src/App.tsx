@@ -30,6 +30,7 @@ import { LaunchDialog } from "./components/LaunchDialog";
 import { StartupNotice } from "./components/StartupNotice";
 import type { PreflightReport, LaunchResult } from "./preflight";
 import { useSettings, type Notice } from "./useSettings";
+import { angleModePatch, calibrationBank, handAnglePatch } from "./calibration";
 import { useGameLanguages } from "./useGameLanguages";
 import { initialHelpState } from "./helpState";
 import {
@@ -306,6 +307,12 @@ function Launcher({ data }: { data: Bootstrap }) {
     }
   }
   function change(key: string, value: string | boolean, numeric: boolean) {
+    if (key === calibrationBank(controller.draft).independent) {
+      if (poseModePending || controller.pending) return;
+      try { void controller.update(angleModePatch(controller.draft, controller.state, value === true)); }
+      catch (error) { controller.report(error); }
+      return;
+    }
     const previous = controller.draft[key];
     setNotice(null);
     const revision = controller.edit(key, value);
@@ -317,21 +324,14 @@ function Launcher({ data }: { data: Bootstrap }) {
   }
   const poseModePending = controller.draft.vr_controllerPoseMode !== controller.state.values.vr_controllerPoseMode;
   function selectPreset(id: string) {
-    if (poseModePending) return;
+    if (poseModePending || controller.pending) return;
     const preset = controller.state.controllerPresets.find(
       (preset) => preset.id === id,
     );
     if (!preset) return;
-    const values = makeDraft(preset.values, controller.state.limits);
-    const previous = { ...controller.draft };
-    const revisions: Record<string, number> = {};
-    for (const [key, value] of Object.entries(values))
-      revisions[key] = controller.edit(key, value);
-    void controller.save(Object.keys(values)).then((success) => {
-      if (!success)
-        for (const [key, value] of Object.entries(values))
-          controller.revert(key, value, previous[key], revisions[key]);
-    });
+    const bank = calibrationBank(controller.draft);
+    void controller.update({ ...preset.values,
+      ...(controller.draft[bank.independent] ? { [bank.initialized]: true } : {}) });
   }
   let selectedPreset = "custom";
   for (const preset of controller.state.controllerPresets) {
@@ -361,7 +361,7 @@ function Launcher({ data }: { data: Bootstrap }) {
     >
       <select
         aria-label={t("settings.preset")}
-        disabled={disabled || poseModePending}
+        disabled={disabled || poseModePending || controller.pending}
         value={selectedPreset}
         onChange={(event) => selectPreset(event.currentTarget.value)}
       >
@@ -382,7 +382,8 @@ function Launcher({ data }: { data: Bootstrap }) {
         draft={controller.draft}
         state={controller.state}
         t={t}
-        disabled={disabled}
+        disabled={disabled || (field.group === "settings.alignment" &&
+          (poseModePending || (controller.pending && field.type !== "number")))}
         invalid={controller.notice?.setting === field.name}
         description={onboarding ? guideDescriptions[field.name] : undefined}
         compact={compact}
@@ -415,6 +416,17 @@ function Launcher({ data }: { data: Bootstrap }) {
           <div className="calibration-row">
             {row.map((axis) => control(axis, false, true))}
           </div>
+          {field.calibrationHand && <div className="calibration-actions">
+            {(["reset", "mirror"] as const).map((action) => <button
+              type="button" key={action}
+              aria-label={`${t(field.row!)}: ${t(action === "reset" ? "settings.resetHandAngles" : "settings.mirrorOtherHand")}`}
+              disabled={disabled || poseModePending || controller.pending}
+              onClick={() => {
+                try { void controller.update(handAnglePatch(controller.draft, controller.state, field.calibrationHand!, action)); }
+                catch (error) { controller.report(error); }
+              }}
+            >{t(action === "reset" ? "settings.resetHandAngles" : "settings.mirrorOtherHand")}</button>)}
+          </div>}
         </SettingRow>,
       ];
     });

@@ -40,6 +40,8 @@ namespace launcher_vr_settings
 
 		std::string response(const json& values, const bool has_vr_config = true)
 		{
+			const bool standard=values.at(vr::settings::controller_pose_mode.name)=="standard";
+			const bool independent=values.at(vr::settings::hand_angles_independent[standard?0:1].name).get<bool>();
 			json limits = json::object();
 			for (const auto& field : vr::settings::numbers)
 				limits[field.name] = {{"min", setting_number(field.min)}, {"max", setting_number(field.max)},
@@ -47,7 +49,7 @@ namespace launcher_vr_settings
 					{"displayReciprocal", field.display_reciprocal}};
 			return json{{"ok", true}, {"values", values}, {"defaults", defaults()}, {"limits", limits},
 				{"onboarding", {{"gameAvailable", game_data::is_game_directory_available()}, {"hasVRConfig", has_vr_config}}},
-				{"controllerPresets",controller_presets(values.at(vr::settings::controller_pose_mode.name) == "standard") },
+				{"controllerPresets",controller_presets(standard,independent)},
 				{"choices",choice_catalog()},
 				{"build", {{"configuration", build_config::name}, {"optimized", build_config::optimized}}}}.dump();
 		}

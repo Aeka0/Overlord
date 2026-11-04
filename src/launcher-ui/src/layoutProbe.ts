@@ -422,7 +422,8 @@ export function inspectLauncherLayout() {
     controls: document.querySelectorAll(".window-control").length === 3,
     calibrationRows: (() => {
       const rows = [...document.querySelectorAll(".calibration-row")];
-      return rows.length === 2 && rows.every((row) => {
+      const independent = !!content.querySelector<HTMLInputElement>('#vr_handAnglesIndependent, #vr_standardHandAnglesIndependent')?.checked;
+      return rows.length === (independent ? 3 : 2) && rows.every((row) => {
         const inputs = [...row.querySelectorAll("input")].map((input) => input.getBoundingClientRect());
         return inputs.length === 3 && inputs.every((bounds) =>
           Math.abs(bounds.top - inputs[0].top) < 1 && bounds.width >= 60 &&
@@ -433,7 +434,8 @@ export function inspectLauncherLayout() {
       content.querySelector<HTMLInputElement>("#vr_worldScale")?.value === "100" &&
       content.querySelector<HTMLInputElement>("#vr_worldScale")?.validity.valid &&
       !!content.querySelector("#vr_controllerPoseMode"),
-    calibrationCommands: [...content.querySelectorAll(".calibration-command code")].length === 6,
+    calibrationCommands: [...content.querySelectorAll(".calibration-command code")].length ===
+      (content.querySelector<HTMLInputElement>('#vr_handAnglesIndependent, #vr_standardHandAnglesIndependent')?.checked ? 9 : 6),
     focusOutlineHidden: focusOutlineHidden(),
   };
   content.scrollTop = previousScroll;

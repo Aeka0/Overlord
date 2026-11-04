@@ -349,5 +349,13 @@
   "choice.tracerRoyal": "Royal",
   "choice.tracerAnime": "Anime",
   "choice.tracer1776": "1776",
-  "choice.tracerRainbow": "Радуга"
+  "choice.tracerRainbow": "Радуга",
+  "settings.independentHandAngles": "Настраивать руки отдельно",
+  "settings.independentHandAnglesHint": "Задайте углы для каждого контроллера. При первом включении копируются общие углы; смена режима сохраняет настройки каждой руки.",
+  "settings.leftHandAngles": "Углы левой руки",
+  "settings.leftHandAnglesHint": "Углы в градусах для левого контроллера, включая оружие и магазины в этой руке.",
+  "settings.rightHandAngles": "Углы правой руки",
+  "settings.rightHandAnglesHint": "Углы в градусах для правого контроллера, включая оружие и магазины в этой руке.",
+  "settings.resetHandAngles": "Сбросить эту руку",
+  "settings.mirrorOtherHand": "Отразить другую руку"
 }

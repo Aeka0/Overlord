@@ -94,7 +94,8 @@ namespace vr::controller_input
 		std::array<hand_pose, 2> runtime_aim{}; // Unfiltered adapter pointing pose.
 		std::array<hand_pose, 2> runtime_grip{}; // Unfiltered adapter grip in its reported calibration basis.
 		std::array<hand_pose, 2> sdk_grip{}, sdk_aim{}; // Before binding/reference adaptation; diagnostics only.
-		std::array<float,3> orientation_degrees{}; // pitch, yaw, roll
+		std::array<std::array<float,3>,2> orientation_degrees{}; // Physical left/right: pitch, yaw, roll.
+		bool orientation_independent{};
 		bool orientation_settling{}; // Position or angle calibration changed; fence physical motion history.
 		std::array<float,3> position_offsets_meters{}; // inward, back, up in the selected grip frame.
 		std::uint64_t continuity_generation{}; // Producer continuity, independent of game simulation cadence.

@@ -155,6 +155,14 @@ namespace vr::settings
 	inline constexpr boolean_setting ads_sprint{"vr_adsSprint", true};
 	inline constexpr boolean_setting exo_punch{"vr_exoPunch", false};
 	inline constexpr boolean_setting hei_round{"vr_heiRound", false};
+	// Standard and Legacy retain independent calibration choices. The initialized
+	// flags let the launcher seed from shared angles once, then retain custom hands.
+	inline constexpr std::array hand_angles_independent{
+	    boolean_setting{"vr_standardHandAnglesIndependent", false},
+	    boolean_setting{"vr_handAnglesIndependent", false}};
+	inline constexpr std::array hand_angles_initialized{
+	    boolean_setting{"vr_standardHandAnglesInitialized", false},
+	    boolean_setting{"vr_handAnglesInitialized", false}};
 	inline constexpr auto toggles = []
 	{
 		constexpr std::array gameplay{recording_mode,
@@ -174,6 +182,8 @@ namespace vr::settings
 		                              ads_sprint,
 		                              exo_punch,
 		                              hei_round,
+		                              hand_angles_independent[0], hand_angles_independent[1],
+		                              hand_angles_initialized[0], hand_angles_initialized[1],
 		                              boolean_setting{disable_lens_flare, false},
 		                              boolean_setting{camera_bob, true},
 		                              boolean_setting{recoil, true},
@@ -241,6 +251,20 @@ namespace vr::settings
 		number_setting{"vr_standardHandAnglePitch", 0.f, -180.f, 180.f, 1.f},
 		number_setting{"vr_standardHandAngleYaw", 0.f, -180.f, 180.f, 1.f},
 		number_setting{"vr_standardHandAngleRoll", 0.f, -180.f, 180.f, 1.f}};
+	inline constexpr std::array independent_hand_angles{
+	    std::array{number_setting{"vr_leftHandAnglePitch", 0.f, -180.f, 180.f, 1.f},
+	               number_setting{"vr_leftHandAngleYaw", 0.f, -180.f, 180.f, 1.f},
+	               number_setting{"vr_leftHandAngleRoll", 0.f, -180.f, 180.f, 1.f}},
+	    std::array{number_setting{"vr_rightHandAnglePitch", 0.f, -180.f, 180.f, 1.f},
+	               number_setting{"vr_rightHandAngleYaw", 0.f, -180.f, 180.f, 1.f},
+	               number_setting{"vr_rightHandAngleRoll", 0.f, -180.f, 180.f, 1.f}}};
+	inline constexpr std::array standard_independent_hand_angles{
+	    std::array{number_setting{"vr_standardLeftHandAnglePitch", 0.f, -180.f, 180.f, 1.f},
+	               number_setting{"vr_standardLeftHandAngleYaw", 0.f, -180.f, 180.f, 1.f},
+	               number_setting{"vr_standardLeftHandAngleRoll", 0.f, -180.f, 180.f, 1.f}},
+	    std::array{number_setting{"vr_standardRightHandAnglePitch", 0.f, -180.f, 180.f, 1.f},
+	               number_setting{"vr_standardRightHandAngleYaw", 0.f, -180.f, 180.f, 1.f},
+	               number_setting{"vr_standardRightHandAngleRoll", 0.f, -180.f, 180.f, 1.f}}};
 	inline const auto& active_hand_alignment() noexcept
 	{
 		return controller_pose_pipeline::selected() == controller_pose_pipeline::mode::standard
@@ -261,6 +285,10 @@ namespace vr::settings
 	                                    hand_pitch,
 	                                    hand_yaw,
 	                                    hand_roll,
+	                                    independent_hand_angles[0][0], independent_hand_angles[0][1], independent_hand_angles[0][2],
+	                                    independent_hand_angles[1][0], independent_hand_angles[1][1], independent_hand_angles[1][2],
+	                                    standard_independent_hand_angles[0][0], standard_independent_hand_angles[0][1], standard_independent_hand_angles[0][2],
+	                                    standard_independent_hand_angles[1][0], standard_independent_hand_angles[1][1], standard_independent_hand_angles[1][2],
 	                                    stabilization_strengths[0],
 	                                    stabilization_strengths[1],
 	                                    stabilization_strengths[2]};

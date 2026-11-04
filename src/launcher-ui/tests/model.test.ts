@@ -13,6 +13,7 @@ import {
   type SettingsState,
 } from "../src/model";
 import { catalogs } from "../src/i18n";
+import { angleModePatch, calibrationBank, handAnglePatch } from "../src/calibration";
 import { shellTranslations } from "../src/shellTranslations";
 import {
   searchHelp,
@@ -42,6 +43,43 @@ const state = {
     ],
   },
 } as unknown as SettingsState;
+test("independent calibration seeds once and mirror/reset only edit the selected physical hand and bank", () => {
+  for (const mode of ["standard", "legacy"]) {
+    let draft = { vr_controllerPoseMode: mode } as Record<string, string | boolean>;
+    const bank = calibrationBank(draft);
+    const limits = Object.fromEntries([...bank.shared, ...bank.hands.flat()].map((key) =>
+      [key, { min: -180, max: 180, step: 1, displayScale: 1 }]));
+    const values = { vr_controllerPoseMode: mode, [bank.independent]: false, [bank.initialized]: false,
+      ...Object.fromEntries(bank.shared.map((key, axis) => [key, [-4, 12, 3][axis]])),
+      ...Object.fromEntries(bank.hands.flat().map((key) => [key, 0])) };
+    const fixture = { ...state, values, limits } as SettingsState;
+    draft = makeDraft(values, limits);
+    const first = angleModePatch(draft, fixture, true);
+    for (const hand of bank.hands) assert.deepEqual(hand.map((key) => first[key]), [-4, 12, 3]);
+    draft = { ...draft, ...makeDraft(first, limits) };
+    const mirror = handAnglePatch(draft, fixture, "left", "mirror");
+    assert.deepEqual(bank.hands[0].map((key) => mirror[key]), [-4, -12, -3]);
+    assert.deepEqual(Object.keys(mirror).sort(), [bank.initialized, ...bank.hands[0]].sort());
+    const reset = handAnglePatch(draft, fixture, "right", "reset");
+    assert.deepEqual(bank.hands[1].map((key) => reset[key]), [0, 0, 0]);
+    draft = { ...draft, ...makeDraft(mirror, limits), ...makeDraft(reset, limits) };
+    const back = angleModePatch(draft, fixture, false);
+    draft = { ...draft, ...makeDraft(back, limits) };
+    assert.deepEqual(angleModePatch(draft, fixture, true), { [bank.independent]: true });
+    draft[bank.hands[1][1]] = "bad";
+    assert.throws(() => handAnglePatch(draft, fixture, "left", "mirror"), SettingError);
+    assert.equal(handAnglePatch(draft, fixture, "right", "reset")[bank.hands[1][1]], 0);
+    for (const field of fields.filter((field) => field.calibrationHand)) {
+      const shown = mode === field.visibleWhen?.[1];
+      assert.equal(visible(field, { ...draft, [bank.independent]: true }), shown);
+      assert.equal(visible(field, { ...draft, [bank.independent]: false }), false);
+      assert.ok(Object.hasOwn(limits, field.name) || !shown);
+    }
+    for (const catalog of Object.values(catalogs))
+      for (const key of ["settings.resetHandAngles", "settings.mirrorOtherHand"])
+        assert.ok(catalog[key]);
+  }
+});
 test("detected game languages come first while every undetected language remains selectable", () => {
   const choices = [
     { value: "english", label: "English", detected: false },

@@ -22,11 +22,25 @@ scale; head looking and aim-angle adjustment cannot translate this point.
 The numeric defaults and presets are starting values, not measured anatomy.
 
 Both Standard and Legacy default to zero position and angle adjustment. The
-shared **None** preset sets all six values to zero in the selected bank. In
+**None** preset zeros the displayed position and angle values in the selected bank. In
 Standard mode this selects the published standard grip origin; there is no
 additional built-in wrist offset. Legacy retains its own grip frame. The former
 Standard trial baseline and Meta Quest 3 preset are retired. Saved custom values
 remain editable and are not rewritten by the default change.
+
+The calibration page can adjust physical left/right controller angles separately.
+Shared angles remain the default. Enabling **Adjust hands separately** for the
+first time copies the selected bank's shared pitch/yaw/roll into both hands;
+later mode switches retain saved independent values. The choice and hand angles
+are saved separately for Standard and Legacy. They follow the physical controller
+when exchanging weapons or holding magazines, including dual weapons.
+
+**Reset this hand** zeros only that hand's angles. **Mirror other hand** copies
+the other hand's pitch and negates yaw/roll once; subsequent edits are independent.
+Both hands use the same signed local-axis convention. The **None** preset resets
+position and the angles displayed in the selected mode, retaining the other
+mode's stored angles. Position offsets and the runtime grip/aim witnesses remain
+separate from these angle controls.
 
 For an empty hand, presentation applies the admitted native model's existing
 neutral wrist basis to the control rotation. For an occupied hand, the existing
