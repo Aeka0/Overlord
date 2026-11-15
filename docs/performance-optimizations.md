@@ -17,6 +17,7 @@ FPS improvement.
 | Area | Established result | Measurement limit |
 | --- | --- | --- |
 | Early view publication and completed scene-input cloning | Headset testing accepted the production handoff and reported a very large scene-performance improvement in The Gulag. | No recording ran during acceptance; no measured FPS gain or post-change counter comparison is available. |
+| OpenXR prediction and family pipeline | Two post-change windows reached one native Present per successful world submission, versus about 1.95 in both baseline windows, with no rejected admissions or runtime/owner failures. The operator reported no noticeable subjective change and no new anomalies. | Initial acceptance covers the tested ending scene on Quest 3 / VirtualDesktopXR at 90 Hz with SSW Auto; see the scope below. |
 | Production render hot paths | Optimized and Debug clients were deployed after focused rendering probes passed; the operator reported a noticeable improvement. | No controlled same-scene before/after capture or attribution to individual changes is available. |
 | Optional diagnostics and repeated preparation | Builds and focused launcher, hand-rig, backend, and WARP checks are recorded in the render performance review. | The repeated-preparation follow-up records no deployment, live timing capture, or headset acceptance. |
 | Other resource, input, and launcher reuse | The current implementation contains the bounded reuse and worker separation described below. | These are source-level reductions in repeated work, without isolated game frame-time measurements. |
@@ -87,6 +88,44 @@ Sources: [scene-input handoff](vr-region-capture.md),
 [runtime completion boundaries](vr-runtime-rendering.md),
 [renderer](../src/client/component/vr/engine_stereo_renderer.cpp), and
 [CPU scene completion](../src/client/component/vr/engine_scene_completion.cpp).
+
+### Queue OpenXR predictions and select families atomically
+
+The Present owner keeps one begun prediction and one waited, unbegun prediction.
+The native ring admits both families independently, and frontend culling closes
+only the family currently being produced. Native backend production remains
+serialized. This lets the frontend prepare the next family while the older
+family completes, without creating another runtime worker.
+
+The frontend takes the oldest untaken family and copies both eye configurations
+under the same bridge lock. A newer publication cannot steal that selection or
+split its eyes. Finishing one frame retires only its own admission/publication;
+the queued family remains available. Pure UI/movie frames retain their original
+single-prediction path, and pending session recovery suppresses new SDK frames.
+
+On 2026-11-15, the deployed implementation from `461f712` and `99e3a20` was
+compared with `8bbabf7` in the H2 `ending` scene. Both used RelWithDebInfo,
+Quest 3 / VirtualDesktopXR, the operator's 90 Hz / SSW Auto settings, FXAA and
+the same 3072 x 3264 eye target. The recorded VR, post-AA, vSync and frame-cap/
+wait-end settings matched.
+Baseline Present/world-submission ratios were 1.9474 and 1.9467; the candidate's
+5.016 s and 5.015 s windows each measured 1.0000, with 451 and 450 successful
+world submissions. Candidate admission rejections, empty submissions and
+runtime/owner failures were all zero within those windows.
+
+The candidate's requested stationary/moving labels did not match its recorded
+controller activity: its first window included move/turn input and its second
+had none. These were not controlled identical-view FPS benchmarks. Acceptance
+is the demonstrated pipeline efficiency and the operator's report of no new
+anomalies; a noticeable subjective gain on this high-end PC was not required.
+GPU execution time, HMD display FPS, gains on slower PCs, menu recovery and
+other missions were not established by these short captures.
+
+Sources: [OpenXR lifecycle and provenance](vr-runtime-rendering.md#openxr-frame-and-lifecycle-contracts),
+[capture procedure](vr-frame-pipeline-capture.md),
+[runtime](../src/client/component/vr/openxr_runtime.cpp),
+[family bridge](../src/client/component/vr/engine_stereo_bridge.cpp), and
+[native ring](../src/client/component/vr/native_render_session.cpp).
 
 ### Advance dynamic uploads once after their consumers
 

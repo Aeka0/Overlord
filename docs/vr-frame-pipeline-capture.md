@@ -2,8 +2,10 @@
 
 This procedure determines whether native Presents are being spent without a
 corresponding OpenXR world submission, and whether frontend admission is being
-rejected during native production. It prepares evidence for a possible queued
-prediction backport. It does not enable that backport or change frame ownership.
+rejected during native production. It compares the baseline and queued-prediction
+paths without changing frame ownership. The initial H2
+[pipeline result](performance-optimizations.md#queue-openxr-predictions-and-select-families-atomically)
+records the measured outcome and its acceptance scope.
 
 ## Preparation
 

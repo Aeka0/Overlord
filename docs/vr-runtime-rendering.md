@@ -307,8 +307,11 @@ The backport combines MWR-VR commits
 [6f199902](https://github.com/lesan0622/MWR-VR/commit/6f1999024a70ce5caf2b817971baf01a9c98963c)
 and [a2789899](https://github.com/lesan0622/MWR-VR/commit/a2789899c7786886b77d5c7fe6281cb13501b0ff),
 retaining H2 bindings, projection ranges, wait-timeout recovery and diagnostics.
-Mock/no-loader checks establish transport and ordering behavior; the changed
-prediction lead still requires same-condition HMD latency/judder acceptance.
+Mock/no-loader checks establish transport and ordering behavior. The initial
+H2 `ending` / Quest 3 / VirtualDesktopXR check accepted the measured pipeline
+efficiency, with no noticeable subjective change and no reported new anomalies.
+See the [recorded result and its scope](performance-optimizations.md#queue-openxr-predictions-and-select-families-atomically);
+this does not certify other missions or menu recovery.
 
 The game D3D11 device binds the session after adapter-LUID and feature-level
 validation. Native admission needs copied content proof for the current device,
