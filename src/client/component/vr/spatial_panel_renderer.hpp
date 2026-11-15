@@ -88,6 +88,7 @@ namespace vr::spatial_panel
 		Microsoft::WRL::ComPtr<ID3D11Buffer> constants_;
 		Microsoft::WRL::ComPtr<ID3D11SamplerState> sampler_;
 		Microsoft::WRL::ComPtr<ID3D11RasterizerState> raster_;
+		Microsoft::WRL::ComPtr<ID3D11RasterizerState> clipped_raster_;
 		Microsoft::WRL::ComPtr<ID3D11DepthStencilState> depth_;
 		Microsoft::WRL::ComPtr<ID3D11DepthStencilState> scene_depth_;
 		Microsoft::WRL::ComPtr<ID3D11BlendState> blend_;

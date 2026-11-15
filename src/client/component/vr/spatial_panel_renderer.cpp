@@ -1,6 +1,7 @@
 #include <std_include.hpp>
 #include "texture_extent.hpp"
 #include "spatial_panel_renderer.hpp"
+#include "screen_layer_region.hpp"
 #include "presentation_options.hpp"
 #include "native_conversion_command_list.hpp"
 #include <d3dcompiler.h>
@@ -261,6 +262,7 @@ float4 recording_ps(Vertex v) : SV_Target {
 		sampler.MaxLOD = D3D11_FLOAT32_MAX; sampler.ComparisonFunc = D3D11_COMPARISON_NEVER;
 		D3D11_RASTERIZER_DESC raster{};
 		raster.FillMode = D3D11_FILL_SOLID; raster.CullMode = D3D11_CULL_NONE; raster.DepthClipEnable = TRUE;
+		auto clipped_raster = raster; clipped_raster.ScissorEnable = TRUE;
 		D3D11_DEPTH_STENCIL_DESC depth{};
 		depth.DepthEnable = FALSE; depth.DepthWriteMask = D3D11_DEPTH_WRITE_MASK_ZERO;
 		depth.DepthFunc = D3D11_COMPARISON_ALWAYS;
@@ -273,6 +275,7 @@ float4 recording_ps(Vertex v) : SV_Target {
 		ready_ = checked(device->CreateBuffer(&buffer, nullptr, &constants_),"create_constant_buffer") &&
 			checked(device->CreateSamplerState(&sampler, &sampler_),"create_sampler") &&
 			checked(device->CreateRasterizerState(&raster, &raster_),"create_rasterizer") &&
+			checked(device->CreateRasterizerState(&clipped_raster, &clipped_raster_),"create_clipped_rasterizer") &&
 			checked(device->CreateDepthStencilState(&depth, &depth_),"create_depth_state") &&
 			checked(device->CreateDepthStencilState(&scene_depth, &scene_depth_),"create_scene_depth_state") &&
 			checked(device->CreateBlendState(&blend, &blend_),"create_blend_state") &&
@@ -601,6 +604,12 @@ float4 recording_ps(Vertex v) : SV_Target {
 			Microsoft::WRL::ComPtr<ID3D11Resource> resource;view->GetResource(&resource);
 			if(owner!=device || resource==output)return false;
 		}
+		screen_region region;
+		if (screen_layer)
+		{
+			region = screen_layer_region(canvas, screen_fade, width, height, !backdrops.empty());
+			if (region.empty()) return true;
+		}
 		D3D11_MAPPED_SUBRESOURCE mapped{};
 		const auto map_result=deferred_->Map(constants_.Get(), 0, D3D11_MAP_WRITE_DISCARD, 0, &mapped);
 		if (FAILED(map_result)){if(screen_scope)scope_status_={"constant_buffer",map_result,true};return false;}
@@ -622,9 +631,15 @@ float4 recording_ps(Vertex v) : SV_Target {
 			deferred_->CopySubresourceRegion(background_copy_.Get(),0,0,0,0,output.Get(),0,nullptr);
 			deferred_->GenerateMips(background_view_.Get());
 		}
-		else if(screen_layer)deferred_->CopyResource(background_copy_.Get(), output.Get());
+		else if(screen_layer)deferred_->CopySubresourceRegion(background_copy_.Get(),0,
+			region.copy.left,region.copy.top,0,output.Get(),0,&region.copy);
 		if(screen_scope){const float black[]{0,0,0,1};deferred_->ClearRenderTargetView(destination,black);}
 		deferred_->RSSetViewports(1, &viewport); deferred_->RSSetState(raster_.Get());
+		if (screen_layer)
+		{
+			deferred_->RSSetState(clipped_raster_.Get());
+			deferred_->RSSetScissorRects(1,&region.draw);
+		}
 		deferred_->OMSetRenderTargets(1, &destination, scene_depth);
 		deferred_->OMSetDepthStencilState(scene_depth ? scene_depth_.Get() : depth_.Get(), 0);
 		deferred_->OMSetBlendState(blend_.Get(), nullptr, UINT_MAX);
