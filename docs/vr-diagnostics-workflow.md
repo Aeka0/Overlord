@@ -5,6 +5,10 @@ Checked. This is the common evidence-collection entry point for black screens, h
 For implementation responsibilities and status-report extension points, see the
 [diagnostic module boundaries](../src/client/component/vr/diagnostics/README.md).
 
+The opt-in [sun-shadow observation](vr-sun-shadow-capture.md) extends one support
+request to a planned 24-second session plus a five-second readback tail. Both
+eyes keep native shadow drawing; ordinary requests retain the normal duration.
+
 ## Establish the identity of the failing run
 
 Record the build commit and uncommitted changes, EXE/PDB hashes, actual process start time, level/checkpoint, triggering actions, SteamVR/HMD, GPU/driver, and relevant settings. Preserve matching binaries and symbols so a later rebuild does not lead to interpreting an old dump with a new PDB.

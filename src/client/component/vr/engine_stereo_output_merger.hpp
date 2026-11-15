@@ -23,6 +23,8 @@ namespace vr::engine_stereo_output_merger
 		gpu_census,
 		ssr_consumer,
 		effect_timeline,
+		sun_shadow,
+		sun_reuse,
 		count,
 	};
 	inline constexpr std::size_t clear_observer_channel_count =

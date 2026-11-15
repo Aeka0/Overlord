@@ -43,6 +43,11 @@ return function()
 		json.import()
 		gsl.import()
 
+	test_executable("vr-sun-shadow-readback-tests", "sun-shadow")
+		files {"./tests/vr/sun_shadow_readback_tests.cpp"}
+		includedirs {"./src/client"}
+		links {"d3d11", "dxgi"}
+
 	local vr_runtime_sources = {
 		"./src/client/component/vr/controller_input.cpp",
 		"./src/client/component/vr/controller_input.hpp",
@@ -588,6 +593,8 @@ return function()
 	test_executable("vr-d3d11-execution-probe", "execution")
 		defines {"H2VR_EXECUTION_PROBE_TESTING"}
 		files {
+			"./src/client/component/vr/engine_stereo_sun_shadow.cpp",
+			"./src/client/component/vr/engine_stereo_resource_ops.cpp",
 			"./tests/vr/execution_probe.cpp",
 			"./tests/vr/std_include.hpp",
 			"./src/client/component/vr/engine_stereo_execution.cpp",

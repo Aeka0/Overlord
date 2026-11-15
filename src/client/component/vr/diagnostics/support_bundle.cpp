@@ -1,5 +1,6 @@
 #include <std_include.hpp>
 #include "menu_sources.hpp"
+#include "sun_shadow.hpp"
 #include "support_bundle.hpp"
 #include "support_archive.hpp"
 #include "report_paths.hpp"
@@ -100,13 +101,19 @@ namespace vr::diagnostics::support
 			if(stopping)return;
 			const auto menu_request = menu_sources::request();
 			const auto retire_menu_request = gsl::finally([menu_request] { menu_sources::cancel(menu_request); });
+			const auto shadow_request = sun_shadow::enabled() ? sun_shadow::request() : 0;
+			const auto retire_shadow_request = gsl::finally([shadow_request]
+			{
+				if (shadow_request) sun_shadow::cancel(shadow_request);
+			});
+			auto shadow_samples = nlohmann::json::array();
 			auto result=reserve_archive();
 			try
 			{
 				// Save each snapshot immediately, so ZIP failure leaves usable text.
 				result->add("README.txt","Attach this ZIP to your Overlord issue. No console copying is needed.\n"
 					"This is a local diagnostic capture; nothing was uploaded automatically.\n"
-					"status-1/2 are fresh snapshots from this request, about five seconds apart.\n"
+					"status-1/2 are fresh snapshots from this request. The normal interval is five seconds; sun-shadow sessions take about 29 seconds.\n"
 					"The process/build/time and before_first_present labels identify their scope.\n"
 					"previous-status and existing-* are historical files; their association with this run is not assumed.\n"
 					"manifest.json lists unavailable/omitted files and size limits. Large dumps are not silently truncated.\n"
@@ -114,6 +121,28 @@ namespace vr::diagnostics::support
 				result->add("core-1.txt",collect_core_status_text(enabled()));
 				result->add("status-1.txt",collect_status_text(enabled()));
 				result->add("trace-1.txt",crash_trace());
+				if (shadow_request)
+				{
+					result->add("sun-shadow-session.txt", "Explicit sun-shadow observation; both eyes render normally.\n"
+						"0-8 seconds: ordinary outdoor view; 8-16: move/turn; 16-24: aim through a scope with an auxiliary view if available.\n"
+						"The final five seconds drain readbacks. Missing/unsupported/busy evidence is not equality.\n"
+						"GPU copies and readback affect timing; this is correctness/work-count evidence, not an FPS benchmark.\n");
+					// One planned session, plus a short drain tail. CPU comparison runs
+					// here; the native owner only publishes immutable logical rows.
+					const auto until = std::chrono::steady_clock::now() + 29s;
+					while (!stopping && std::chrono::steady_clock::now() < until)
+					{
+						sun_shadow::drain(shadow_request, shadow_samples);
+						std::unique_lock lock(wait_mutex); wake.wait_for(lock,100ms,[]{return stopping.load();});
+					}
+					sun_shadow::drain(shadow_request, shadow_samples);
+					auto shadow_report = sun_shadow::finish(shadow_request);
+					sun_shadow::drain(shadow_request, shadow_samples);
+					shadow_report["archived_samples"] = shadow_samples.size();
+					shadow_report["samples"] = std::move(shadow_samples);
+					result->add("sun-shadow.json", shadow_report.dump());
+				}
+				else
 				{
 					std::unique_lock lock(wait_mutex);wake.wait_for(lock,5s,[]{return stopping.load();});
 				}
@@ -192,11 +221,13 @@ namespace vr::diagnostics::support
 			manual_pending=false;
 			try{if(error)std::rethrow_exception(error);}catch(const std::exception& e){console::error("[VR] Diagnostic collection failed: %s\n",e.what());}
 		}))manual_pending=false;
+		else if (sun_shadow::enabled()) console::info("[VR] Sun-shadow capture: 0-8s stand, 8-16s move/turn, 16-24s scope; then 5s readback drain. The ZIP folder opens automatically.\n");
 		else console::info("[VR] Collecting diagnostics for five seconds. Keep the issue visible; the ZIP folder will open automatically.\n");
 	}
 	void stop()
 	{
 		{const std::lock_guard admission(admission_mutex);stopping=true;}
 		wake.notify_all();worker.stop();
+		sun_shadow::stop();
 	}
 }

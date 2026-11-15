@@ -997,10 +997,13 @@ namespace vr::engine_stereo_execution
 					static_cast<std::uint64_t>(restore_state != FALSE), 0, 0, 0, 0}, 2,
 				binding);
 			// WARP (and some driver wrappers) re-enters Draw/Dispatch while
-			// executing a list. Scope only the admitted, tagged list on this exact
+			// executing a list. Scope only the native owner's tagged list on this exact
 			// thread/context; nested unknown command lists are still classified.
+			// This provenance also serves production observers after the bounded
+			// bootstrap census has closed its admission gate.
 			const auto previous_conversion=executing_conversion;
-			executing_conversion=invocation.known_conversion?context:nullptr;
+			executing_conversion=restore_state != FALSE && reinterpret_cast<std::uintptr_t>(context) == expected_context.load(std::memory_order_acquire) &&
+				native_conversion_command_list::is_marked(commands) ? context : nullptr;
 			original(context, commands, restore_state);
 			executing_conversion=previous_conversion;
 			if (restore_state == FALSE)
@@ -1047,6 +1050,10 @@ namespace vr::engine_stereo_execution
 		}
 	}
 
+	bool in_known_conversion(ID3D11DeviceContext* context) noexcept
+	{
+		return context && (context == executing_conversion || native_conversion_command_list::is_recording_context(context));
+	}
 	void set_invocation_observer(const invocation_observer_channel channel,
 		const invocation_observer_fn observer) noexcept
 	{

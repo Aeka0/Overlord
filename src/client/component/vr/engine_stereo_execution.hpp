@@ -58,6 +58,8 @@ namespace vr::engine_stereo_execution
 		gpu_census,
 		ssr_consumer,
 		effect_timeline,
+		sun_shadow,
+		sun_reuse,
 		count,
 	};
 	inline constexpr std::size_t invocation_observer_channel_count =
@@ -316,6 +318,8 @@ namespace vr::engine_stereo_execution
 	// remains independent and does not require an observer to be registered.
 	void set_invocation_observer(invocation_observer_channel channel,
 		invocation_observer_fn observer) noexcept;
+	// The existing conversion owner identifies private recording/replay contexts.
+	[[nodiscard]] bool in_known_conversion(ID3D11DeviceContext* context) noexcept;
 	// Independent from the bounded invocation observer so a diagnostic that
 	// tracks immediate-context state cannot be displaced by the GPU census.
 	// ExecuteCommandList is opaque to that tracker and is the only event routed

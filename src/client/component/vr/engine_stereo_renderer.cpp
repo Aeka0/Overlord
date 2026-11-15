@@ -7,6 +7,7 @@
 #include "diagnostics.hpp"
 #include "diagnostics/runtime_code_snapshot.hpp"
 #include "diagnostics/renderer_evidence.hpp"
+#include "diagnostics/sun_shadow.hpp"
 #include "engine_backend_probe.hpp"
 #include "engine_stereo_binding.hpp"
 #include "eye_composition.hpp"
@@ -1830,6 +1831,7 @@ namespace vr::engine_stereo_renderer
 			const void* const parameters, const void* const primary_view,
 			const void* const rebase_view)
 		{
+			diagnostics::sun_shadow::geometry_view(parameters, primary_view, rebase_view);
 			// 787230 prepares one scene draw-list executor, then calls its native
 			// callback. Mark only its view initialization; fullscreen/query users
 			// of the same 78A340 function remain outside the dynamic-mesh scope.
@@ -3508,6 +3510,8 @@ namespace vr::engine_stereo_renderer
 			engine_stereo_bridge::set_render_hook_installed(installed);
 			if (installed)
 			{
+				diagnostics::sun_shadow::install();
+				engine_stereo_sun_shadow::install();
 				console::info("[VR] installed CPU-only H2 frontend/backend/query observation hooks\n");
 			}
 		}

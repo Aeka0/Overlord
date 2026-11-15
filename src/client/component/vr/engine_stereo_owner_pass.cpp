@@ -3,6 +3,7 @@
 #include "component/vr/native_render_contract.hpp"
 
 #include "engine_stereo_owner_pass.hpp"
+#include "diagnostics/sun_shadow.hpp"
 #include "engine_scene_resolution.hpp"
 #include "diagnostics.hpp"
 #include "region_capture.hpp"
@@ -544,6 +545,8 @@ namespace vr::engine_stereo_owner_pass
 
 		void retire_transaction_preserving_records(transaction& active) noexcept
 		{
+			engine_stereo_sun_shadow::unwatch();
+			active.sun_shadow = {}; active.sun_texture.Reset();
 			// Backend states may retain +0x3238/+0x3240 until the next native owner
 			// installs a record. Keep the private right-eye bytes alive across that
 			// interval; the next begin() replaces them before its own owner call.
@@ -1531,12 +1534,75 @@ namespace vr::engine_stereo_owner_pass
 			return;
 		}
 		active.production_owner_invoke_timing_started_ns[eye] = timing_now_ns();
+		diagnostics::sun_shadow::begin_owner(active);
 		if(eye<2) region_capture::begin_owner(active.records.pair_id, eye,
 			static_cast<const void*>(active.record(eye)));
+	}
+	bool begin_sun_shadow(void* data, void* record) noexcept
+	{
+		auto* active = active_transaction;
+		if (!active || !*active || !active->production || active->failed || active->current_view > 1 ||
+			GetCurrentThreadId() != active->owner_thread_id || record != active->record(active->current_view) ||
+			active->claim.frontend != reinterpret_cast<std::uintptr_t>(data)) return false;
+		auto& range = active->sun_shadow;
+		if (active->current_view == 0)
+		{
+			engine_stereo_sun_shadow::unwatch(); range = {}; active->sun_texture.Reset();
+			if (active->auxiliary.valid || diagnostics::sun_shadow::capturing()) return false;
+			h2_gpu_context_lock lock;
+			if (lock && engine_stereo_sun_shadow::snapshot(data, record, range.left, active->sun_texture))
+			{
+				Microsoft::WRL::ComPtr<ID3D11Device> source_device, device;
+				active->sun_texture->GetDevice(&source_device); active->context->GetDevice(&device);
+				if (source_device != device || active->context->GetType() != D3D11_DEVICE_CONTEXT_IMMEDIATE) return false;
+				range.begin = active->dynamic_index_left_count; range.open = true;
+				engine_stereo_sun_shadow::watch(reinterpret_cast<ID3D11Resource*>(range.left.resource), active->context.Get());
+			}
+			return false;
+		}
+		if (!range.valid || active->auxiliary.valid || diagnostics::sun_shadow::capturing())
+		{
+			engine_stereo_sun_shadow::note_refusal(); engine_stereo_sun_shadow::unwatch(); return false;
+		}
+		// Match the native serialization point before consuming the image. Any
+		// intervening writer or unexplained command list keeps the right draw.
+		h2_gpu_context_lock lock;
+		engine_stereo_sun_shadow::inputs right;
+		Microsoft::WRL::ComPtr<ID3D11Texture2D> texture;
+		const bool reuse = lock && engine_stereo_sun_shadow::watching(range.left.resource, active->context.Get()) &&
+			engine_stereo_sun_shadow::snapshot(data, record, right, texture) &&
+			range.accepts(right, active->dynamic_index_right_count, active->dynamic_index_left_count,
+				engine_stereo_sun_shadow::modified());
+		if (reuse)
+		{
+			active->dynamic_index_right_count = range.end;
+			publish_dynamic_index_boundary_counts(*active);
+			engine_stereo_sun_shadow::note_skip(range.end - range.begin);
+		}
+		else engine_stereo_sun_shadow::note_refusal();
+		engine_stereo_sun_shadow::unwatch();
+		return reuse;
+	}
+	void end_sun_shadow(void* data, void* record) noexcept
+	{
+		engine_stereo_sun_shadow::finish_left();
+		auto* active = active_transaction;
+		if (!active || !*active || !active->production || active->failed || active->current_view != 0 ||
+			GetCurrentThreadId() != active->owner_thread_id || record != active->record(0) || !active->sun_shadow.open) return;
+		auto& range = active->sun_shadow;
+		range.open = false; range.end = active->dynamic_index_left_count;
+		engine_stereo_sun_shadow::inputs after;
+		Microsoft::WRL::ComPtr<ID3D11Texture2D> texture;
+		if (!engine_stereo_sun_shadow::snapshot(data, record, after, texture) || !(after == range.left) ||
+			range.end <= range.begin || range.end > maximum_dynamic_index_boundaries_per_eye)
+		{ engine_stereo_sun_shadow::unwatch(); return; }
+		range.valid = true;
+		engine_stereo_sun_shadow::note_left();
 	}
 
 	void end_owner_invoke(transaction& active, const std::uint32_t eye) noexcept
 	{
+		diagnostics::sun_shadow::end_owner();
 		if (eye >= auxiliary_scene::view_count) return;
 		const auto started_ns = active.production_owner_invoke_timing_started_ns[eye];
 		active.production_owner_invoke_timing_started_ns[eye] = 0;
@@ -1806,6 +1872,7 @@ namespace vr::engine_stereo_owner_pass
 				return false;
 			}
 			production_context_lock_acquires.fetch_add(1, std::memory_order_relaxed);
+			diagnostics::sun_shadow::capture_eye(active);
 			// The registry's first field is a GfxImage, NOT a D3D view. Match
 			// its texture/SRV to the selected RTV before original PostFX reads
 			// this image at 0x1407B07AA; stale bindings cannot authorize an input.
@@ -2156,6 +2223,7 @@ namespace vr::engine_stereo_owner_pass
 			if (active_transaction == &active) active_transaction = nullptr;
 			production_pair.store(0, std::memory_order_release);
 			production_active.store(false, std::memory_order_release);
+			diagnostics::sun_shadow::end_pair(active.records.pair_id, !active.failed, active.completed_eye_mask);
 			retire_transaction_preserving_records(active);
 			return;
 		}
@@ -2340,6 +2408,8 @@ namespace vr::engine_stereo_owner_pass
 	void invalidate_device(ID3D11DeviceContext* const context,
 		const std::uint64_t generation) noexcept
 	{
+		engine_stereo_sun_shadow::unwatch();
+		diagnostics::sun_shadow::invalidate_device();
 		native_post_aa::invalidate_device(context, generation);
 		engine_stereo_material_buffer_probe::cancel(context, generation);
 		engine_stereo_particle_buffer_probe::cancel(context, generation);
@@ -2366,6 +2436,7 @@ namespace vr::engine_stereo_owner_pass
 	{
 		std::lock_guard lock(state_mutex);
 		auto output = evidence;
+		output.sun_reuse = engine_stereo_sun_shadow::get_counters();
 		output.state = state.load(std::memory_order_acquire);
 		output.error = error.load(std::memory_order_acquire);
 		output.attempts = attempts.load(std::memory_order_acquire);

@@ -50,6 +50,8 @@ namespace vr::engine_stereo_resource_ops
 		ssr_consumer,
 		owner_diagnostic,
 		effect_timeline,
+		sun_shadow,
+		sun_reuse,
 		count,
 	};
 	inline constexpr std::size_t observer_channel_count =

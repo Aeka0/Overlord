@@ -892,6 +892,14 @@
     "description": "settings.debugAudioOutputHint"
   },
   {
+    "name": "vr_debugSunShadowCapture",
+    "category": "debug",
+    "group": "settings.debugProbes",
+    "label": "settings.debugSunShadowCapture",
+    "type": "toggle",
+    "description": "settings.debugSunShadowCaptureHint"
+  },
+  {
     "name": "vr_debugSceneModels",
     "category": "debug",
     "group": "settings.debugProbes",

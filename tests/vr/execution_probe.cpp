@@ -5,6 +5,7 @@
 #include "component/vr/engine_stereo_output_merger.hpp"
 #include "component/vr/engine_stereo_renderer.hpp"
 #include "component/vr/native_conversion_command_list.hpp"
+#include "sun_shadow_reuse_tests.hpp"
 #include "utils/hook_validation.hpp"
 
 #include <cstdlib>
@@ -13,6 +14,15 @@
 #include <iostream>
 #include <memory>
 #include <thread>
+
+// This probe exercises shared D3D observation and the reuse gate without
+// installing native game callsites or invoking H2's transaction owner.
+namespace vr::engine_stereo_owner_pass
+{
+	bool begin_sun_shadow(void*, void*) noexcept { return false; }
+	void end_sun_shadow(void*, void*) noexcept {}
+}
+namespace console { void print(int, const char*, ...) {} }
 
 namespace
 {
@@ -999,6 +1009,9 @@ int main()
 		fail("racing classifier scopes were not rejected as a hard collision");
 	}
 
+	sun_shadow_reuse_tests::run(device.Get(), context.Get(), depth.Get(), depth_stencil.Get(), render_target.Get(),
+		[](bool ok, const char* reason) { if (!ok) fail(reason); });
+	std::cout << "sun reuse gate / resource writer checks: PASS\n";
 	std::cout << "deferred_target_match_mask=0x" << std::hex <<
 		deferred_target_match_mask << std::dec << " observed_slots=" <<
 		observed_slots.size() << '\n';

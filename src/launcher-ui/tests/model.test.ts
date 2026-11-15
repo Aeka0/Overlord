@@ -128,18 +128,19 @@ test("tracer presets expose seven localized Personalization choices", () => {
     assert.equal(collect({ vr_tracerStyle: value }, fixture).vr_tracerStyle, value);
   assert.throws(() => collect({ vr_tracerStyle: "1776" }, fixture));
 });
-test("CPU wait timing is an optional localized Debug toggle", () => {
-  const field = fields.find((entry) => entry.name === "vr_debugWaitTiming");
+for (const [name, key] of [["vr_debugWaitTiming", "debugWaitTiming"], ["vr_debugSunShadowCapture", "debugSunShadowCapture"]])
+test(`${name} is an optional localized Debug toggle`, () => {
+  const field = fields.find((entry) => entry.name === name);
   assert.ok(field);
   assert.equal(field.category, "debug");
   assert.equal(field.type, "toggle");
   for (const catalog of Object.values(catalogs)) {
-    assert.ok(catalog["settings.debugWaitTiming"]);
-    assert.ok(catalog["settings.debugWaitTimingHint"]);
+    assert.ok(catalog[`settings.${key}`]);
+    assert.ok(catalog[`settings.${key}Hint`]);
   }
   for (const enabled of [false, true]) {
-    const selected = { ...state, values: { vr_debugWaitTiming: enabled } } as SettingsState;
-    assert.equal(collect(makeDraft(selected.values, selected.limits), selected).vr_debugWaitTiming, enabled);
+    const selected = { ...state, values: { [name]: enabled } } as SettingsState;
+    assert.equal(collect(makeDraft(selected.values, selected.limits), selected)[name], enabled);
   }
 });
 test("body positioning is a localized Basics choice", () => {

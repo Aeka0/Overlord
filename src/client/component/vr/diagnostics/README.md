@@ -62,6 +62,13 @@ ranges and writes TGA files. No runtime-owned image is sampled, and no graphics
 work occurs during report formatting. Menu geometry in the normal status report
 is copied from the actual submitted SDK layer and current head pose.
 
+`sun_shadow` is selected in the launcher's Debug settings for same-pair shadow research.
+It preserves all native passes and samples bounded light-view/index evidence.
+Copies and nonblocking row readback stay on the completed-eye GPU owner; this
+same support worker compares immutable CPU pixels and archives summaries. See
+the [capture procedure](../../../../../docs/vr-sun-shadow-capture.md) for the
+planned session, resource budget, native source chain and interpretation limits.
+
 `screen_display.hpp` supplies bounded producer snapshots for fixed scope,
 Javelin, their native HUD capture and the shared auxiliary view. Producers and
 readers use try-locks; dropped observations are explicit. They retain CPU values

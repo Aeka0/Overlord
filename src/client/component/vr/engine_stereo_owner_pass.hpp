@@ -7,6 +7,7 @@
 #include "engine_stereo_dynamic_arena.hpp"
 #include "engine_stereo_dynamic_upload.hpp"
 #include "engine_stereo_light_views.hpp"
+#include "engine_stereo_sun_shadow.hpp"
 #include "engine_stereo_tessellation_view.hpp"
 #include "native_display_contract.hpp"
 #include "native_post_aa_contract.hpp"
@@ -107,6 +108,7 @@ namespace vr::engine_stereo_owner_pass
 
 	struct report
 	{
+		engine_stereo_sun_shadow::counters sun_reuse;
 		gate_state state{gate_state::waiting};
 		failure error{failure::none};
 		std::uint64_t attempts{};
@@ -307,6 +309,8 @@ namespace vr::engine_stereo_owner_pass
 
 	struct transaction
 	{
+		engine_stereo_sun_shadow::range sun_shadow;
+		Microsoft::WRL::ComPtr<ID3D11Texture2D> sun_texture;
 		bool active{};
 		bool production{};
 		bool failed{};

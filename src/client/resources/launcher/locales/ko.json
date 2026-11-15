@@ -357,5 +357,7 @@
   "settings.rightHandAngles": "오른손 각도",
   "settings.rightHandAnglesHint": "오른쪽 컨트롤러와 해당 손으로 든 무기 및 탄창의 각도를 도 단위로 조정합니다.",
   "settings.resetHandAngles": "이 손 초기화",
-  "settings.mirrorOtherHand": "반대 손 대칭 복사"
+  "settings.mirrorOtherHand": "반대 손 대칭 복사",
+  "settings.debugSunShadowCapture": "태양 그림자 수집",
+  "settings.debugSunShadowCaptureHint": "Ctrl+Shift+F8 진단 수집에 태양 그림자 데이터를 포함합니다. 약 29초가 걸리며 다음 게임 시작 시 적용됩니다."
 }

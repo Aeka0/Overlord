@@ -20,6 +20,10 @@ namespace vr::diagnostics::detail
 		const engine_stereo_material_buffer_probe::report& material_buffer_status,
 		const engine_stereo_particle_buffer_probe::report& particle_buffer_status)
 	{
+		const auto& sun = owner_pass_status.sun_reuse;
+		output << "  sun_shadow_reuse: eligible_left=" << sun.left << " skipped_right=" << sun.skipped
+			<< " refused_right=" << sun.refused << " dirty_refusals=" << sun.dirty
+			<< " saved_dynamic_boundaries=" << sun.saved_boundaries << '\n';
 		output << "  backend_owner_context_lock: acquires="
 			<< owner_pass_status.production_context_lock_acquires;
 		output << " failures=" << owner_pass_status.production_context_lock_failures;

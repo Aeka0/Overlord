@@ -357,5 +357,7 @@
   "settings.rightHandAngles": "右手の角度",
   "settings.rightHandAnglesHint": "右コントローラーと、その手で持つ武器やマガジンの角度を度単位で調整します。",
   "settings.resetHandAngles": "この手をリセット",
-  "settings.mirrorOtherHand": "反対の手を反転コピー"
+  "settings.mirrorOtherHand": "反対の手を反転コピー",
+  "settings.debugSunShadowCapture": "太陽の影の記録",
+  "settings.debugSunShadowCaptureHint": "Ctrl+Shift+F8 の診断収集に太陽の影のデータを含めます。約29秒かかります。次回のゲーム起動時に適用されます。"
 }

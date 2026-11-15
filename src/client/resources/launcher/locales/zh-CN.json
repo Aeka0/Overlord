@@ -357,5 +357,7 @@
   "settings.rightHandAngles": "右手角度",
   "settings.rightHandAnglesHint": "以度为单位调整物理右手柄，以及该手持有的武器和弹匣。",
   "settings.resetHandAngles": "重置这只手",
-  "settings.mirrorOtherHand": "镜像另一只手"
+  "settings.mirrorOtherHand": "镜像另一只手",
+  "settings.debugSunShadowCapture": "太阳阴影采集",
+  "settings.debugSunShadowCaptureHint": "按 Ctrl+Shift+F8 采集诊断时附带太阳阴影证据，约需 29 秒。下次启动游戏时生效。"
 }

@@ -357,5 +357,7 @@
   "settings.rightHandAngles": "Углы правой руки",
   "settings.rightHandAnglesHint": "Углы в градусах для правого контроллера, включая оружие и магазины в этой руке.",
   "settings.resetHandAngles": "Сбросить эту руку",
-  "settings.mirrorOtherHand": "Отразить другую руку"
+  "settings.mirrorOtherHand": "Отразить другую руку",
+  "settings.debugSunShadowCapture": "Сбор данных теней солнца",
+  "settings.debugSunShadowCaptureHint": "Добавляет данные теней солнца в диагностику Ctrl+Shift+F8. Сбор занимает около 29 секунд. Применяется при следующем запуске игры."
 }

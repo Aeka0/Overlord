@@ -350,6 +350,16 @@ equivalent optimization. Current owners share native context and arenas.
 Disabling native effects, reducing visibility, removing resource-boundary
 proofs, or changing image quality is not part of the recorded hot-path work.
 
+## Same-pair main sun-shadow reuse
+
+The observed uncached depth-only sun path can reuse its left-eye atlas after
+matching the right light/list/visibility inputs, ordered geometry range and
+intervening resource writes. The native sun visibility gate is preserved.
+Transparent, cached, auxiliary and unexplained paths retain original drawing.
+The earlier baseline contained one exact 48 MiB comparison and 812 duplicate
+draws per eye; this supports a theoretical work reduction, not an FPS claim.
+See [the native contract and verification limits](vr-sun-shadow-reuse.md).
+
 ## Verification and future comparisons
 
 Existing focused coverage includes scene-completion/upload ordering,

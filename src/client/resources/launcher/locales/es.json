@@ -357,5 +357,7 @@
   "settings.rightHandAngles": "Ángulos de la mano derecha",
   "settings.rightHandAnglesHint": "Grados para el mando derecho y las armas y cargadores que sostiene.",
   "settings.resetHandAngles": "Restablecer esta mano",
-  "settings.mirrorOtherHand": "Reflejar la otra mano"
+  "settings.mirrorOtherHand": "Reflejar la otra mano",
+  "settings.debugSunShadowCapture": "Captura de sombras solares",
+  "settings.debugSunShadowCaptureHint": "Incluye las sombras solares al recopilar diagnósticos con Ctrl+Mayús+F8. Dura unos 29 segundos. Se aplica al reiniciar el juego."
 }

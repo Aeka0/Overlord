@@ -357,5 +357,7 @@
   "settings.rightHandAngles": "Winkel der rechten Hand",
   "settings.rightHandAnglesHint": "Winkel in Grad für den rechten Controller sowie gehaltene Waffen und Magazine.",
   "settings.resetHandAngles": "Diese Hand zurücksetzen",
-  "settings.mirrorOtherHand": "Andere Hand spiegeln"
+  "settings.mirrorOtherHand": "Andere Hand spiegeln",
+  "settings.debugSunShadowCapture": "Sonnenschatten erfassen",
+  "settings.debugSunShadowCaptureHint": "Erfasst Sonnenschatten mit Strg+Umschalt+F8. Dauert etwa 29 Sekunden. Gilt ab dem nächsten Spielstart."
 }
