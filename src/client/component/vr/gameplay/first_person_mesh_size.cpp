@@ -159,7 +159,8 @@ namespace vr::gameplay::first_person_mesh_size
 		if (data!=packet_data::inverse_bind)
 		{
 			const game::XSurface* source{};std::memcpy(&source,bytes+0x28,sizeof(source));
-			if (!source || !(surface=sized_surface(source,size))) { ++rejected;return false; }
+			surface = source ? sized_surface(source, size) : nullptr;
+			if (!surface) { ++rejected;return false; }
 		}
 		if (data!=packet_data::surface)
 		{
