@@ -6,6 +6,7 @@
 #include "gameplay/notebook_runtime.hpp"
 #include "remote_hud_policy.hpp"
 #include "native_hud_capture.hpp"
+#include "hud_command_snapshot.hpp"
 #include "presentation_options.hpp"
 #include "native_menu.hpp"
 #include "spatial_panel_renderer.hpp"
@@ -414,11 +415,11 @@ namespace vr::native_hud_capture
 			}
 			return rect.right > rect.x && rect.bottom > rect.y;
 		}
-		bool select_commands(const void* commands, scope& result, unsigned ordinal, unsigned expected,
-			std::span<const native_waypoints::group> narrative_groups) noexcept
+		bool select_commands(const void* commands, command_snapshot& snapshot, scope& result, unsigned ordinal, unsigned expected,
+			std::span<const native_waypoints::group> narrative_groups) noexcept try
 		{
-			// Inspect the bounded immutable owner stream twice: first the native
-			// ammo panel's material anchor, then its contained glyph/quad commands.
+			// Decode the immutable owner stream once across passes and weapon sources.
+			// Preserve the anchor pass and original selection order.
 			bool found{};
 			for (int pass = 0; pass < 2; ++pass)
 			{
@@ -428,34 +429,55 @@ namespace vr::native_hud_capture
 				bool terminated{};
 				for (int n = 0; n < 2048; ++n)
 				{
-					std::array<std::byte, 4> header{};
-					if (!utils::native_memory::read_bytes(header.data(), cursor, header.size())) return false;
-					const auto size = field<std::uint16_t>(header.data(), 0);
-					const auto op = field<std::uint8_t>(header.data(), 2);
-					const auto flags = field<std::uint8_t>(header.data(), 3);
-					if (op == 0) { terminated = true; break; }
-					if (size < 4 || cursor - static_cast<const std::byte*>(commands) + size > 0x100000) return false;
+					const auto* decoded = snapshot.get(n, [&](weapon_command& value)
+					{
+						std::array<std::byte, 104> raw{};
+						if (!utils::native_memory::read_bytes(raw.data(), cursor, 4)) return false;
+						value.size = field<std::uint16_t>(raw.data(), 0);
+						value.op = field<std::uint8_t>(raw.data(), 2);
+						value.flags = field<std::uint8_t>(raw.data(), 3);
+						if (!value.op) return true;
+						if (value.size < 4 || cursor - static_cast<const std::byte*>(commands) + value.size > 0x100000) return false;
+						if ((value.flags == 0 || value.flags == 0x40) && value.op == 17 && value.size == 104)
+						{
+							if (!utils::native_memory::read_bytes(raw.data(), cursor, raw.size())) return false;
+							std::array<char, 96> storage{};
+							const auto name = material_name(raw.data(), storage);
+							value.blur = name == "h1_hud_weapwidget_blur";
+							value.border = gameplay::weapon_hud::native::border(name);
+							value.widget = name.starts_with("h1_hud_weapwidget_");
+							value.visible = (field<std::uint32_t>(raw.data(), 96) >> 24) != 0;
+							if (value.flags == 0 && value.widget)
+							{
+								rectangle rect{};
+								value.bounds_valid = quad_bounds(raw.data(), rect);
+								value.bounds = {rect.x, rect.y, rect.right, rect.bottom};
+							}
+						}
+						return true;
+					});
+					if (!decoded) return false;
+					const auto size = decoded->size;
+					const auto op = decoded->op;
+					const auto flags = decoded->flags;
+					if (!op) { terminated = true; break; }
 					bool selected{};
 					if ((flags == 0 || flags == 0x40) && op == 17 && size == 104)
 					{
-						std::array<std::byte, 104> quad{};
-						std::array<char, 96> name_storage{};
-						if (!utils::native_memory::read_bytes(quad.data(), cursor, quad.size())) return false;
-						const auto name = material_name(quad.data(), name_storage);
-						rectangle rect{};
-						if(pass==0 && flags==0x40 && name=="h1_hud_weapwidget_blur")pending_blur=cursor;
-						if (flags==0 && gameplay::weapon_hud::native::border(name) && pass == 0)
+						rectangle rect{decoded->bounds[0], decoded->bounds[1], decoded->bounds[2], decoded->bounds[3]};
+						if(pass==0 && flags==0x40 && decoded->blur)pending_blur=cursor;
+						if (flags==0 && decoded->border && pass == 0)
 						{
 							const auto* blur=pending_blur;pending_blur=nullptr;
-							if (!(field<std::uint32_t>(quad.data(),96)>>24)) {cursor+=size;continue;}
+							if (!decoded->visible) {cursor+=size;continue;}
 							if (borders++!=ordinal) {cursor+=size;continue;}
-							if (!quad_bounds(quad.data(), rect)) return false;
+							if (!decoded->bounds_valid) return false;
 							result.weapon_blur=blur;result.weapon_border=rect;
 							result.bounds = {std::floor(rect.x) - 4, std::floor(rect.y) - 4,
 								std::ceil(rect.right) + 4, std::ceil(rect.bottom) + 4};
 							found = true;
 						}
-						if (flags==0 && pass == 1 && name.starts_with("h1_hud_weapwidget_") && quad_bounds(quad.data(), rect))
+						if (flags==0 && pass == 1 && decoded->widget && decoded->bounds_valid)
 							selected = rect.x >= result.bounds.x && rect.y >= result.bounds.y &&
 								rect.right <= result.bounds.right && rect.bottom <= result.bounds.bottom;
 					}
@@ -485,6 +507,7 @@ namespace vr::native_hud_capture
 			return result.count > 1 && result.bounds.x >= 0 && result.bounds.y >= 0 &&
 				width >= 32 && width <= 2048 && height >= 16 && height <= 1024;
 		}
+		catch (...) { return false; }
 		void bind_weapon_blur(scope& s) noexcept
 		{
 			if(!s.weapon_blur || !s.output)return;
@@ -1142,7 +1165,8 @@ namespace vr::native_hud_capture
 			for(auto& layer:screen_scopes)layer.is_weapon_screen=weapon_screen;
 			scope warnings{}; warnings.is_warning=true;
 			std::array<scope,directional_ui::waypoint_capacity> markers{};
-			auto indicator_result=std::make_shared<indicators>();
+			indicators indicator_storage;
+			auto* indicator_result = &indicator_storage;
 			narrative.is_narrative = true;
 			const auto selection_start = std::chrono::steady_clock::now();
 			const bool independent=gameplay::weapons::carry::active();
@@ -1158,11 +1182,14 @@ namespace vr::native_hud_capture
 						gameplay::weapons::carry::held(source.owner.id()))) capture_sources[source_count++]=source;
 			}
 			else {capture_sources[0].owner=gameplay::weapons::current_hold();capture_sources[0].definition=capture_sources[0].owner.weapon;source_count=1;}
+			thread_local command_snapshot weapon_commands;
+			weapon_commands.reset();
+			const auto reset_commands = gsl::finally([&] { weapon_commands.reset(); });
 			bool selected{};
 			for (unsigned i=0;i<source_count;++i)
 			{
 				selected_sources[i]=gameplay && gameplay::weapon_hud::has_presentation_owner(capture_sources[i].owner) &&
-					(requested.load() || diagnostic) && select_commands(commands,weapon_scopes[i],i,source_count,groups);
+					(requested.load() || diagnostic) && select_commands(commands,weapon_commands,weapon_scopes[i],i,source_count,groups);
 				if (!selected_sources[i]) weapon_scopes[i].count=0;
 				selected=selected || selected_sources[i];
 			}
@@ -1261,9 +1288,17 @@ namespace vr::native_hud_capture
 						else { indicator_result->markers[i].crop={}; ++indicator_rejected; }
 					}
 				}
+				// Empty/menu dispatches need no shared allocation. Allocate the
+				// immutable publication before taking the reader's mutex.
+				std::shared_ptr<const indicators> published;
+				if (indicator_result->warnings || indicator_result->atlas)
+				{
+					try { published = std::make_shared<indicators>(std::move(indicator_storage)); }
+					catch (...) { ++indicator_rejected; }
+				}
 				const std::lock_guard lock(publication_mutex);
-				if (indicator_result->warnings || indicator_result->atlas) { indicator_publication=indicator_result; ++indicator_captures; }
-				else indicator_publication.reset();
+				if (published) ++indicator_captures;
+				indicator_publication = std::move(published);
 			});
 			// Clear failures/empty streams too; transient text cannot keep old ink.
 			const auto publish_narrative = gsl::finally([&] {
