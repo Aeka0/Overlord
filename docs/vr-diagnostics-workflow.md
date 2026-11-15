@@ -13,6 +13,10 @@ Save existing evidence before restarting. All `minidumps/` paths below are relat
 
 ## Choose the smallest useful observation
 
+For a planned OpenXR frame-production baseline, use the
+[frame pipeline capture procedure](vr-frame-pipeline-capture.md). It reuses the
+same diagnostic ZIP and adds interval analysis without changing the frame loop.
+
 For headset-dependent reproduction, agree an explicit capture window with the
 operator. Announce start immediately before the command and completion immediately
 after it returns, including failures. Outside that window assume the headset is

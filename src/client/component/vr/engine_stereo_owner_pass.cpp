@@ -62,6 +62,8 @@ namespace vr::engine_stereo_owner_pass
 		report evidence;
 		std::atomic<gate_state> state{gate_state::waiting};
 		std::atomic<failure> error{failure::none};
+		std::atomic_uint64_t frontend_unarmed{}, frontend_accepted{}, frontend_invalid_pair{},
+			frontend_production_busy{}, frontend_pair_unavailable{};
 		std::atomic_uint64_t attempts{};
 		std::atomic_uint64_t completions{};
 		std::atomic_uint64_t failures{};
@@ -736,12 +738,26 @@ namespace vr::engine_stereo_owner_pass
 		const std::uint64_t pair_id) noexcept
 	{
 		if (state.load(std::memory_order_acquire) != gate_state::complete)
-			return frontend_culling_admission::unarmed;
-		if (pair_id == 0 || production_active.load(std::memory_order_acquire) ||
-			!native_render_session::active().accepts_pair(pair_id))
 		{
+			frontend_unarmed.fetch_add(1, std::memory_order_relaxed);
+			return frontend_culling_admission::unarmed;
+		}
+		if (pair_id == 0)
+		{
+			frontend_invalid_pair.fetch_add(1, std::memory_order_relaxed);
 			return frontend_culling_admission::unavailable;
 		}
+		if (production_active.load(std::memory_order_acquire))
+		{
+			frontend_production_busy.fetch_add(1, std::memory_order_relaxed);
+			return frontend_culling_admission::unavailable;
+		}
+		if (!native_render_session::active().accepts_pair(pair_id))
+		{
+			frontend_pair_unavailable.fetch_add(1, std::memory_order_relaxed);
+			return frontend_culling_admission::unavailable;
+		}
+		frontend_accepted.fetch_add(1, std::memory_order_relaxed);
 		return frontend_culling_admission::accepted;
 	}
 
@@ -2352,6 +2368,9 @@ namespace vr::engine_stereo_owner_pass
 		output.production_attempts = production_attempts.load(std::memory_order_acquire);
 		output.production_completions = production_completions.load(std::memory_order_acquire);
 		output.production_failures = production_failures.load(std::memory_order_acquire);
+		output.frontend_admission = {frontend_unarmed.load(std::memory_order_relaxed),
+			frontend_accepted.load(std::memory_order_relaxed), frontend_invalid_pair.load(std::memory_order_relaxed),
+			frontend_production_busy.load(std::memory_order_relaxed), frontend_pair_unavailable.load(std::memory_order_relaxed)};
 		output.production_eye_copies = production_eye_copies.load(std::memory_order_acquire);
 		for (std::size_t eye = 0; eye < output.display_routes.size(); ++eye)
 		{

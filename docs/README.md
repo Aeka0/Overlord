@@ -79,6 +79,9 @@ headset acceptance where those boundaries matter.
 
 ## Diagnostics and source audits
 
+For a planned OpenXR frame-production baseline, see
+[frame pipeline capture](vr-frame-pipeline-capture.md).
+
 | Purpose | Guides |
 | --- | --- |
 | Capture and acceptance | [Diagnostics workflow](vr-diagnostics-workflow.md), [region performance capture](vr-region-capture.md), [render performance review](vr-render-performance-review.md), [equipment visibility capture](vr-equipment-visibility-capture.md), [interaction diagnostics](vr-interaction-diagnostics.md) |

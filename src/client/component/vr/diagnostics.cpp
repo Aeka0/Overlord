@@ -430,6 +430,7 @@ namespace vr::diagnostics
 
 	std::string format_status_text(const bool dvar_enabled)
 	{
+		const auto pipeline_begin_tick = GetTickCount64();
 		const auto identity = target_identity::get();
 		const auto device = d3d11::get_device_snapshot();
 		const auto graphics = d3d11::get_graphics_status();
@@ -446,6 +447,8 @@ namespace vr::diagnostics
 		const auto draw_indexed_status = engine_stereo_draw_indexed::get_status();
 		const auto execution_status = engine_stereo_execution::get_status();
 		const auto owner_pass_status = engine_stereo_owner_pass::get_report();
+		const auto pipeline_input = controller_input::latest();
+		const auto pipeline_tick = GetTickCount64();
 		auto scene_batch_storage =
 			std::make_unique<engine_stereo_scene_batch_probe::report>();
 		engine_stereo_scene_batch_probe::get_report(*scene_batch_storage);
@@ -488,6 +491,32 @@ namespace vr::diagnostics
 
 		std::ostringstream output;
 		output << "[VR] status\n";
+		// Reuse the copied status inputs above. No new SDK calls, GPU queries,
+		// counter resets or persistence on the render/Present owners.
+		output << "  frame_pipeline: schema=1 pid=" << GetCurrentProcessId()
+			<< " tick_ms=" << pipeline_tick << " snapshot_span_ms=" << pipeline_tick-pipeline_begin_tick
+			<< " session=" << runtime_status.session_generation << " device=" << runtime_status.device_generation
+			<< " reference=" << pipeline_input.reference_generation << " backend=" << available(runtime_status.backend_name)
+			<< " state=" << to_string(runtime_status.state) << " focused=" << pipeline_input.focused
+			<< " enabled=" << runtime_status.applied_enabled << " native_ready=" << runtime_status.native_renderer_ready
+			<< " owner_ready=" << (owner_pass_status.state == engine_stereo_owner_pass::gate_state::complete) << '\n';
+		const auto& frames = runtime_status.frame_submission;
+		output << "  frame_pipeline_counts: presents=" << graphics.present_count
+			<< " runtime_presents=" << runtime_status.present_owner_pre_count << " completed=" << frames.completed
+			<< " world=" << frames.world << " menu_only=" << frames.menu_only << " empty=" << frames.empty
+			<< " runtime_failures=" << runtime_status.failures.total
+			<< " owner_completed=" << owner_pass_status.production_completions
+			<< " owner_failures=" << owner_pass_status.production_failures << '\n';
+		const auto& admission = owner_pass_status.frontend_admission;
+		output << "  frame_pipeline_admission: unarmed=" << admission.unarmed << " accepted=" << admission.accepted
+			<< " invalid_pair=" << admission.invalid_pair << " production_busy=" << admission.production_busy
+			<< " pair_unavailable=" << admission.pair_unavailable << '\n';
+		output << "  frame_pipeline_cpu: transaction_samples=" << owner_pass_status.production_transaction_timing_samples
+			<< " transaction_total_us=" << owner_pass_status.production_transaction_timing_total_us;
+		for (std::size_t eye{}; eye < 2; ++eye)
+			output << " eye" << eye << "_samples=" << owner_pass_status.production_eye_timing_samples[eye]
+				<< " eye" << eye << "_total_us=" << owner_pass_status.production_eye_timing_total_us[eye];
+		output << '\n';
 		wait_timing::append(output);
 		detail::append_session_status(output, identity.compatibility_probe_passed);
 		detail::append_environment_status(output, device);

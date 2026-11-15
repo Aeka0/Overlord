@@ -60,6 +60,12 @@ namespace vr::engine_stereo_owner_pass
 		accepted,
 		unavailable,
 	};
+	// Process-lifetime observations of the existing first-failed-prerequisite
+	// gate. Calls are not frames, and independently sampled counts are approximate.
+	struct frontend_culling_counters
+	{
+		std::uint64_t unarmed{}, accepted{}, invalid_pair{}, production_busy{}, pair_unavailable{};
+	};
 
 	enum class model_state_failure_stage : std::uint8_t
 	{
@@ -109,6 +115,7 @@ namespace vr::engine_stereo_owner_pass
 		std::uint64_t production_attempts{};
 		std::uint64_t production_completions{};
 		std::uint64_t production_failures{};
+		frontend_culling_counters frontend_admission;
 		failure last_failure{failure::none};
 		bool failure_in_production{};
 		std::uint64_t failure_pair{};
