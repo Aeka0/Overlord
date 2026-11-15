@@ -515,7 +515,7 @@ namespace vr::gameplay::weapons::physical_reload
 			auto& contact=next.contact.catch_input;
 			const auto centre=action_slap_centre(definition,state.ammo.action,units);
 			contact.rotation=wrist_in_gun.rotation;
-			contact.hand_world=scale(add(wrist.position,view_offset),1/units);
+			contact.hand_world=swing_position(input.grip[off],scale(add(wrist.position,view_offset),1/units));
 			std::array<vec,hands::hand_contact_count> points;
 			contact.valid=hands::contact_points(slap_hand,solved,wrist_in_gun,points);
 			if (contact.valid) for (size_t i=0;i<points.size();++i)

@@ -64,7 +64,8 @@ namespace vr::gameplay::weapons::physical_reload
 		if(d.handle_catch || d.interaction.receiver_release)
 		{
 			const auto centre=action_slap_centre(d,v.ammo.action,units);
-			g.catch_input.valid=s.contact.catch_input.valid;g.catch_input.rotation=raw.rotation;g.catch_input.hand_world=scale(wrist.position,1/units);g.diagnose_slap=s.contact.diagnose_slap;
+			g.catch_input.valid=s.contact.catch_input.valid;g.catch_input.rotation=raw.rotation;
+			g.catch_input.hand_world=swing_position(f.input.grip[off],scale(wrist.position,1/units));g.diagnose_slap=s.contact.diagnose_slap;
 			for(size_t i=0;i<s.contact_in_wrist.size();++i)g.catch_input.slap_points[i]=scale(sub(compose(raw,{s.contact_in_wrist[i],{0,0,0,1}}).position,centre),1/units);
 			if(d.interaction.receiver_release && s.palm_in_wrist)
 				g.catch_input.palm=palm_relative_to_target(*s.palm_in_wrist,raw,centre,units);

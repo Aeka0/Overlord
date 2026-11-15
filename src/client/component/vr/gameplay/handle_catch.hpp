@@ -39,7 +39,10 @@ namespace vr::gameplay::weapons::physical_reload
 		bool valid{};
 		hands::quat rotation{0,0,0,1}; // corrected raw wrist, gun-local
 		std::array<vec,hands::hand_contact_count> slap_points{}; // whole hand relative to raised tab, metres
-		vec hand_world{}; // raw world position, not IK or a snapped contact
+		// Raw hand position for the swing-speed gate, not IK or a snapped contact.
+		// Use tracking metres so a moving platform cannot add its own speed;
+		// world metres are the fallback when no tracked position is available.
+		vec hand_world{};
 		std::optional<contact_box> palm; // Receiver-only solid palm, target-relative metres.
 	};
 	inline bool valid(const handle_catch_input& in) noexcept
@@ -48,6 +51,13 @@ namespace vr::gameplay::weapons::physical_reload
 		for (auto v:in.slap_points) for (float x:v) if (!std::isfinite(x) || std::abs(x)>100) return false;
 		for (float x:in.hand_world) if (!std::isfinite(x)) return false;
 		return !in.palm || valid_palm_meters(*in.palm);
+	}
+	// Adapted from MWR-VR 1645500bd9595253432c3adc3a16cdff5f9e27f3.
+	template<class Pose> vec swing_position(const Pose& tracked,const vec& world_meters) noexcept
+	{
+		if (!tracked.valid || !tracked.quality.position_valid || !tracked.quality.position_tracked) return world_meters;
+		const auto& position=tracked.tracking.position_meters;
+		return {float(position[0]),float(position[1]),float(position[2])};
 	}
 	struct handle_catch_grip
 	{

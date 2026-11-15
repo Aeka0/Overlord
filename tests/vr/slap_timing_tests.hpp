@@ -1,5 +1,6 @@
 #pragma once
 #include "component/vr/gameplay/handle_catch.hpp"
+#include "component/vr/controller_input.hpp"
 
 namespace slap_timing_tests
 {
@@ -12,6 +13,31 @@ namespace slap_timing_tests
 		{
 			return std::chrono::steady_clock::time_point(std::chrono::duration_cast<std::chrono::steady_clock::duration>(std::chrono::duration<double>(seconds)));
 		};
+		// Same relative slap on a stationary or 20 m/s platform. World-space
+		// speed rejects the riding case even though the player's hand moves 2 m/s.
+		{
+			const auto slap=[&](float platform_speed,float hand_speed,bool tracking_space) {
+				p::hand_slap_sweep<1> gesture; bool accepted{};
+				vr::controller_input::hand_pose hand;hand.valid=true;
+				hand.quality.position_valid=hand.quality.position_tracked=true;
+				for(int frame=0;frame<6;++frame)
+				{
+					const float seconds=.02f*frame;
+					const p::vec world{platform_speed*seconds,0,.15f-hand_speed*seconds};
+					hand.tracking.position_meters={0,0,-hand_speed*seconds};
+					const auto position=tracking_space?p::swing_position(hand,world):world;
+					accepted=gesture.update(tuning.slap,tuning.max_slap_speed,
+						{p::vec{0,0,.15f-2.f*seconds}},position,time(1.+seconds),.25f) || accepted;
+				}
+				return accepted;
+			};
+			check(!slap(20,2,false),"world-speed gate reproduces a normal slap rejected on a moving vehicle");
+			check(slap(0,2,true) && slap(20,2,true),"tracking-speed gate accepts the same slap at rest and on a moving vehicle");
+			check(!slap(0,0,true) && !slap(20,0,true),"a moving gun crossing a stationary tracked hand cannot produce a slap");
+			vr::controller_input::hand_pose lost;lost.valid=true;lost.quality.position_valid=true;
+			const p::vec world{1,2,3};
+			check(p::swing_position(lost,world)==world,"an untracked hand retains the world-metre fallback");
+		}
 		// Recorded MP5K contact #7, 2026-09-10: all motion gates passed,
 		// but a 68.4718 ms sample crossed the old fixed 25 cm step cap.
 		// Only this point and the wrist speed were exported, not a full pose replay.
