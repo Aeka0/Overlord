@@ -132,7 +132,9 @@ namespace vr::engine_stereo_bridge
 	void invalidate_views_for(std::uint64_t frame_id) noexcept;
 	// Frontend start: take the oldest family no frontend has taken yet (a newer
 	// queued one is promoted only after the current one was taken).
-	void take_view_family_for_frontend() noexcept;
+	// Taking and copying both eye configs is one lock transaction: publication
+	// cannot replace the selected family before the frontend has its snapshot.
+	[[nodiscard]] bool take_view_family_for_frontend(std::array<render_config, 2>& output) noexcept;
 	[[nodiscard]] std::array<std::uint64_t, 2> family_queue_counters() noexcept; // deferred, promoted
 	void reset() noexcept;
 

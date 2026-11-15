@@ -293,7 +293,8 @@ admission per family, so retiring the older one preserves the queued one.
 Only the family currently being produced is closed to frontend culling; native
 backend production itself still has one owner.
 
-At frontend derivation, the bridge takes the oldest untaken family. A newer
+At frontend derivation, the bridge takes the oldest untaken family and copies
+both eye configurations in the same lock transaction. A newer
 publication waits in one bounded slot, and cannot replace a family between its
 two eyes. Ending one prediction invalidates only that family when a queued one
 exists. Stop/teardown retires queued native admission without inventing an SDK

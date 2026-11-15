@@ -206,6 +206,8 @@ namespace vr::engine_stereo_bridge
 
 	namespace
 	{
+		bool snapshot_render_configs_locked(std::array<render_config, 2>& output) noexcept;
+
 		void promote_next_locked() noexcept
 		{
 			if (!next_family.valid) return;
@@ -244,14 +246,16 @@ namespace vr::engine_stereo_bridge
 		}
 	}
 
-	void take_view_family_for_frontend() noexcept
+	bool take_view_family_for_frontend(std::array<render_config, 2>& output) noexcept
 	{
 		const std::lock_guard lock(state_mutex);
 		// Never advance while the backend is between the two eyes of the current one.
 		if (published_taken && next_family.valid &&
 			(published_eye_mask == 0 || published_eye_mask == 0x3u))
 			promote_next_locked();
-		if (views_available && published_frame_id != 0) published_taken = true;
+		if (!snapshot_render_configs_locked(output)) return false;
+		published_taken = true;
+		return true;
 	}
 
 	std::array<std::uint64_t, 2> family_queue_counters() noexcept
@@ -345,34 +349,42 @@ namespace vr::engine_stereo_bridge
 			output.half_eye_offset_units > 0.0f && output.half_eye_offset_units <= 1000.0f;
 	}
 
+	namespace
+	{
+		bool snapshot_render_configs_locked(std::array<render_config, 2>& output) noexcept
+		{
+			output = {};
+			if (!target_matched || !enabled || !views_available || !render_hook_installed ||
+				published_frame_id == 0)
+			{
+				return false;
+			}
+			const auto half_offset = ipd_meters * 0.5f * world_scale;
+			if (!std::isfinite(half_offset) || half_offset <= 0.0f || half_offset > 1000.0f)
+			{
+				return false;
+			}
+			for (std::uint32_t eye{}; eye < output.size(); ++eye)
+			{
+				output[eye] = {
+					published_frame_id,
+					eye_projections,
+					half_offset,
+					swap_eyes,
+					published_publication,
+					published_frame_id,
+					eye,
+					swap_eyes ? eye ^ 1u : eye,
+				};
+			}
+			return true;
+		}
+	}
+
 	bool get_render_configs(std::array<render_config, 2>& output) noexcept
 	{
 		const std::lock_guard lock(state_mutex);
-		output = {};
-		if (!target_matched || !enabled || !views_available || !render_hook_installed ||
-			published_frame_id == 0)
-		{
-			return false;
-		}
-		const auto half_offset = ipd_meters * 0.5f * world_scale;
-		if (!std::isfinite(half_offset) || half_offset <= 0.0f || half_offset > 1000.0f)
-		{
-			return false;
-		}
-		for (std::uint32_t eye{}; eye < output.size(); ++eye)
-		{
-			output[eye] = {
-				published_frame_id,
-				eye_projections,
-				half_offset,
-				swap_eyes,
-				published_publication,
-				published_frame_id,
-				eye,
-				swap_eyes ? eye ^ 1u : eye,
-			};
-		}
-		return true;
+		return snapshot_render_configs_locked(output);
 	}
 
 	capture_tag consume_capture_tag() noexcept

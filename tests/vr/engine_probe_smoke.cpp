@@ -706,17 +706,17 @@ namespace
 		vr::tests::require(publish_view_family(42,{-.032f,0,0},{.032f,0,0},optics) &&
 			publish_view_family(43,{-.032f,0,0},{.032f,0,0},optics), "queued family publication failed");
 		view_family family;
-		take_view_family_for_frontend();
+		std::array<render_config,2> eyes;
+		vr::tests::require(take_view_family_for_frontend(eyes),"oldest family could not be taken");
 		vr::tests::require(get_view_family(family) && family.frame_id==42 && family.publication==1,
 			"a late frontend skipped the oldest untaken family");
-		std::array<render_config,2> eyes;
 		vr::tests::require(get_render_configs(eyes),"taken family lost its eye configurations");
 		record_stereo_eye(eyes[0],256,256,256,256);
-		take_view_family_for_frontend();
+		vr::tests::require(take_view_family_for_frontend(eyes),"partial family could not be taken");
 		vr::tests::require(get_view_family(family) && family.frame_id==42,
 			"queued family replaced a family between its two eyes");
 		record_stereo_eye(eyes[1],256,256,256,256);
-		take_view_family_for_frontend();
+		vr::tests::require(take_view_family_for_frontend(eyes),"queued family could not be taken");
 		vr::tests::require(get_view_family(family) && family.frame_id==43 && family.publication==2,
 			"queued family was not promoted after the older family was consumed");
 		invalidate_views_for(42);
@@ -724,6 +724,13 @@ namespace
 			"retiring an older family invalidated the queued family");
 		invalidate_views_for(43);
 		vr::tests::require(!get_view_family(family),"retired family remained available");
+		vr::tests::require(publish_view_family(61,{-.032f,0,0},{.032f,0,0},optics) &&
+			take_view_family_for_frontend(eyes) &&
+			publish_view_family(62,{-.032f,0,0},{.032f,0,0},optics),"publication race fixture failed");
+		std::array<render_config,2> observed;
+		vr::tests::require(get_render_configs(observed) && observed[0].pair_id==62 &&
+			eyes[0].pair_id==61 && eyes[1].pair_id==61 && eyes[0].publication==eyes[1].publication,
+			"publication after a frontend take stole its claimed stereo snapshot");
 	}
 
 	void expect_render_target_observation_contract()
