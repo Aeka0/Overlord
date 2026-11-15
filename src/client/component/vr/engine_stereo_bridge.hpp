@@ -127,6 +127,13 @@ namespace vr::engine_stereo_bridge
 		const std::array<float, 3>& right_position,
 		const std::array<eye_projection, 2>& projections) noexcept;
 	void invalidate_views() noexcept;
+	// Retires a finished family only if it is still the published one; a newer
+	// queued family (OpenXR pipelining) stays available to the next frontend.
+	void invalidate_views_for(std::uint64_t frame_id) noexcept;
+	// Frontend start: take the oldest family no frontend has taken yet (a newer
+	// queued one is promoted only after the current one was taken).
+	void take_view_family_for_frontend() noexcept;
+	[[nodiscard]] std::array<std::uint64_t, 2> family_queue_counters() noexcept; // deferred, promoted
 	void reset() noexcept;
 
 	[[nodiscard]] bool is_active() noexcept;

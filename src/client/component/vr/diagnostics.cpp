@@ -518,6 +518,8 @@ namespace vr::diagnostics
 				<< " eye" << eye << "_total_us=" << owner_pass_status.production_eye_timing_total_us[eye];
 		output << '\n';
 		wait_timing::append(output);
+		const auto family_queue = engine_stereo_bridge::family_queue_counters();
+		output << "  frame_pipeline_queue: deferred=" << family_queue[0] << " promoted=" << family_queue[1] << '\n';
 		detail::append_session_status(output, identity.compatibility_probe_passed);
 		detail::append_environment_status(output, device);
 		output << "capture context: " << (graphics.present_count == 0 ?

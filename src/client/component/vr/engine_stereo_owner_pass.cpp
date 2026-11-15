@@ -188,6 +188,7 @@ namespace vr::engine_stereo_owner_pass
 		std::array<std::atomic_uint32_t, auxiliary_scene::view_count> camera_model_final_inactive{};
 		std::array<std::atomic_uint32_t, auxiliary_scene::view_count> camera_model_final_other{};
 		std::atomic_bool production_active{};
+		std::atomic_uint64_t production_pair{};
 		std::atomic_bool gpu_census_launch_attempted{};
 		// High 32 bits are a monotonic request sequence; low 32 bits are the exact
 		// requested delay. Publishing both in one release operation prevents a
@@ -747,7 +748,9 @@ namespace vr::engine_stereo_owner_pass
 			frontend_invalid_pair.fetch_add(1, std::memory_order_relaxed);
 			return frontend_culling_admission::unavailable;
 		}
-		if (production_active.load(std::memory_order_acquire))
+		// Only the family currently being produced is closed. The queued OpenXR
+		// family may be culled while the older family's backend transaction runs.
+		if (production_pair.load(std::memory_order_acquire) == pair_id)
 		{
 			frontend_production_busy.fetch_add(1, std::memory_order_relaxed);
 			return frontend_culling_admission::unavailable;
@@ -1105,6 +1108,7 @@ namespace vr::engine_stereo_owner_pass
 			auto expected = false;
 			if (!production_active.compare_exchange_strong(expected, true,
 				std::memory_order_acq_rel, std::memory_order_acquire)) return false;
+			production_pair.store(cloned_records.pair_id, std::memory_order_release);
 		}
 		else
 		{
@@ -2150,6 +2154,7 @@ namespace vr::engine_stereo_owner_pass
 			native_post_aa::finish_pair(active.records.pair_id, !active.failed);
 			engine_stereo_binding::release(active.claim);
 			if (active_transaction == &active) active_transaction = nullptr;
+			production_pair.store(0, std::memory_order_release);
 			production_active.store(false, std::memory_order_release);
 			retire_transaction_preserving_records(active);
 			return;
@@ -2353,6 +2358,7 @@ namespace vr::engine_stereo_owner_pass
 		if (resources.context.Get() != context || resources.generation != generation) return;
 		fail_global(failure::device);
 		resources = {};
+		production_pair.store(0, std::memory_order_release);
 		production_active.store(false, std::memory_order_release);
 	}
 

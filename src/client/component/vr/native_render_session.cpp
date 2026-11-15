@@ -308,6 +308,7 @@ float4 main(float4 position : SV_Position) : SV_Target
 		copy_ring_ = false;
 		accepting_pairs_ = true;
 		expected_pair_id_ = 0;
+		prior_pair_id_ = 0;
 		device_ = graphics.device;
 		context_ = graphics.context;
 		status_.available = true;
@@ -456,6 +457,7 @@ float4 main(float4 position : SV_Position) : SV_Target
 		copy_ring_ = true;
 		accepting_pairs_ = false;
 		expected_pair_id_ = 0;
+		prior_pair_id_ = 0;
 		device_ = graphics.device;
 		context_ = graphics.context;
 		conversion_deferred_context_ = std::move(conversion_deferred_context);
@@ -523,6 +525,7 @@ float4 main(float4 position : SV_Position) : SV_Target
 		copy_ring_ = false;
 		accepting_pairs_ = false;
 		expected_pair_id_ = 0;
+		prior_pair_id_ = 0;
 		device_.Reset();
 		context_.Reset();
 		conversion_deferred_context_.Reset();
@@ -561,6 +564,7 @@ float4 main(float4 position : SV_Position) : SV_Target
 		const std::lock_guard lock(mutex_);
 		if (!status_.available) return false;
 		expected_pair_id_ = 0;
+		prior_pair_id_ = 0;
 		status_.expected_pair_id = 0;
 		if (accepting_pairs_)
 		{
@@ -571,13 +575,49 @@ float4 main(float4 position : SV_Position) : SV_Target
 		return true;
 	}
 
-	bool session::admit_pair(const std::uint64_t pair_id) noexcept
+	void session::stop_expecting_locked(const std::uint64_t pair_id) noexcept
+	{
+		if (pair_id == 0) return;
+		if (prior_pair_id_ == pair_id) prior_pair_id_ = 0;
+		else if (expected_pair_id_ == pair_id)
+		{
+			expected_pair_id_ = prior_pair_id_;
+			prior_pair_id_ = 0;
+		}
+		accepting_pairs_ = expected_pair_id_ != 0;
+		status_.accepting_pairs = accepting_pairs_;
+		status_.expected_pair_id = expected_pair_id_;
+	}
+
+	bool session::admit_pair(const std::uint64_t pair_id, const bool pipelined) noexcept
 	{
 		const std::lock_guard lock(mutex_);
 		if (!status_.available || !copy_ring_ || pair_id == 0) return false;
+		if (accepting_pairs_ && expects_locked(pair_id)) return true;
+		if (pipelined && prior_pair_id_ == 0)
+		{
+			// The older family keeps its slot (or the claim on a free one); the
+			// queued family needs another free slot by the time H2 produces it.
+			std::size_t free_slots{};
+			bool older_owns_slot = !accepting_pairs_;
+			for (const auto& pair : pairs_)
+			{
+				if (pair.state == pair_state::free && pair.pair_id == 0 &&
+					pair.completed_eye_mask == 0 && pair.active_eye_mask == 0) ++free_slots;
+				else if (pair.pair_id == expected_pair_id_) older_owns_slot = true;
+			}
+			if (free_slots < (older_owns_slot ? 1u : 2u)) return false;
+			prior_pair_id_ = accepting_pairs_ ? expected_pair_id_ : 0;
+			accepting_pairs_ = true;
+			expected_pair_id_ = pair_id;
+			status_.accepting_pairs = true;
+			status_.expected_pair_id = pair_id;
+			++status_.acquisition_resumes;
+			return true;
+		}
 		if (accepting_pairs_)
 		{
-			return expected_pair_id_ == pair_id;
+			return false;
 		}
 		if (!std::ranges::all_of(pairs_, [](const target_pair& pair)
 			{
@@ -598,8 +638,7 @@ float4 main(float4 position : SV_Position) : SV_Target
 	bool session::accepts_pair(const std::uint64_t pair_id) const noexcept
 	{
 		const std::lock_guard lock(mutex_);
-		return status_.available && copy_ring_ && accepting_pairs_ && pair_id != 0 &&
-			expected_pair_id_ == pair_id;
+		return status_.available && copy_ring_ && accepting_pairs_ && expects_locked(pair_id);
 	}
 
 	bool session::acquire_target(const std::uint64_t pair_id, const std::uint32_t eye,
@@ -634,7 +673,7 @@ float4 main(float4 position : SV_Position) : SV_Target
 			}
 			return true;
 		}
-		if (!accepting_pairs_ || (copy_ring_ && pair_id != expected_pair_id_))
+		if (!accepting_pairs_ || (copy_ring_ && !expects_locked(pair_id)))
 		{
 			++status_.acquisition_rejections;
 			++status_.pair_rejections;
@@ -808,7 +847,7 @@ float4 main(float4 position : SV_Position) : SV_Target
 			}
 			return false;
 		};
-		if (!accepting_pairs_ || pair_id != expected_pair_id_)
+		if (!accepting_pairs_ || !expects_locked(pair_id))
 		{
 			retain_failure(copy_failure::admission, E_ACCESSDENIED);
 			failed_pair_id_ = pair_id;
@@ -1042,12 +1081,10 @@ float4 main(float4 position : SV_Position) : SV_Target
 			selected->state = pair_state::published;
 			selected->preview_pair_id = pair_id;
 			selected->preview_owner_thread = GetCurrentThreadId();
-			// One OpenVR pose family admits exactly one H2 stereo producer. Close the
-			// gate before another frontend publication can occupy the second ring slot.
-			accepting_pairs_ = false;
-			expected_pair_id_ = 0;
-			status_.accepting_pairs = false;
-			status_.expected_pair_id = 0;
+			// One pose family admits exactly one H2 stereo producer. Retire its
+			// admission before another frontend publication can occupy a ring slot;
+			// an OpenXR queued family stays admitted.
+			stop_expecting_locked(pair_id);
 		}
 		return true;
 	}
@@ -1168,7 +1205,7 @@ float4 main(float4 position : SV_Position) : SV_Target
 			break;
 		}
 
-		const auto predicted = accepting_pairs_ && expected_pair_id_ == pair_id;
+		const auto predicted = accepting_pairs_ && expects_locked(pair_id);
 		if (selected == nullptr && !predicted) return false;
 		if (selected != nullptr)
 		{
@@ -1179,10 +1216,7 @@ float4 main(float4 position : SV_Position) : SV_Target
 		}
 		if (predicted)
 		{
-			accepting_pairs_ = false;
-			expected_pair_id_ = 0;
-			status_.accepting_pairs = false;
-			status_.expected_pair_id = 0;
+			stop_expecting_locked(pair_id);
 		}
 		if (failed)
 		{

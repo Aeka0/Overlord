@@ -149,7 +149,10 @@ namespace vr::native_render_session
 		void invalidate(std::uint64_t device_generation = 0) noexcept;
 		[[nodiscard]] bool available(const d3d11::device_snapshot& graphics) const noexcept;
 		[[nodiscard]] bool suspend_acquisition() noexcept;
-		[[nodiscard]] bool admit_pair(std::uint64_t pair_id) noexcept;
+		// pipelined: OpenXR queues the next pose family while the current one is
+		// still being produced; admit it beside that older family when the ring
+		// keeps a slot for each. OpenVR keeps one family at a time.
+		[[nodiscard]] bool admit_pair(std::uint64_t pair_id, bool pipelined = false) noexcept;
 		[[nodiscard]] bool accepts_pair(std::uint64_t pair_id) const noexcept;
 		// The target pairs are the OpenVR submission ring. An eye texture is owned
 		// by exactly one stereo family until the next successful WaitGetPoses retires
@@ -216,6 +219,13 @@ namespace vr::native_render_session
 		bool copy_ring_{};
 		bool accepting_pairs_{};
 		std::uint64_t expected_pair_id_{};
+		// Older family still expected while a pipelined one was admitted (OpenXR).
+		std::uint64_t prior_pair_id_{};
+		[[nodiscard]] bool expects_locked(std::uint64_t pair_id) const noexcept
+		{
+			return pair_id != 0 && (pair_id == expected_pair_id_ || pair_id == prior_pair_id_);
+		}
+		void stop_expecting_locked(std::uint64_t pair_id) noexcept;
 		Microsoft::WRL::ComPtr<ID3D11Device> device_;
 		Microsoft::WRL::ComPtr<ID3D11DeviceContext> context_;
 		Microsoft::WRL::ComPtr<ID3D11DeviceContext> conversion_deferred_context_;

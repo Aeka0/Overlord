@@ -93,6 +93,13 @@ consistent with the proposed frontend/back-end overlap problem. It is not, by
 itself, a promise that the backport will double FPS. Admission calls are not
 frames, and several calls can refer to one pose family.
 
+With queued predictions, `production_busy` rejects only the family currently
+being produced; a different admitted family may proceed. The earlier baseline
+rejected any family while production was active. This is the policy being
+changed, so compare actual rejected calls and Present/world rates rather than
+treating this counter as an unchanged measure of backend CPU utilization.
+`frame_pipeline_queue` also records deferred/promoted family publications.
+
 The endpoint snapshots are sequential observations, not an atomic renderer
 transaction. Their observation spans are recorded. Readiness is checked at the
 endpoints; the operator must describe any intervening pause or tracking loss.

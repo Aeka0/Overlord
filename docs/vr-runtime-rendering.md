@@ -277,13 +277,37 @@ Gameplay consumes tracking/input frames published by the runtime rather than pol
 ## OpenXR frame and lifecycle contracts
 
 Read the implementation through `on_present` -> `complete_native` ->
-`on_present_post` -> `begin_prediction`. Present-pre finishes the previous
-prediction; a matching Present-post opens the next one. Head, grip/aim spaces,
-view poses and projection fields use that prediction's display time and LOCAL
-space. A partial native eye pair retains one prediction, with a bounded wait
-across Presents; it cannot resample tracking or acquire replacement world data.
-Frame submission uses the original SDK poses/FOV and retires the native pair
-after its same-queue texture transfer. Runtime waits never hold the GPU queue scope.
+`on_present_post` -> `begin_prediction` / `queue_prediction`. World rendering
+keeps the current begun prediction and at most one waited, unbegun prediction.
+The next `xrWaitFrame` can overlap the current frame; its `xrBeginFrame` follows
+the current `xrEndFrame`. Both remain serialized on the real Present owner,
+without a second runtime worker. See the Khronos contracts for
+[xrWaitFrame](https://registry.khronos.org/OpenXR/specs/1.1/man/html/xrWaitFrame.html)
+and [xrBeginFrame](https://registry.khronos.org/OpenXR/specs/1.1/man/html/xrBeginFrame.html).
+
+Each prediction retains its own display time, SDK eye poses/FOV, native pair
+admission and per-eye image progress. A partial native pair or pending image
+wait cannot substitute another prediction's images or reacquire a completed eye.
+The two-slot native ring reserves room for each admitted family and closes
+admission per family, so retiring the older one preserves the queued one.
+Only the family currently being produced is closed to frontend culling; native
+backend production itself still has one owner.
+
+At frontend derivation, the bridge takes the oldest untaken family. A newer
+publication waits in one bounded slot, and cannot replace a family between its
+two eyes. Ending one prediction invalidates only that family when a queued one
+exists. Stop/teardown retires queued native admission without inventing an SDK
+submission for an unbegun frame. Pure UI/movie frames retain the single-prediction
+path. Pending session recovery suppresses promotion/new waits, preserving the
+initiating failure until teardown retires both predictions. Runtime waits never
+hold the GPU queue scope.
+
+The backport combines MWR-VR commits
+[6f199902](https://github.com/lesan0622/MWR-VR/commit/6f1999024a70ce5caf2b817971baf01a9c98963c)
+and [a2789899](https://github.com/lesan0622/MWR-VR/commit/a2789899c7786886b77d5c7fe6281cb13501b0ff),
+retaining H2 bindings, projection ranges, wait-timeout recovery and diagnostics.
+Mock/no-loader checks establish transport and ordering behavior; the changed
+prediction lead still requires same-condition HMD latency/judder acceptance.
 
 The game D3D11 device binds the session after adapter-LUID and feature-level
 validation. Native admission needs copied content proof for the current device,

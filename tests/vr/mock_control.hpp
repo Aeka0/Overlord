@@ -11,6 +11,7 @@ namespace vr::tests::mock
 		happy,
 		canted_views,
 		parallel_views,
+		moving_views,
 		scaled_view_quaternions,
 		view_count_mismatch,
 		invalid_eye_pose,
@@ -35,6 +36,7 @@ namespace vr::tests::mock
 		end_session,
 		get_current_interaction_profile,
 		locate_views,
+		end_frame,
 	};
 
 	struct statistics

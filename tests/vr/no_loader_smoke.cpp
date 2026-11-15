@@ -1395,6 +1395,17 @@ namespace
 			session.admit_pair(post_deferral_pair_id) &&
 			session.discard_unpublished_pair(post_deferral_pair_id),
 			"deferring a cache-warmup prediction did not admit a fresh pose family");
+		// A queued family must retain a second slot even before either family
+		// has produced pixels; cancelling one admission must leave the other.
+		vr::tests::require(session.admit_pair(7988) && session.admit_pair(7989,true) &&
+			!session.admit_pair(7990,true) && session.accepts_pair(7988) && session.accepts_pair(7989) &&
+			session.discard_unpublished_pair(7988) && session.accepts_pair(7989) &&
+			session.discard_unpublished_pair(7989), "two queued reservations did not retain independent admission");
+		vr::tests::require(session.admit_pair(7986) &&
+			session.copy_eye(7986,0,hdr_source.Get(),5,warp_graphics.context.Get()) &&
+			session.admit_pair(7987,true) && session.discard_unpublished_pair(7987) &&
+			session.accepts_pair(7986) && session.discard_unpublished_pair(7986),
+			"cancelling a queued family revoked the older partial eye pair");
 		constexpr std::uint64_t partial_pair_id = 7999;
 		vr::tests::require(session.admit_pair(partial_pair_id) &&
 			session.copy_eye(partial_pair_id, 0, hdr_source.Get(), 5,

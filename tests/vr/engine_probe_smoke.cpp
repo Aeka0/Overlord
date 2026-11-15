@@ -698,6 +698,34 @@ namespace
 			"same-frame eye submissions were classified as incoherent");
 	}
 
+	void expect_oldest_view_family_is_taken_first()
+	{
+		using namespace vr::engine_stereo_bridge;
+		configure_bridge();
+		const std::array<eye_projection,2> optics{{{-1,1,-1,1},{-1,1,-1,1}}};
+		vr::tests::require(publish_view_family(42,{-.032f,0,0},{.032f,0,0},optics) &&
+			publish_view_family(43,{-.032f,0,0},{.032f,0,0},optics), "queued family publication failed");
+		view_family family;
+		take_view_family_for_frontend();
+		vr::tests::require(get_view_family(family) && family.frame_id==42 && family.publication==1,
+			"a late frontend skipped the oldest untaken family");
+		std::array<render_config,2> eyes;
+		vr::tests::require(get_render_configs(eyes),"taken family lost its eye configurations");
+		record_stereo_eye(eyes[0],256,256,256,256);
+		take_view_family_for_frontend();
+		vr::tests::require(get_view_family(family) && family.frame_id==42,
+			"queued family replaced a family between its two eyes");
+		record_stereo_eye(eyes[1],256,256,256,256);
+		take_view_family_for_frontend();
+		vr::tests::require(get_view_family(family) && family.frame_id==43 && family.publication==2,
+			"queued family was not promoted after the older family was consumed");
+		invalidate_views_for(42);
+		vr::tests::require(get_view_family(family) && family.frame_id==43,
+			"retiring an older family invalidated the queued family");
+		invalidate_views_for(43);
+		vr::tests::require(!get_view_family(family),"retired family remained available");
+	}
+
 	void expect_render_target_observation_contract()
 	{
 		using namespace vr::engine_stereo_bridge;
@@ -2152,6 +2180,7 @@ int main()
 		expect_bridge_gate_and_views();
 		expect_explicit_eye_render_config_and_counters();
 		expect_same_frame_view_family_contract();
+		expect_oldest_view_family_is_taken_first();
 		expect_render_target_observation_contract();
 		expect_record_local_asymmetric_eye_slots();
 		expect_general_projection_ranges();

@@ -427,7 +427,8 @@ namespace openxr_adaptation_tests
 		                   "native prediction did not publish a head and eye family");
 		const bool rotated = scenario == vr::tests::mock::scenario::parallel_views;
 		const vr::pose_filter::vec center = rotated ? vr::pose_filter::vec{.1f, .02f, -.03f}
-		                                           : vr::pose_filter::vec{};
+		    : scenario == vr::tests::mock::scenario::moving_views ? vr::pose_filter::vec{.01f, 0, 0}
+		                                                       : vr::pose_filter::vec{};
 		const auto expected_rotation = vr::pose_filter::rotation(
 		    {0, rotated ? std::sin(.1f) : 0, 0, rotated ? std::cos(.1f) : 1});
 		vr::tests::require(vr::pose_filter::length(vr::pose_filter::sub(reference.origin.position_meters, center)) < .00001f &&
@@ -454,15 +455,27 @@ namespace openxr_adaptation_tests
 		const auto pending = present(graphics, 2);
 		runtime.on_present(pending);
 		runtime.on_present_post(pending, S_OK);
-		vr::tests::require(loader.statistics().frames_waited == 1 && loader.statistics().images_acquired == 0,
-		                   "partial stereo must not acquire images, resample poses "
-		                   "or submit a substitute");
+		vr::tests::require(loader.statistics().frames_waited == 2 && loader.statistics().frames_begun == 1 &&
+		                       loader.statistics().images_acquired == 0 &&
+		                       vr::native_render_session::active().accepts_pair(1) &&
+		                       vr::native_render_session::active().accepts_pair(2),
+		                   "partial stereo must retain its pair and images while the next prediction waits unbegun");
 		const float right[]{.1f, .9f, .8f, 1};
 		graphics.context->ClearRenderTargetView(target.Get(), right);
 		vr::tests::require(
 		    vr::native_render_session::active().copy_eye(1, 1, texture.Get(), 4, graphics.context.Get()),
 		    "right native copy failed");
-		const auto complete = present(graphics, 3);
+		auto complete = present(graphics, 3);
+		if (scenario == vr::tests::mock::scenario::moving_views)
+		{
+			loader.fail_once(vr::tests::mock::failure_point::wait_swapchain_image, XR_TIMEOUT_EXPIRED);
+			runtime.on_present(complete);
+			vr::tests::require(loader.statistics().frames_ended == 0 && loader.statistics().images_acquired == 1 &&
+			    loader.statistics().frames_waited == 2 && !runtime.get_status().reinitialize_pending,
+			    "swapchain timeout lost the current image or queued prediction");
+			runtime.on_present_post(complete,S_OK);
+			complete = present(graphics,4);
+		}
 		runtime.on_present(complete);
 		vr::tests::require(runtime.get_status().submitted_frames == 1 &&
 		                       loader.statistics().projection_frames == 1,
@@ -477,13 +490,54 @@ namespace openxr_adaptation_tests
 		vr::tests::require((pixels[0] & 255) > 200 && ((pixels[1] >> 8) & 255) > 200 &&
 		                       pixels[0] != pixels[1],
 		                   "native eye colors or linear/sRGB transfer changed");
-		runtime.on_present_post(complete, S_OK);
-		const auto wrong_pre = present(graphics, 4), wrong_post = present(graphics, 5);
+		// Keep the frontend late for several frames: each older begun frame must
+		// still submit its own time/eye poses while a newer prediction is queued.
+		auto previous = complete;
+		std::uint64_t pair = 2;
+		for (std::uint64_t index = 0; index < 3; ++index)
+		{
+			runtime.on_present_post(previous, S_OK);
+			const auto next_pair = previous.frame_index;
+			graphics.context->ClearRenderTargetView(target.Get(), left);
+			vr::tests::require(vr::native_render_session::active().copy_eye(pair,0,texture.Get(),4,graphics.context.Get()),
+			    "queued left copy failed");
+			graphics.context->ClearRenderTargetView(target.Get(), right);
+			vr::tests::require(vr::native_render_session::active().copy_eye(pair,1,texture.Get(),4,graphics.context.Get()),
+			    "queued right copy failed");
+			previous = present(graphics, previous.frame_index+1);
+			runtime.on_present(previous);
+			vr::tests::require(loader.statistics().projection_frames == index+2 &&
+			    runtime.get_status().failures.total == 0, "queued frame was starved or used another prediction's metadata");
+			pair = next_pair;
+		}
+		runtime.on_present_post(previous, S_OK);
+		if (scenario == vr::tests::mock::scenario::moving_views)
+		{
+			graphics.context->ClearRenderTargetView(target.Get(),left);
+			vr::tests::require(vr::native_render_session::active().copy_eye(pair,0,texture.Get(),4,graphics.context.Get()),
+			    "failure fixture left copy failed");
+			graphics.context->ClearRenderTargetView(target.Get(),right);
+			vr::tests::require(vr::native_render_session::active().copy_eye(pair,1,texture.Get(),4,graphics.context.Get()),
+			    "failure fixture right copy failed");
+			loader.fail_once(vr::tests::mock::failure_point::end_frame,XR_ERROR_RUNTIME_FAILURE);
+			const auto failed = present(graphics,previous.frame_index+1);
+			runtime.on_present(failed);
+			runtime.on_present_post(failed,S_OK);
+			const auto state = runtime.get_status();
+			vr::tests::require(state.reinitialize_pending && state.failures.total==1 &&
+			    state.last_error.find("xrEndFrame")!=std::string::npos,
+			    "failed EndFrame started another SDK frame before session recovery");
+		}
+		else
+		{
+		const auto waits_before_mismatch = loader.statistics().frames_waited;
+		const auto wrong_pre = present(graphics, previous.frame_index+1), wrong_post = present(graphics, previous.frame_index+2);
 		runtime.on_present(wrong_pre);
 		runtime.on_present_post(wrong_post, S_OK);
 		vr::tests::require(runtime.get_status().state == vr::runtime_state::fatal_for_vr &&
-		                       loader.statistics().frames_waited == 2,
+		                       loader.statistics().frames_waited == waits_before_mismatch,
 		                   "mismatched Present must not open another XR prediction");
+		}
 		runtime.shutdown();
 		const auto statistics = loader.statistics();
 		vr::tests::require(!runtime.get_status().loader_loaded &&

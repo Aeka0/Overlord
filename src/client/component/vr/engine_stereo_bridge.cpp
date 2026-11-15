@@ -25,7 +25,23 @@ namespace vr::engine_stereo_bridge
 		std::array<float, 3> left_eye_position{};
 		std::array<float, 3> right_eye_position{};
 		std::uint64_t view_publications{};
+		std::uint64_t published_publication{};
 		std::uint64_t published_frame_id{};
+		// OpenXR keeps two predictions in flight. A frontend that starts after both
+		// were published used to read only the newest, so the older begun frame was
+		// never produced: it ended empty ~3 native frames later and every frontend in
+		// between was rejected (mock All Ghillied Up, 120 Hz: ~25 of 147 frames/s).
+		// The newer family now waits here until a frontend has taken the current one.
+		struct queued_family
+		{
+			bool valid{};
+			std::uint64_t frame_id{}, publication{};
+			float ipd{};
+			std::array<float, 3> left{}, right{};
+			std::array<eye_projection, 2> projections{};
+		} next_family;
+		bool published_taken{};
+		std::uint64_t deferred_families{}, promoted_families{};
 		std::uint32_t published_eye_mask{};
 		std::uint64_t stereo_frames{};
 		std::uint64_t coherent_stereo_pairs{};
@@ -150,6 +166,12 @@ namespace vr::engine_stereo_bridge
 		{
 			return false;
 		}
+		if (views_available && published_frame_id != 0 && !published_taken)
+		{
+			next_family = {true, frame_id, ++view_publications, separation, left_position, right_position, projections};
+			++deferred_families;
+			return true;
+		}
 		if (published_eye_mask != 0 && published_eye_mask != 0x3u)
 		{
 			// Keep one predicted family immutable until both H2 scene submissions
@@ -164,7 +186,9 @@ namespace vr::engine_stereo_bridge
 		published_frame_id = frame_id;
 		published_eye_mask = 0;
 		views_available = true;
-		++view_publications;
+		published_publication = ++view_publications;
+		published_taken = false;
+		next_family = {};
 		return true;
 	}
 
@@ -180,10 +204,60 @@ namespace vr::engine_stereo_bridge
 		(void)publish_view_family(frame_id, left_position, right_position, projections);
 	}
 
+	namespace
+	{
+		void promote_next_locked() noexcept
+		{
+			if (!next_family.valid) return;
+			ipd_meters = next_family.ipd;
+			left_eye_position = next_family.left;
+			right_eye_position = next_family.right;
+			eye_projections = next_family.projections;
+			published_frame_id = next_family.frame_id;
+			published_publication = next_family.publication;
+			published_eye_mask = 0;
+			views_available = true;
+			published_taken = false;
+			next_family = {};
+			++promoted_families;
+		}
+	}
+
 	void invalidate_views() noexcept
 	{
 		const std::lock_guard lock(state_mutex);
 		invalidate_views_locked();
+		next_family = {};
+		published_taken = false;
+	}
+
+	void invalidate_views_for(const std::uint64_t frame_id) noexcept
+	{
+		const std::lock_guard lock(state_mutex);
+		if (next_family.valid && next_family.frame_id == frame_id)
+			next_family = {};
+		if (published_frame_id == frame_id)
+		{
+			invalidate_views_locked();
+			published_taken = false;
+			promote_next_locked();
+		}
+	}
+
+	void take_view_family_for_frontend() noexcept
+	{
+		const std::lock_guard lock(state_mutex);
+		// Never advance while the backend is between the two eyes of the current one.
+		if (published_taken && next_family.valid &&
+			(published_eye_mask == 0 || published_eye_mask == 0x3u))
+			promote_next_locked();
+		if (views_available && published_frame_id != 0) published_taken = true;
+	}
+
+	std::array<std::uint64_t, 2> family_queue_counters() noexcept
+	{
+		const std::lock_guard lock(state_mutex);
+		return {deferred_families, promoted_families};
 	}
 
 	void reset() noexcept
@@ -198,6 +272,10 @@ namespace vr::engine_stereo_bridge
 		left_eye_position = {};
 		right_eye_position = {};
 		view_publications = 0;
+		deferred_families = promoted_families = 0;
+		published_publication = 0;
+		next_family = {};
+		published_taken = false;
 		published_frame_id = 0;
 		published_eye_mask = 0;
 		stereo_frames = 0;
@@ -238,7 +316,7 @@ namespace vr::engine_stereo_bridge
 			return false;
 		}
 		output.frame_id = published_frame_id;
-		output.publication = view_publications;
+		output.publication = published_publication;
 		output.left_position = left_eye_position;
 		output.right_position = right_eye_position;
 		output.eyes = eye_projections;
@@ -259,7 +337,7 @@ namespace vr::engine_stereo_bridge
 		output.eyes = eye_projections;
 		output.half_eye_offset_units = ipd_meters * 0.5f * world_scale;
 		output.swap_eyes = swap_eyes;
-		output.publication = view_publications;
+		output.publication = published_publication;
 		output.output_eye = requested_eye;
 		output.view_eye = swap_eyes ? requested_eye ^ 1u : requested_eye;
 		output.pair_id = published_frame_id;
@@ -288,7 +366,7 @@ namespace vr::engine_stereo_bridge
 				eye_projections,
 				half_offset,
 				swap_eyes,
-				view_publications,
+				published_publication,
 				published_frame_id,
 				eye,
 				swap_eyes ? eye ^ 1u : eye,

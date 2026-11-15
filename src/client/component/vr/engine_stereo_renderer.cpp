@@ -906,6 +906,7 @@ namespace vr::engine_stereo_renderer
 			reason = view_rejection::eye_derivation;
 			if (natural_slot == nullptr || !token) return false;
 			reason = view_rejection::views_unavailable;
+			engine_stereo_bridge::take_view_family_for_frontend();
 			if (!engine_stereo_bridge::get_render_configs(configs)) return false;
 			reason = view_rejection::eye_derivation;
 			if (!engine_stereo_view::derive(natural_slot, configs, output)) return false;

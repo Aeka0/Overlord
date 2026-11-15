@@ -33,6 +33,8 @@ struct XrSession_T
 	bool frame_waited{};
 	bool frame_begun{};
 	std::array<XrView, 2> located_views{};
+	std::array<XrView, 2> begun_views{};
+	XrTime begun_display_time{};
 	XrActionSet actions{};bool synced{};XrTime display_time{};
 };
 
@@ -816,7 +818,8 @@ XrResult XRAPI_CALL mockWaitFrame(const XrSession session, const XrFrameWaitInfo
 	{
 		return XR_ERROR_SESSION_NOT_RUNNING;
 	}
-	if (session->frame_waited || session->frame_begun)
+	// A second Wait may overlap the begun frame, but not an unbegun Wait.
+	if (session->frame_waited)
 	{
 		return XR_ERROR_CALL_ORDER_INVALID;
 	}
@@ -842,6 +845,8 @@ XrResult XRAPI_CALL mockBeginFrame(const XrSession session, const XrFrameBeginIn
 	}
 	session->frame_waited = false;
 	session->frame_begun = true;
+	session->begun_display_time = session->display_time;
+	session->begun_views = session->located_views;
 	const std::lock_guard lock(g_mutex);
 	++g_statistics.frames_begun;
 	return XR_SUCCESS;
@@ -874,6 +879,8 @@ XrResult XRAPI_CALL mockLocateViews(const XrSession session, const XrViewLocateI
 		if(g_scenario==scenario::canted_views){views[index].pose.orientation.y=index==0?-.05f:.05f;views[index].pose.orientation.w=std::sqrt(1-.05f*.05f);}
 		views[index].pose.position.x = index == 0 ? -0.032f : 0.032f;
 		views[index].pose.position.y = g_head_height;
+		if (g_scenario == scenario::moving_views)
+			views[index].pose.position.x += float(locate_info->displayTime) * .01f;
 		if (g_scenario == scenario::parallel_views)
 		{
 			// One coherent eye sample, different from the separately located VIEW space.
@@ -889,6 +896,8 @@ XrResult XRAPI_CALL mockLocateViews(const XrSession session, const XrViewLocateI
 		}
 		views[index].fov = {-0.7f, 0.7f, 0.7f, -0.7f};
 		session->located_views[index] = views[index];
+		if (locate_info->displayTime == session->begun_display_time)
+			session->begun_views[index] = views[index];
 	}
 	const std::lock_guard lock(g_mutex);
 	++g_statistics.views_located;
@@ -897,7 +906,12 @@ XrResult XRAPI_CALL mockLocateViews(const XrSession session, const XrViewLocateI
 
 XrResult XRAPI_CALL mockEndFrame(XrSession session,const XrFrameEndInfo* end)
 {
-	if(!session||!session->running||!session->frame_begun||!end||end->displayTime!=session->display_time||end->layerCount>8||(end->layerCount&&!end->layers))return XR_ERROR_CALL_ORDER_INVALID;
+	if(!session||!session->running||!session->frame_begun||!end||end->displayTime!=session->begun_display_time||end->layerCount>8||(end->layerCount&&!end->layers))return XR_ERROR_CALL_ORDER_INVALID;
+	{
+		const std::lock_guard lock(g_mutex);
+		XrResult result{};
+		if (consume_failure_locked(failure_point::end_frame,result)) return result;
+	}
 	session->frame_begun=false;
 	bool projection=false,quad=false,cylinder=false;
 	for(unsigned layer_index=0;layer_index<end->layerCount;++layer_index)
@@ -911,7 +925,7 @@ XrResult XRAPI_CALL mockEndFrame(XrSession session,const XrFrameEndInfo* end)
 			for(unsigned eye=0;eye<2;++eye)
 			{
 				const auto& view=p->views[eye];
-				const auto& expected = session->located_views[eye].pose;
+				const auto& expected = session->begun_views[eye].pose;
 				if(view.pose.orientation.x!=expected.orientation.x || view.pose.orientation.y!=expected.orientation.y ||
 					view.pose.orientation.z!=expected.orientation.z || view.pose.orientation.w!=expected.orientation.w ||
 					view.pose.position.x!=expected.position.x || view.pose.position.y!=expected.position.y || view.pose.position.z!=expected.position.z ||

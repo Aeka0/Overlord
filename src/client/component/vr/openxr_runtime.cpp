@@ -165,7 +165,8 @@ namespace vr::openxr
 		};
 		struct prediction
 		{
-			bool sdk_frame_open{}, views_valid{}, native_pair_admitted{}, ui_only{}, menu_layers_ready{};
+			// waited: xrWaitFrame returned, xrBeginFrame not yet called (queued_ only).
+			bool sdk_frame_open{}, views_valid{}, native_pair_admitted{}, ui_only{}, menu_layers_ready{}, waited{};
 			std::array<bool, 2> eyes_rendered{};
 			unsigned pending_presents{};
 			std::uint64_t pair{};
@@ -173,6 +174,16 @@ namespace vr::openxr
 			std::array<XrView, 2> views{};
 			head_pose_bridge::tracking_pose head;
 		} prediction_;
+		// H2's frontend runs one native frame ahead of the Present owner: a family
+		// published at Present-post(k) is read by frontend k+2 and submitted at
+		// Present(k+2). With one prediction in flight, frontend k+1 only saw the
+		// family backend k was producing and was rejected, so every VR frame cost
+		// approximately two native Presents per submitted world frame (also
+		// observed in the H2 baseline before this backport).
+		// queued_ is the next frame, waited and published while prediction_ is still
+		// begun; it is begun right after prediction_ ends (xrWaitFrame for N+1 may
+		// precede xrEndFrame for N; xrBeginFrame for N+1 may not).
+		prediction queued_;
 		present_transaction::key present_;
 		std::uint64_t owner_generation_{};
 		std::uint32_t owner_thread_{};
@@ -319,6 +330,9 @@ namespace vr::openxr
 				else
 					(void)complete_native(event.swap_chain);
 			}
+			if (!prediction_.sdk_frame_open && queued_.waited && session_running_ &&
+			    !status_.reinitialize_pending && status_.state != runtime_state::fatal_for_vr)
+				(void)promote_queued();
 			publish_status_locked();
 		}
 		void on_present_post(const d3d11::present_event& event, HRESULT result)
@@ -342,10 +356,15 @@ namespace vr::openxr
 			}
 			status_.direct_present_owner_contract_valid = true;
 			status_.present_owner_last_completed_frame = event.frame_index;
-			if (status_.desired_enabled && status_.applied_enabled && !prediction_.sdk_frame_open &&
+			if (status_.desired_enabled && status_.applied_enabled && !status_.reinitialize_pending &&
 			    status_.state != runtime_state::fatal_for_vr && poll_events() && session_running_)
 			{
-				(void)begin_prediction(event.frame_index);
+				if (!prediction_.sdk_frame_open && queued_.waited)
+					(void)promote_queued();
+				if (!prediction_.sdk_frame_open)
+					(void)begin_prediction(event.frame_index);
+				else if (!queued_.waited && !prediction_.ui_only && status_.requested_scene_mode == scene_mode::engine_stereo)
+					(void)queue_prediction(event.frame_index);
 			}
 			publish_status_locked();
 		}
@@ -1013,6 +1032,7 @@ namespace vr::openxr
 				prediction_.menu_layers_ready = false;
 				(void)finish_prediction(world_submission::omit);
 			}
+			discard_queued();
 			if (!has_objects())
 			{
 				session_running_ = false;
@@ -1198,6 +1218,7 @@ namespace vr::openxr
 						prediction_.menu_layers_ready = false;
 						(void)finish_prediction(world_submission::omit);
 					}
+					discard_queued();
 						inputs_.invalidate(controller_input::input_reason::session_inactive);
 						head_pose_bridge::invalidate_pose();
 						if (session_running_)
@@ -1246,6 +1267,45 @@ namespace vr::openxr
 			prediction_.native_pair_admitted = false;
 			return retired;
 		}
+		// Wait for and publish the next frame while prediction_ is still begun.
+		bool queue_prediction(const std::uint64_t pair)
+		{
+			std::swap(prediction_, queued_);
+			const bool prepared = begin_prediction(pair, true);
+			std::swap(prediction_, queued_);
+			return prepared;
+		}
+		// Begin the queued frame once the previous xrEndFrame returned.
+		bool promote_queued()
+		{
+			const XrFrameBeginInfo begin{XR_TYPE_FRAME_BEGIN_INFO};
+			const auto result = dispatch_.begin_frame(session_, &begin);
+			if (XR_FAILED(result))
+			{
+				discard_queued();
+				inputs_.invalidate(controller_input::input_reason::begin_frame_failed, result);
+				head_pose_bridge::invalidate_pose();
+				engine_stereo_bridge::invalidate_views();
+				status_.reinitialize_pending = true;
+				return fail(runtime_state::recoverable_error, "xrBeginFrame", result);
+			}
+			prediction_ = queued_;
+			queued_ = {};
+			prediction_.waited = false;
+			prediction_.sdk_frame_open = true;
+			return true;
+		}
+		// Teardown/session stop only: the waited frame is never begun.
+		void discard_queued()
+		{
+			if (queued_.native_pair_admitted)
+			{
+				std::swap(prediction_, queued_);
+				(void)retire_native_prediction();
+				std::swap(prediction_, queued_);
+			}
+			queued_ = {};
+		}
 		bool finish_prediction(world_submission world,
 		                       publication_policy publication = publication_policy::invalidate)
 		{
@@ -1278,9 +1338,16 @@ namespace vr::openxr
 			const auto result = dispatch_.end_frame(session_, &end);
 			prediction_.sdk_frame_open = false;
 			const bool retired = retire_native_prediction();
+			const auto ended_pair = prediction_.pair;
 			prediction_ = {};
 			if (publication == publication_policy::invalidate)
-				engine_stereo_bridge::invalidate_views();
+			{
+				// A queued family already replaced this one for the next frontend.
+				if (queued_.waited)
+					engine_stereo_bridge::invalidate_views_for(ended_pair);
+				else
+					engine_stereo_bridge::invalidate_views();
+			}
 			if (XR_FAILED(result))
 			{
 				status_.reinitialize_pending = true;
@@ -1363,9 +1430,9 @@ namespace vr::openxr
 			status_.native_renderer_error.clear();
 			return true;
 		}
-		bool begin_prediction(std::uint64_t pair)
+		bool begin_prediction(std::uint64_t pair, const bool queued = false)
 		{
-			if (prediction_.sdk_frame_open || !session_running_)
+			if (prediction_.sdk_frame_open || prediction_.waited || !session_running_)
 				return false;
 			if (!try_arm_native())
 				return false;
@@ -1385,17 +1452,27 @@ namespace vr::openxr
 				engine_stereo_bridge::invalidate_views();
 				return fail(runtime_state::recoverable_error, "xrWaitFrame", result);
 			}
-			const XrFrameBeginInfo begin{XR_TYPE_FRAME_BEGIN_INFO};
+			if (queued)
+			{
+				// xrBeginFrame waits for the current frame's xrEndFrame (promote_queued).
+				// A queued frame that is not prepared below still gets begun and ended
+				// without a world layer, keeping every xrWaitFrame paired.
+				prediction_.waited = true;
+			}
+			else
+			{
+				const XrFrameBeginInfo begin{XR_TYPE_FRAME_BEGIN_INFO};
 				result = dispatch_.begin_frame(session_, &begin);
 				if (XR_FAILED(result))
 				{
 					inputs_.invalidate(controller_input::input_reason::begin_frame_failed,result);
-				head_pose_bridge::invalidate_pose();
-				engine_stereo_bridge::invalidate_views();
-				status_.reinitialize_pending = true;
-				return fail(runtime_state::recoverable_error, "xrBeginFrame", result);
+					head_pose_bridge::invalidate_pose();
+					engine_stereo_bridge::invalidate_views();
+					status_.reinitialize_pending = true;
+					return fail(runtime_state::recoverable_error, "xrBeginFrame", result);
+				}
+				prediction_.sdk_frame_open = true;
 			}
-			prediction_.sdk_frame_open = true;
 				if (!prediction_.state.shouldRender)
 				{
 					inputs_.invalidate(controller_input::input_reason::frame_not_rendered);
@@ -1548,8 +1625,12 @@ namespace vr::openxr
 			{
 				if (status_.native_renderer_ready)
 				{
-					if (!native_render_session::active().admit_pair(pair))
+					if (!native_render_session::active().admit_pair(pair, queued))
 					{
+						// No ring slot for a second family yet: this queued frame is
+						// submitted without a world layer.
+						if (queued)
+							return false;
 						(void)finish_prediction(world_submission::omit);
 						return fail(runtime_state::fatal_for_vr,
 						            "native OpenXR prediction admission",
@@ -1567,6 +1648,10 @@ namespace vr::openxr
 				if (!engine_stereo_bridge::publish_view_family(
 				        pair, eye_offsets[0], eye_offsets[1], projections_))
 				{
+					// The current family is mid-production; its admitted queued pair is
+					// discarded unpublished when this frame ends.
+					if (queued)
+						return false;
 					(void)finish_prediction(world_submission::omit);
 					return fail(
 					    runtime_state::fatal_for_vr, "OpenXR predicted view family", XR_ERROR_POSE_INVALID);
