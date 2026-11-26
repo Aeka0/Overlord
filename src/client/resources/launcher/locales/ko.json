@@ -359,5 +359,12 @@
   "settings.resetHandAngles": "이 손 초기화",
   "settings.mirrorOtherHand": "반대 손 대칭 복사",
   "settings.debugSunShadowCapture": "태양 그림자 수집",
-  "settings.debugSunShadowCaptureHint": "Ctrl+Shift+F8 진단 수집에 태양 그림자 데이터를 포함합니다. 약 29초가 걸리며 다음 게임 시작 시 적용됩니다."
+  "settings.debugSunShadowCaptureHint": "Ctrl+Shift+F8 진단 수집에 태양 그림자 데이터를 포함합니다. 약 29초가 걸리며 다음 게임 시작 시 적용됩니다.",
+  "settings.performance": "성능",
+  "settings.renderScale": "VR 렌더 스케일",
+  "settings.renderScaleHint": "VR 렌더링 해상도를 50%~120% 범위로 조절합니다(기본값: 100%). 부하가 큰 야외 스테이지에서는 80%~90%로 낮추세요. 게임 재시작 또는 vr_reinit으로 적용됩니다.",
+  "settings.sharpening": "FidelityFX CAS 선명화",
+  "settings.sharpeningHint": "AMD FidelityFX CAS 공간 선명화를 적용해 디테일을 보정합니다(0%~100%, 기본값: 0%). 즉시 적용됩니다.",
+  "settings.hiddenAreaMesh": "OpenXR 숨김 영역 메시",
+  "settings.hiddenAreaMeshHint": "보이지 않는 OpenXR 렌즈 모서리를 깊이 버퍼에서 미리 마스킹하여 가장자리 픽셀 렌더링을 건너뜁니다. GPU 성능이 향상되며 기본적으로 켜져 있습니다."
 }

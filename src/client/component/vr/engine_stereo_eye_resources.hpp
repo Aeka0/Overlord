@@ -174,6 +174,8 @@ namespace vr::engine_stereo_eye_resources
 		std::uint32_t eye, std::uint32_t target_id) noexcept;
 	[[nodiscard]] std::uint64_t active_resource_revision(std::uint64_t pair_id,
 		std::uint32_t eye) noexcept;
+	[[nodiscard]] std::uint32_t current_isolated_eye(
+		ID3D11DeviceContext* context) noexcept;
 
 	// The exact-read observer is armed only for an explicitly selected production
 	// experiment. It reads PS slot 13 at the proven H2 DrawIndexed caller and never

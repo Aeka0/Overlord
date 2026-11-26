@@ -359,5 +359,12 @@
   "settings.resetHandAngles": "Reset this hand",
   "settings.mirrorOtherHand": "Mirror other hand",
   "settings.debugSunShadowCapture": "Sun-shadow capture",
-  "settings.debugSunShadowCaptureHint": "Include sun-shadow evidence when collecting diagnostics with Ctrl+Shift+F8. Collection takes about 29 seconds. Applies on the next game start."
+  "settings.debugSunShadowCaptureHint": "Include sun-shadow evidence when collecting diagnostics with Ctrl+Shift+F8. Collection takes about 29 seconds. Applies on the next game start.",
+  "settings.performance": "Performance",
+  "settings.renderScale": "VR render scale",
+  "settings.renderScaleHint": "Scales VR eye rendering resolution from 50% to 120% (default: 100%). Lower to 80%–90% to improve frame rate in heavy outdoor levels. Applies on game restart or with vr_reinit.",
+  "settings.sharpening": "FidelityFX CAS sharpening",
+  "settings.sharpeningHint": "Applies AMD FidelityFX CAS spatial sharpening to recover detail (0% to 100%, default: 0%). Applies immediately.",
+  "settings.hiddenAreaMesh": "OpenXR hidden area mesh",
+  "settings.hiddenAreaMeshHint": "Masks invisible OpenXR lens corners in depth so edge pixels are skipped during rendering. Improves GPU performance; on by default."
 }

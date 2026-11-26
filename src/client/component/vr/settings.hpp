@@ -155,6 +155,7 @@ namespace vr::settings
 	inline constexpr boolean_setting ads_sprint{"vr_adsSprint", true};
 	inline constexpr boolean_setting exo_punch{"vr_exoPunch", false};
 	inline constexpr boolean_setting hei_round{"vr_heiRound", false};
+	inline constexpr boolean_setting hidden_area_mesh{"vr_hiddenAreaMesh", true};
 	// Standard and Legacy retain independent calibration choices. The initialized
 	// flags let the launcher seed from shared angles once, then retain custom hands.
 	inline constexpr std::array hand_angles_independent{
@@ -189,7 +190,8 @@ namespace vr::settings
 		                              boolean_setting{recoil, true},
 		                              boolean_setting{stabilization_toggles[0], false},
 		                              boolean_setting{stabilization_toggles[1], false},
-		                              boolean_setting{stabilization_toggles[2], false}};
+		                              boolean_setting{stabilization_toggles[2], false},
+		                              hidden_area_mesh};
 		std::array<boolean_setting, gameplay.size() + debug_options::names.size()> result{};
 		std::copy(gameplay.begin(), gameplay.end(), result.begin());
 		for (std::size_t i{}; i < debug_options::names.size(); ++i)
@@ -202,6 +204,10 @@ namespace vr::settings
 		"vr_worldScale", default_world_scale, .01f, 10000.f, 1.f, default_world_scale, true};
 	inline constexpr number_setting first_person_scale{
 		"vr_firstPersonScale", 1.f, .2f, 1.f, .01f, .01f};
+	inline constexpr number_setting render_scale{
+		"vr_renderScale", 1.f, .5f, 1.2f, .05f, .01f};
+	inline constexpr number_setting sharpening{
+		"vr_sharpening", 0.f, 0.f, 1.f, .05f, .01f};
 	inline constexpr number_setting snap_angle{"vr_snapAngle", 30.f, 5.f, 90.f, 5.f};
 	inline constexpr number_setting aim_assist_strength{"vr_aimAssistStrength", 0.f, 0.f, 100.f, 1.f};
 	inline constexpr number_setting enemy_melee_damage{"vr_enemyMeleeDamageScale", .5f, .1f, 2.f, .1f};
@@ -291,5 +297,7 @@ namespace vr::settings
 	                                    standard_independent_hand_angles[1][0], standard_independent_hand_angles[1][1], standard_independent_hand_angles[1][2],
 	                                    stabilization_strengths[0],
 	                                    stabilization_strengths[1],
-	                                    stabilization_strengths[2]};
+	                                    stabilization_strengths[2],
+	                                    render_scale,
+	                                    sharpening};
 }

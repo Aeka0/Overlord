@@ -14,6 +14,8 @@
 #include <utils/string.hpp>
 #include <utils/flags.hpp>
 
+#include <mutex>
+
 namespace database
 {
 	namespace
@@ -22,10 +24,12 @@ namespace database
 		{
 			std::unique_ptr<std::ifstream> stream;
 			uint64_t offset{};
+			uint64_t size{};
 			std::string path;
 		};
 
 		std::unordered_map<game::DB_IFileSysFile*, bnet_file_handle_t> bnet_file_handles{};
+		std::mutex bnet_file_handles_mutex{};
 		utils::hook::detour bnet_fs_open_file_hook;
 		utils::hook::detour bnet_fs_read_hook;
 		utils::hook::detour bnet_fs_tell_hook;
@@ -165,8 +169,6 @@ namespace database
 				return bnet_fs_open_file_hook.invoke<game::DB_IFileSysFile*>(this_, folder, file_.data());
 			}
 
-			const auto handle = handle_allocator.allocate<game::DB_IFileSysFile>();
-
 			try
 			{
 #ifdef DEBUG
@@ -176,10 +178,35 @@ namespace database
 				auto stream = std::make_unique<std::ifstream>();
 				stream->open(path, std::ios::binary);
 
+				uint64_t file_size{};
+				if (stream->is_open())
+				{
+					stream->seekg(0, std::ios::end);
+					const auto end_pos = static_cast<std::streamoff>(stream->tellg());
+					stream->seekg(0, std::ios::beg);
+					file_size = (end_pos > 0) ? static_cast<uint64_t>(end_pos) : uint64_t{};
+				}
+
 				bnet_file_handle_t bnet_handle{};
 				bnet_handle.stream = std::move(stream);
+				bnet_handle.size = file_size;
 				bnet_handle.path = path;
-				bnet_file_handles[handle] = std::move(bnet_handle);
+
+				std::lock_guard lock(bnet_file_handles_mutex);
+				const auto handle = handle_allocator.allocate<game::DB_IFileSysFile>();
+				if (!handle)
+				{
+					return nullptr;
+				}
+				try
+				{
+					bnet_file_handles.emplace(handle, std::move(bnet_handle));
+				}
+				catch (...)
+				{
+					handle_allocator.free(handle);
+					throw;
+				}
 				return handle;
 			}
 			catch (const std::exception& e)
@@ -187,116 +214,114 @@ namespace database
 				console::error("[Database] Error opening file %s: %s\n", path.data(), e.what());
 			}
 
-			return handle;
+			return nullptr;
 		}
 
 		game::FileSysResult bnet_fs_read_stub(game::DB_FileSysInterface* this_, game::DB_IFileSysFile* handle,
 			unsigned __int64 offset, unsigned __int64 size, void* dest)
 		{
-			if (bnet_file_handles.find(handle) == bnet_file_handles.end())
+			std::unique_lock lock(bnet_file_handles_mutex);
+			const auto it = bnet_file_handles.find(handle);
+			if (it == bnet_file_handles.end())
 			{
+				lock.unlock();
 				return bnet_fs_read_hook.invoke<game::FileSysResult>(this_, handle, offset, size, dest);
 			}
-			else
+
+			auto& handle_ = it->second;
+			if (!handle_.stream->is_open())
 			{
-				auto& handle_ = bnet_file_handles[handle];
-				if (!handle_.stream->is_open())
+				return game::FILESYSRESULT_ERROR;
+			}
+
+			try
+			{
+				const auto start_pos = offset - handle_.offset;
+				if (start_pos >= handle_.size)
 				{
-					return game::FILESYSRESULT_ERROR;
-				}
-
-				try
-				{
-					const auto start_pos = offset - handle_.offset;
-					handle_.stream->seekg(0, std::ios::end);
-					const auto end_pos = static_cast<uint64_t>(handle_.stream->tellg());
-					handle_.stream->seekg(start_pos);
-
-					const auto len = end_pos - start_pos;
-					const auto bytes_to_read = len <= size ? len : size;
-
-					const auto& res = handle_.stream->read(reinterpret_cast<char*>(dest), bytes_to_read);
-					if (res.bad())
-					{
-						return game::FILESYSRESULT_ERROR;
-					}
-
-					const auto bytes_read = static_cast<uint64_t>(res.gcount());
-					handle->bytes_read += bytes_read;
-					handle->last_read = bytes_read;
-
+					handle->last_read = 0;
 					return game::FILESYSRESULT_SUCCESS;
 				}
-				catch (const std::exception& e)
+
+				handle_.stream->clear();
+				handle_.stream->seekg(static_cast<std::streamoff>(start_pos), std::ios::beg);
+
+				const auto len = handle_.size - start_pos;
+				const auto bytes_to_read = len <= size ? len : size;
+
+				const auto& res = handle_.stream->read(reinterpret_cast<char*>(dest), static_cast<std::streamsize>(bytes_to_read));
+				if (res.bad())
 				{
-					console::error("[Database] bnet_fs_read_stub: %s\n", e.what());
 					return game::FILESYSRESULT_ERROR;
 				}
+
+				const auto bytes_read = static_cast<uint64_t>(res.gcount());
+				handle->bytes_read += bytes_read;
+				handle->last_read = bytes_read;
+
+				return game::FILESYSRESULT_SUCCESS;
+			}
+			catch (const std::exception& e)
+			{
+				console::error("[Database] bnet_fs_read_stub: %s\n", e.what());
+				return game::FILESYSRESULT_ERROR;
 			}
 		}
 
 		game::FileSysResult bnet_fs_tell_stub(game::DB_FileSysInterface* this_, game::DB_IFileSysFile* handle, uint64_t* bytes_read)
 		{
-			if (bnet_file_handles.find(handle) == bnet_file_handles.end())
+			std::unique_lock lock(bnet_file_handles_mutex);
+			const auto it = bnet_file_handles.find(handle);
+			if (it == bnet_file_handles.end())
 			{
+				lock.unlock();
 				return bnet_fs_tell_hook.invoke<game::FileSysResult>(this_, handle, bytes_read);
 			}
-			else
-			{
-				auto& handle_ = bnet_file_handles[handle];
-				if (!handle_.stream->is_open())
-				{
-					return game::FILESYSRESULT_ERROR;
-				}
 
-				try
-				{
-					*bytes_read = handle->last_read;
-					return game::FILESYSRESULT_SUCCESS;
-				}
-				catch (const std::exception& e)
-				{
-					console::error("[Database] bnet_fs_tell_stub: %s\n", e.what());
-					return game::FILESYSRESULT_ERROR;
-				}
+			auto& handle_ = it->second;
+			if (!handle_.stream->is_open())
+			{
+				return game::FILESYSRESULT_ERROR;
+			}
+
+			try
+			{
+				*bytes_read = handle->last_read;
+				return game::FILESYSRESULT_SUCCESS;
+			}
+			catch (const std::exception& e)
+			{
+				console::error("[Database] bnet_fs_tell_stub: %s\n", e.what());
+				return game::FILESYSRESULT_ERROR;
 			}
 		}
 
 		uint64_t bnet_fs_size_stub(game::DB_FileSysInterface* this_, game::DB_IFileSysFile* handle)
 		{
-			if (bnet_file_handles.find(handle) == bnet_file_handles.end())
+			std::unique_lock lock(bnet_file_handles_mutex);
+			const auto it = bnet_file_handles.find(handle);
+			if (it == bnet_file_handles.end())
 			{
+				lock.unlock();
 				return bnet_fs_size_hook.invoke<uint64_t>(this_, handle);
 			}
-			else
-			{
-				auto& handle_ = bnet_file_handles[handle];
-				try
-				{
-					handle_.stream->seekg(0, std::ios::end);
-					const std::streamsize size = handle_.stream->tellg();
-					handle_.stream->seekg(0, std::ios::beg);
-					return static_cast<uint64_t>(size);
-				}
-				catch (const std::exception& e)
-				{
-					console::error("[Database] bnet_fs_size_stub: %s\n", e.what());
-					return 0;
-				}
-			}
+
+			return it->second.size;
 		}
 
 		void bnet_fs_close_stub(game::DB_FileSysInterface* this_, game::DB_IFileSysFile* handle)
 		{
-			if (bnet_file_handles.find(handle) == bnet_file_handles.end())
+			std::unique_lock lock(bnet_file_handles_mutex);
+			const auto it = bnet_file_handles.find(handle);
+			if (it == bnet_file_handles.end())
 			{
+				lock.unlock();
 				bnet_fs_close_hook.invoke<uint64_t>(this_, handle);
+				return;
 			}
-			else
-			{
-				handle_allocator.free(handle);
-				bnet_file_handles.erase(handle);
-			}
+
+			bnet_file_handles.erase(it);
+			handle_allocator.free(handle);
 		}
 
 		bool bnet_fs_exists_stub(game::DB_FileSysInterface* this_, game::DB_IFileSysFile* handle, const char* filename)
@@ -343,56 +368,62 @@ namespace database
 		uint64_t bink_io_read_stub(game::DB_IFileSysFile** handle, void* dest, uint64_t bytes)
 		{
 			const auto handle_ptr = *handle;
-			if (bnet_file_handles.find(handle_ptr) == bnet_file_handles.end())
+			std::unique_lock lock(bnet_file_handles_mutex);
+			const auto it = bnet_file_handles.find(handle_ptr);
+			if (it == bnet_file_handles.end())
 			{
+				lock.unlock();
 				return bink_io_read_hook.invoke<uint64_t>(handle, dest, bytes);
 			}
-			else
-			{
-				auto& handle_ = bnet_file_handles[handle_ptr];
-				if (!handle_.stream->is_open())
-				{
-					return 0;
-				}
 
-				try
-				{
-					const auto& res = handle_.stream->read(reinterpret_cast<char*>(dest), bytes);
-					return static_cast<uint64_t>(res.gcount());
-				}
-				catch (const std::exception& e)
-				{
-					console::error("[Database] bink_io_read_stub: %s\n", e.what());
-					return 0;
-				}
+			auto& handle_ = it->second;
+			if (!handle_.stream->is_open())
+			{
+				return 0;
+			}
+
+			try
+			{
+				const auto& res = handle_.stream->read(reinterpret_cast<char*>(dest), static_cast<std::streamsize>(bytes));
+				return static_cast<uint64_t>(res.gcount());
+			}
+			catch (const std::exception& e)
+			{
+				console::error("[Database] bink_io_read_stub: %s\n", e.what());
+				return 0;
 			}
 		}
 
 		bool bink_io_seek_stub(game::DB_IFileSysFile** handle, uint64_t pos)
 		{
 			const auto handle_ptr = *handle;
-			if (bnet_file_handles.find(handle_ptr) == bnet_file_handles.end())
+			std::unique_lock lock(bnet_file_handles_mutex);
+			const auto it = bnet_file_handles.find(handle_ptr);
+			if (it == bnet_file_handles.end())
 			{
+				lock.unlock();
 				return bink_io_seek_hook.invoke<bool>(handle, pos);
 			}
-			else
-			{
-				auto& handle_ = bnet_file_handles[handle_ptr];
-				if (!handle_.stream->is_open())
-				{
-					return false;
-				}
 
-				try
+			auto& handle_ = it->second;
+			if (!handle_.stream->is_open())
+			{
+				return false;
+			}
+
+			try
+			{
+				if (!handle_.stream->bad())
 				{
-					const auto& res = handle_.stream->seekg(pos);
-					return !(res.fail() || res.bad());
+					handle_.stream->clear();
 				}
-				catch (const std::exception& e)
-				{
-					console::error("[Database] bink_io_seek_stub: %s\n", e.what());
-					return 0;
-				}
+				const auto& res = handle_.stream->seekg(static_cast<std::streamoff>(pos));
+				return !(res.fail() || res.bad());
+			}
+			catch (const std::exception& e)
+			{
+				console::error("[Database] bink_io_seek_stub: %s\n", e.what());
+				return false;
 			}
 		}
 
@@ -410,9 +441,10 @@ namespace database
 
 	void close_fastfile_handles()
 	{
+		std::lock_guard lock(bnet_file_handles_mutex);
 		for (const auto& handle : bnet_file_handles)
 		{
-			if (handle.second.path.ends_with(".ff"))
+			if (handle.second.path.ends_with(".ff") && handle.second.stream)
 			{
 				handle.second.stream->close();
 			}

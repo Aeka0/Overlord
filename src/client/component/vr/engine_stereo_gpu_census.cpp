@@ -1,6 +1,7 @@
 #include <std_include.hpp>
 #include "component/vr/native_render_contract.hpp"
 #include "engine_stereo_gpu_census.hpp"
+#include "lazy_storage.hpp"
 
 #include "engine_stereo_material_buffer_probe.hpp"
 #include "engine_stereo_particle_buffer_probe.hpp"
@@ -47,8 +48,15 @@ namespace vr::engine_stereo_gpu_census
 		template <typename T>
 		void reset_large_object(T& value) noexcept
 		{
-			value.~T();
-			::new (static_cast<void*>(&value)) T{};
+			if constexpr (requires { value.clear_storage(); })
+			{
+				value.clear_storage();
+			}
+			else
+			{
+				value.~T();
+				::new (static_cast<void*>(&value)) T{};
+			}
 		}
 
 		std::mutex census_mutex;
@@ -108,16 +116,16 @@ namespace vr::engine_stereo_gpu_census
 			resource_descriptor descriptor{};
 		};
 
-		std::array<reflected_shader, maximum_reflected_shaders> reflected_shaders{};
+		lazy_array<reflected_shader, maximum_reflected_shaders> reflected_shaders{};
 		std::array<reflected_constant_buffer, maximum_reflected_constant_buffers>
 			reflected_constant_buffers{};
-		std::array<reflected_constant_variable, maximum_reflected_constant_variables>
+		lazy_array<reflected_constant_variable, maximum_reflected_constant_variables>
 			reflected_constant_variables{};
 		std::size_t reflected_constant_buffer_count{},
 			reflected_constant_variable_count{};
-		std::array<srv_resource_descriptor_entry,
+		lazy_array<srv_resource_descriptor_entry,
 			maximum_srv_resource_descriptors> srv_resource_descriptors{};
-		thread_local std::array<std::byte, maximum_shader_bytecode_bytes>
+		thread_local lazy_array<std::byte, maximum_shader_bytecode_bytes>
 			shader_bytecode_scratch{};
 		struct constant_buffer_slot_identity
 		{
@@ -163,13 +171,13 @@ namespace vr::engine_stereo_gpu_census
 		// The detailed snapshots exist only for the single armed pair. Fixed static
 		// storage avoids allocations in D3D11 invocation hooks and is never copied
 		// into the public report; only bounded category samples are published.
-		std::array<detailed_observation, maximum_observations_per_eye>
+		lazy_array<detailed_observation, maximum_observations_per_eye>
 			left_signatures{};
 		detailed_observation right_signature{};
 		std::array<std::uint64_t, maximum_observations_per_eye>
 			left_dynamic_fx_family_ordinals{}, left_dynamic_fx_arena_sequences{};
 		dynamic_fx_stream_entry previous_right_stream_entry{};
-		std::array<dynamic_fx_family_comparison, dynamic_fx_family_count>
+		lazy_array<dynamic_fx_family_comparison, dynamic_fx_family_count>
 			dynamic_fx_binding_working{};
 		constexpr std::size_t maximum_dynamic_fx_content_captures_per_eye = 4096;
 		struct dynamic_fx_content_capture
@@ -178,7 +186,7 @@ namespace vr::engine_stereo_gpu_census
 			std::uint8_t stage{}, slot{};
 			engine_stereo_constant_buffer_probe::content_byte_snapshot content{};
 		};
-		std::array<std::array<dynamic_fx_content_capture,
+		lazy_array<std::array<dynamic_fx_content_capture,
 			maximum_dynamic_fx_content_captures_per_eye>, 2>
 			dynamic_fx_content_captures{};
 		std::array<std::size_t, 2> dynamic_fx_content_capture_counts{};
@@ -3974,11 +3982,17 @@ namespace vr::engine_stereo_gpu_census
 		reflected_shaders.fill({});
 		reflected_constant_buffer_count = 0;
 		reflected_constant_variable_count = 0;
+		(void)left_signatures.get();
+		(void)dynamic_fx_content_captures.get();
+		(void)reflected_shaders.get();
+		(void)reflected_constant_variables.get();
+		(void)srv_resource_descriptors.get();
+		(void)dynamic_fx_binding_working.get();
 		srv_resource_descriptors.fill({});
 		census.current_state = state::pair_active;
 		census.pair_id = pair_id;
-		census.ordered.snapshot_static_storage_bytes = sizeof(left_signatures) +
-			sizeof(right_signature);
+		census.ordered.snapshot_static_storage_bytes =
+			decltype(left_signatures)::storage_bytes + sizeof(right_signature);
 		census.resource_operation_hooks = resource_hooks;
 		engine_stereo_output_merger::set_clear_observers(
 			engine_stereo_output_merger::clear_observer_channel::gpu_census,
@@ -4252,10 +4266,13 @@ namespace vr::engine_stereo_gpu_census
 		left_dynamic_fx_family_ordinals.fill(0);
 		left_dynamic_fx_arena_sequences.fill(0);
 		previous_right_stream_entry = {};
-		reflected_shaders.fill({});
+		left_signatures.clear_storage();
+		dynamic_fx_content_captures.clear_storage();
+		reflected_shaders.clear_storage();
 		reflected_constant_buffer_count = 0;
 		reflected_constant_variable_count = 0;
-		srv_resource_descriptors.fill({});
+		reflected_constant_variables.clear_storage();
+		srv_resource_descriptors.clear_storage();
 		active_eye = 2;
 		call_sequence = 0;
 		census_context = nullptr;

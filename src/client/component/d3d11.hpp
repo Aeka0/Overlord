@@ -218,5 +218,7 @@ namespace d3d11
 			std::chrono::steady_clock::time_point started,
 			std::chrono::steady_clock::time_point completed);
 		void record_device_removed_reason(std::uint64_t generation, HRESULT reason);
+		void set_vr_present_paced(bool active) noexcept;
+		[[nodiscard]] bool is_vr_present_paced() noexcept;
 	}
 }

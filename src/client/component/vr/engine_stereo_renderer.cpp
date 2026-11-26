@@ -24,6 +24,7 @@
 #include "engine_scene_completion.hpp"
 #include "engine_stereo_probe.hpp"
 #include "engine_stereo_renderer.hpp"
+#include "lazy_storage.hpp"
 #include "debug_options.hpp"
 #include "engine_stereo_view.hpp"
 #include "engine_view_probe.hpp"
@@ -257,10 +258,10 @@ namespace vr::engine_stereo_renderer
 		thread_local engine_backend_probe::backend_token active_backend_transaction{};
 		thread_local engine_stereo_binding::backend_claim active_stereo_binding{};
 		thread_local engine_stereo_backend_view::transaction active_backend_view_copy{};
-		thread_local engine_stereo_backend_target::transaction active_backend_target_route{};
-		thread_local engine_stereo_output_merger::transaction active_output_merger{};
-		thread_local engine_stereo_draw_indexed::transaction active_draw_indexed{};
-		thread_local engine_stereo_owner_pass::transaction active_owner_pass{};
+		thread_local lazy_box<engine_stereo_backend_target::transaction> active_backend_target_route_storage{};
+		thread_local lazy_box<engine_stereo_output_merger::transaction> active_output_merger_storage{};
+		thread_local lazy_box<engine_stereo_draw_indexed::transaction> active_draw_indexed_storage{};
+		thread_local lazy_box<engine_stereo_owner_pass::transaction> active_owner_pass_storage{};
 		thread_local bool dynamic_upload_owner_scope{};
 		utils::hook::detour backend_target_prepare_hook{};
 		utils::hook::detour backend_target_select_hook{};
@@ -1635,19 +1636,22 @@ namespace vr::engine_stereo_renderer
 			const bool command_dispatch_returned = false) noexcept
 		{
 			engine_stereo_execution::clear_backend_record_context();
-			if (active_draw_indexed)
+			if (auto* const draw_indexed = active_draw_indexed_storage.get_if();
+				draw_indexed && *draw_indexed)
 			{
-				engine_stereo_draw_indexed::end(active_draw_indexed,
+				engine_stereo_draw_indexed::end(*draw_indexed,
 					command_dispatch_returned);
 			}
-			if (active_output_merger)
+			if (auto* const output_merger = active_output_merger_storage.get_if();
+				output_merger && *output_merger)
 			{
-				engine_stereo_output_merger::end(active_output_merger,
+				engine_stereo_output_merger::end(*output_merger,
 					command_dispatch_returned);
 			}
-			if (active_backend_target_route)
+			if (auto* const backend_target = active_backend_target_route_storage.get_if();
+				backend_target && *backend_target)
 			{
-				engine_stereo_backend_target::end(active_backend_target_route,
+				engine_stereo_backend_target::end(*backend_target,
 					command_dispatch_returned);
 			}
 			if (active_backend_view_copy)
@@ -1701,11 +1705,14 @@ namespace vr::engine_stereo_renderer
 				{
 					(void)engine_stereo_backend_view::begin(active_backend_view_copy,
 						active_stereo_binding, record_address);
-					(void)engine_stereo_backend_target::begin(active_backend_target_route,
+					(void)engine_stereo_backend_target::begin(
+						active_backend_target_route_storage.get(),
 						active_stereo_binding, record_address);
-					(void)engine_stereo_output_merger::begin(active_output_merger,
+					(void)engine_stereo_output_merger::begin(
+						active_output_merger_storage.get(),
 						active_stereo_binding, record_address);
-					(void)engine_stereo_draw_indexed::begin(active_draw_indexed,
+					(void)engine_stereo_draw_indexed::begin(
+						active_draw_indexed_storage.get(),
 						active_stereo_binding, record_address);
 					// The old same-device command replay is intentionally not armed.
 					// Captured evidence proved this transaction is a fullscreen
@@ -1887,14 +1894,16 @@ namespace vr::engine_stereo_renderer
 					static_cast<bool>(active_backend_transaction),
 					static_cast<bool>(active_stereo_binding),
 				};
+				auto& backend_target = active_backend_target_route_storage.get();
+				auto& output_merger = active_output_merger_storage.get();
 				engine_stereo_backend_target::record_view_copy(
-					active_backend_target_route,
+					backend_target,
 					reinterpret_cast<std::uintptr_t>(_ReturnAddress()), scope,
 					active_backend_view_copy.copy_calls,
 					active_backend_view_copy.substitutions,
 					active_backend_view_copy.selected_eye,
 					active_backend_view_copy.substitutions > previous_substitutions);
-				engine_stereo_output_merger::note_view_copy(active_output_merger,
+				engine_stereo_output_merger::note_view_copy(output_merger,
 					active_backend_view_copy.copy_calls,
 					active_backend_view_copy.substitutions,
 					active_backend_view_copy.selected_eye);
@@ -1919,9 +1928,6 @@ namespace vr::engine_stereo_renderer
 				backend_target_select_hook.invoke<void>(context, target_id);
 				return;
 			}
-			const auto graphics = d3d11::get_device_snapshot();
-			const auto binding_before =
-				engine_stereo_output_merger::get_current_binding(graphics.context.Get());
 			const engine_stereo_backend_target::selection_scope scope{
 				active_backend_transaction.backend_id,
 				active_stereo_binding.publication_sequence,
@@ -1930,8 +1936,10 @@ namespace vr::engine_stereo_renderer
 				static_cast<bool>(active_backend_transaction),
 				static_cast<bool>(active_stereo_binding),
 			};
-			engine_stereo_output_merger::note_target(active_output_merger, target_id);
-			engine_stereo_backend_target::invoke_select(active_backend_target_route,
+			auto& output_merger = active_output_merger_storage.get();
+			auto& backend_target = active_backend_target_route_storage.get();
+			engine_stereo_output_merger::note_target(output_merger, target_id);
+			engine_stereo_backend_target::invoke_select(backend_target,
 				context, target_id, reinterpret_cast<std::uintptr_t>(_ReturnAddress()),
 				scope,
 				reinterpret_cast<const void*>(native_render_contract::target_registry_base),
@@ -1940,10 +1948,11 @@ namespace vr::engine_stereo_renderer
 				{
 					backend_target_select_hook.invoke<void>(original_context, original_target);
 				});
-			if (active_owner_pass)
+			if (auto* const owner_pass = active_owner_pass_storage.get_if();
+				owner_pass && *owner_pass)
 			{
-				engine_stereo_owner_pass::note_target_selection(active_owner_pass,
-					target_id, graphics.context.Get(), binding_before.sequence);
+				engine_stereo_owner_pass::note_target_selection(*owner_pass,
+					target_id, owner_pass->context.Get(), 0);
 			}
 		}
 
@@ -2015,8 +2024,8 @@ namespace vr::engine_stereo_renderer
 			constexpr auto record_size = engine_view_probe::frontend_record_stride;
 			const auto capture_observation = !engine_stereo_execution::bootstrap_complete();
 			constexpr auto changed_block_size = std::size_t{0x400};
-			thread_local std::array<std::uint8_t, record_size> before_bytes{};
-			thread_local std::array<std::uint8_t, record_size> after_bytes{};
+			thread_local lazy_array<std::uint8_t, record_size> before_bytes_storage{};
+			thread_local lazy_array<std::uint8_t, record_size> after_bytes_storage{};
 			engine_backend_probe::target_prepare_observation observation{};
 			observation.record = reinterpret_cast<std::uintptr_t>(record);
 			observation.caller = reinterpret_cast<std::uintptr_t>(_ReturnAddress());
@@ -2049,6 +2058,7 @@ namespace vr::engine_stereo_renderer
 					observation.record_index = static_cast<std::uint32_t>(index);
 					if (capture_observation)
 					{
+						auto& before_bytes = before_bytes_storage.get();
 						std::memcpy(before_bytes.data(), record, before_bytes.size());
 					}
 					std::memcpy(&observation.record_type, static_cast<const std::uint8_t*>(record) +
@@ -2080,7 +2090,7 @@ namespace vr::engine_stereo_renderer
 					if (capture_observation)
 					{
 						(void)capture_artifact(evidence::captures.record_before_target_prepare_artifact,
-							reinterpret_cast<std::uintptr_t>(before_bytes.data()), metadata);
+							reinterpret_cast<std::uintptr_t>(before_bytes_storage.get().data()), metadata);
 						(void)capture_artifact(evidence::captures.registry_before_target_prepare_artifact,
 							native_render_contract::target_registry_base, metadata);
 					}
@@ -2110,8 +2120,9 @@ namespace vr::engine_stereo_renderer
 					arena_record && observation.record_valid,
 				});
 				const auto previous_upload_scope = dynamic_upload_owner_scope;
-				dynamic_upload_owner_scope = active_owner_pass &&
-					active_owner_pass.current_view < auxiliary_scene::view_count;
+				const auto* const owner_ptr = active_owner_pass_storage.get_if();
+				dynamic_upload_owner_scope = owner_ptr && *owner_ptr &&
+					owner_ptr->current_view < auxiliary_scene::view_count;
 				const auto owner_exit = gsl::finally([previous_upload_scope]() noexcept
 				{
 					dynamic_upload_owner_scope = previous_upload_scope;
@@ -2140,12 +2151,13 @@ namespace vr::engine_stereo_renderer
 				if (claim && engine_scene_resolution::ready() && engine_stereo_owner_pass::ready_to_claim())
 				{
 					const auto graphics = d3d11::get_device_snapshot();
+					auto& active_owner_pass = active_owner_pass_storage.get();
 					if (engine_stereo_owner_pass::begin(active_owner_pass,
 						std::move(claim), record, graphics))
 					{
 						// Drain a deferred H2 upload even on an early C++ unwind. Normal
 						// end() retires the transaction, making this guard a no-op.
-						const auto pair_exit = gsl::finally([]() noexcept
+						const auto pair_exit = gsl::finally([&active_owner_pass]() noexcept
 						{
 							if (active_owner_pass) engine_stereo_owner_pass::end(active_owner_pass);
 						});
@@ -2293,6 +2305,8 @@ namespace vr::engine_stereo_renderer
 
 			if (capture_observation && observation.record_valid)
 			{
+				const auto& before_bytes = before_bytes_storage.get();
+				auto& after_bytes = after_bytes_storage.get();
 				std::memcpy(after_bytes.data(), record, after_bytes.size());
 				for (std::size_t index{}; index < after_bytes.size(); ++index)
 				{
@@ -2337,6 +2351,11 @@ namespace vr::engine_stereo_renderer
 			{
 				engine_backend_probe::record_target_prepare(observation);
 			}
+			else
+			{
+				before_bytes_storage.clear_storage();
+				after_bytes_storage.clear_storage();
+			}
 		}
 
 		void backend_command_dispatch_probe_stub(void* const commands,
@@ -2353,6 +2372,9 @@ namespace vr::engine_stereo_renderer
 				reinterpret_cast<std::uintptr_t>(commands),
 				engine_backend_probe::observation_stage::before_call);
 			publish_execution_backend_context();
+			auto& active_backend_target_route = active_backend_target_route_storage.get();
+			auto& active_output_merger = active_output_merger_storage.get();
+			auto& active_draw_indexed = active_draw_indexed_storage.get();
 			engine_stereo_backend_target::enter_dispatch(active_backend_target_route);
 			engine_stereo_output_merger::enter_dispatch(active_output_merger);
 			engine_stereo_draw_indexed::enter_dispatch(active_draw_indexed, commands);
@@ -2423,7 +2445,8 @@ namespace vr::engine_stereo_renderer
 
 		void h2_query_publish_probe_stub(void* const query)
 		{
-			if (!engine_backend_probe::is_enabled())
+			if (!engine_backend_probe::is_enabled() ||
+				engine_stereo_execution::bootstrap_complete())
 			{
 				reinterpret_cast<h2_query_publish_fn>(h2_query_publish_function)(query);
 				return;
@@ -2443,6 +2466,11 @@ namespace vr::engine_stereo_renderer
 			const std::uint32_t generation, const std::int32_t result,
 			const std::uint32_t complete) noexcept
 		{
+			if (!engine_backend_probe::is_enabled() ||
+				engine_stereo_execution::bootstrap_complete())
+			{
+				return;
+			}
 			(void)engine_backend_probe::record_query_result(query, generation,
 				result, complete != 0);
 		}

@@ -1,6 +1,7 @@
 #include <std_include.hpp>
 
 #include "engine_stereo_ssr_consumer_probe.hpp"
+#include "lazy_storage.hpp"
 
 #include "component/d3d11.hpp"
 #include "engine_stereo_execution.hpp"
@@ -47,11 +48,11 @@ namespace vr::engine_stereo_ssr_consumer_probe
 
 		std::mutex probe_mutex;
 		std::mutex tracking_transition_mutex;
-		report current_report{};
-		std::array<reflected_shader, maximum_reflected_shaders> reflected_shaders{};
+		lazy_box<report> current_report_storage{};
+		lazy_array<reflected_shader, maximum_reflected_shaders> reflected_shaders{};
 		std::array<std::atomic_uintptr_t, maximum_scene_mip_candidate_shaders>
 			scene_mip_candidate_shader_identities{};
-		thread_local std::array<std::byte, maximum_shader_bytecode_bytes>
+		thread_local lazy_array<std::byte, maximum_shader_bytecode_bytes>
 			shader_bytecode_scratch{};
 		std::atomic_bool installed{};
 		std::atomic_bool observer_attached{};
@@ -67,18 +68,17 @@ namespace vr::engine_stereo_ssr_consumer_probe
 		using resource_write_registry =
 			engine_stereo_ssr_consumer_window::resource_write_window<
 				maximum_resource_write_records>;
-		resource_write_registry resource_writes{};
+		lazy_box<resource_write_registry> resource_writes_storage{};
 		std::size_t active_sample_baseline{};
 
 		void reset_resource_writes_locked() noexcept
 		{
-			resource_writes.~resource_write_registry();
-			::new (static_cast<void*>(&resource_writes)) resource_write_registry{};
+			resource_writes_storage.clear_storage();
 		}
 
 		void clear_reflected_shaders_locked() noexcept
 		{
-			for (auto& entry : reflected_shaders) entry = {};
+			reflected_shaders.clear_storage();
 		}
 
 		void clear_scene_mip_candidate_shaders_locked() noexcept
@@ -107,8 +107,7 @@ namespace vr::engine_stereo_ssr_consumer_probe
 			// report is several MiB once detailed diagnostic capacity is included.
 			// Reconstruct it in place so MSVC cannot materialize a same-sized RHS on
 			// H2's render-thread stack.
-			current_report.~report();
-			::new (static_cast<void*>(&current_report)) report{};
+			current_report_storage.clear_storage();
 			reset_resource_writes_locked();
 		}
 
@@ -183,6 +182,7 @@ namespace vr::engine_stereo_ssr_consumer_probe
 			ID3D11PixelShader* const shader) noexcept
 		{
 			if (shader == nullptr) return nullptr;
+			auto& current_report = current_report_storage.get();
 			const auto identity = reinterpret_cast<std::uintptr_t>(shader);
 			reflected_shader* available{};
 			for (auto& entry : reflected_shaders)
@@ -552,6 +552,7 @@ namespace vr::engine_stereo_ssr_consumer_probe
 			const reflected_shader* const shader) noexcept
 		{
 			if (shader == nullptr) return;
+			auto& current_report = current_report_storage.get();
 			if (!shader->shader_resources[scene_mip_srv_slot].declared_in_disassembly)
 			{
 				++current_report.scene_mip_declaration_rejections;
@@ -575,6 +576,7 @@ namespace vr::engine_stereo_ssr_consumer_probe
 			ID3D11DeviceContext* const context, const reflected_shader& shader,
 			const std::uint64_t pair_id, const std::uint32_t eye) noexcept
 		{
+			auto& current_report = current_report_storage.get();
 			ID3D11ShaderResourceView* view{};
 			context->PSGetShaderResources(static_cast<UINT>(scene_mip_srv_slot), 1,
 				&view);
@@ -916,14 +918,14 @@ namespace vr::engine_stereo_ssr_consumer_probe
 						// The tagged list only samples H2's resolved eye texture into a
 						// VR-owned target and restores the complete immediate-context state.
 						// It cannot invalidate producer history for H2-owned SSR inputs.
-						++current_report.resource_write_native_conversion_lists;
+						++current_report_storage.get().resource_write_native_conversion_lists;
 					}
 					else
 					{
 						// Every unmarked list remains a hard opaque barrier: it may hide
 						// arbitrary resource writes, so older records cannot be decisive.
 						reset_resource_writes_locked();
-						++current_report.resource_write_opaque_barriers;
+						++current_report_storage.get().resource_write_opaque_barriers;
 					}
 				}
 				return;
@@ -1019,10 +1021,12 @@ namespace vr::engine_stereo_ssr_consumer_probe
 			const std::uint64_t pair_id,
 			const std::uint32_t eye, const std::uintptr_t shader) noexcept
 		{
+			const auto* const report_ptr = current_report_storage.get_if();
+			if (report_ptr == nullptr) return nullptr;
 			for (std::size_t index = active_sample_baseline;
-				index < current_report.sample_count; ++index)
+				index < report_ptr->sample_count; ++index)
 			{
-				const auto& sample = current_report.samples[index];
+				const auto& sample = report_ptr->samples[index];
 				if (sample.pair_id == pair_id && sample.eye == eye &&
 					sample.shader == shader)
 				{
@@ -1071,6 +1075,7 @@ namespace vr::engine_stereo_ssr_consumer_probe
 			clear_reflected_shaders_locked();
 			clear_scene_mip_candidate_shaders_locked();
 			active_sample_baseline = 0;
+			auto& current_report = current_report_storage.get();
 			current_report.expected_context = reinterpret_cast<std::uintptr_t>(context);
 			current_report.device_generation = device_generation;
 			install_epoch = lifecycle_epoch.load(std::memory_order_acquire);
@@ -1091,6 +1096,7 @@ namespace vr::engine_stereo_ssr_consumer_probe
 			{
 				observer_attached.store(true, std::memory_order_release);
 				installed.store(true, std::memory_order_release);
+				auto& current_report = current_report_storage.get();
 				current_report.installed = true;
 				current_report.observer_attached = true;
 			}
@@ -1119,12 +1125,16 @@ namespace vr::engine_stereo_ssr_consumer_probe
 			expected_context.store(0, std::memory_order_release);
 			expected_generation.store(0, std::memory_order_release);
 			query_enabled.store(false, std::memory_order_release);
-			current_report.installed = false;
-			current_report.observer_attached = false;
-			current_report.content_tracking_active = false;
-			current_report.owner_thread = 0;
-			current_report.active_eye = 2;
-			current_report.active_pair = 0;
+			if (auto* const report_ptr = current_report_storage.get_if())
+			{
+				auto& current_report = *report_ptr;
+				current_report.installed = false;
+				current_report.observer_attached = false;
+				current_report.content_tracking_active = false;
+				current_report.owner_thread = 0;
+				current_report.active_eye = 2;
+				current_report.active_pair = 0;
+			}
 			clear_scene_mip_candidate_shaders_locked();
 		}
 		stop_observation(true);
@@ -1166,6 +1176,7 @@ namespace vr::engine_stereo_ssr_consumer_probe
 			{
 				return false;
 			}
+			auto& current_report = current_report_storage.get();
 			if (current_report.window.current ==
 				engine_stereo_ssr_consumer_window::phase::complete)
 			{
@@ -1231,6 +1242,7 @@ namespace vr::engine_stereo_ssr_consumer_probe
 			{
 				return false;
 			}
+			auto& current_report = current_report_storage.get();
 			if (current_report.focused.current ==
 				engine_stereo_ssr_consumer_window::focused_phase::pair_active)
 			{
@@ -1259,6 +1271,7 @@ namespace vr::engine_stereo_ssr_consumer_probe
 		if (!query_enabled.load(std::memory_order_acquire) ||
 			active_pair.load(std::memory_order_acquire) != pair_id ||
 			active_eye.load(std::memory_order_acquire) != eye) return;
+		auto& current_report = current_report_storage.get();
 		if (current_report.focused.current ==
 			engine_stereo_ssr_consumer_window::focused_phase::pair_active)
 		{
@@ -1284,6 +1297,7 @@ namespace vr::engine_stereo_ssr_consumer_probe
 			query_enabled.store(false, std::memory_order_release);
 			resource_write_tracking_active.store(false, std::memory_order_release);
 			lifecycle_epoch.fetch_add(1, std::memory_order_acq_rel);
+			auto& current_report = current_report_storage.get();
 			const auto focused_pair = current_report.focused.current ==
 				engine_stereo_ssr_consumer_window::focused_phase::pair_active;
 			if (!successful) current_report.sample_count = active_sample_baseline;
@@ -1345,6 +1359,7 @@ namespace vr::engine_stereo_ssr_consumer_probe
 		const auto pair_id = active_pair.load(std::memory_order_acquire);
 		const auto eye = active_eye.load(std::memory_order_acquire);
 		const std::lock_guard lock(probe_mutex);
+		auto& current_report = current_report_storage.get();
 		++current_report.resource_write_callbacks;
 		if (!resource_write_tracking_active.load(std::memory_order_acquire) ||
 			context == nullptr || destination == nullptr ||
@@ -1371,6 +1386,7 @@ namespace vr::engine_stereo_ssr_consumer_probe
 		metadata.output_target = output_target;
 		metadata.operation = operation;
 
+		auto& resource_writes = resource_writes_storage.get();
 		copy_source_lineage_sample lineage{};
 		bool lineage_candidate{};
 		if (operation == engine_stereo_ssr_consumer_window::
@@ -1423,27 +1439,27 @@ namespace vr::engine_stereo_ssr_consumer_probe
 		if (!query_enabled.load(std::memory_order_acquire))
 		{
 			const std::lock_guard lock(probe_mutex);
-			++current_report.inactive_rejections;
+			++current_report_storage.get().inactive_rejections;
 			return;
 		}
 		if (output_target != exact_consumer_target)
 		{
 			const std::lock_guard lock(probe_mutex);
-			++current_report.target_rejections;
+			++current_report_storage.get().target_rejections;
 			return;
 		}
 		if (context == nullptr || expected_context.load(std::memory_order_acquire) !=
 			reinterpret_cast<std::uintptr_t>(context))
 		{
 			const std::lock_guard lock(probe_mutex);
-			++current_report.context_rejections;
+			++current_report_storage.get().context_rejections;
 			return;
 		}
 		const auto thread = GetCurrentThreadId();
 		if (owner_thread.load(std::memory_order_acquire) != thread)
 		{
 			const std::lock_guard lock(probe_mutex);
-			++current_report.thread_rejections;
+			++current_report_storage.get().thread_rejections;
 			return;
 		}
 		const auto eye = active_eye.load(std::memory_order_acquire);
@@ -1452,7 +1468,7 @@ namespace vr::engine_stereo_ssr_consumer_probe
 		if (eye >= 2 || pair_id == 0)
 		{
 			const std::lock_guard lock(probe_mutex);
-			++current_report.eye_rejections;
+			++current_report_storage.get().eye_rejections;
 			return;
 		}
 		const auto publish_consumer_outputs = gsl::finally(
@@ -1467,6 +1483,7 @@ namespace vr::engine_stereo_ssr_consumer_probe
 		if (shader == nullptr)
 		{
 			const std::lock_guard lock(probe_mutex);
+			auto& current_report = current_report_storage.get();
 			if (!query_enabled.load(std::memory_order_acquire) ||
 				lifecycle_epoch.load(std::memory_order_acquire) != callback_epoch ||
 				expected_context.load(std::memory_order_acquire) !=
@@ -1491,6 +1508,7 @@ namespace vr::engine_stereo_ssr_consumer_probe
 		bool start_tracking{};
 		{
 			const std::lock_guard lock(probe_mutex);
+			auto& current_report = current_report_storage.get();
 			++current_report.callback_entries;
 			++current_report.shader_queries;
 			const auto shader_identity = reinterpret_cast<std::uintptr_t>(shader);
@@ -1630,8 +1648,10 @@ namespace vr::engine_stereo_ssr_consumer_probe
 					}
 					if (focused_capture && declaration.declared)
 					{
-						if (engine_stereo_ssr_consumer_window::find_last_resource_write(
-							resource_writes, captured.resource, captured.last_write))
+						if (const auto* const writes = resource_writes_storage.get_if();
+							writes != nullptr &&
+							engine_stereo_ssr_consumer_window::find_last_resource_write(
+								*writes, captured.resource, captured.last_write))
 						{
 							++current_report.declared_srv_last_write_known;
 						}
@@ -1732,7 +1752,10 @@ namespace vr::engine_stereo_ssr_consumer_probe
 	void get_report(report& output) noexcept
 	{
 		const std::lock_guard lock(probe_mutex);
-		output = current_report;
+		if (const auto* const report_ptr = current_report_storage.get_if())
+			output = *report_ptr;
+		else
+			output = {};
 		output.installed = installed.load(std::memory_order_acquire);
 		output.observer_attached = observer_attached.load(std::memory_order_acquire);
 		output.content_tracking_active = content_tracking_active.load(

@@ -1,6 +1,7 @@
 #include <std_include.hpp>
 
 #include "engine_stereo_execution.hpp"
+#include "lazy_storage.hpp"
 
 #include "engine_stereo_draw_indexed.hpp"
 #include "native_conversion_command_list.hpp"
@@ -51,6 +52,7 @@ namespace vr::engine_stereo_execution
 		std::array<std::atomic<invocation_observer_fn>,
 			invocation_observer_channel_count> invocation_observers{};
 		std::atomic<opaque_state_observer_fn> opaque_state_observer{};
+		std::atomic<execute_command_list_observer_fn> execute_command_list_observer{};
 		std::atomic<draw_indexed_observer_fn> draw_indexed_observer{};
 		std::mutex observer_registration_mutex;
 		std::atomic_uint32_t observer_mask{};
@@ -132,8 +134,8 @@ namespace vr::engine_stereo_execution
 		std::array<std::atomic_uint32_t, api_count> per_api{};
 		std::array<std::atomic_uint32_t, api_count> classifier_per_api{};
 		std::array<std::atomic_uint32_t, api_count> frame_per_api{};
-		std::array<event, maximum_events> captured_events{};
-		report published_report{};
+		lazy_array<event, maximum_events> captured_events{};
+		lazy_box<report> published_report_storage{};
 		std::atomic_bool report_ready{};
 
 		std::atomic_uintptr_t classifier_record{};
@@ -161,7 +163,7 @@ namespace vr::engine_stereo_execution
 			api operation{api::draw_indexed};
 		};
 
-		thread_local std::array<call_stack_key, maximum_call_stack_keys>
+		thread_local lazy_array<call_stack_key, maximum_call_stack_keys>
 			call_stack_keys{};
 		thread_local std::uint32_t call_stack_key_count{};
 
@@ -219,7 +221,7 @@ namespace vr::engine_stereo_execution
 		void reset_call_stack_keys() noexcept
 		{
 			call_stack_key_count = 0;
-			call_stack_keys = {};
+			call_stack_keys.clear_storage();
 		}
 
 		[[nodiscard]] bool reserve_call_stack_sample(const event& value) noexcept
@@ -375,7 +377,7 @@ namespace vr::engine_stereo_execution
 		void assemble_report_locked() noexcept
 		{
 			if (report_ready.load(std::memory_order_acquire)) return;
-			auto& output = published_report;
+			auto& output = published_report_storage.get();
 			std::memset(std::addressof(output), 0, sizeof(output));
 			output.expected_context = observation_context.load(std::memory_order_acquire);
 			output.device_generation = observation_generation.load(
@@ -996,6 +998,11 @@ namespace vr::engine_stereo_execution
 				{reinterpret_cast<std::uintptr_t>(commands),
 					static_cast<std::uint64_t>(restore_state != FALSE), 0, 0, 0, 0}, 2,
 				binding);
+			if (const auto observer = execute_command_list_observer.load(
+				std::memory_order_acquire))
+			{
+				observer(context, commands, restore_state != FALSE);
+			}
 			// WARP (and some driver wrappers) re-enters Draw/Dispatch while
 			// executing a list. Scope only the native owner's tagged list on this exact
 			// thread/context; nested unknown command lists are still classified.
@@ -1071,6 +1078,12 @@ namespace vr::engine_stereo_execution
 		opaque_state_observer.store(observer, std::memory_order_release);
 		if (observer) observer_mask.fetch_or(opaque_mask, std::memory_order_release);
 		else observer_mask.fetch_and(~opaque_mask, std::memory_order_release);
+	}
+
+	void set_execute_command_list_observer(
+		const execute_command_list_observer_fn observer) noexcept
+	{
+		execute_command_list_observer.store(observer, std::memory_order_release);
 	}
 
 	void set_draw_indexed_observer(const draw_indexed_observer_fn observer) noexcept
@@ -1272,13 +1285,13 @@ namespace vr::engine_stereo_execution
 		if (state == gate_state::classifier_arming ||
 			state == gate_state::classifier_active ||
 			state == gate_state::classifier_end_arming ||
-			state == gate_state::classifier_closing)
+			state == gate_state::classifier_closing ||
+			classifier_owner_active.load(std::memory_order_acquire))
 		{
 			(void)request_terminal_failure(failure::classifier_collision);
 			return false;
 		}
-		if (output.active || active_classifier != nullptr ||
-			classifier_owner_active.load(std::memory_order_acquire) || record == 0 ||
+		if (output.active || active_classifier != nullptr || record == 0 ||
 			!hooks_installed.load(std::memory_order_acquire) ||
 			expected_context.load(std::memory_order_acquire) == 0 ||
 			expected_generation.load(std::memory_order_acquire) == 0)
@@ -1331,6 +1344,7 @@ namespace vr::engine_stereo_execution
 			finalize_report();
 			return false;
 		}
+		(void)captured_events.get();
 		if (!open_admission_gate(classifier_scope_flag))
 		{
 			active_classifier = nullptr;
@@ -1546,6 +1560,7 @@ namespace vr::engine_stereo_execution
 		{
 			set_failure(failure::device_generation);
 		}
+		(void)captured_events.get();
 		if (!open_admission_gate(frame_scope_flag))
 		{
 			set_failure(failure::frame_boundary);
@@ -1696,7 +1711,7 @@ namespace vr::engine_stereo_execution
 		state = current_state.load(std::memory_order_acquire);
 		if (state != gate_state::complete && state != gate_state::failed) return false;
 		assemble_report_locked();
-		output = published_report;
+		output = published_report_storage.get();
 		return true;
 	}
 
@@ -1888,8 +1903,8 @@ namespace vr::engine_stereo_execution
 		admission_pause_entered.store(false, std::memory_order_relaxed);
 		admission_pause_released.store(false, std::memory_order_relaxed);
 #endif
-		std::memset(std::addressof(published_report), 0,
-			sizeof(published_report));
+		published_report_storage.clear_storage();
+		captured_events.clear_storage();
 		current_state.store(gate_state::classifier_pending, std::memory_order_release);
 		return true;
 	}

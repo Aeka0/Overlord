@@ -1,6 +1,7 @@
 #include <std_include.hpp>
 
 #include "engine_stereo_effect_timeline.hpp"
+#include "lazy_storage.hpp"
 
 #include "engine_stereo_constant_buffer_probe.hpp"
 #include "engine_stereo_gpu_census.hpp"
@@ -70,7 +71,7 @@ namespace vr::engine_stereo_effect_timeline
 		std::atomic_uint64_t frozen_pair{};
 
 		// These fields have exactly one writer: the proven H2 scene-owner thread.
-		std::array<pair_sample, maximum_pairs> ring{};
+		lazy_array<pair_sample, maximum_pairs> ring{};
 		std::array<watched_resource, maximum_watched_resources> watched_resources{};
 		std::size_t ring_write_index{};
 		std::size_t ring_count{};
@@ -93,7 +94,7 @@ namespace vr::engine_stereo_effect_timeline
 		};
 		using invocation_stream = std::array<captured_invocation,
 			maximum_compared_invocations>;
-		std::array<std::array<invocation_stream, compared_stream_count>, 2>
+		lazy_array<std::array<invocation_stream, compared_stream_count>, 2>
 			compared_invocations{};
 		std::array<std::array<std::uint32_t, compared_stream_count>, 2>
 			compared_invocation_counts{};
@@ -103,7 +104,7 @@ namespace vr::engine_stereo_effect_timeline
 		// The ring is normalized into this immutable snapshot before state=frozen is
 		// published. The mutex covers the rare re-arm/freeze versus vr_status race.
 		std::mutex publication_mutex;
-		report published_report{};
+		lazy_box<report> published_report_storage{};
 
 		[[nodiscard]] bool capture_active(const state value) noexcept
 		{
@@ -938,7 +939,8 @@ namespace vr::engine_stereo_effect_timeline
 
 		void clear_live_capture() noexcept
 		{
-			std::memset(ring.data(), 0, sizeof(ring));
+			ring.clear_storage();
+			compared_invocations.clear_storage();
 			std::memset(watched_resources.data(), 0, sizeof(watched_resources));
 			ring_write_index = 0;
 			ring_count = 0;
@@ -991,7 +993,8 @@ namespace vr::engine_stereo_effect_timeline
 			}
 			{
 				const std::lock_guard lock(publication_mutex);
-				std::memset(&published_report, 0, sizeof(published_report));
+				published_report_storage.zero_if_allocated();
+				auto& published_report = published_report_storage.get();
 				fill_header(published_report, state::frozen);
 				published_report.mark_applications = applied;
 				published_report.sample_count = static_cast<std::uint32_t>(ring_count);
@@ -1412,7 +1415,7 @@ namespace vr::engine_stereo_effect_timeline
 		if (phase == state::frozen)
 		{
 			const std::lock_guard lock(publication_mutex);
-			output = published_report;
+			output = published_report_storage.get();
 			return;
 		}
 		fill_header(output, phase);

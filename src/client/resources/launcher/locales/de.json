@@ -359,5 +359,12 @@
   "settings.resetHandAngles": "Diese Hand zurücksetzen",
   "settings.mirrorOtherHand": "Andere Hand spiegeln",
   "settings.debugSunShadowCapture": "Sonnenschatten erfassen",
-  "settings.debugSunShadowCaptureHint": "Erfasst Sonnenschatten mit Strg+Umschalt+F8. Dauert etwa 29 Sekunden. Gilt ab dem nächsten Spielstart."
+  "settings.debugSunShadowCaptureHint": "Erfasst Sonnenschatten mit Strg+Umschalt+F8. Dauert etwa 29 Sekunden. Gilt ab dem nächsten Spielstart.",
+  "settings.performance": "Leistung",
+  "settings.renderScale": "VR-Renderauflösung",
+  "settings.renderScaleHint": "Skaliert die VR-Renderauflösung von 50 % bis 120 % (Standard: 100 %). Für anspruchsvolle Außenlevels auf 80 %–90 % senken. Gilt nach einem Spielneustart oder über vr_reinit.",
+  "settings.sharpening": "FidelityFX-CAS-Schärfe",
+  "settings.sharpeningHint": "Wendet räumliches AMD FidelityFX CAS zur Detailwiederherstellung an (0 % bis 100 %, Standard: 0 %). Gilt sofort.",
+  "settings.hiddenAreaMesh": "OpenXR-Sichtfeldmaske",
+  "settings.hiddenAreaMeshHint": "Maskiert unsichtbare OpenXR-Linsenecken im Tiefenpuffer vorab aus, um nicht sichtbare Randpixel beim Rendern zu überspringen. Steigert die GPU-Leistung; standardmäßig aktiviert."
 }

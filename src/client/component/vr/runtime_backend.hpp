@@ -33,6 +33,7 @@ namespace vr
 
 		[[nodiscard]] bool requested_enabled() const;
 		[[nodiscard]] bool applied_enabled() const;
+		[[nodiscard]] bool is_session_running() const noexcept;
 		[[nodiscard]] bool requires_present_owner_execution() const noexcept;
 		[[nodiscard]] runtime_status get_status() const;
 

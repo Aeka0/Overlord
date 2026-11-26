@@ -469,3 +469,67 @@ test("launch preflight messages exist in all supported languages", () => {
     assert.ok(Object.values(catalog).every((text) => text.length > 0));
   }
 });
+
+test("performance render scale, CAS sharpening, and hidden area mesh sit at the end of Basics and round-trip independently", () => {
+  const basics = fields.filter((field) => field.category === "basics");
+  const basicsGroups = [...new Set(basics.map((field) => field.group))];
+  assert.deepEqual(basicsGroups.slice(0, 2), ["settings.runtimeBackend", "settings.turning"]);
+  assert.equal(basicsGroups.at(-1), "settings.performance");
+  const performance = basics.filter((field) => field.group === "settings.performance");
+  assert.deepEqual(
+    performance.map((field) => field.name),
+    ["vr_renderScale", "vr_sharpening", "vr_hiddenAreaMesh"],
+  );
+  assert.equal(performance[0].type, "number");
+  assert.equal(performance[0].unit, "unit.percent");
+  assert.equal(performance[1].type, "number");
+  assert.equal(performance[1].unit, "unit.percent");
+  assert.equal(performance[2].type, "toggle");
+  for (const catalog of Object.values(catalogs)) {
+    for (const key of [
+      "settings.performance",
+      "settings.renderScale",
+      "settings.renderScaleHint",
+      "settings.sharpening",
+      "settings.sharpeningHint",
+      "settings.hiddenAreaMesh",
+      "settings.hiddenAreaMeshHint",
+    ]) {
+      assert.ok(catalog[key]?.length, key);
+    }
+  }
+  const fixture = {
+    ...state,
+    values: { vr_renderScale: 1, vr_sharpening: 0, vr_hiddenAreaMesh: true },
+    limits: {
+      vr_renderScale: { min: 0.5, max: 1.2, step: 0.05, displayScale: 0.01 },
+      vr_sharpening: { min: 0, max: 1, step: 0.05, displayScale: 0.01 },
+    },
+  } as SettingsState;
+  const initialDraft = makeDraft(fixture.values, fixture.limits);
+  assert.equal(initialDraft.vr_renderScale, "100");
+  assert.equal(initialDraft.vr_sharpening, "0");
+  assert.equal(initialDraft.vr_hiddenAreaMesh, true);
+  assert.equal(displayLimit(fixture.limits.vr_renderScale).min, 50);
+  assert.equal(displayLimit(fixture.limits.vr_renderScale).max, 120);
+  assert.equal(displayLimit(fixture.limits.vr_renderScale).step, 5);
+  assert.equal(displayLimit(fixture.limits.vr_sharpening).min, 0);
+  assert.equal(displayLimit(fixture.limits.vr_sharpening).max, 100);
+  assert.equal(displayLimit(fixture.limits.vr_sharpening).step, 5);
+
+  const savedScale = collect({ ...initialDraft, vr_renderScale: "85" }, fixture);
+  assert.deepEqual(savedScale, { vr_renderScale: 0.85, vr_sharpening: 0, vr_hiddenAreaMesh: true });
+  assert.equal(makeDraft(savedScale, fixture.limits).vr_renderScale, "85");
+
+  const savedSharpening = collect({ ...initialDraft, vr_sharpening: "40" }, fixture);
+  assert.deepEqual(savedSharpening, { vr_renderScale: 1, vr_sharpening: 0.4, vr_hiddenAreaMesh: true });
+  assert.equal(makeDraft(savedSharpening, fixture.limits).vr_sharpening, "40");
+
+  const savedMaskOff = collect({ ...initialDraft, vr_hiddenAreaMesh: false }, fixture);
+  assert.deepEqual(savedMaskOff, { vr_renderScale: 1, vr_sharpening: 0, vr_hiddenAreaMesh: false });
+
+  for (const invalid of ["49", "121", "", "NaN"])
+    assert.throws(() => collect({ ...initialDraft, vr_renderScale: invalid }, fixture), SettingError);
+  for (const invalid of ["-1", "101", "", "Infinity"])
+    assert.throws(() => collect({ ...initialDraft, vr_sharpening: invalid }, fixture), SettingError);
+});

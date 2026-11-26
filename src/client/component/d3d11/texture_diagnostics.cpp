@@ -38,6 +38,7 @@ namespace d3d11::texture_diagnostics
 		std::atomic_flag installing = ATOMIC_FLAG_INIT;
 		std::atomic<std::uint64_t> sequence{}, next_call{}, calls{}, dropped{}, failures{}, active_overflow{};
 		std::atomic<std::uint64_t> hook_count{}, hook_failures{}, identity_overflow{};
+		std::atomic<std::size_t> identity_count{};
 		snapshot dump_snapshot;
 
 		bool supplement(MINIDUMP_USER_STREAM& stream) noexcept
@@ -69,6 +70,7 @@ namespace d3d11::texture_diagnostics
 			for (std::size_t index{}; index < active.size(); ++index)
 			{
 				auto& target = active[index];
+				if (target.active.load(std::memory_order_relaxed)) continue;
 				if (target.writing.test_and_set(std::memory_order_acquire)) continue;
 				if (target.active.load(std::memory_order_acquire)) { target.writing.clear(std::memory_order_release); continue; }
 				target.value = value;
@@ -105,8 +107,16 @@ namespace d3d11::texture_diagnostics
 
 		template <typename T> bool copy_pointer(const T* source, T& destination) noexcept
 		{
-			SIZE_T received{};
-			return source && ReadProcessMemory(GetCurrentProcess(), source, &destination, sizeof(T), &received) && received == sizeof(T);
+			if (!source) return false;
+			__try
+			{
+				std::memcpy(&destination, source, sizeof(T));
+				return true;
+			}
+			__except (EXCEPTION_EXECUTE_HANDLER)
+			{
+				return false;
+			}
 		}
 
 		HRESULT STDMETHODCALLTYPE create_texture_stub(ID3D11Device* device, const D3D11_TEXTURE2D_DESC* description,
@@ -120,8 +130,10 @@ namespace d3d11::texture_diagnostics
 			value.initial_data = initial != nullptr;
 			create_texture original{};
 			bool observed{};
-			for (const auto& entry : identities)
+			const auto count = (std::min)(identity_count.load(std::memory_order_acquire), identities.size());
+			for (std::size_t index{}; index < count; ++index)
 			{
+				const auto& entry = identities[index];
 				if (entry.device.load(std::memory_order_acquire) != device) continue;
 				value.generation = entry.generation.load(std::memory_order_acquire);
 				original = entry.original.load(std::memory_order_acquire);
@@ -176,8 +188,10 @@ namespace d3d11::texture_diagnostics
 		bool identify(ID3D11Device* device, const std::uint64_t generation, const create_texture original) noexcept
 		{
 			identity* empty{};
-			for (auto& entry : identities)
+			std::size_t empty_index{};
+			for (std::size_t index{}; index < identities.size(); ++index)
 			{
+				auto& entry = identities[index];
 				const auto known = entry.device.load(std::memory_order_acquire);
 				if (known == device)
 				{
@@ -185,12 +199,22 @@ namespace d3d11::texture_diagnostics
 					entry.generation.store(generation, std::memory_order_release);
 					return true;
 				}
-				if (!known && !empty) empty = &entry;
+				if (!known && !empty)
+				{
+					empty = &entry;
+					empty_index = index;
+				}
 			}
 			if (!empty) { ++identity_overflow; return false; }
 			empty->original.store(original, std::memory_order_relaxed);
 			empty->generation.store(generation, std::memory_order_relaxed);
 			empty->device.store(device, std::memory_order_release);
+			auto old = identity_count.load(std::memory_order_relaxed);
+			while (old < empty_index + 1 &&
+				!identity_count.compare_exchange_weak(old, (std::max)(old, empty_index + 1),
+					std::memory_order_release, std::memory_order_relaxed))
+			{
+			}
 			return true;
 		}
 

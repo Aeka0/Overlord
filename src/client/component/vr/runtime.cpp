@@ -131,6 +131,10 @@ namespace vr
 	{
 		return implementation_->backend.applied_enabled();
 	}
+	bool runtime::is_session_running() const noexcept
+	{
+		return implementation_->backend.is_session_running();
+	}
 	runtime_status runtime::get_status() const
 	{
 		auto status = implementation_->backend.get_status();

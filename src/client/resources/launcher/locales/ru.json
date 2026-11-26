@@ -359,5 +359,12 @@
   "settings.resetHandAngles": "Сбросить эту руку",
   "settings.mirrorOtherHand": "Отразить другую руку",
   "settings.debugSunShadowCapture": "Сбор данных теней солнца",
-  "settings.debugSunShadowCaptureHint": "Добавляет данные теней солнца в диагностику Ctrl+Shift+F8. Сбор занимает около 29 секунд. Применяется при следующем запуске игры."
+  "settings.debugSunShadowCaptureHint": "Добавляет данные теней солнца в диагностику Ctrl+Shift+F8. Сбор занимает около 29 секунд. Применяется при следующем запуске игры.",
+  "settings.performance": "Производительность",
+  "settings.renderScale": "Масштаб рендеринга VR",
+  "settings.renderScaleHint": "Масштабирует разрешение рендеринга VR от 50 % до 120 % (по умолчанию: 100 %). Снизьте до 80–90 % на тяжёлых открытых уровнях. Применяется после перезапуска игры или команды vr_reinit.",
+  "settings.sharpening": "Резкость FidelityFX CAS",
+  "settings.sharpeningHint": "Применяет пространственное повышение резкости AMD FidelityFX CAS для восстановления чёткости деталей (от 0 % до 100 %, по умолчанию: 0 %). Применяется сразу.",
+  "settings.hiddenAreaMesh": "Маска скрытой области OpenXR",
+  "settings.hiddenAreaMeshHint": "Заранее маскирует невидимые углы линз OpenXR в буфере глубины, чтобы пропускать невидимые краевые пиксели при рендеринге. Повышает производительность GPU; включено по умолчанию."
 }

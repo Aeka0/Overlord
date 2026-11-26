@@ -2,12 +2,41 @@
 from __future__ import annotations
 
 import argparse
+import json
 import os
 from pathlib import Path
 import shutil
 import subprocess
 
 ROOT = Path(__file__).resolve().parents[1]
+
+
+def find_generator_instance(generator: str) -> str | None:
+    prefixes = {
+        "Visual Studio 18 ": "18.",
+        "Visual Studio 17 ": "17.",
+        "Visual Studio 16 ": "16.",
+    }
+    major = next((prefix for name, prefix in prefixes.items() if generator.startswith(name)), None)
+    if not major:
+        return None
+    for variable in ("ProgramFiles(x86)", "ProgramFiles"):
+        base = os.environ.get(variable)
+        if not base:
+            continue
+        vswhere = Path(base) / "Microsoft Visual Studio/Installer/vswhere.exe"
+        if not vswhere.is_file():
+            continue
+        output = subprocess.check_output(
+            [str(vswhere), "-products", "*", "-all", "-format", "json"],
+            text=True, encoding="utf-8", errors="replace",
+        )
+        for entry in json.loads(output):
+            version = entry.get("installationVersion", "")
+            location = entry.get("installationPath", "")
+            if version.startswith(major) and location and not entry.get("isComplete", True):
+                return f"{Path(location).as_posix()},version={version}"
+    return None
 
 
 def find_cmake(explicit: str | None) -> Path:
@@ -33,6 +62,8 @@ def find_cmake(explicit: str | None) -> Path:
 
 def build(configuration: str, generator: str, toolset: str, jobs: int,
           cmake: Path, destination: Path) -> Path:
+    if generator == "Visual Studio 17 2022" and toolset == "v145":
+        generator = "Visual Studio 18 2026"
     source = ROOT / "deps/openxr"
     if not (source / "src/loader/CMakeLists.txt").is_file():
         raise FileNotFoundError("Initialize the deps/openxr submodule before building the loader")
@@ -42,6 +73,8 @@ def build(configuration: str, generator: str, toolset: str, jobs: int,
                  "-DBUILD_LOADER=ON", "-DDYNAMIC_LOADER=ON",
                  "-DBUILD_API_LAYERS=OFF", "-DBUILD_TESTS=OFF",
                  "-DBUILD_CONFORMANCE_TESTS=OFF"]
+    if instance := find_generator_instance(generator):
+        configure.append(f"-DCMAKE_GENERATOR_INSTANCE={instance}")
     subprocess.run(configure, cwd=ROOT, check=True)
     subprocess.run([str(cmake), "--build", str(build_dir), "--config", configuration,
                     "--target", "openxr_loader", "--parallel", str(jobs)], cwd=ROOT, check=True)
