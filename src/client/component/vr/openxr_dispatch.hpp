@@ -82,6 +82,8 @@ namespace vr::openxr
 		PFN_xrGetActionStateVector2f get_action_state_vector2f{};
 		PFN_xrGetActionStatePose get_action_state_pose{};
 		PFN_xrApplyHapticFeedback apply_haptic_feedback{};
+		PFN_xrPerfSettingsSetPerformanceLevelEXT perf_settings_set_performance_level{};
+		PFN_xrGetVisibilityMaskKHR get_visibility_mask{};
 
 		[[nodiscard]] bool load_global(PFN_xrGetInstanceProcAddr entry, std::string& error, XrResult& result);
 		[[nodiscard]] bool load_instance(XrInstance instance, std::string& error, XrResult& result);

@@ -2,7 +2,10 @@
 
 #include "component/vr/engine_stereo_bridge.hpp"
 #include "component/vr/openxr_runtime.hpp"
+#include "component/vr/render_tuning.hpp"
+#include "component/vr/runtime_backend.hpp"
 #include "component/vr/steamvr_runtime.hpp"
+#include "component/vr/texture_blit.hpp"
 #include "mock_control.hpp"
 #include "test_support.hpp"
 #include "component/vr/engine_scene_resolution.hpp"
@@ -487,16 +490,207 @@ namespace
 		vr::engine_stereo_bridge::set_enabled(false);runtime.shutdown();
 	}
 
-		void run_happy_path(mock_loader_control& loader, const d3d11::device_snapshot& first_graphics)
+	void expect_texture_blit_cas_upscale()
+	{
+		const auto graphics = vr::tests::create_graphics(1);
+		constexpr std::uint32_t src_w = 32;
+		constexpr std::uint32_t src_h = 32;
+		constexpr std::uint32_t dst_w = 64;
+		constexpr std::uint32_t dst_h = 64;
+		// DXGI_FORMAT_R11G11B10_FLOAT: 1.0f per channel -> exp=15, mant=0.
+		constexpr std::uint32_t r11g11b10_zero = 0x00000000u;
+		constexpr std::uint32_t r11g11b10_one = (15u << 6) | (15u << 17) | (15u << 27);
+		const auto decode_unorm_float = [](const std::uint32_t bits, const unsigned mant_bits) -> float
+		{
+			const std::uint32_t exp = (bits >> mant_bits) & 0x1Fu;
+			const std::uint32_t mant = bits & ((1u << mant_bits) - 1u);
+			vr::tests::require(exp < 31u, "R11G11B10_FLOAT texel contained Inf/NaN");
+			if (exp == 0u)
+			{
+				return std::ldexp(static_cast<float>(mant), -14 - static_cast<int>(mant_bits));
+			}
+			return std::ldexp(static_cast<float>((1u << mant_bits) | mant),
+				static_cast<int>(exp) - 15 - static_cast<int>(mant_bits));
+		};
+		vr::tests::require(decode_unorm_float(r11g11b10_one & 0x7FFu, 6u) == 1.0f,
+			"R11G11B10_FLOAT test encoding mismatch");
+
+		std::vector<std::uint32_t> checkerboard(src_w * src_h);
+		for (std::uint32_t y = 0; y < src_h; ++y)
+		{
+			for (std::uint32_t x = 0; x < src_w; ++x)
+			{
+				checkerboard[y * src_w + x] = ((x ^ y) & 1u) != 0u ? r11g11b10_one : r11g11b10_zero;
+			}
+		}
+
+		D3D11_TEXTURE2D_DESC src_desc{};
+		src_desc.Width = src_w;
+		src_desc.Height = src_h;
+		src_desc.MipLevels = 1;
+		src_desc.ArraySize = 1;
+		src_desc.Format = DXGI_FORMAT_R11G11B10_FLOAT;
+		src_desc.SampleDesc = {1, 0};
+		src_desc.Usage = D3D11_USAGE_DEFAULT;
+		src_desc.BindFlags = D3D11_BIND_SHADER_RESOURCE;
+		D3D11_SUBRESOURCE_DATA init_data{};
+		init_data.pSysMem = checkerboard.data();
+		init_data.SysMemPitch = src_w * sizeof(std::uint32_t);
+		Microsoft::WRL::ComPtr<ID3D11Texture2D> src_tex;
+		vr::tests::require(SUCCEEDED(graphics.device->CreateTexture2D(&src_desc, &init_data, &src_tex)),
+			"CAS test source texture creation failed");
+
+		D3D11_TEXTURE2D_DESC dst_desc = src_desc;
+		dst_desc.Width = dst_w;
+		dst_desc.Height = dst_h;
+		dst_desc.BindFlags = D3D11_BIND_RENDER_TARGET;
+		Microsoft::WRL::ComPtr<ID3D11Texture2D> dst_tex;
+		Microsoft::WRL::ComPtr<ID3D11RenderTargetView> dst_rtv;
+		vr::tests::require(SUCCEEDED(graphics.device->CreateTexture2D(&dst_desc, nullptr, &dst_tex)) &&
+			SUCCEEDED(graphics.device->CreateRenderTargetView(dst_tex.Get(), nullptr, &dst_rtv)),
+			"CAS test 64x64 target creation failed");
+
+		D3D11_TEXTURE2D_DESC staging_desc = dst_desc;
+		staging_desc.Usage = D3D11_USAGE_STAGING;
+		staging_desc.BindFlags = 0;
+		staging_desc.CPUAccessFlags = D3D11_CPU_ACCESS_READ;
+		Microsoft::WRL::ComPtr<ID3D11Texture2D> staging64;
+		vr::tests::require(SUCCEEDED(graphics.device->CreateTexture2D(&staging_desc, nullptr, &staging64)),
+			"CAS test 64x64 staging creation failed");
+
+		vr::texture_blit::renderer blit;
+		std::string error;
+		const vr::texture_blit::renderer::draw_request cas_request{
+			.graphics = graphics,
+			.source = src_tex.Get(),
+			.destination = dst_rtv.Get(),
+			.width = dst_w,
+			.height = dst_h,
+			.source_encoding = vr::texture_blit::encoding::linear,
+			.dim = 0.0f,
+			.sharpness = 0.65f};
+		vr::tests::require(blit.draw(cas_request, error),
+			std::format("CAS upscale draw failed: {}", error));
+
+		graphics.context->CopyResource(staging64.Get(), dst_tex.Get());
+		D3D11_MAPPED_SUBRESOURCE mapped{};
+		vr::tests::require(SUCCEEDED(graphics.context->Map(staging64.Get(), 0, D3D11_MAP_READ, 0, &mapped)),
+			"CAS staging Map failed");
+		float min_r = 1e9f;
+		float max_r = -1e9f;
+		std::uint32_t first_pixel{};
+		bool any_different = false;
+		for (std::uint32_t y = 0; y < dst_h; ++y)
+		{
+			const auto* row = reinterpret_cast<const std::uint32_t*>(
+				static_cast<const std::uint8_t*>(mapped.pData) + y * mapped.RowPitch);
+			for (std::uint32_t x = 0; x < dst_w; ++x)
+			{
+				const std::uint32_t px = row[x];
+				if (x == 0 && y == 0)
+				{
+					first_pixel = px;
+				}
+				else if (px != first_pixel)
+				{
+					any_different = true;
+				}
+				const float r = decode_unorm_float(px & 0x7FFu, 6u);
+				const float g = decode_unorm_float((px >> 11) & 0x7FFu, 6u);
+				const float b = decode_unorm_float((px >> 22) & 0x3FFu, 5u);
+				vr::tests::require(std::isfinite(r) && std::isfinite(g) && std::isfinite(b),
+					"CAS upscale emitted non-finite channel");
+				min_r = (std::min)(min_r, r);
+				max_r = (std::max)(max_r, r);
+			}
+		}
+		graphics.context->Unmap(staging64.Get(), 0);
+		vr::tests::require(any_different && min_r < 0.35f && max_r > 0.65f,
+			std::format("CAS upscale produced uniform/unexpected output (min_r={}, max_r={})", min_r, max_r));
+
+		// Verify CopyResource fast-path (32x32 -> 32x32, dim = 0, sharpness = 0).
+		D3D11_TEXTURE2D_DESC fast_desc = src_desc;
+		fast_desc.BindFlags = D3D11_BIND_RENDER_TARGET;
+		Microsoft::WRL::ComPtr<ID3D11Texture2D> fast_tex;
+		Microsoft::WRL::ComPtr<ID3D11RenderTargetView> fast_rtv;
+		vr::tests::require(SUCCEEDED(graphics.device->CreateTexture2D(&fast_desc, nullptr, &fast_tex)) &&
+			SUCCEEDED(graphics.device->CreateRenderTargetView(fast_tex.Get(), nullptr, &fast_rtv)),
+			"CopyResource fast-path target creation failed");
+		D3D11_TEXTURE2D_DESC staging32_desc = fast_desc;
+		staging32_desc.Usage = D3D11_USAGE_STAGING;
+		staging32_desc.BindFlags = 0;
+		staging32_desc.CPUAccessFlags = D3D11_CPU_ACCESS_READ;
+		Microsoft::WRL::ComPtr<ID3D11Texture2D> staging32;
+		vr::tests::require(SUCCEEDED(graphics.device->CreateTexture2D(&staging32_desc, nullptr, &staging32)),
+			"CopyResource fast-path staging creation failed");
+
+		const vr::texture_blit::renderer::draw_request fast_request{
+			.graphics = graphics,
+			.source = src_tex.Get(),
+			.destination = fast_rtv.Get(),
+			.width = src_w,
+			.height = src_h,
+			.source_encoding = vr::texture_blit::encoding::linear,
+			.dim = 0.0f,
+			.sharpness = 0.0f};
+		vr::tests::require(blit.draw(fast_request, error),
+			std::format("CopyResource fast-path draw failed: {}", error));
+
+		graphics.context->CopyResource(staging32.Get(), fast_tex.Get());
+		vr::tests::require(SUCCEEDED(graphics.context->Map(staging32.Get(), 0, D3D11_MAP_READ, 0, &mapped)),
+			"CopyResource fast-path staging Map failed");
+		for (std::uint32_t y = 0; y < src_h; ++y)
+		{
+			const auto* row = reinterpret_cast<const std::uint32_t*>(
+				static_cast<const std::uint8_t*>(mapped.pData) + y * mapped.RowPitch);
+			for (std::uint32_t x = 0; x < src_w; ++x)
+			{
+				vr::tests::require(row[x] == checkerboard[y * src_w + x],
+					"CopyResource fast-path modified pixel values");
+			}
+		}
+		graphics.context->Unmap(staging32.Get(), 0);
+		blit.reset();
+
+		// Verify render_tuning::scale_extent across 1.0, 0.8, 0.5, 1.2, and NaN.
+		const auto restore_scale = gsl::finally([]()
+		{
+			vr::render_tuning::render_scale.store(1.0f, std::memory_order_release);
+		});
+		vr::render_tuning::render_scale.store(1.0f, std::memory_order_release);
+		vr::tests::require((vr::render_tuning::scale_extent(2000, 2000) ==
+			vr::engine_scene_resolution::extent{2000, 2000}), "scale_extent(1.0) mismatch");
+		vr::render_tuning::render_scale.store(0.8f, std::memory_order_release);
+		vr::tests::require((vr::render_tuning::scale_extent(2000, 2000) ==
+			vr::engine_scene_resolution::extent{1600, 1600}), "scale_extent(0.8) mismatch");
+		vr::render_tuning::render_scale.store(0.5f, std::memory_order_release);
+		vr::tests::require((vr::render_tuning::scale_extent(2000, 2000) ==
+			vr::engine_scene_resolution::extent{1000, 1000}), "scale_extent(0.5) mismatch");
+		vr::render_tuning::render_scale.store(1.2f, std::memory_order_release);
+		vr::tests::require((vr::render_tuning::scale_extent(2000, 2000) ==
+			vr::engine_scene_resolution::extent{2400, 2400}), "scale_extent(1.2) mismatch");
+		vr::render_tuning::render_scale.store(std::numeric_limits<float>::quiet_NaN(),
+			std::memory_order_release);
+		vr::tests::require((vr::render_tuning::scale_extent(2000, 2000) ==
+			vr::engine_scene_resolution::extent{2000, 2000}), "scale_extent(NaN) mismatch");
+	}
+
+	void run_happy_path(mock_loader_control& loader, const d3d11::device_snapshot& first_graphics)
 	{
 		configure(loader, first_graphics, vr::tests::mock::scenario::happy);
 		vr::openxr::runtime_backend runtime;
+		vr::tests::require(!runtime.requested_enabled() && !runtime.applied_enabled(),
+			"fresh runtime unexpectedly reported enabled");
 		runtime.set_desired_enabled(true);
+		vr::tests::require(runtime.requested_enabled() && !runtime.applied_enabled(),
+			"requested_enabled did not reflect desired enable before initialize");
 		runtime.set_scene_mode(vr::scene_mode::synthetic);
 		vr::tests::require(runtime.initialize(first_graphics), "happy-path initialization failed");
 
 		auto status = runtime.get_status();
 		vr::tests::require(status.state == vr::runtime_state::session_idle, "initialized runtime is not session_idle");
+		vr::tests::require(runtime.requested_enabled() && runtime.applied_enabled(),
+			"initialized runtime did not report requested_enabled and applied_enabled");
 		vr::tests::require(status.applied_enabled && status.loader_loaded && status.instance_created &&
 			status.session_created, "happy path did not create the OpenXR object graph");
 		vr::tests::require(status.view_count == 2 && status.eyes[0].width == 64 && status.eyes[1].height == 64,
@@ -517,8 +711,11 @@ namespace
 		{
 			runtime.on_present(first_graphics, frame);
 		}
+		runtime.poll_capture(first_graphics);
 		status = runtime.get_status();
 		vr::tests::require(status.submitted_frames == 4, "multi-frame happy path did not submit four frames");
+		vr::tests::require(runtime.requested_enabled() && runtime.applied_enabled(),
+			"running runtime did not report requested_enabled and applied_enabled");
 
 		loader.set_should_render(FALSE);
 		runtime.on_present(first_graphics, 5);
@@ -566,21 +763,26 @@ namespace
 		vr::tests::require(status.submitted_frames == 8, "repeated reinitialize frames were not submitted");
 
 		runtime.set_desired_enabled(false);
+		vr::tests::require(!runtime.requested_enabled(), "disable did not update requested_enabled");
 		runtime.on_present(second_graphics, 10);
 		status = runtime.get_status();
 		vr::tests::require(status.state == vr::runtime_state::disabled && !status.desired_enabled &&
-			!status.applied_enabled && !status.loader_loaded, "disable did not fully tear down VR");
+			!status.applied_enabled && !status.loader_loaded &&
+			!runtime.requested_enabled() && !runtime.applied_enabled(),
+			"disable did not fully tear down VR");
 
 		runtime.set_desired_enabled(true);
 		loader.queue_session_state(XR_SESSION_STATE_READY);
 		runtime.on_present(second_graphics, 11);
 		status = runtime.get_status();
-		vr::tests::require(status.state == vr::runtime_state::running && status.session_generation == 5,
+		vr::tests::require(status.state == vr::runtime_state::running && status.session_generation == 5 &&
+			runtime.requested_enabled() && runtime.applied_enabled(),
 			"enable after disable did not rebuild and run");
 
 		runtime.shutdown();
 		status = runtime.get_status();
-		vr::tests::require(status.state == vr::runtime_state::disabled && !status.loader_loaded,
+		vr::tests::require(status.state == vr::runtime_state::disabled && !status.loader_loaded &&
+			!runtime.requested_enabled() && !runtime.applied_enabled(),
 			"shutdown did not leave a disabled unloaded runtime");
 
 		const auto statistics = loader.statistics();
@@ -601,6 +803,23 @@ namespace
 		vr::tests::require(statistics.views_located == 9 && statistics.images_acquired == 18 &&
 			statistics.images_waited == 18 && statistics.images_released == 18,
 			"view and swapchain image ABI counts are inconsistent");
+	}
+
+	void expect_facade_lockfree_queries(const d3d11::device_snapshot& graphics)
+	{
+		vr::runtime_backend facade;
+		vr::tests::require(!facade.requested_enabled() && !facade.applied_enabled(),
+			"fresh runtime_backend facade unexpectedly reported enabled");
+		facade.set_desired_enabled(true);
+		vr::tests::require(facade.requested_enabled() && !facade.applied_enabled(),
+			"runtime_backend facade requested_enabled did not reflect enable");
+		facade.poll_capture(graphics);
+		facade.set_desired_enabled(false);
+		vr::tests::require(!facade.requested_enabled() && !facade.applied_enabled(),
+			"runtime_backend facade requested_enabled did not reflect disable");
+		facade.shutdown();
+		vr::tests::require(!facade.requested_enabled() && !facade.applied_enabled(),
+			"runtime_backend facade reported enabled after shutdown");
 	}
 }
 
@@ -646,6 +865,7 @@ int main()
 		expect_destroy_instance_null_proc(loader, graphics);
 			expect_strict_scene_source_rejection(loader, graphics);
 		run_happy_path(loader, graphics);
+		expect_facade_lockfree_queries(graphics);
 		openxr_adaptation_tests::calibrated_grip_input(loader,graphics);
 		openxr_adaptation_tests::standard_wrist_equivalence();
 		openxr_adaptation_tests::standard_grip_input(loader,graphics);
@@ -663,6 +883,7 @@ int main()
 		openxr_adaptation_tests::frontend_menu(loader,graphics,true);
 		openxr_adaptation_tests::canted_native_views(loader,graphics);
 		openxr_startup_tests::initialization(loader,graphics);
+		expect_texture_blit_cas_upscale();
 		loader.unload();
 		vr::tests::require(GetModuleHandleW(L"openxr_loader.dll") == nullptr,
 			"production runtime leaked an openxr_loader.dll module reference");

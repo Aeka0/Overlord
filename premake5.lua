@@ -110,16 +110,14 @@ filter "platforms:x64"
 filter {}
 
 filter "configurations:Release"
-	optimize "Size"
+	optimize "Speed"
 	linkoptions {"/IGNORE:4702"}
 	defines {"NDEBUG"}
 	flags {"FatalCompileWarnings"}
 filter {"configurations:Release", "action:vs*"}
-	-- v142 WPO miscompiles nonzero-initialized aggregate publication: it can
-	-- retain writes into .rdata or delete them entirely. Apply the policy to
-	-- every project, not individual buffers/TUs. Keep ordinary /O1 optimization.
-	-- Re-enable only after toolchain qualification and Release runtime acceptance.
-	buildoptions {"/GL-", "/bigobj"}
+	-- WPO (/GL + /LTCG) still miscompiles nonzero-initialized aggregate publication on v145
+	-- (retained /GL- and /LTCG:OFF while keeping /O2 /Oi /Ot /Ob3 /Gw /arch:AVX2).
+	buildoptions {"/Oi", "/Ot", "/Ob3", "/Gw", "/arch:AVX2", "/GL-", "/bigobj"}
 	linkoptions {"/LTCG:OFF"}
 filter {}
 
@@ -138,7 +136,7 @@ filter "configurations:RelWithDebInfo"
 	flags {"NoRuntimeChecks"}
 	-- beta2 treats justmycode as project-scoped; keep Debug's default by
 	-- specifying its compiler switch only for this optimized configuration.
-	buildoptions {"/bigobj", "/JMC-"}
+	buildoptions {"/Oi", "/Ot", "/Gw", "/arch:AVX2", "/bigobj", "/JMC-"}
 	defines {"NDEBUG", "H2VR_PROFILE_BUILD"}
 filter {}
 

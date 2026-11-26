@@ -57,7 +57,7 @@ namespace vr
 			if (identity == 0) return false;
 			const auto start = detail::stereo_pointer_slot<buckets>(identity) * ways;
 			for (std::size_t i{}; i < ways; ++i)
-				if (entries_[start + i] == identity) return true;
+				if (generations_[start + i] == generation_ && entries_[start + i] == identity) return true;
 			return false;
 		}
 
@@ -66,16 +66,31 @@ namespace vr
 			if (identity == 0) return;
 			const auto start = detail::stereo_pointer_slot<buckets>(identity) * ways;
 			for (std::size_t i{}; i < ways; ++i)
-				if (entries_[start + i] == identity) return;
+				if (generations_[start + i] == generation_ && entries_[start + i] == identity) return;
 			// Four colliding material views can coexist instead of repeatedly
 			// calling GetResource. Storage and lifetime remain bounded per pair.
-			for (auto i = ways - 1; i != 0; --i) entries_[start + i] = entries_[start + i - 1];
+			for (auto i = ways - 1; i != 0; --i)
+			{
+				entries_[start + i] = entries_[start + i - 1];
+				generations_[start + i] = generations_[start + i - 1];
+			}
 			entries_[start] = identity;
+			generations_[start] = generation_;
 		}
 
-		void clear() noexcept { entries_.fill(0); }
+		void clear() noexcept
+		{
+			++generation_;
+			if (generation_ == 0)
+			{
+				generations_.fill(0);
+				generation_ = 1;
+			}
+		}
 
 	private:
 		std::array<std::uintptr_t, Capacity> entries_{};
+		std::array<std::uint32_t, Capacity> generations_{};
+		std::uint32_t generation_{1};
 	};
 }

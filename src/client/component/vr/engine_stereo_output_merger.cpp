@@ -66,6 +66,8 @@ namespace vr::engine_stereo_output_merger
 		std::array<std::atomic<clear_depth_stencil_observer_fn>,
 			clear_observer_channel_count> clear_depth_stencil_observers{};
 		std::atomic<clear_state_observer_fn> clear_state_observer{};
+		std::atomic<depth_bind_observer_fn> depth_bind_observer{};
+		std::atomic<post_clear_depth_hook_fn> post_clear_depth_hook{};
 		std::atomic<render_target_rewriter_fn> render_target_rewriter{};
 		std::atomic<depth_stencil_rewriter_fn> depth_stencil_rewriter{};
 		std::atomic<unordered_access_rewriter_fn> unordered_access_rewriter{};
@@ -77,12 +79,24 @@ namespace vr::engine_stereo_output_merger
 		std::atomic_uint64_t latest_publication_sequence{};
 		std::atomic_uintptr_t latest_record{};
 		report published_report{};
+		struct tls_binding_snapshot
+		{
+			bool valid{};
+			std::uint64_t sequence{};
+			std::uintptr_t context{};
+			std::uint32_t render_target_count{};
+			std::uint32_t target_id_plus_one{};
+			std::uintptr_t render_target_0{};
+			std::uintptr_t depth_stencil{};
+		};
 		thread_local transaction* active_transaction{};
 		thread_local replay_guard* active_replay_guard{};
 		thread_local bool inside_output_merger{};
-		thread_local binding_snapshot current_binding{};
+		thread_local bool in_post_clear_hook{};
+		// Zero-initialized POD avoids __dyn_tls_on_demand_init checks on hot D3D11 hooks.
+		thread_local tls_binding_snapshot current_binding{};
 		thread_local std::uint64_t current_binding_sequence{};
-		thread_local std::uint32_t current_target_id{0xFFFFFFFFu};
+		thread_local std::uint32_t current_target_id_plus_one{};
 
 		[[nodiscard]] bool is_terminal(const gate_state state) noexcept
 		{
@@ -258,6 +272,38 @@ namespace vr::engine_stereo_output_merger
 			capture_depth_stencil(active, depth_stencil, event.depth_stencil);
 		}
 
+		template <typename View, typename Rewriter, std::size_t Capacity>
+		[[nodiscard]] View* const* maybe_rewrite_views(
+			ID3D11DeviceContext* const context, const UINT count,
+			View* const* const views, const Rewriter rewrite,
+			std::array<View*, Capacity>& scratch) noexcept
+		{
+			if (views == nullptr || count > Capacity || rewrite == nullptr)
+			{
+				return views;
+			}
+			bool any_rewritten = false;
+			for (UINT index{}; index < count; ++index)
+			{
+				auto* const original_view = views[index];
+				auto* const candidate = original_view == nullptr ? nullptr :
+					rewrite(context, original_view);
+				if (!any_rewritten && candidate != original_view)
+				{
+					any_rewritten = true;
+					for (UINT prefix{}; prefix < index; ++prefix)
+					{
+						scratch[prefix] = views[prefix];
+					}
+				}
+				if (any_rewritten)
+				{
+					scratch[index] = candidate;
+				}
+			}
+			return any_rewritten ? scratch.data() : views;
+		}
+
 		void publish_current_binding(ID3D11DeviceContext* const context,
 			const UINT render_target_count,
 			ID3D11RenderTargetView* const* const render_targets,
@@ -275,7 +321,7 @@ namespace vr::engine_stereo_output_merger
 			current_binding.sequence = ++current_binding_sequence;
 			current_binding.context = reinterpret_cast<std::uintptr_t>(context);
 			current_binding.render_target_count = render_target_count;
-			current_binding.target_id = current_target_id;
+			current_binding.target_id_plus_one = current_target_id_plus_one;
 			current_binding.render_target_0 = render_target_count != 0 &&
 				render_targets != nullptr
 				? reinterpret_cast<std::uintptr_t>(render_targets[0]) : 0;
@@ -326,21 +372,10 @@ namespace vr::engine_stereo_output_merger
 				output_merger_hook.get_original());
 			if (original == nullptr) return;
 			const auto caller = reinterpret_cast<std::uintptr_t>(_ReturnAddress());
-			std::array<ID3D11RenderTargetView*, maximum_render_targets> rewritten_targets{};
-			auto* effective_targets = render_targets;
-			if (render_targets != nullptr && render_target_count <= rewritten_targets.size())
-			{
-				const auto rewrite = render_target_rewriter.load(std::memory_order_acquire);
-				if (rewrite != nullptr)
-				{
-					for (UINT index{}; index < render_target_count; ++index)
-					{
-						rewritten_targets[index] = render_targets[index] == nullptr ? nullptr :
-							rewrite(context, render_targets[index]);
-					}
-					effective_targets = rewritten_targets.data();
-				}
-			}
+			std::array<ID3D11RenderTargetView*, maximum_render_targets> rewritten_targets;
+			auto* const effective_targets = maybe_rewrite_views(context, render_target_count,
+				render_targets, render_target_rewriter.load(std::memory_order_acquire),
+				rewritten_targets);
 			auto* effective_depth = depth_stencil;
 			if (depth_stencil != nullptr)
 			{
@@ -353,6 +388,10 @@ namespace vr::engine_stereo_output_merger
 			original(context, render_target_count, effective_targets, effective_depth);
 			publish_current_binding(context, render_target_count, effective_targets,
 				effective_depth);
+			if (const auto depth_observer = depth_bind_observer.load(std::memory_order_acquire))
+			{
+				depth_observer(context, effective_depth);
+			}
 			observe_replay_mutation(context);
 			observe_transaction_binding(context, render_target_count, effective_targets,
 				effective_depth, caller);
@@ -371,24 +410,14 @@ namespace vr::engine_stereo_output_merger
 				output_merger_unordered_access_hook.get_original());
 			if (original == nullptr) return;
 			const auto caller = reinterpret_cast<std::uintptr_t>(_ReturnAddress());
-			std::array<ID3D11RenderTargetView*, maximum_render_targets> rewritten_targets{};
+			std::array<ID3D11RenderTargetView*, maximum_render_targets> rewritten_targets;
 			auto* effective_targets = render_targets;
 			auto* effective_depth = depth_stencil;
 			if (render_target_count != D3D11_KEEP_RENDER_TARGETS_AND_DEPTH_STENCIL)
 			{
-				if (render_targets != nullptr && render_target_count <= rewritten_targets.size())
-				{
-					const auto rewrite = render_target_rewriter.load(std::memory_order_acquire);
-					if (rewrite != nullptr)
-					{
-						for (UINT index{}; index < render_target_count; ++index)
-						{
-							rewritten_targets[index] = render_targets[index] == nullptr ? nullptr :
-								rewrite(context, render_targets[index]);
-						}
-						effective_targets = rewritten_targets.data();
-					}
-				}
+				effective_targets = maybe_rewrite_views(context, render_target_count,
+					render_targets, render_target_rewriter.load(std::memory_order_acquire),
+					rewritten_targets);
 				if (depth_stencil != nullptr)
 				{
 					if (const auto rewrite = depth_stencil_rewriter.load(
@@ -399,23 +428,10 @@ namespace vr::engine_stereo_output_merger
 				}
 			}
 			std::array<ID3D11UnorderedAccessView*, D3D11_PS_CS_UAV_REGISTER_COUNT>
-				rewritten_uavs{};
-			auto* effective_uavs = unordered_access_views;
-			if (unordered_access_views != nullptr &&
-				unordered_access_count <= rewritten_uavs.size())
-			{
-				const auto rewrite = unordered_access_rewriter.load(
-					std::memory_order_acquire);
-				if (rewrite != nullptr)
-				{
-					for (UINT index{}; index < unordered_access_count; ++index)
-					{
-						rewritten_uavs[index] = unordered_access_views[index] == nullptr ? nullptr :
-							rewrite(context, unordered_access_views[index]);
-					}
-					effective_uavs = rewritten_uavs.data();
-				}
-			}
+				rewritten_uavs;
+			auto* const effective_uavs = maybe_rewrite_views(context, unordered_access_count,
+				unordered_access_views, unordered_access_rewriter.load(std::memory_order_acquire),
+				rewritten_uavs);
 			original(context, render_target_count, effective_targets, effective_depth,
 				unordered_access_start_slot, unordered_access_count,
 				effective_uavs, initial_counts);
@@ -426,6 +442,10 @@ namespace vr::engine_stereo_output_merger
 			{
 				publish_current_binding(context, render_target_count, effective_targets,
 					effective_depth);
+				if (const auto depth_observer = depth_bind_observer.load(std::memory_order_acquire))
+				{
+					depth_observer(context, effective_depth);
+				}
 				observe_transaction_binding(context, render_target_count,
 					effective_targets, effective_depth, caller);
 			}
@@ -441,6 +461,10 @@ namespace vr::engine_stereo_output_merger
 			original(context);
 			clear_state_calls.fetch_add(1, std::memory_order_relaxed);
 			invalidate_current_binding(context);
+			if (const auto depth_observer = depth_bind_observer.load(std::memory_order_acquire))
+			{
+				depth_observer(context, nullptr);
+			}
 			observe_replay_mutation(context);
 			observe_transaction_binding(context, 0, nullptr, nullptr, caller);
 			if (const auto callback = clear_state_observer.load(
@@ -468,12 +492,13 @@ namespace vr::engine_stereo_output_merger
 			}
 			original(context, effective_view, color);
 			clear_render_target_calls.fetch_add(1, std::memory_order_relaxed);
+			const auto current_id = current_binding.target_id_plus_one - 1u;
 			for (auto& registered : clear_render_target_observers)
 			{
 				if (const auto observer = registered.load(std::memory_order_acquire))
 				{
 					observer(context, effective_view, caller,
-						current_binding.target_id, current_binding.render_target_0,
+						current_id, current_binding.render_target_0,
 						current_binding.sequence);
 				}
 			}
@@ -498,13 +523,25 @@ namespace vr::engine_stereo_output_merger
 			}
 			original(context, effective_view, flags, depth, stencil);
 			clear_depth_stencil_calls.fetch_add(1, std::memory_order_relaxed);
+			const auto current_id = current_binding.target_id_plus_one - 1u;
 			for (auto& registered : clear_depth_stencil_observers)
 			{
 				if (const auto observer = registered.load(std::memory_order_acquire))
 				{
 					observer(context, effective_view, flags, caller,
-						current_binding.target_id, current_binding.render_target_0,
+						current_id, current_binding.render_target_0,
 						current_binding.sequence);
+				}
+			}
+			if (effective_view != nullptr && active_replay_guard == nullptr &&
+				active_transaction == nullptr && !in_post_clear_hook)
+			{
+				if (const auto post_clear = post_clear_depth_hook.load(
+					std::memory_order_acquire))
+				{
+					in_post_clear_hook = true;
+					post_clear(context, effective_view, flags, depth);
+					in_post_clear_hook = false;
 				}
 			}
 		}
@@ -546,7 +583,15 @@ namespace vr::engine_stereo_output_merger
 		{
 			return {};
 		}
-		return current_binding;
+		binding_snapshot output{};
+		output.valid = current_binding.valid;
+		output.sequence = current_binding.sequence;
+		output.context = current_binding.context;
+		output.render_target_count = current_binding.render_target_count;
+		output.target_id = current_binding.target_id_plus_one - 1u;
+		output.render_target_0 = current_binding.render_target_0;
+		output.depth_stencil = current_binding.depth_stencil;
+		return output;
 	}
 
 	void set_clear_observers(const clear_observer_channel channel,
@@ -564,6 +609,16 @@ namespace vr::engine_stereo_output_merger
 	void set_clear_state_observer(const clear_state_observer_fn value) noexcept
 	{
 		clear_state_observer.store(value, std::memory_order_release);
+	}
+
+	void set_depth_bind_observer(const depth_bind_observer_fn value) noexcept
+	{
+		depth_bind_observer.store(value, std::memory_order_release);
+	}
+
+	void set_post_clear_depth_hook(const post_clear_depth_hook_fn hook) noexcept
+	{
+		post_clear_depth_hook.store(hook, std::memory_order_release);
 	}
 
 	void set_view_rewriters(const render_target_rewriter_fn render_target,
@@ -586,7 +641,7 @@ namespace vr::engine_stereo_output_merger
 		current_binding = {};
 		current_binding.sequence = ++current_binding_sequence;
 		current_binding.context = address;
-		current_target_id = 0xFFFFFFFFu;
+		current_target_id_plus_one = 0;
 		binding_invalidations.fetch_add(1, std::memory_order_relaxed);
 	}
 
@@ -824,7 +879,7 @@ namespace vr::engine_stereo_output_merger
 
 	void note_target(transaction& active, const std::uint32_t target_id) noexcept
 	{
-		current_target_id = target_id;
+		current_target_id_plus_one = target_id + 1u;
 		if (active) active.latest_target_id = target_id;
 	}
 
@@ -1018,7 +1073,7 @@ namespace vr::engine_stereo_output_merger
 		latest_record.store(0, std::memory_order_relaxed);
 		current_binding = {};
 		current_binding_sequence = 0;
-		current_target_id = 0xFFFFFFFFu;
+		current_target_id_plus_one = 0;
 		{
 			const std::lock_guard report_lock(report_mutex);
 			published_report = {};

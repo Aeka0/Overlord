@@ -72,6 +72,7 @@ namespace d3d11
 		std::atomic_uint64_t dxgi_factory1_create_count{};
 		std::atomic_long last_dxgi_factory1_result{E_PENDING};
 		std::atomic_uint64_t d3d11_create_count{};
+		std::atomic_bool vr_present_paced{};
 		thread_local bool inside_graphics_callback{};
 		thread_local bool inside_device_transition{};
 		thread_local std::uint32_t present_gpu_scope_depth{};
@@ -2633,6 +2634,16 @@ namespace d3d11
 			{
 				current_graphics_status.device_removed_reason = reason;
 			}
+		}
+
+		void set_vr_present_paced(const bool active) noexcept
+		{
+			vr_present_paced.store(active, std::memory_order_release);
+		}
+
+		bool is_vr_present_paced() noexcept
+		{
+			return vr_present_paced.load(std::memory_order_acquire);
 		}
 	}
 

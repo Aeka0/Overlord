@@ -1,6 +1,7 @@
 #include <std_include.hpp>
 
 #include "engine_stereo_constant_buffer_probe.hpp"
+#include "lazy_storage.hpp"
 
 
 #include "component/d3d11.hpp"
@@ -193,16 +194,16 @@ namespace vr::engine_stereo_constant_buffer_probe
 			ID3D11DeviceContext* held_context{};
 		};
 
-		std::array<buffer_entry, maximum_tracked_buffers> buffers{};
+		lazy_array<buffer_entry, maximum_tracked_buffers> buffers{};
 		std::array<shader_entry, maximum_tracked_vertex_shaders> shaders{};
 		std::array<device_candidate, maximum_device_candidates> device_candidates{};
 		global_slot_state current_slot{};
 		thread_local std::array<pending_map, maximum_pending_maps_per_thread>
 			pending_maps{};
 		thread_local std::uint32_t pending_map_count{};
-		thread_local std::array<std::byte, maximum_shader_bytecode_bytes>
+		thread_local lazy_array<std::byte, maximum_shader_bytecode_bytes>
 			shader_bytecode_scratch{};
-		std::array<draw_record, maximum_draws_per_eye> left_draws{};
+		lazy_array<draw_record, maximum_draws_per_eye> left_draws{};
 		std::array<copy_source_sample, maximum_copy_source_samples>
 			copy_source_samples{};
 		std::size_t copy_source_sample_count{};
@@ -417,7 +418,9 @@ namespace vr::engine_stereo_constant_buffer_probe
 
 		void reset_buffer_table() noexcept
 		{
-			for (auto& entry : buffers)
+			auto* const entries = buffers.get_if();
+			if (entries == nullptr) return;
+			for (auto& entry : *entries)
 			{
 				entry.identity.store(0, std::memory_order_relaxed);
 				entry.sequence.store(0, std::memory_order_relaxed);
@@ -453,7 +456,7 @@ namespace vr::engine_stereo_constant_buffer_probe
 			current_slot.origin.store(bind_origin::unknown, std::memory_order_relaxed);
 			for (auto& value : pending_maps) value = {};
 			pending_map_count = 0;
-			clear_trivial(left_draws);
+			left_draws.zero_if_allocated();
 			next_creation_serial.store(0, std::memory_order_relaxed);
 			next_shader_creation_serial.store(0, std::memory_order_relaxed);
 			next_upload_generation.store(0, std::memory_order_relaxed);
@@ -1647,6 +1650,7 @@ namespace vr::engine_stereo_constant_buffer_probe
 			const auto first_install = !hooks_installed.load(std::memory_order_acquire);
 			if (first_install)
 			{
+				(void)buffers.get();
 				reset_buffer_table();
 				reset_counters();
 				const std::lock_guard lifecycle_lock(lifecycle_mutex);
@@ -1856,6 +1860,7 @@ namespace vr::engine_stereo_constant_buffer_probe
 		{
 			// Writes are deliberately ignored while the gate is closed. The new
 			// epoch makes every prior content hash unknown without scanning the table.
+			(void)buffers.get();
 			publish_slot_metadata(0, bind_origin::unknown, 0);
 		}
 		history_tracking_enabled.store(now_enabled, std::memory_order_release);
@@ -1961,11 +1966,13 @@ namespace vr::engine_stereo_constant_buffer_probe
 		{
 			return false;
 		}
+		(void)buffers.get();
+		if (left_draws.allocated()) left_draws.zero_if_allocated();
+		else (void)left_draws.get();
 		clear_trivial(working_report);
 		working_report.current_state = state::pair_active;
 		working_report.pair_id = pair_id;
 		working_report.owner_thread = owner_thread;
-		clear_trivial(left_draws);
 		active_pair.store(pair_id, std::memory_order_release);
 		active_eye.store(invalid_eye, std::memory_order_release);
 		active_owner_thread.store(owner_thread, std::memory_order_release);

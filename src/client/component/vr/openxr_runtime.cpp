@@ -22,6 +22,8 @@
 #include "engine_scene_resolution.hpp"
 #include "movie_presentation.hpp"
 #include "presentation_options.hpp"
+#include "render_tuning.hpp"
+#include "hidden_area_mask.hpp"
 
 #include <d3d11_4.h>
 #include <algorithm>
@@ -190,6 +192,9 @@ namespace vr::openxr
 		float pause_dim_{};
 		XrTime reference_change_{};
 		bool cylinder_supported_{};
+		bool perf_settings_supported_{};
+		bool visibility_mask_supported_{};
+		unsigned scene_width_{}, scene_height_{};
 		DXGI_FORMAT menu_format_{};
 		input_actions inputs_;
 
@@ -217,6 +222,7 @@ namespace vr::openxr
 				auto_initialize_allowed_ = true;
 			}
 			status_.desired_enabled = enabled;
+			desired_enabled_atomic_.store(enabled, std::memory_order_release);
 			publish_status_locked();
 		}
 
@@ -407,6 +413,7 @@ namespace vr::openxr
 		{
 			const wait_timing::scoped_lock lock(mutex_, wait_timing::site::xr_other);
 			status_.desired_enabled = false;
+			desired_enabled_atomic_.store(false, std::memory_order_release);
 			status_.reinitialize_pending = false;
 			(void)teardown_locked(true);
 			publish_status_locked();
@@ -420,14 +427,17 @@ namespace vr::openxr
 
 		bool requested_enabled() const
 		{
-			const wait_timing::scoped_lock lock(mutex_, wait_timing::site::xr_other);
-			return status_.desired_enabled;
+			return desired_enabled_atomic_.load(std::memory_order_acquire);
 		}
 
 		bool applied_enabled() const
 		{
-			const wait_timing::scoped_lock lock(mutex_, wait_timing::site::xr_enabled);
-			return status_.applied_enabled;
+			return applied_enabled_atomic_.load(std::memory_order_acquire);
+		}
+
+		bool is_session_running() const noexcept
+		{
+			return session_running_atomic_.load(std::memory_order_acquire);
 		}
 
 		runtime_status get_status() const
@@ -465,6 +475,10 @@ namespace vr::openxr
 		{
 			const std::lock_guard lock(status_mutex_);
 			status_snapshot_ = status_;
+			session_running_atomic_.store(status_.applied_enabled && status_.session_running,
+			                              std::memory_order_release);
+			desired_enabled_atomic_.store(status_.desired_enabled, std::memory_order_release);
+			applied_enabled_atomic_.store(status_.applied_enabled, std::memory_order_release);
 		}
 
 		void publish_progress_locked(const char* const stage, const std::string& operation)
@@ -670,22 +684,42 @@ namespace vr::openxr
 
 			publish_progress_locked("instance", "xrCreateInstance");
 			constexpr auto requested_api_version = XR_MAKE_VERSION(1, 0, 0);
-			cylinder_supported_ = std::ranges::any_of(
-			    extensions,
-			    [](const auto& e) {
-				    return std::strcmp(e.extensionName, XR_KHR_COMPOSITION_LAYER_CYLINDER_EXTENSION_NAME) ==
-				           0;
-			    });
-			const char* enabled_extensions[]{XR_KHR_D3D11_ENABLE_EXTENSION_NAME,
-			                                 XR_KHR_COMPOSITION_LAYER_CYLINDER_EXTENSION_NAME};
+			const auto has_extension = [&](const char* const name)
+			{
+				return std::ranges::any_of(extensions, [name](const auto& item)
+				{
+					return std::strcmp(item.extensionName, name) == 0;
+				});
+			};
+			cylinder_supported_ = has_extension(XR_KHR_COMPOSITION_LAYER_CYLINDER_EXTENSION_NAME);
+			perf_settings_supported_ = has_extension(XR_EXT_PERFORMANCE_SETTINGS_EXTENSION_NAME);
+			visibility_mask_supported_ = has_extension(XR_KHR_VISIBILITY_MASK_EXTENSION_NAME);
+			std::array<const char*, 4> enabled_extensions{};
+			std::uint32_t enabled_extension_count{};
+			enabled_extensions[enabled_extension_count++] = XR_KHR_D3D11_ENABLE_EXTENSION_NAME;
+			if (cylinder_supported_)
+			{
+				enabled_extensions[enabled_extension_count++] =
+				    XR_KHR_COMPOSITION_LAYER_CYLINDER_EXTENSION_NAME;
+			}
+			if (perf_settings_supported_)
+			{
+				enabled_extensions[enabled_extension_count++] =
+				    XR_EXT_PERFORMANCE_SETTINGS_EXTENSION_NAME;
+			}
+			if (visibility_mask_supported_)
+			{
+				enabled_extensions[enabled_extension_count++] =
+				    XR_KHR_VISIBILITY_MASK_EXTENSION_NAME;
+			}
 			XrInstanceCreateInfo instance_info{XR_TYPE_INSTANCE_CREATE_INFO};
 			strcpy_s(instance_info.applicationInfo.applicationName, product::name);
 			instance_info.applicationInfo.applicationVersion = 1;
 			strcpy_s(instance_info.applicationInfo.engineName, product::name);
 			instance_info.applicationInfo.engineVersion = 1;
 			instance_info.applicationInfo.apiVersion = requested_api_version;
-			instance_info.enabledExtensionCount = cylinder_supported_ ? 2 : 1;
-			instance_info.enabledExtensionNames = enabled_extensions;
+			instance_info.enabledExtensionCount = enabled_extension_count;
+			instance_info.enabledExtensionNames = enabled_extensions.data();
 			result = dispatch_.create_instance(&instance_info, &instance_);
 			if (!call_ok(result, "xrCreateInstance", runtime_state::runtime_unavailable))
 			{
@@ -826,6 +860,8 @@ namespace vr::openxr
 				return false;
 			}
 			status_.session_created = true;
+			refresh_visibility_mask(0);
+			refresh_visibility_mask(1);
 
 			publish_progress_locked("spaces", "xrCreateReferenceSpace(local)");
 			XrReferenceSpaceCreateInfo space_info{XR_TYPE_REFERENCE_SPACE_CREATE_INFO};
@@ -864,7 +900,8 @@ namespace vr::openxr
 				(void)teardown_preserving_error();
 				return false;
 			}
-			constexpr std::array preferred{std::int64_t(DXGI_FORMAT_R16G16B16A16_FLOAT),
+			constexpr std::array preferred{std::int64_t(DXGI_FORMAT_R11G11B10_FLOAT),
+			                               std::int64_t(DXGI_FORMAT_R16G16B16A16_FLOAT),
 			                               std::int64_t(DXGI_FORMAT_R8G8B8A8_UNORM_SRGB),
 			                               std::int64_t(DXGI_FORMAT_B8G8R8A8_UNORM_SRGB),
 			                               std::int64_t(DXGI_FORMAT_R8G8B8A8_UNORM)};
@@ -911,8 +948,15 @@ namespace vr::openxr
 			}
 			status_.recommended_eye_width = width;
 			status_.recommended_eye_height = height;
+			const auto max_w =
+			    (std::min)(view_configs_[0].maxImageRectWidth, view_configs_[1].maxImageRectWidth);
+			const auto max_h =
+			    (std::min)(view_configs_[0].maxImageRectHeight, view_configs_[1].maxImageRectHeight);
+			const auto scene = render_tuning::scale_extent(width, height, max_w, max_h);
+			scene_width_ = scene.width;
+			scene_height_ = scene.height;
 			if (status_.requested_scene_mode == scene_mode::engine_stereo &&
-			    !engine_scene_resolution::request({width, height}, error))
+			    !engine_scene_resolution::request({scene_width_, scene_height_}, error))
 			{
 				status_.native_renderer_error = error;
 				fail(runtime_state::fatal_for_vr, error.c_str(), XR_ERROR_RUNTIME_FAILURE);
@@ -962,6 +1006,7 @@ namespace vr::openxr
 			status_.graphics_transport = "h2_device_openxr";
 			status_.native_renderer_ready = false;
 			status_.applied_enabled = true;
+			applied_enabled_atomic_.store(true, std::memory_order_release);
 			status_.reinitialize_pending = false;
 			status_.state = runtime_state::session_idle;
 			publish_progress_locked("complete", "initialization complete");
@@ -1009,6 +1054,7 @@ namespace vr::openxr
 			                                 result_name(result));
 			set_result(result);
 			status_.applied_enabled = false;
+			applied_enabled_atomic_.store(false, std::memory_order_release);
 			publish_status_locked();
 			return false;
 		}
@@ -1016,8 +1062,50 @@ namespace vr::openxr
 		bool settle_eye(eye_swapchain& eye, XrResult& result) noexcept
 		{
 			const auto settled = settle_acquired_image(dispatch_, eye);
+			eye.drawn = false;
 			result = settled.code;
 			return bool(settled);
+		}
+
+		void refresh_visibility_mask(const unsigned eye)
+		{
+			if (!visibility_mask_supported_ || dispatch_.get_visibility_mask == nullptr ||
+			    session_ == XR_NULL_HANDLE || eye >= 2)
+			{
+				return;
+			}
+			XrVisibilityMaskKHR mask{XR_TYPE_VISIBILITY_MASK_KHR};
+			auto result = dispatch_.get_visibility_mask(
+			    session_, view_type_, eye, XR_VISIBILITY_MASK_TYPE_HIDDEN_TRIANGLE_MESH_KHR, &mask);
+			if (XR_FAILED(result) || mask.vertexCountOutput == 0 || mask.vertexCountOutput > 16384u ||
+			    mask.indexCountOutput < 3u || mask.indexCountOutput > 65536u ||
+			    (mask.indexCountOutput % 3u) != 0u)
+			{
+				hidden_area_mask::set_eye_mesh(eye, nullptr, 0, nullptr, 0);
+				return;
+			}
+			std::vector<XrVector2f> xr_vertices(mask.vertexCountOutput);
+			std::vector<std::uint32_t> indices(mask.indexCountOutput);
+			mask.vertexCapacityInput = mask.vertexCountOutput;
+			mask.vertices = xr_vertices.data();
+			mask.indexCapacityInput = mask.indexCountOutput;
+			mask.indices = indices.data();
+			result = dispatch_.get_visibility_mask(
+			    session_, view_type_, eye, XR_VISIBILITY_MASK_TYPE_HIDDEN_TRIANGLE_MESH_KHR, &mask);
+			if (XR_FAILED(result) || mask.vertexCountOutput == 0 ||
+			    mask.vertexCountOutput > xr_vertices.size() || mask.indexCountOutput < 3u ||
+			    mask.indexCountOutput > indices.size() || (mask.indexCountOutput % 3u) != 0u)
+			{
+				hidden_area_mask::set_eye_mesh(eye, nullptr, 0, nullptr, 0);
+				return;
+			}
+			std::vector<hidden_area_mask::vertex2> vertices(mask.vertexCountOutput);
+			for (std::uint32_t index = 0; index < mask.vertexCountOutput; ++index)
+			{
+				vertices[index] = {xr_vertices[index].x, xr_vertices[index].y};
+			}
+			hidden_area_mask::set_eye_mesh(
+			    eye, vertices.data(), vertices.size(), indices.data(), mask.indexCountOutput);
 		}
 
 		bool teardown_locked(const bool final_shutdown) noexcept
@@ -1038,6 +1126,13 @@ namespace vr::openxr
 				session_running_ = false;
 				status_.applied_enabled = false;
 				status_.session_running = false;
+				session_running_atomic_.store(false, std::memory_order_release);
+				applied_enabled_atomic_.store(false, std::memory_order_release);
+				perf_settings_supported_ = false;
+				visibility_mask_supported_ = false;
+				scene_width_ = 0;
+				scene_height_ = 0;
+				hidden_area_mask::clear();
 				status_.state =
 				    final_shutdown || !status_.desired_enabled ? runtime_state::disabled : status_.state;
 				return true;
@@ -1047,9 +1142,11 @@ namespace vr::openxr
 			compositor_.invalidate();
 			capture_.invalidate(status_.device_generation);
 			status_.applied_enabled = false;
+			applied_enabled_atomic_.store(false, std::memory_order_release);
 			if (graphics_ && !openxr::wait_for_gpu_idle(
 			                     graphics_.device.Get(), graphics_.context.Get(), status_.last_error))
 				return teardown_failure("D3D11 GPU idle wait", XR_ERROR_RUNTIME_FAILURE);
+			hidden_area_mask::clear();
 			XrResult result{XR_SUCCESS};
 			const auto menu_cleanup = menus_.destroy(dispatch_);
 			if (!menu_cleanup)
@@ -1155,6 +1252,10 @@ namespace vr::openxr
 			if (status_.native_renderer_ready)
 				native_render_session::active().invalidate(status_.device_generation);
 			blit_.reset();
+			perf_settings_supported_ = false;
+			visibility_mask_supported_ = false;
+			scene_width_ = 0;
+			scene_height_ = 0;
 			status_.native_renderer_ready = false;
 			status_.submission_on_game_device = false;
 			graphics_ = {};
@@ -1190,6 +1291,15 @@ namespace vr::openxr
 						reference_change_ = changed.changeTime;
 					continue;
 				}
+				if (event.type == XR_TYPE_EVENT_DATA_VISIBILITY_MASK_CHANGED_KHR)
+				{
+					const auto& changed =
+					    reinterpret_cast<const XrEventDataVisibilityMaskChangedKHR&>(event);
+					if (changed.session == session_ && changed.viewConfigurationType == view_type_ &&
+					    changed.viewIndex < 2)
+						refresh_visibility_mask(changed.viewIndex);
+					continue;
+				}
 				if (event.type != XR_TYPE_EVENT_DATA_SESSION_STATE_CHANGED)
 					continue;
 				const auto& changed = reinterpret_cast<const XrEventDataSessionStateChanged&>(event);
@@ -1209,6 +1319,16 @@ namespace vr::openxr
 					status_.session_running = true;
 					++status_.session_begin_count;
 					status_.state = runtime_state::running;
+					if (perf_settings_supported_ &&
+					    dispatch_.perf_settings_set_performance_level != nullptr)
+					{
+						(void)dispatch_.perf_settings_set_performance_level(
+						    session_, XR_PERF_SETTINGS_DOMAIN_CPU_EXT,
+						    XR_PERF_SETTINGS_LEVEL_SUSTAINED_HIGH_EXT);
+						(void)dispatch_.perf_settings_set_performance_level(
+						    session_, XR_PERF_SETTINGS_DOMAIN_GPU_EXT,
+						    XR_PERF_SETTINGS_LEVEL_SUSTAINED_HIGH_EXT);
+					}
 				}
 				else if (changed.state == XR_SESSION_STATE_STOPPING)
 				{
@@ -1403,8 +1523,8 @@ namespace vr::openxr
 			}
 			if (proof.generation != graphics_.generation ||
 			    proof.context != reinterpret_cast<std::uintptr_t>(graphics_.context.Get()) ||
-			    proof.owner_thread != GetCurrentThreadId() || proof.source.Width != eyes_[0].width ||
-			    proof.source.Height != eyes_[0].height)
+			    proof.owner_thread != GetCurrentThreadId() || proof.source.Width != scene_width_ ||
+			    proof.source.Height != scene_height_)
 			{
 				return fail(runtime_state::fatal_for_vr,
 				            "native OpenXR content proof device/owner mismatch",
@@ -1413,13 +1533,13 @@ namespace vr::openxr
 			const auto ring = native_render_session::active().get_status();
 			if (!ring.available || ring.device_generation != graphics_.generation ||
 			    ring.width != proof.source.Width || ring.height != proof.source.Height ||
-			    ring.format != DXGI_FORMAT_R16G16B16A16_FLOAT ||
+			    ring.format != DXGI_FORMAT_R11G11B10_FLOAT ||
 			    ring.source_format != std::uint32_t(proof.source.Format))
 			{
 				std::string error;
 				if ((ring.available && !native_render_session::active().suspend_acquisition()) ||
 				    !native_render_session::active().ensure_copy_ring(
-				        graphics_, proof.source, DXGI_FORMAT_R16G16B16A16_FLOAT, error))
+				        graphics_, proof.source, DXGI_FORMAT_R11G11B10_FLOAT, error))
 				{
 					status_.native_renderer_error = error;
 					return fail(
@@ -1539,6 +1659,7 @@ namespace vr::openxr
 				                     std::tan(f.angleRight),
 				                     std::tan(f.angleDown),
 				                     std::tan(f.angleUp)};
+				hidden_area_mask::set_eye_projection(eye, projections_[eye]);
 			}
 			if (status_.requested_scene_mode == scene_mode::engine_stereo)
 			{
@@ -1671,16 +1792,16 @@ namespace vr::openxr
 			++status_.frame_context_prepare_count;
 			return true;
 		}
-		bool render_eye(eye_swapchain& eye,
-		                unsigned index,
-		                ID3D11Texture2D* source,
-		                eye_content content,
-		                XrResult& result,
-		                std::string& error)
+		bool draw_eye(eye_swapchain& eye,
+		              unsigned index,
+		              ID3D11Texture2D* source,
+		              eye_content content,
+		              XrResult& result,
+		              std::string& error)
 		{
-			// Retain this prediction across a compositor wait. A previously released
-			// eye is already complete; a pending eye must wait on its existing index.
-			if (prediction_.eyes_rendered[index]) return true;
+			// Retain this prediction across a compositor wait. A previously drawn or
+			// released eye is already complete; a pending eye waits on its existing index.
+			if (prediction_.eyes_rendered[index] || eye.drawn) return true;
 			if (!eye.acquired)
 			{
 				const XrSwapchainImageAcquireInfo acquire{XR_TYPE_SWAPCHAIN_IMAGE_ACQUIRE_INFO};
@@ -1728,17 +1849,20 @@ namespace vr::openxr
 				    .width = eye.width,
 				    .height = eye.height,
 				    .source_encoding = texture_blit::encoding::linear,
-				    .dim = pause_dim_};
+				    .dim = pause_dim_,
+				    .sharpness = render_tuning::sharpening.load(std::memory_order_relaxed)};
 				if (!blit_.draw(transfer, error))
 				{
 					result = XR_ERROR_RUNTIME_FAILURE;
 					return false;
 				}
 			}
-			{
-				const auto queue = d3d11::acquire_gpu_queue_interop();
-				graphics_.context->Flush();
-			}
+			eye.drawn = true;
+			return true;
+		}
+		bool release_eye(eye_swapchain& eye, unsigned index, XrResult& result, std::string& error)
+		{
+			if (prediction_.eyes_rendered[index]) return true;
 			const XrSwapchainImageReleaseInfo release{XR_TYPE_SWAPCHAIN_IMAGE_RELEASE_INFO};
 			result = dispatch_.release_swapchain_image(eye.handle, &release);
 			if (XR_FAILED(result))
@@ -1746,10 +1870,50 @@ namespace vr::openxr
 				error = "xrReleaseSwapchainImage";
 				return false;
 			}
-			eye.acquired = eye.waited = false;
+			eye.acquired = eye.waited = eye.drawn = false;
 			++status_.eyes[index].released;
 			++status_.compositor_render_count;
 			prediction_.eyes_rendered[index] = true;
+			return true;
+		}
+		bool render_eyes(const std::array<ID3D11Texture2D*, 2>& sources,
+		                 eye_content content,
+		                 XrResult& result,
+		                 std::string& error)
+		{
+			bool any_newly_drawn{};
+			for (unsigned eye = 0; eye < 2; ++eye)
+			{
+				const bool already = prediction_.eyes_rendered[eye] || eyes_[eye].drawn;
+				if (!draw_eye(eyes_[eye], eye, sources[eye], content, result, error))
+				{
+					if (eye == 1 && result == XR_TIMEOUT_EXPIRED && eyes_[0].drawn &&
+					    !prediction_.eyes_rendered[0])
+					{
+						{
+							const auto queue = d3d11::acquire_gpu_queue_interop();
+							graphics_.context->Flush();
+						}
+						XrResult release_result{};
+						std::string release_error;
+						if (!release_eye(eyes_[0], 0, release_result, release_error))
+						{
+							result = release_result;
+							error = std::move(release_error);
+						}
+					}
+					return false;
+				}
+				any_newly_drawn |= !already;
+			}
+			if (any_newly_drawn)
+			{
+				const auto queue = d3d11::acquire_gpu_queue_interop();
+				graphics_.context->Flush();
+			}
+			for (unsigned eye = 0; eye < 2; ++eye)
+				if (!release_eye(eyes_[eye], eye, result, error))
+					return false;
 			return true;
 		}
 		bool frame_failure(const char* operation, XrResult result)
@@ -1786,9 +1950,8 @@ namespace vr::openxr
 				return false;
 			XrResult result{};
 			std::string error;
-			for (unsigned eye = 0; eye < 2; ++eye)
-				if (!render_eye(eyes_[eye], eye, nullptr, eye_content::diagnostic_color, result, error))
-					return frame_failure(error.empty() ? "OpenXR eye render" : error.c_str(), result);
+			if (!render_eyes({nullptr, nullptr}, eye_content::diagnostic_color, result, error))
+				return frame_failure(error.empty() ? "OpenXR eye render" : error.c_str(), result);
 			return finish_prediction(world_submission::include);
 		}
 		bool complete_native(IDXGISwapChain* chain)
@@ -1822,14 +1985,11 @@ namespace vr::openxr
 				XrResult result{};
 				std::string error;
 				++status_.compositor_prepare_count;
-				for (unsigned eye = 0; eye < 2; ++eye)
-					if (!render_eye(eyes_[eye],
-					                eye,
-					                source[eye].color.Get(),
-					                eye_content::native_texture,
-					                result,
-					                error))
-						return frame_failure(error.empty() ? "OpenXR eye transfer" : error.c_str(), result);
+				if (!render_eyes({source[0].color.Get(), source[1].color.Get()},
+				                 eye_content::native_texture,
+				                 result,
+				                 error))
+					return frame_failure(error.empty() ? "OpenXR eye transfer" : error.c_str(), result);
 				status_.last_compositor_error.clear();
 				world = true;
 			}
@@ -1915,6 +2075,9 @@ namespace vr::openxr
 		bool auto_initialize_allowed_{true};
 		std::uint64_t initialization_generation_{};
 		std::atomic_uint64_t resize_generation_{};
+		std::atomic_bool session_running_atomic_{};
+		std::atomic_bool desired_enabled_atomic_{};
+		std::atomic_bool applied_enabled_atomic_{};
 		mutable std::mutex status_mutex_;
 		runtime_status status_snapshot_{runtime_state::disabled, true};
 	};
@@ -1929,6 +2092,7 @@ namespace vr::openxr
 		void set_desired_enabled(bool value)
 		{
 			status_.desired_enabled = value;
+			desired_enabled_atomic_.store(value, std::memory_order_release);
 		}
 		void set_scene_mode(scene_mode mode)
 		{
@@ -1975,6 +2139,7 @@ namespace vr::openxr
 		{
 			status_.state = runtime_state::disabled;
 			status_.applied_enabled = false;
+			applied_enabled_atomic_.store(false, std::memory_order_release);
 		}
 		bool shutdown_complete() const noexcept
 		{
@@ -1982,9 +2147,13 @@ namespace vr::openxr
 		}
 		bool requested_enabled() const
 		{
-			return status_.desired_enabled;
+			return desired_enabled_atomic_.load(std::memory_order_acquire);
 		}
 		bool applied_enabled() const
+		{
+			return applied_enabled_atomic_.load(std::memory_order_acquire);
+		}
+		bool is_session_running() const noexcept
 		{
 			return false;
 		}
@@ -1995,6 +2164,8 @@ namespace vr::openxr
 
 	  private:
 		runtime_status status_{};
+		std::atomic_bool desired_enabled_atomic_{};
+		std::atomic_bool applied_enabled_atomic_{};
 	};
 #endif
 
@@ -2079,6 +2250,10 @@ namespace vr::openxr
 	bool runtime_backend::applied_enabled() const
 	{
 		return implementation_->applied_enabled();
+	}
+	bool runtime_backend::is_session_running() const noexcept
+	{
+		return implementation_->is_session_running();
 	}
 	runtime_status runtime_backend::get_status() const
 	{

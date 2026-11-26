@@ -359,5 +359,12 @@
   "settings.resetHandAngles": "重設這隻手",
   "settings.mirrorOtherHand": "鏡像另一隻手",
   "settings.debugSunShadowCapture": "太陽陰影擷取",
-  "settings.debugSunShadowCaptureHint": "按 Ctrl+Shift+F8 擷取診斷時附帶太陽陰影證據，約需 29 秒。下次啟動遊戲時生效。"
+  "settings.debugSunShadowCaptureHint": "按 Ctrl+Shift+F8 擷取診斷時附帶太陽陰影證據，約需 29 秒。下次啟動遊戲時生效。",
+  "settings.performance": "效能",
+  "settings.renderScale": "VR 渲染解析度比例",
+  "settings.renderScaleHint": "在 50% 至 120% 範圍內縮放 VR 渲染解析度（預設 100%）。在負載較高的戶外關卡中可降至 80%–90% 以提升幀率。重新啟動遊戲或執行 vr_reinit 後生效。",
+  "settings.sharpening": "FidelityFX CAS 銳化",
+  "settings.sharpeningHint": "套用 AMD FidelityFX CAS 空間銳化以還原畫面細節（0% 至 100%，預設 0%）。立即生效。",
+  "settings.hiddenAreaMesh": "OpenXR 隱藏區域遮罩",
+  "settings.hiddenAreaMeshHint": "在深度緩衝中預先遮罩 OpenXR 鏡片邊緣不可見的角落，略過不可見邊緣像素的著色渲染以提升 GPU 效能。預設開啟。"
 }

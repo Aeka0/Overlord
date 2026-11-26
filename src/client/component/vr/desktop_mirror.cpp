@@ -90,6 +90,11 @@ namespace vr::desktop_mirror
 				resources.generation = eye.generation;
 			}
 			if (FAILED(resources.error)) return nullptr;
+			if (resources.shader)
+			{
+				for (const auto& source : resources.sources)
+					if (source.texture.Get() == eye.texture.Get()) return source.view.Get();
+			}
 			Microsoft::WRL::ComPtr<ID3D11Device> device;
 			eye.texture->GetDevice(&device);
 			if (!resources.shader)
@@ -125,6 +130,13 @@ namespace vr::desktop_mirror
 			recording_frame::publish_viewport(mirror_ready ? viewport->Size.x : 0,
 				mirror_ready ? viewport->Size.y : 0,horizontal_fov,source_eye);
 		});
+		const auto hwnd = viewport ? static_cast<HWND>(viewport->PlatformHandleRaw) : nullptr;
+		if (hwnd != nullptr && IsIconic(hwnd))
+		{
+			camera_filter.reset();
+			last_state.store(state::invalid_view, std::memory_order_relaxed);
+			return;
+		}
 		// Native menus/console are still needed on the desktop. They are not a
 		// third scene render and must remain usable while the HMD is unavailable.
 		if (!game::CL_IsCgameInitialized() || *game::keyCatchers != 0)

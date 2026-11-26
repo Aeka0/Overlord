@@ -359,5 +359,12 @@
   "settings.resetHandAngles": "この手をリセット",
   "settings.mirrorOtherHand": "反対の手を反転コピー",
   "settings.debugSunShadowCapture": "太陽の影の記録",
-  "settings.debugSunShadowCaptureHint": "Ctrl+Shift+F8 の診断収集に太陽の影のデータを含めます。約29秒かかります。次回のゲーム起動時に適用されます。"
+  "settings.debugSunShadowCaptureHint": "Ctrl+Shift+F8 の診断収集に太陽の影のデータを含めます。約29秒かかります。次回のゲーム起動時に適用されます。",
+  "settings.performance": "パフォーマンス",
+  "settings.renderScale": "VR レンダースケール",
+  "settings.renderScaleHint": "VR の描画解像度を 50%～120% の範囲で調整します（初期値：100%）。負荷の高い屋外ステージでは 80%～90% に下げると快適になります。ゲームの再起動または vr_reinit で適用されます。",
+  "settings.sharpening": "FidelityFX CAS シャープ化",
+  "settings.sharpeningHint": "AMD FidelityFX CAS による空間シャープ化を適用し、細部の鮮明さを補います（0%～100%、初期値：0%）。すぐに反映されます。",
+  "settings.hiddenAreaMesh": "OpenXR 非表示領域メッシュ",
+  "settings.hiddenAreaMeshHint": "OpenXR レンズの視界外となる四隅を深度バッファで事前にマスクし、見えない端のピクセル描画を省略します。GPU 負荷を軽減します。初期状態は有効です。"
 }

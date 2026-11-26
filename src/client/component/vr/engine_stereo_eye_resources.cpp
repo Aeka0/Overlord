@@ -10,7 +10,11 @@
 #include "utils/hook.hpp"
 #include "utils/hook_validation.hpp"
 
+#include <algorithm>
+#include <array>
 #include <atomic>
+#include <cstddef>
+#include <cstdint>
 #include <mutex>
 #include <type_traits>
 
@@ -23,7 +27,7 @@ namespace vr::engine_stereo_eye_resources
 		};
 		constexpr std::size_t unordered_access_vtable_slot = 68;
 		constexpr std::size_t maximum_target_views = 64;
-		constexpr std::size_t maximum_foreign_views_per_pair = 1024;
+		constexpr std::size_t maximum_foreign_views_per_pair = 4096;
 
 		using shader_resource_fn = void(__stdcall*)(ID3D11DeviceContext*, UINT,
 			UINT, ID3D11ShaderResourceView* const*);
@@ -87,6 +91,7 @@ namespace vr::engine_stereo_eye_resources
 			std::uint32_t current_eye{auxiliary_scene::no_view};
 			bool auxiliary_complete{};
 			std::uint8_t completed_eye_mask{};
+			std::uint8_t touched_srv_stages{0x3Fu};
 			failure error{failure::none};
 		};
 
@@ -99,6 +104,20 @@ namespace vr::engine_stereo_eye_resources
 
 		std::array<utils::hook::detour, shader_stage_count> shader_hooks;
 		utils::hook::detour unordered_access_hook;
+		constexpr std::size_t device_view_slot_count = 4;
+		constexpr std::array<std::size_t, device_view_slot_count> device_view_vtable_slots{
+			7, 8, 9, 10,
+		};
+		std::array<utils::hook::detour, device_view_slot_count> device_view_hooks;
+		std::array<std::atomic_uintptr_t, device_view_slot_count> device_view_hook_targets{};
+		std::atomic_bool device_view_hooks_installed{};
+		std::atomic_uint64_t view_creation_epoch{1};
+		std::uint64_t last_foreign_clear_epoch{};
+		constexpr std::size_t watched_resource_capacity =
+			isolated_target_count * (1 + auxiliary_scene::view_count);
+		std::array<std::atomic_uintptr_t, watched_resource_capacity> watched_resources{};
+		std::atomic_size_t watched_resource_count{};
+		std::atomic_uint64_t watched_resources_seq{};
 		std::mutex hook_mutex;
 		std::mutex state_mutex;
 		std::atomic_bool hooks_installed{};
@@ -138,6 +157,7 @@ namespace vr::engine_stereo_eye_resources
 		std::atomic_uint64_t active_pair{};
 		std::atomic_uint32_t active_owner_thread{};
 		std::atomic_uint32_t active_eye{auxiliary_scene::no_view};
+		std::atomic_bool post_restore_dirty{true};
 		std::atomic_uintptr_t quarantine_context{};
 		std::atomic_uint64_t quarantine_generation{};
 		std::atomic_uint64_t quarantine_pair{};
@@ -171,6 +191,25 @@ namespace vr::engine_stereo_eye_resources
 		persistent_state resources;
 		pair_state pair;
 		thread_local thread_pair_token current_pair{};
+		thread_local bool in_state_maintenance{};
+
+		struct state_maintenance_scope
+		{
+			bool previous{};
+
+			state_maintenance_scope() noexcept : previous(in_state_maintenance)
+			{
+				in_state_maintenance = true;
+			}
+
+			~state_maintenance_scope() noexcept
+			{
+				in_state_maintenance = previous;
+			}
+
+			state_maintenance_scope(const state_maintenance_scope&) = delete;
+			state_maintenance_scope& operator=(const state_maintenance_scope&) = delete;
+		};
 
 		[[nodiscard]] bool valid_resource_description(const role target_role,
 			const D3D11_TEXTURE2D_DESC& value) noexcept
@@ -290,14 +329,39 @@ namespace vr::engine_stereo_eye_resources
 
 		[[nodiscard]] bool active_isolated_eye(ID3D11DeviceContext* const context) noexcept
 		{
-			if (cleanup_quarantined.load(std::memory_order_acquire) ||
-				invalidation_pending.load(std::memory_order_acquire) ||
-				!owner_hook_token_matches() || !owns_pair_on_current_thread() ||
-				pair.current_eye >= auxiliary_scene::view_count) return false;
+			if (current_pair.pair_id == 0 ||
+				!pair_active.load(std::memory_order_acquire) ||
+				cleanup_quarantined.load(std::memory_order_acquire) ||
+				invalidation_pending.load(std::memory_order_acquire))
+			{
+				return false;
+			}
+			const auto tid = GetCurrentThreadId();
+			if (active_owner_thread.load(std::memory_order_acquire) != tid)
+			{
+				return false;
+			}
+			const auto pair_id = active_pair.load(std::memory_order_acquire);
+			const auto expected_ctx = expected_context.load(std::memory_order_acquire);
+			const auto expected_gen = expected_generation.load(std::memory_order_acquire);
+			if (pair_id == 0 || expected_ctx == 0 || expected_gen == 0 ||
+				current_pair.pair_id != pair_id ||
+				current_pair.context != expected_ctx ||
+				current_pair.generation != expected_gen)
+			{
+				return false;
+			}
+			if (!pair.active || pair.owner_thread != tid ||
+				pair.pair_id != pair_id ||
+				pair.context != current_pair.context ||
+				pair.generation != current_pair.generation ||
+				pair.current_eye >= auxiliary_scene::view_count)
+			{
+				return false;
+			}
 			if (reinterpret_cast<std::uintptr_t>(context) != pair.context ||
-				pair.context != expected_context.load(std::memory_order_acquire) ||
-				pair.generation != expected_generation.load(
-					std::memory_order_acquire))
+				pair.context != expected_ctx ||
+				pair.generation != expected_gen)
 			{
 				publish_failure(failure::context);
 				return false;
@@ -321,6 +385,7 @@ namespace vr::engine_stereo_eye_resources
 			clear_cache(resources.depth_stencils);
 			clear_cache(resources.shader_resources);
 			clear_cache(resources.unordered_access);
+			last_foreign_clear_epoch = view_creation_epoch.load(std::memory_order_acquire);
 		}
 
 		void clear_foreign_caches() noexcept
@@ -342,6 +407,134 @@ namespace vr::engine_stereo_eye_resources
 		void cache_foreign(target_view_cache<View>& cache, View* const view) noexcept
 		{
 			cache.foreign.insert(reinterpret_cast<std::uintptr_t>(view));
+		}
+
+		[[nodiscard]] bool foreign_cache_current() noexcept
+		{
+			return device_view_hooks_installed.load(std::memory_order_acquire) &&
+				view_creation_epoch.load(std::memory_order_acquire) ==
+					last_foreign_clear_epoch;
+		}
+
+		void sync_foreign_caches_on_owner() noexcept
+		{
+			if (!device_view_hooks_installed.load(std::memory_order_acquire))
+				return;
+			const auto observed = view_creation_epoch.load(std::memory_order_acquire);
+			if (observed != last_foreign_clear_epoch)
+			{
+				clear_foreign_caches();
+				last_foreign_clear_epoch = observed;
+			}
+		}
+
+		void publish_watched_resources() noexcept
+		{
+			watched_resources_seq.fetch_add(1, std::memory_order_acq_rel);
+			std::size_t count{};
+			const auto push = [&](ID3D11Resource* const resource) noexcept
+			{
+				if (resource != nullptr && count < watched_resource_capacity)
+				{
+					watched_resources[count++].store(
+						reinterpret_cast<std::uintptr_t>(resource),
+						std::memory_order_relaxed);
+				}
+			};
+			for (const auto& target : resources.targets)
+			{
+				push(static_cast<ID3D11Resource*>(target.original.Get()));
+				for (const auto& eye : target.eyes)
+					push(static_cast<ID3D11Resource*>(eye.Get()));
+			}
+			for (std::size_t index{count}; index < watched_resource_capacity; ++index)
+				watched_resources[index].store(0, std::memory_order_relaxed);
+			watched_resource_count.store(count, std::memory_order_relaxed);
+			watched_resources_seq.fetch_add(1, std::memory_order_release);
+			view_creation_epoch.fetch_add(1, std::memory_order_release);
+		}
+
+		[[nodiscard]] bool is_watched_resource(
+			ID3D11Resource* const resource) noexcept
+		{
+			if (resource == nullptr) return true;
+			const auto seq1 = watched_resources_seq.load(std::memory_order_acquire);
+			if ((seq1 & 1u) != 0) return true;
+			const auto count = (std::min)(
+				watched_resource_count.load(std::memory_order_relaxed),
+				watched_resource_capacity);
+			const auto ptr = reinterpret_cast<std::uintptr_t>(resource);
+			for (std::size_t index{}; index < count; ++index)
+			{
+				if (watched_resources[index].load(std::memory_order_relaxed) == ptr)
+					return true;
+			}
+			std::atomic_thread_fence(std::memory_order_acquire);
+			return watched_resources_seq.load(std::memory_order_relaxed) != seq1;
+		}
+
+		enum class target_resource_match : std::uint8_t
+		{
+			none,
+			original,
+			isolated_eye,
+		};
+
+		[[nodiscard]] target_resource_match match_target_resource(
+			ID3D11Resource* const resource,
+			std::uint32_t* const matched_target_index = nullptr) noexcept
+		{
+			if (resource == nullptr) return target_resource_match::none;
+			for (std::uint32_t index{}; index < resources.targets.size(); ++index)
+			{
+				const auto& target = resources.targets[index];
+				if (resource == target.original.Get())
+				{
+					if (matched_target_index != nullptr) *matched_target_index = index;
+					return target_resource_match::original;
+				}
+				if (resource == target.eyes[0].Get() ||
+					resource == target.eyes[1].Get() ||
+					resource == target.eyes[2].Get())
+				{
+					if (matched_target_index != nullptr) *matched_target_index = index;
+					return target_resource_match::isolated_eye;
+				}
+			}
+			return target_resource_match::none;
+		}
+
+		[[nodiscard]] bool should_note_external_bind(
+			ID3D11DeviceContext* const context) noexcept
+		{
+			return !in_state_maintenance &&
+				pair_active.load(std::memory_order_acquire) &&
+				reinterpret_cast<std::uintptr_t>(context) ==
+					expected_context.load(std::memory_order_acquire);
+		}
+
+		template <typename View>
+		void note_external_views_bound(const target_view_cache<View>& cache,
+			View* const* const views, const UINT view_count,
+			const std::uint8_t srv_stage_mask = 0) noexcept
+		{
+			if (views == nullptr || view_count == 0) return;
+			if (!owns_pair_on_current_thread())
+			{
+				post_restore_dirty.store(true, std::memory_order_release);
+				return;
+			}
+			const bool foreign_ok = foreign_cache_current();
+			for (UINT index{}; index < view_count; ++index)
+			{
+				if (views[index] != nullptr &&
+					(!foreign_ok || !foreign_cached(cache, views[index])))
+				{
+					pair.touched_srv_stages |= srv_stage_mask;
+					post_restore_dirty.store(true, std::memory_order_release);
+					return;
+				}
+			}
 		}
 
 		template <typename View>
@@ -414,15 +607,21 @@ namespace vr::engine_stereo_eye_resources
 		}
 
 		template <typename View>
-		[[nodiscard]] View* rewrite_admitted_view(target_view_cache<View>& cache,
-			View* const original) noexcept
+		[[nodiscard]] View* rewrite_admitted_view_synced(
+			target_view_cache<View>& cache, View* const original,
+			const bool foreign_ok, bool* const proven_foreign = nullptr) noexcept
 		{
+			if (proven_foreign != nullptr) *proven_foreign = false;
 			const auto identity = reinterpret_cast<std::uintptr_t>(original);
 			if (const auto* index = cache.known.find(identity); index && *index < cache.count)
 				return cache.entries[*index].eyes[pair.current_eye].Get();
 			// Non-target SRVs dominate scene draws. Even a negative-cache hit used
 			// to scan every original/left/right mapping first.
-			if (foreign_cached(cache, original)) return original;
+			if (foreign_cached(cache, original))
+			{
+				if (proven_foreign != nullptr) *proven_foreign = foreign_ok;
+				return original;
+			}
 			for (std::size_t index{}; index < cache.count; ++index)
 			{
 				const auto& entry = cache.entries[index];
@@ -441,20 +640,43 @@ namespace vr::engine_stereo_eye_resources
 				publish_failure(failure::resource_contract);
 				return original;
 			}
-			for (std::uint32_t index{}; index < resources.targets.size(); ++index)
+			std::uint32_t target_index{};
+			switch (match_target_resource(resource.Get(), &target_index))
 			{
-				if (resource.Get() == resources.targets[index].original.Get())
-					return create_target_view_mapping(cache, original, index);
+			case target_resource_match::original:
+				return create_target_view_mapping(cache, original, target_index);
+			case target_resource_match::isolated_eye:
+				// Never insert untracked private eye views into cache.foreign;
+				// cleanup verification must still detect them.
+				return original;
+			case target_resource_match::none:
+			default:
+				cache_foreign(cache, original);
+				if (proven_foreign != nullptr) *proven_foreign = foreign_ok;
+				return original;
 			}
-			cache_foreign(cache, original);
-			return original;
+		}
+
+		template <typename View>
+		[[nodiscard]] View* rewrite_admitted_view(target_view_cache<View>& cache,
+			View* const original) noexcept
+		{
+			sync_foreign_caches_on_owner();
+			return rewrite_admitted_view_synced(cache, original,
+				foreign_cache_current());
 		}
 
 		template <typename View>
 		[[nodiscard]] View* rewrite_view(target_view_cache<View>& cache,
 			ID3D11DeviceContext* const context, View* const original) noexcept
 		{
-			if (original == nullptr || !active_isolated_eye(context)) return original;
+			if (original == nullptr) return original;
+			if (!active_isolated_eye(context))
+			{
+				if (should_note_external_bind(context))
+					note_external_views_bound(cache, &original, 1);
+				return original;
+			}
 			return rewrite_admitted_view(cache, original);
 		}
 
@@ -465,7 +687,7 @@ namespace vr::engine_stereo_eye_resources
 			if (current == nullptr) return nullptr;
 			if (const auto* index = cache.known.find(reinterpret_cast<std::uintptr_t>(current));
 				index && *index < cache.count) return cache.entries[*index].original.Get();
-			if (foreign_cached(cache, current)) return current;
+			if (foreign_cache_current() && foreign_cached(cache, current)) return current;
 			for (std::size_t index{}; index < cache.count; ++index)
 			{
 				if (cache.entries[index].eyes[0].Get() == current ||
@@ -476,14 +698,15 @@ namespace vr::engine_stereo_eye_resources
 		}
 
 		template <typename View>
-		void restore_bound_view(const target_view_cache<View>& cache,
+		[[nodiscard]] bool restore_bound_view(const target_view_cache<View>& cache,
 			View*& current) noexcept
 		{
 			auto* const restored = restore_view(cache, current);
-			if (restored == current) return;
+			if (restored == current) return false;
 			if (restored != nullptr) restored->AddRef();
 			if (current != nullptr) current->Release();
 			current = restored;
+			return true;
 		}
 
 		[[nodiscard]] ID3D11RenderTargetView* rewrite_render_target(
@@ -616,11 +839,14 @@ namespace vr::engine_stereo_eye_resources
 			// The mapping owns these immutable COM views. Reuse their exact resource
 			// identity during validation/restoration too; unknown views still query.
 			const auto& cache = cache_for_view<View>();
-			if (const auto* index = cache.known.find(reinterpret_cast<std::uintptr_t>(view));
+			const auto key = reinterpret_cast<std::uintptr_t>(view);
+			if (const auto* index = cache.known.find(key);
 				index && *index < cache.count)
 				return isolated != (cache.entries[*index].original.Get() == view);
-			// A view not rewritten by routing can still alias a private eye texture.
-			// The negative routing cache is not proof that cleanup is complete.
+			if (foreign_cache_current() && cache.foreign.contains(key))
+				return false;
+			// Fall back to GetResource whenever the negative cache is absent or
+			// a device view creation occurred after the last epoch sync.
 			Microsoft::WRL::ComPtr<ID3D11Resource> resource;
 			view->GetResource(resource.GetAddressOf());
 			if (!resource)
@@ -628,14 +854,64 @@ namespace vr::engine_stereo_eye_resources
 				publish_failure(failure::resource_contract);
 				return true;
 			}
-			for (const auto& target : resources.targets)
+			const auto match = match_target_resource(resource.Get());
+			return isolated ? (match == target_resource_match::isolated_eye) :
+				(match == target_resource_match::original);
+		}
+
+		struct rebind_classification
+		{
+			bool needs_rebind{};
+			bool may_contain_isolated{};
+		};
+
+		template <typename View>
+		[[nodiscard]] rebind_classification classify_rebind_view(
+			target_view_cache<View>& cache, View* const view) noexcept
+		{
+			if (view == nullptr) return {};
+			const auto identity = reinterpret_cast<std::uintptr_t>(view);
+			if (const auto* index = cache.known.find(identity);
+				index && *index < cache.count)
 			{
-				if (isolated ? (resource.Get() == target.eyes[0].Get() ||
-					resource.Get() == target.eyes[1].Get() || resource.Get() == target.eyes[2].Get()) :
-					resource.Get() == target.original.Get())
-					return true;
+				return {
+					cache.entries[*index].eyes[pair.current_eye].Get() != view,
+					true,
+				};
 			}
-			return false;
+			if (foreign_cache_current() && foreign_cached(cache, view))
+				return {};
+			for (std::size_t index{}; index < cache.count; ++index)
+			{
+				const auto& entry = cache.entries[index];
+				if (entry.original.Get() == view || entry.eyes[0].Get() == view ||
+					entry.eyes[1].Get() == view || entry.eyes[2].Get() == view)
+				{
+					cache.known.insert(identity, index);
+					return {
+						entry.eyes[pair.current_eye].Get() != view,
+						true,
+					};
+				}
+			}
+			Microsoft::WRL::ComPtr<ID3D11Resource> resource;
+			view->GetResource(resource.GetAddressOf());
+			if (!resource)
+			{
+				publish_failure(failure::resource_contract);
+				return {false, true};
+			}
+			switch (match_target_resource(resource.Get()))
+			{
+			case target_resource_match::original:
+				return {true, true};
+			case target_resource_match::isolated_eye:
+				return {false, true};
+			case target_resource_match::none:
+			default:
+				cache_foreign(cache, view);
+				return {};
+			}
 		}
 
 		[[nodiscard]] std::uint64_t count_bound_target_views(
@@ -685,21 +961,40 @@ namespace vr::engine_stereo_eye_resources
 			boundary_rebind_attempts.fetch_add(1, std::memory_order_relaxed);
 			if (!active_isolated_eye(context))
 			{
+				if (owns_pair_on_current_thread()) pair.touched_srv_stages = 0x3Fu;
 				boundary_rebind_failures.fetch_add(1, std::memory_order_relaxed);
 				return false;
 			}
+			sync_foreign_caches_on_owner();
 
+			bool contract_violation{};
+			bool needs_om_rebind{};
 			std::array<ID3D11RenderTargetView*,
 				D3D11_SIMULTANEOUS_RENDER_TARGET_COUNT> render_targets{};
 			ID3D11DepthStencilView* depth{};
 			context->OMGetRenderTargets(static_cast<UINT>(render_targets.size()),
 				render_targets.data(), &depth);
 			const auto render_target_count = bound_prefix(render_targets);
+			for (UINT i{}; i < render_target_count && !needs_om_rebind; ++i)
+			{
+				needs_om_rebind |= classify_rebind_view(
+					resources.render_targets, render_targets[i]).needs_rebind;
+			}
+			if (!needs_om_rebind)
+			{
+				needs_om_rebind |= classify_rebind_view(
+					resources.depth_stencils, depth).needs_rebind;
+			}
 			std::array<ID3D11UnorderedAccessView*,
 				D3D11_PS_CS_UAV_REGISTER_COUNT> om_unordered{};
 			context->OMGetRenderTargetsAndUnorderedAccessViews(0, nullptr, nullptr, 0,
 				static_cast<UINT>(om_unordered.size()), om_unordered.data());
 			const auto om_unordered_count = bound_prefix(om_unordered);
+			for (UINT i{}; i < om_unordered_count && !needs_om_rebind; ++i)
+			{
+				needs_om_rebind |= classify_rebind_view(
+					resources.unordered_access, om_unordered[i]).needs_rebind;
+			}
 			if (om_unordered_count != 0)
 			{
 				UINT unordered_start{};
@@ -708,8 +1003,9 @@ namespace vr::engine_stereo_eye_resources
 				if (unordered_start < render_target_count)
 				{
 					publish_failure(failure::binding_contract);
+					contract_violation = true;
 				}
-				else
+				else if (needs_om_rebind)
 				{
 					std::array<UINT, D3D11_PS_CS_UAV_REGISTER_COUNT> initial_counts{};
 					initial_counts.fill(D3D11_KEEP_UNORDERED_ACCESS_VIEWS);
@@ -722,7 +1018,7 @@ namespace vr::engine_stereo_eye_resources
 					boundary_rebind_calls.fetch_add(1, std::memory_order_relaxed);
 				}
 			}
-			else if (render_target_count != 0 || depth != nullptr)
+			else if ((render_target_count != 0 || depth != nullptr) && needs_om_rebind)
 			{
 				context->OMSetRenderTargets(render_target_count,
 					render_target_count == 0 ? nullptr : render_targets.data(), depth);
@@ -737,7 +1033,13 @@ namespace vr::engine_stereo_eye_resources
 			context->CSGetUnorderedAccessViews(0,
 				static_cast<UINT>(cs_unordered.size()), cs_unordered.data());
 			const auto cs_unordered_count = bound_prefix(cs_unordered);
-			if (cs_unordered_count != 0)
+			bool needs_cs_rebind{};
+			for (UINT i{}; i < cs_unordered_count && !needs_cs_rebind; ++i)
+			{
+				needs_cs_rebind |= classify_rebind_view(
+					resources.unordered_access, cs_unordered[i]).needs_rebind;
+			}
+			if (cs_unordered_count != 0 && needs_cs_rebind)
 			{
 				std::array<UINT, D3D11_PS_CS_UAV_REGISTER_COUNT> initial_counts{};
 				initial_counts.fill(D3D11_KEEP_UNORDERED_ACCESS_VIEWS);
@@ -747,6 +1049,7 @@ namespace vr::engine_stereo_eye_resources
 			}
 			release_views(cs_unordered);
 
+			pair.touched_srv_stages = 0;
 			std::array<ID3D11ShaderResourceView*,
 				D3D11_COMMONSHADER_INPUT_RESOURCE_SLOT_COUNT> shader_views{};
 			for (std::size_t stage{}; stage < shader_stage_count; ++stage)
@@ -754,7 +1057,19 @@ namespace vr::engine_stereo_eye_resources
 				get_shader_resources(stage, context,
 					static_cast<UINT>(shader_views.size()), shader_views.data());
 				const auto count = bound_prefix(shader_views);
-				if (count != 0)
+				bool needs_srv_rebind{};
+				bool stage_may_have_isolated{};
+				for (UINT i{}; i < count; ++i)
+				{
+					const auto classified = classify_rebind_view(
+						resources.shader_resources, shader_views[i]);
+					needs_srv_rebind |= classified.needs_rebind;
+					stage_may_have_isolated |= classified.may_contain_isolated;
+					if (needs_srv_rebind) break;
+				}
+				if (stage_may_have_isolated || needs_srv_rebind)
+					pair.touched_srv_stages |= static_cast<std::uint8_t>(1u << stage);
+				if (count != 0 && needs_srv_rebind)
 				{
 					set_shader_resources(stage, context, count, shader_views.data());
 					boundary_rebind_calls.fetch_add(1, std::memory_order_relaxed);
@@ -767,7 +1082,8 @@ namespace vr::engine_stereo_eye_resources
 				boundary_rebind_failures.fetch_add(1, std::memory_order_relaxed);
 				return false;
 			}
-			const auto remaining = count_bound_target_views(context, false);
+			const auto remaining = contract_violation ?
+				count_bound_target_views(context, false) : std::uint64_t{};
 			boundary_original_views_remaining.fetch_add(remaining,
 				std::memory_order_relaxed);
 			if (remaining != 0 || pair.failed)
@@ -787,31 +1103,52 @@ namespace vr::engine_stereo_eye_resources
 			if (context == nullptr || !owns_pair_on_current_thread() ||
 				reinterpret_cast<std::uintptr_t>(context) != pair.context)
 			{
+				post_restore_dirty.store(true, std::memory_order_release);
 				publish_failure(failure::lifecycle);
 				restore_rebind_failures.fetch_add(1, std::memory_order_relaxed);
 				return false;
 			}
 
+			const auto prior_eye = pair.current_eye;
+			const std::uint8_t stages_to_check =
+				(prior_eye == auxiliary_scene::no_view &&
+					post_restore_dirty.load(std::memory_order_acquire)) ?
+				std::uint8_t{0x3Fu} : pair.touched_srv_stages;
+
+			std::uint64_t remaining{};
+			bool contract_violation{};
+			bool om_changed{};
 			std::array<ID3D11RenderTargetView*,
 				D3D11_SIMULTANEOUS_RENDER_TARGET_COUNT> render_targets{};
 			ID3D11DepthStencilView* depth{};
 			context->OMGetRenderTargets(static_cast<UINT>(render_targets.size()),
 				render_targets.data(), &depth);
 			const auto render_target_count = bound_prefix(render_targets);
-			for (auto*& view : render_targets)
-				restore_bound_view(resources.render_targets, view);
-			restore_bound_view(resources.depth_stencils, depth);
+			for (std::size_t i{}; i < render_target_count; ++i)
+			{
+				if (restore_bound_view(resources.render_targets, render_targets[i]))
+					om_changed = true;
+				remaining += uses_target_resource(render_targets[i], true) ? 1 : 0;
+			}
+			if (restore_bound_view(resources.depth_stencils, depth))
+				om_changed = true;
+			remaining += uses_target_resource(depth, true) ? 1 : 0;
 
 			std::array<ID3D11UnorderedAccessView*,
 				D3D11_PS_CS_UAV_REGISTER_COUNT> om_unordered{};
 			context->OMGetRenderTargetsAndUnorderedAccessViews(0, nullptr, nullptr, 0,
 				static_cast<UINT>(om_unordered.size()), om_unordered.data());
 			const auto om_unordered_count = bound_prefix(om_unordered);
-			for (auto*& view : om_unordered)
-				restore_bound_view(resources.unordered_access, view);
+			for (std::size_t i{}; i < om_unordered_count; ++i)
+			{
+				if (restore_bound_view(resources.unordered_access, om_unordered[i]))
+					om_changed = true;
+				remaining += uses_target_resource(om_unordered[i], true) ? 1 : 0;
+			}
 
 			// Disable redirection before the inverse setters run. Every view handed to
 			// those setters has already been mapped eye->original above.
+			const state_maintenance_scope maintenance_guard;
 			pair.current_eye = auxiliary_scene::no_view;
 			active_eye.store(auxiliary_scene::no_view, std::memory_order_release);
 			if (om_unordered_count != 0)
@@ -822,8 +1159,9 @@ namespace vr::engine_stereo_eye_resources
 				if (unordered_start < render_target_count)
 				{
 					publish_failure(failure::binding_contract);
+					contract_violation = true;
 				}
-				else
+				else if (om_changed)
 				{
 					std::array<UINT, D3D11_PS_CS_UAV_REGISTER_COUNT> initial_counts{};
 					initial_counts.fill(D3D11_KEEP_UNORDERED_ACCESS_VIEWS);
@@ -836,7 +1174,7 @@ namespace vr::engine_stereo_eye_resources
 					restore_rebind_calls.fetch_add(1, std::memory_order_relaxed);
 				}
 			}
-			else if (render_target_count != 0 || depth != nullptr)
+			else if ((render_target_count != 0 || depth != nullptr) && om_changed)
 			{
 				context->OMSetRenderTargets(render_target_count,
 					render_target_count == 0 ? nullptr : render_targets.data(), depth);
@@ -846,14 +1184,19 @@ namespace vr::engine_stereo_eye_resources
 			if (depth != nullptr) depth->Release();
 			release_views(om_unordered);
 
+			bool cs_changed{};
 			std::array<ID3D11UnorderedAccessView*,
 				D3D11_PS_CS_UAV_REGISTER_COUNT> cs_unordered{};
 			context->CSGetUnorderedAccessViews(0,
 				static_cast<UINT>(cs_unordered.size()), cs_unordered.data());
 			const auto cs_unordered_count = bound_prefix(cs_unordered);
-			for (auto*& view : cs_unordered)
-				restore_bound_view(resources.unordered_access, view);
-			if (cs_unordered_count != 0)
+			for (std::size_t i{}; i < cs_unordered_count; ++i)
+			{
+				if (restore_bound_view(resources.unordered_access, cs_unordered[i]))
+					cs_changed = true;
+				remaining += uses_target_resource(cs_unordered[i], true) ? 1 : 0;
+			}
+			if (cs_unordered_count != 0 && cs_changed)
 			{
 				std::array<UINT, D3D11_PS_CS_UAV_REGISTER_COUNT> initial_counts{};
 				initial_counts.fill(D3D11_KEEP_UNORDERED_ACCESS_VIEWS);
@@ -867,12 +1210,18 @@ namespace vr::engine_stereo_eye_resources
 				D3D11_COMMONSHADER_INPUT_RESOURCE_SLOT_COUNT> shader_views{};
 			for (std::size_t stage{}; stage < shader_stage_count; ++stage)
 			{
+				if ((stages_to_check & (1u << stage)) == 0) continue;
 				get_shader_resources(stage, context,
 					static_cast<UINT>(shader_views.size()), shader_views.data());
 				const auto count = bound_prefix(shader_views);
-				for (auto*& view : shader_views)
-					restore_bound_view(resources.shader_resources, view);
-				if (count != 0)
+				bool srv_changed{};
+				for (std::size_t i{}; i < count; ++i)
+				{
+					if (restore_bound_view(resources.shader_resources, shader_views[i]))
+						srv_changed = true;
+					remaining += uses_target_resource(shader_views[i], true) ? 1 : 0;
+				}
+				if (count != 0 && srv_changed)
 				{
 					set_shader_resources(stage, context, count, shader_views.data());
 					restore_rebind_calls.fetch_add(1, std::memory_order_relaxed);
@@ -880,17 +1229,66 @@ namespace vr::engine_stereo_eye_resources
 				release_views(shader_views);
 			}
 
-			const auto remaining = count_bound_target_views(context, true);
+			if (contract_violation)
+				remaining = count_bound_target_views(context, true);
 			restore_isolated_views_remaining.fetch_add(remaining,
 				std::memory_order_relaxed);
 			if (remaining != 0)
 			{
+				post_restore_dirty.store(true, std::memory_order_release);
 				publish_failure(failure::binding_contract);
 				restore_rebind_failures.fetch_add(1, std::memory_order_relaxed);
 				return false;
 			}
+			post_restore_dirty.store(prior_eye != 1 || contract_violation,
+				std::memory_order_release);
 			restore_rebind_completions.fetch_add(1, std::memory_order_relaxed);
 			return true;
+		}
+
+		template <typename View, std::size_t Capacity>
+		[[nodiscard]] bool rewrite_admitted_view_batch(
+			target_view_cache<View>& cache, const UINT view_count,
+			View* const* const views, std::array<View*, Capacity>& rewritten,
+			std::uint64_t& local_replacements,
+			bool* const any_unproven_or_isolated = nullptr) noexcept
+		{
+			bool any_rewritten = false;
+			local_replacements = 0;
+			if (any_unproven_or_isolated != nullptr)
+				*any_unproven_or_isolated = false;
+			sync_foreign_caches_on_owner();
+			const bool foreign_ok = foreign_cache_current();
+			for (UINT index{}; index < view_count; ++index)
+			{
+				auto* const original_view = views[index];
+				bool proven_foreign = false;
+				auto* const candidate = original_view == nullptr ? nullptr :
+					rewrite_admitted_view_synced(cache, original_view,
+						foreign_ok, &proven_foreign);
+				if (candidate != original_view)
+				{
+					if (!any_rewritten)
+					{
+						any_rewritten = true;
+						for (UINT prefix{}; prefix < index; ++prefix)
+						{
+							rewritten[prefix] = views[prefix];
+						}
+					}
+					++local_replacements;
+				}
+				else if (any_unproven_or_isolated != nullptr &&
+					original_view != nullptr && !proven_foreign)
+				{
+					*any_unproven_or_isolated = true;
+				}
+				if (any_rewritten)
+				{
+					rewritten[index] = candidate;
+				}
+			}
+			return any_rewritten;
 		}
 
 		void shader_resource_stub(const std::size_t stage,
@@ -902,12 +1300,19 @@ namespace vr::engine_stereo_eye_resources
 			if (original == nullptr) return;
 			if (!active_isolated_eye(context) || views == nullptr || view_count == 0)
 			{
+				if (views != nullptr && view_count != 0 &&
+					should_note_external_bind(context))
+				{
+					note_external_views_bound(resources.shader_resources, views,
+						view_count, static_cast<std::uint8_t>(1u << stage));
+				}
 				original(context, start_slot, view_count, views);
 				return;
 			}
 			if (start_slot > D3D11_COMMONSHADER_INPUT_RESOURCE_SLOT_COUNT ||
 				view_count > D3D11_COMMONSHADER_INPUT_RESOURCE_SLOT_COUNT - start_slot)
 			{
+				pair.touched_srv_stages |= static_cast<std::uint8_t>(1u << stage);
 				publish_failure(failure::binding_contract);
 				original(context, start_slot, view_count, views);
 				return;
@@ -916,15 +1321,22 @@ namespace vr::engine_stereo_eye_resources
 			// each native material bind, or repeat the same owner admission per slot.
 			std::array<ID3D11ShaderResourceView*,
 				D3D11_COMMONSHADER_INPUT_RESOURCE_SLOT_COUNT> rewritten;
-			for (UINT index{}; index < view_count; ++index)
+			std::uint64_t local_replacements{};
+			bool any_unproven_or_isolated{};
+			const bool any_rewritten = rewrite_admitted_view_batch(
+				resources.shader_resources, view_count, views, rewritten,
+				local_replacements, &any_unproven_or_isolated);
+			if (any_rewritten || any_unproven_or_isolated)
 			{
-				rewritten[index] = views[index] == nullptr ? nullptr :
-					rewrite_admitted_view(resources.shader_resources, views[index]);
-				if (rewritten[index] != views[index])
-					shader_resource_replacements[stage].fetch_add(1,
-						std::memory_order_relaxed);
+				pair.touched_srv_stages |= static_cast<std::uint8_t>(1u << stage);
 			}
-			original(context, start_slot, view_count, rewritten.data());
+			if (local_replacements != 0)
+			{
+				shader_resource_replacements[stage].fetch_add(local_replacements,
+					std::memory_order_relaxed);
+			}
+			original(context, start_slot, view_count,
+				any_rewritten ? rewritten.data() : views);
 		}
 
 		void __stdcall ps_shader_resource_stub(ID3D11DeviceContext* const context,
@@ -973,6 +1385,12 @@ namespace vr::engine_stereo_eye_resources
 			if (original == nullptr) return;
 			if (!active_isolated_eye(context) || views == nullptr || view_count == 0)
 			{
+				if (views != nullptr && view_count != 0 &&
+					should_note_external_bind(context))
+				{
+					note_external_views_bound(resources.unordered_access, views,
+						view_count);
+				}
 				original(context, start_slot, view_count, views, initial_counts);
 				return;
 			}
@@ -984,11 +1402,18 @@ namespace vr::engine_stereo_eye_resources
 				return;
 			}
 			std::array<ID3D11UnorderedAccessView*,
-				D3D11_PS_CS_UAV_REGISTER_COUNT> rewritten{};
-			for (UINT index{}; index < view_count; ++index)
-				rewritten[index] = views[index] == nullptr ? nullptr :
-					rewrite_unordered_access(context, views[index]);
-			original(context, start_slot, view_count, rewritten.data(), initial_counts);
+				D3D11_PS_CS_UAV_REGISTER_COUNT> rewritten;
+			std::uint64_t local_replacements{};
+			const bool any_rewritten = rewrite_admitted_view_batch(
+				resources.unordered_access, view_count, views, rewritten,
+				local_replacements);
+			if (local_replacements != 0)
+			{
+				unordered_access_replacements.fetch_add(local_replacements,
+					std::memory_order_relaxed);
+			}
+			original(context, start_slot, view_count,
+				any_rewritten ? rewritten.data() : views, initial_counts);
 		}
 
 		[[nodiscard]] std::array<void*, shader_stage_count> shader_stubs() noexcept
@@ -999,6 +1424,79 @@ namespace vr::engine_stereo_eye_resources
 				reinterpret_cast<void*>(hs_shader_resource_stub),
 				reinterpret_cast<void*>(ds_shader_resource_stub),
 				reinterpret_cast<void*>(cs_shader_resource_stub)};
+		}
+
+		template <std::size_t Index, typename Desc, typename View>
+		HRESULT __stdcall device_create_view_stub(ID3D11Device* const device,
+			ID3D11Resource* const resource, const Desc* const desc, View** const view)
+		{
+			using fn_t = HRESULT(__stdcall*)(ID3D11Device*, ID3D11Resource*,
+				const Desc*, View**);
+			const auto original = reinterpret_cast<fn_t>(
+				device_view_hooks[Index].get_original());
+			if (original == nullptr) return E_UNEXPECTED;
+			const auto result = original(device, resource, desc, view);
+			if (SUCCEEDED(result) && view != nullptr && is_watched_resource(resource))
+			{
+				view_creation_epoch.fetch_add(1, std::memory_order_release);
+			}
+			return result;
+		}
+
+		[[nodiscard]] bool install_device_view_hooks(
+			ID3D11DeviceContext* const context) noexcept
+		{
+			try
+			{
+				Microsoft::WRL::ComPtr<ID3D11Device> device;
+				context->GetDevice(device.GetAddressOf());
+				if (!device) return false;
+				auto* const vtable = *reinterpret_cast<void***>(device.Get());
+				if (vtable == nullptr) return false;
+				const std::array<void*, device_view_slot_count> stubs{
+					reinterpret_cast<void*>(device_create_view_stub<0,
+						D3D11_SHADER_RESOURCE_VIEW_DESC, ID3D11ShaderResourceView>),
+					reinterpret_cast<void*>(device_create_view_stub<1,
+						D3D11_UNORDERED_ACCESS_VIEW_DESC, ID3D11UnorderedAccessView>),
+					reinterpret_cast<void*>(device_create_view_stub<2,
+						D3D11_RENDER_TARGET_VIEW_DESC, ID3D11RenderTargetView>),
+					reinterpret_cast<void*>(device_create_view_stub<3,
+						D3D11_DEPTH_STENCIL_VIEW_DESC, ID3D11DepthStencilView>),
+				};
+				std::array<void*, device_view_slot_count> targets{};
+				for (std::size_t index{}; index < device_view_slot_count; ++index)
+				{
+					targets[index] = vtable[device_view_vtable_slots[index]];
+					if (!utils::hook_validation::validate_executable_target(targets[index]))
+						return false;
+					for (std::size_t previous{}; previous < index; ++previous)
+						if (targets[index] == targets[previous]) return false;
+				}
+				for (std::size_t index{}; index < device_view_slot_count; ++index)
+				{
+					const auto existing = device_view_hook_targets[index].load(
+						std::memory_order_acquire);
+					if (existing != 0 && existing != reinterpret_cast<std::uintptr_t>(
+						targets[index]))
+					{
+						return false;
+					}
+					if (!device_view_hooks[index].is_enabled())
+					{
+						if (device_view_hooks[index].get_original() == nullptr)
+							device_view_hooks[index].create(targets[index], stubs[index]);
+						else device_view_hooks[index].enable();
+					}
+					if (!device_view_hooks[index].is_enabled()) return false;
+					device_view_hook_targets[index].store(reinterpret_cast<std::uintptr_t>(
+						targets[index]), std::memory_order_release);
+				}
+				return true;
+			}
+			catch (...)
+			{
+				return false;
+			}
 		}
 
 		[[nodiscard]] bool extract_texture(ID3D11View* const view,
@@ -1127,18 +1625,21 @@ namespace vr::engine_stereo_eye_resources
 				}
 			}
 			resources = std::move(replacement);
+			publish_watched_resources();
 			clear_all_caches();
 			for (std::uint32_t index{}; index < resources.targets.size(); ++index)
 			{
 				if (!append_owner_view_mapping(index))
 				{
 					resources = {};
+					publish_watched_resources();
 					resources_ready.store(false, std::memory_order_release);
 					last_failure.store(failure::view_creation,
 						std::memory_order_release);
 					return false;
 				}
 			}
+			last_foreign_clear_epoch = view_creation_epoch.load(std::memory_order_acquire);
 			resources.ready = true;
 			resources_ready.store(true, std::memory_order_release);
 			resource_rebuilds.fetch_add(1, std::memory_order_relaxed);
@@ -1160,6 +1661,7 @@ namespace vr::engine_stereo_eye_resources
 			active_pair.store(0, std::memory_order_release);
 			active_owner_thread.store(0, std::memory_order_release);
 			active_eye.store(auxiliary_scene::no_view, std::memory_order_release);
+			post_restore_dirty.store(true, std::memory_order_release);
 			exact_read_enabled.store(false, std::memory_order_release);
 			exact_read_pair.store(0, std::memory_order_release);
 			// Publish inactivity only after the owner has stopped touching pair state.
@@ -1175,6 +1677,9 @@ namespace vr::engine_stereo_eye_resources
 		{
 			if (pair_active.load(std::memory_order_acquire)) return false;
 			resources = {};
+			publish_watched_resources();
+			last_foreign_clear_epoch = 0;
+			post_restore_dirty.store(true, std::memory_order_release);
 			resources_ready.store(false, std::memory_order_release);
 			expected_context.store(0, std::memory_order_release);
 			expected_generation.store(0, std::memory_order_release);
@@ -1273,6 +1778,8 @@ namespace vr::engine_stereo_eye_resources
 
 			unordered_access_hook_target.store(reinterpret_cast<std::uintptr_t>(
 				unordered_target), std::memory_order_release);
+			device_view_hooks_installed.store(install_device_view_hooks(context),
+				std::memory_order_release);
 			{
 				const std::lock_guard state_lock(state_mutex);
 				const auto prior_context = expected_context.load(
@@ -1296,6 +1803,10 @@ namespace vr::engine_stereo_eye_resources
 						return false;
 					}
 					if (!release_generation_state()) return false;
+				}
+				else if (!pair_active.load(std::memory_order_acquire))
+				{
+					last_foreign_clear_epoch = 0;
 				}
 				expected_context.store(reinterpret_cast<std::uintptr_t>(context),
 					std::memory_order_release);
@@ -1362,60 +1873,88 @@ namespace vr::engine_stereo_eye_resources
 		std::array<Microsoft::WRL::ComPtr<ID3D11Texture2D>, isolated_target_count>
 			originals{};
 		std::array<D3D11_TEXTURE2D_DESC, isolated_target_count> descriptions{};
-		for (std::size_t index{}; index < bindings.size(); ++index)
+		bool fast_matched = resources.ready &&
+			resources.device.Get() == device &&
+			resources.context == reinterpret_cast<std::uintptr_t>(context) &&
+			resources.generation == device_generation;
+		if (fast_matched)
 		{
-			// Missing optional histories are inactive slots, not native target 0.
-			// A partially specified binding is still rejected.
-			if (index != 0 && bindings[index].target_id == 0 && !bindings[index].owner_view)
-				continue;
-			const auto expected_id = index == 0 ? isolated_target_id :
-				native_post_aa::history_targets[index - 1];
-			if (bindings[index].target_id != expected_id ||
-				bindings[index].target_role != role::color ||
-				!source_role_matches(bindings[index]) ||
-				!extract_texture(bindings[index].owner_view, originals[index]))
+			for (std::size_t index{}; index < bindings.size(); ++index)
 			{
-				last_failure.store(failure::binding_contract, std::memory_order_release);
-				pair_failures.fetch_add(1, std::memory_order_relaxed);
-				return false;
-			}
-			originals[index]->GetDesc(&descriptions[index]);
-			if (!valid_resource_description(bindings[index].target_role,
-				descriptions[index]))
-			{
-				last_failure.store(failure::resource_contract, std::memory_order_release);
-				pair_failures.fetch_add(1, std::memory_order_relaxed);
-				return false;
-			}
-			Microsoft::WRL::ComPtr<ID3D11Device> source_device;
-			originals[index]->GetDevice(source_device.GetAddressOf());
-			if (source_device.Get() != device)
-			{
-				last_failure.store(failure::resource_contract, std::memory_order_release);
-				pair_failures.fetch_add(1, std::memory_order_relaxed);
-				return false;
-			}
-			for (std::size_t previous{}; previous < index; ++previous)
-			{
-				if (bindings[previous].target_id == bindings[index].target_id ||
-					originals[previous].Get() == originals[index].Get())
+				const auto& existing = resources.targets[index];
+				if (existing.target_id != bindings[index].target_id ||
+					existing.target_role != bindings[index].target_role ||
+					existing.owner_view.Get() != bindings[index].owner_view)
 				{
-					last_failure.store(failure::binding_contract,
-						std::memory_order_release);
-					pair_failures.fetch_add(1, std::memory_order_relaxed);
-					return false;
+					fast_matched = false;
+					break;
 				}
 			}
 		}
-
-		if (!resources_match(bindings, originals, descriptions, device, context,
-			device_generation) && !rebuild_resources(device, context, device_generation,
-			bindings, originals, descriptions))
+		if (!fast_matched)
 		{
-			pair_failures.fetch_add(1, std::memory_order_relaxed);
-			return false;
+			for (std::size_t index{}; index < bindings.size(); ++index)
+			{
+				// Missing optional histories are inactive slots, not native target 0.
+				// A partially specified binding is still rejected.
+				if (index != 0 && bindings[index].target_id == 0 && !bindings[index].owner_view)
+					continue;
+				const auto expected_id = index == 0 ? isolated_target_id :
+					native_post_aa::history_targets[index - 1];
+				if (bindings[index].target_id != expected_id ||
+					bindings[index].target_role != role::color ||
+					!source_role_matches(bindings[index]) ||
+					!extract_texture(bindings[index].owner_view, originals[index]))
+				{
+					last_failure.store(failure::binding_contract, std::memory_order_release);
+					pair_failures.fetch_add(1, std::memory_order_relaxed);
+					return false;
+				}
+				originals[index]->GetDesc(&descriptions[index]);
+				if (!valid_resource_description(bindings[index].target_role,
+					descriptions[index]))
+				{
+					last_failure.store(failure::resource_contract, std::memory_order_release);
+					pair_failures.fetch_add(1, std::memory_order_relaxed);
+					return false;
+				}
+				Microsoft::WRL::ComPtr<ID3D11Device> source_device;
+				originals[index]->GetDevice(source_device.GetAddressOf());
+				if (source_device.Get() != device)
+				{
+					last_failure.store(failure::resource_contract, std::memory_order_release);
+					pair_failures.fetch_add(1, std::memory_order_relaxed);
+					return false;
+				}
+				for (std::size_t previous{}; previous < index; ++previous)
+				{
+					if (bindings[previous].target_id == bindings[index].target_id ||
+						originals[previous].Get() == originals[index].Get())
+					{
+						last_failure.store(failure::binding_contract,
+							std::memory_order_release);
+						pair_failures.fetch_add(1, std::memory_order_relaxed);
+						return false;
+					}
+				}
+			}
+
+			if (!resources_match(bindings, originals, descriptions, device, context,
+				device_generation) && !rebuild_resources(device, context, device_generation,
+				bindings, originals, descriptions))
+			{
+				pair_failures.fetch_add(1, std::memory_order_relaxed);
+				return false;
+			}
 		}
-		clear_foreign_caches();
+		const auto observed_view_epoch =
+			view_creation_epoch.load(std::memory_order_acquire);
+		if (!device_view_hooks_installed.load(std::memory_order_acquire) ||
+			observed_view_epoch != last_foreign_clear_epoch)
+		{
+			clear_foreign_caches();
+			last_foreign_clear_epoch = observed_view_epoch;
+		}
 		pair = {};
 		pair.active = true;
 		pair.pair_id = pair_id;
@@ -1427,6 +1966,7 @@ namespace vr::engine_stereo_eye_resources
 		active_pair.store(pair_id, std::memory_order_release);
 		active_owner_thread.store(pair.owner_thread, std::memory_order_release);
 		active_eye.store(auxiliary_scene::no_view, std::memory_order_release);
+		post_restore_dirty.store(true, std::memory_order_release);
 		last_failure.store(failure::none, std::memory_order_release);
 		pair_active.store(true, std::memory_order_release);
 		return true;
@@ -1454,10 +1994,21 @@ namespace vr::engine_stereo_eye_resources
 		{
 			// Grow only the auxiliary mapping. Existing HMD images, views and
 			// histories keep their identities when the first scope is raised.
+			bool created{};
 			for(auto& target:resources.targets)
-				if(target.original && !target.eyes[auxiliary_scene::view_index] &&
-					FAILED(resources.device->CreateTexture2D(&target.description,nullptr,
-						target.eyes[auxiliary_scene::view_index].GetAddressOf()))) return false;
+			{
+				if(target.original && !target.eyes[auxiliary_scene::view_index])
+				{
+					if(FAILED(resources.device->CreateTexture2D(&target.description,nullptr,
+						target.eyes[auxiliary_scene::view_index].GetAddressOf())))
+					{
+						if(created) publish_watched_resources();
+						return false;
+					}
+					created=true;
+				}
+			}
+			if(created) publish_watched_resources();
 			return extend_auxiliary_views(resources.render_targets) && extend_auxiliary_views(resources.depth_stencils) &&
 				extend_auxiliary_views(resources.shader_resources) && extend_auxiliary_views(resources.unordered_access);
 		}
@@ -1469,6 +2020,15 @@ namespace vr::engine_stereo_eye_resources
 		return owns_pair_on_current_thread() && pair.pair_id == pair_id &&
 			pair.current_eye == eye && eye < auxiliary_scene::view_count && !pair.failed ?
 			resource_rebuilds.load(std::memory_order_relaxed) : 0;
+	}
+
+	std::uint32_t current_isolated_eye(ID3D11DeviceContext* const context) noexcept
+	{
+		if (context != nullptr && active_isolated_eye(context) && pair.current_eye < 2)
+		{
+			return pair.current_eye;
+		}
+		return 0xFFFFFFFFu;
 	}
 
 	ID3D11RenderTargetView* isolated_color_view(const std::uint64_t pair_id,
@@ -1523,6 +2083,7 @@ namespace vr::engine_stereo_eye_resources
 		}
 		pair.current_eye=auxiliary_scene::view_index;
 		active_eye.store(auxiliary_scene::view_index,std::memory_order_release);
+		post_restore_dirty.store(true,std::memory_order_release);
 		return rebind_inherited_state(context) && !pair.failed;
 	}
 
@@ -1552,6 +2113,7 @@ namespace vr::engine_stereo_eye_resources
 		if (pair.failed) return false;
 		pair.current_eye = eye;
 		active_eye.store(eye, std::memory_order_release);
+		post_restore_dirty.store(true, std::memory_order_release);
 		if (!rebind_inherited_state(
 			reinterpret_cast<ID3D11DeviceContext*>(pair.context)))
 		{
@@ -1593,8 +2155,10 @@ namespace vr::engine_stereo_eye_resources
 			else last_failure.store(failure::lifecycle, std::memory_order_release);
 			return false;
 		}
-		const auto remaining = count_bound_target_views(
-			reinterpret_cast<ID3D11DeviceContext*>(pair.context), true);
+		const auto remaining = post_restore_dirty.load(std::memory_order_acquire) ?
+			count_bound_target_views(
+				reinterpret_cast<ID3D11DeviceContext*>(pair.context), true) :
+			std::uint64_t{};
 		restore_isolated_views_remaining.fetch_add(remaining,
 			std::memory_order_relaxed);
 		if (remaining != 0)

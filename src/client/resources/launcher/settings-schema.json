@@ -158,6 +158,32 @@
     "description": "settings.cameraBobHint"
   },
   {
+    "name": "vr_renderScale",
+    "category": "basics",
+    "group": "settings.performance",
+    "label": "settings.renderScale",
+    "type": "number",
+    "unit": "unit.percent",
+    "description": "settings.renderScaleHint"
+  },
+  {
+    "name": "vr_sharpening",
+    "category": "basics",
+    "group": "settings.performance",
+    "label": "settings.sharpening",
+    "type": "number",
+    "unit": "unit.percent",
+    "description": "settings.sharpeningHint"
+  },
+  {
+    "name": "vr_hiddenAreaMesh",
+    "category": "basics",
+    "group": "settings.performance",
+    "label": "settings.hiddenAreaMesh",
+    "type": "toggle",
+    "description": "settings.hiddenAreaMeshHint"
+  },
+  {
     "name": "vr_worldScale",
     "category": "calibration",
     "group": "settings.worldScale",

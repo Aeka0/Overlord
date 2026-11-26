@@ -1,5 +1,6 @@
 #include <std_include.hpp>
 #include "texture_extent.hpp"
+#include "lazy_storage.hpp"
 #include "gameplay/fixed_sniper.hpp"
 #include "gameplay/javelin_screen.hpp"
 #include "diagnostics/screen_display.hpp"
@@ -80,12 +81,24 @@ namespace vr::native_hud_capture
 			std::array<std::shared_ptr<frame>, 3> warning_slots, marker_slots;
 			std::array<std::array<std::shared_ptr<frame>,3>,remote_hud::frame_count> remote_slots;
 			std::array<std::array<std::shared_ptr<frame>,3>,3> screen_scope_slots;
-			struct raster_entry { Microsoft::WRL::ComPtr<ID3D11RasterizerState> original, clipped; };
+			struct raster_entry
+			{
+				Microsoft::WRL::ComPtr<ID3D11RasterizerState> original, clipped;
+				bool has_desc{}, scissor_enable{};
+			};
 			std::array<raster_entry,16> rasters;
+			struct depth_entry
+			{
+				Microsoft::WRL::ComPtr<ID3D11DepthStencilState> state;
+				bool disabled{};
+			};
+			std::array<depth_entry,16> depth_states;
 			std::uint64_t sequence{};
 			struct blend_entry
 			{
 				Microsoft::WRL::ComPtr<ID3D11BlendState> original, coverage, attenuation, subtractive, additive, opaque;
+				D3D11_BLEND_DESC desc{};
+				bool has_desc{};
 			};
 			std::array<blend_entry, 16> blends;
 			Microsoft::WRL::ComPtr<ID3D11PixelShader> opaque_alpha;
@@ -100,7 +113,7 @@ namespace vr::native_hud_capture
 			UINT staging_width{}, staging_height{};
 		};
 		thread_local resources gpu;
-		thread_local std::array<std::array<const void*,1024>,remote_hud::frame_count> remote_selections{};
+		thread_local lazy_array<std::array<const void*,1024>,remote_hud::frame_count> remote_selections_storage{};
 		struct scope
 		{
 			unsigned menu_index{menu_surface::surface_count};
@@ -146,13 +159,14 @@ namespace vr::native_hud_capture
 			std::array<scope,menu_surface::surface_count> scopes;
 			bool open{};
 		};
-		thread_local menu_pass global_ui_pass;
+		thread_local lazy_box<menu_pass> global_ui_pass_storage{};
 		thread_local std::array<scope,remote_hud::layer_count> global_remote;
 		thread_local std::uint64_t global_remote_epoch{},global_remote_reference{};
 		thread_local bool global_remote_valid{};
 		bool select_remote(const void*,std::span<scope,remote_hud::layer_count>,std::span<const native_menu::range>);
 		void prepare_remote(std::span<scope,remote_hud::layer_count> layers,unsigned stream,scope* tail)
 		{
+			auto& remote_selections = remote_selections_storage.get();
 			for(unsigned i=0;i<layers.size();++i)
 			{
 				auto& layer=layers[i];layer.is_remote=true;layer.remote_stream=remote_hud::index(stream,remote_hud::layer(i));
@@ -220,7 +234,8 @@ namespace vr::native_hud_capture
 		void global_ui_begin(void* commands) noexcept
 		{
 			++global_ui_dispatches;
-			if(!alive||active||global_ui_pass.open)return;
+			if(!alive||active)return;
+			if(const auto* existing = global_ui_pass_storage.get_if(); existing && existing->open)return;
 			try
 			{
 				const auto plan=native_menu::for_stream(reinterpret_cast<std::uintptr_t>(commands));
@@ -236,14 +251,17 @@ namespace vr::native_hud_capture
 				global_remote_valid=remote_epoch && select_remote(commands,global_remote,
 					plan?std::span<const native_menu::range>(plan->ranges):std::span<const native_menu::range>{});
 				if(!global_remote_valid)for(auto& layer:global_remote){layer.failed=true;layer.count=0;}
+				auto& global_ui_pass = global_ui_pass_storage.get();
 				global_ui_pass.plan=plan;if(plan)prepare_menu_scopes(global_ui_pass,graphics,&global_remote[0]);
 				global_ui_pass.open=true;active=plan?&global_ui_pass.scopes[0]:&global_remote[0];
 			}
-			catch(...){++global_ui_failures;global_ui_pass={};}
+			catch(...){++global_ui_failures;global_ui_pass_storage.zero_if_allocated();}
 		}
 		void global_ui_end(void*) noexcept
 		{
-			if(!global_ui_pass.open)return;
+			auto* const pass_ptr = global_ui_pass_storage.get_if();
+			if(!pass_ptr || !pass_ptr->open)return;
+			auto& global_ui_pass = *pass_ptr;
 			active=nullptr;
 			try
 			{
@@ -781,6 +799,36 @@ namespace vr::native_hud_capture
 			s.graphics.context->ClearRenderTargetView(out.target.Get(), transparent);
 			return true;
 		}
+		template<class Entry, std::size_t N, class KeyPtr, class GetKey>
+		Entry* find_cached_slot(std::array<Entry, N>& entries, KeyPtr key, GetKey get_key) noexcept
+		{
+			Entry* empty{};
+			for (auto& entry : entries)
+			{
+				auto* current = get_key(entry);
+				if (current == key) return &entry;
+				if (!current && !empty) empty = &entry;
+			}
+			return empty;
+		}
+		bool raster_scissor_enabled(ID3D11RasterizerState* state, resources::raster_entry*& entry,
+			D3D11_RASTERIZER_DESC* full_desc = nullptr) noexcept
+		{
+			entry = find_cached_slot(gpu.rasters, state, [](const auto& item) { return item.original.Get(); });
+			if (entry && entry->has_desc && (!full_desc || entry->clipped))
+				return entry->scissor_enable;
+			D3D11_RASTERIZER_DESC desc{};
+			state->GetDesc(&desc);
+			const bool scissor_enable = desc.ScissorEnable != FALSE;
+			if (entry && !entry->has_desc)
+			{
+				entry->original = state;
+				entry->scissor_enable = scissor_enable;
+				entry->has_desc = true;
+			}
+			if (full_desc) *full_desc = desc;
+			return scissor_enable;
+		}
 		void copy_draw_to(scope& s,ID3D11DeviceContext* context, UINT count, UINT start, INT base,
 			engine_stereo_draw_indexed::draw_original original) noexcept
 		{
@@ -820,9 +868,8 @@ namespace vr::native_hud_capture
 				// Scissor rectangles are irrelevant when the rasterizer disables them.
 				Microsoft::WRL::ComPtr<ID3D11RasterizerState> raster;
 				context->RSGetState(&raster);
-				D3D11_RASTERIZER_DESC raster_desc{};
-				if (raster) raster->GetDesc(&raster_desc);
-				if (raster_desc.ScissorEnable)
+				resources::raster_entry* raster_slot{};
+				if (raster && raster_scissor_enabled(raster.Get(), raster_slot))
 				{
 					if (scissor_count != 1) return;
 					if (scissors[0].left > 0 || scissors[0].top > 0 || scissors[0].right < v.Width || scissors[0].bottom < v.Height) return;
@@ -838,14 +885,41 @@ namespace vr::native_hud_capture
 			{ ++invalid_targets; s.diagnostic_rejections|=screen_probe::hud_target; s.failed = true; return; }
 			if (depth)
 			{
-				D3D11_DEPTH_STENCIL_DESC state{};
-				if (depth_state) depth_state->GetDesc(&state);
 				// Null state is D3D's depth-enabled default. A merely bound, disabled
 				// DSV is harmless; real depth/stencil effects need their own route.
-				if (!depth_state || state.DepthEnable || state.StencilEnable)
+				if (!depth_state)
+				{ ++unsupported_depth; s.diagnostic_rejections|=screen_probe::hud_depth; s.failed = true; return; }
+				auto* depth_slot = find_cached_slot(gpu.depth_states, depth_state.Get(), [](const auto& item) { return item.state.Get(); });
+				bool disabled{};
+				if (depth_slot && depth_slot->state)
+					disabled = depth_slot->disabled;
+				else
+				{
+					D3D11_DEPTH_STENCIL_DESC state{};
+					depth_state->GetDesc(&state);
+					disabled = !state.DepthEnable && !state.StencilEnable;
+					if (depth_slot)
+					{
+						depth_slot->state = depth_state;
+						depth_slot->disabled = disabled;
+					}
+				}
+				if (!disabled)
 				{ ++unsupported_depth; s.diagnostic_rejections|=screen_probe::hud_depth; s.failed = true; return; }
 			}
-			D3D11_BLEND_DESC desc{}; blend->GetDesc(&desc);
+			auto* blend_slot = find_cached_slot(gpu.blends, blend.Get(), [](const auto& item) { return item.original.Get(); });
+			D3D11_BLEND_DESC fallback_desc{};
+			if (blend_slot)
+			{
+				if (!blend_slot->has_desc)
+				{
+					blend->GetDesc(&blend_slot->desc);
+					blend_slot->original = blend;
+					blend_slot->has_desc = true;
+				}
+			}
+			else blend->GetDesc(&fallback_desc);
+			const D3D11_BLEND_DESC& desc = blend_slot ? blend_slot->desc : fallback_desc;
 			const auto& source = desc.RenderTarget[0];
 			if(s.screen_diagnostic&&s.scope_layer<3)
 			{
@@ -853,10 +927,11 @@ namespace vr::native_hud_capture
 				observed.blend_dst[s.scope_layer]=source.DestBlend;observed.blend_op[s.scope_layer]=source.BlendOp;
 			}
 			D3D11_BLEND_DESC coverage_desc{};
-			last_blend_src.store(source.SrcBlend); last_blend_dst.store(source.DestBlend);
-			last_blend_op.store(source.BlendOp);
-			last_material.store(image_command ? quad.material : 0);
-			last_color.store(image_command ? quad.color : 0xffffffff);
+			last_blend_src.store(source.SrcBlend, std::memory_order_relaxed);
+			last_blend_dst.store(source.DestBlend, std::memory_order_relaxed);
+			last_blend_op.store(source.BlendOp, std::memory_order_relaxed);
+			last_material.store(image_command ? quad.material : 0, std::memory_order_relaxed);
+			last_color.store(image_command ? quad.color : 0xffffffff, std::memory_order_relaxed);
 			const bool black_unlit = source.BlendOp == D3D11_BLEND_OP_REV_SUBTRACT &&
 				is_black_unlit_quad(s.copying_command, context);
 			const bool subtractive=s.is_narrative_subtractive || (s.is_screen_scope && !s.is_weapon_screen && s.scope_layer==1);
@@ -901,15 +976,10 @@ namespace vr::native_hud_capture
 				const auto color=narrative_ui::fade_color(image_material,quad.color);
 				std::memcpy(mapped.pData,color.data(),sizeof(color));context->Unmap(gpu.text_fade_color.Get(),0);
 			}
-			ID3D11BlendState* coverage{};
-			for (auto& entry : gpu.blends)
-			{
-				if (entry.original && entry.original.Get()!=blend.Get()) continue;
-				auto& cached=opaque ? entry.opaque : subtractive ? entry.subtractive : additive ? entry.additive : attenuating ? entry.attenuation : entry.coverage;
-				if (!cached && FAILED(s.graphics.device->CreateBlendState(&coverage_desc,&cached))) { s.failed = true; return; }
-				entry.original = blend; coverage = cached.Get(); break;
-			}
-			if (!coverage) { s.failed = true; return; }
+			if (!blend_slot) { s.failed = true; return; }
+			auto& cached = opaque ? blend_slot->opaque : subtractive ? blend_slot->subtractive : additive ? blend_slot->additive : attenuating ? blend_slot->attenuation : blend_slot->coverage;
+			if (!cached && FAILED(s.graphics.device->CreateBlendState(&coverage_desc, &cached))) { s.failed = true; return; }
+			ID3D11BlendState* coverage = cached.Get();
 			if (menu || s.is_narrative || s.is_warning || s.is_damage || s.is_screen_scope || s.is_remote)
 			{
 				const auto& v = viewports[0];
@@ -951,27 +1021,25 @@ namespace vr::native_hud_capture
 			{
 				context->RSGetState(&original_raster);
 				if (!original_raster) { s.failed=true; return; }
-				D3D11_RASTERIZER_DESC raster{}; original_raster->GetDesc(&raster);
+				resources::raster_entry* raster_slot{};
+				D3D11_RASTERIZER_DESC raster{};
+				const bool scissor_enable = raster_scissor_enabled(original_raster.Get(), raster_slot, &raster);
+				if (!raster_slot) { s.failed=true; return; }
 				D3D11_RECT tile{static_cast<LONG>(s.atlas_x),static_cast<LONG>(s.atlas_y),
 					static_cast<LONG>(s.atlas_x+s.bounds.right-s.bounds.x),static_cast<LONG>(s.atlas_y+s.bounds.bottom-s.bounds.y)};
-				if (raster.ScissorEnable)
+				if (scissor_enable)
 				{
 					if (scissor_count!=1) { s.failed=true; return; }
 					tile.left=std::max(tile.left,translated_scissors[0].left); tile.top=std::max(tile.top,translated_scissors[0].top);
 					tile.right=std::max(tile.left,std::min(tile.right,translated_scissors[0].right));
 					tile.bottom=std::max(tile.top,std::min(tile.bottom,translated_scissors[0].bottom));
 				}
-				ID3D11RasterizerState* clipped{};
-				for (auto& entry:gpu.rasters)
+				if (!raster_slot->clipped)
 				{
-					if (entry.original.Get()==original_raster.Get()) { clipped=entry.clipped.Get(); break; }
-					if (entry.original) continue;
 					raster.ScissorEnable=TRUE;
-					if (FAILED(s.graphics.device->CreateRasterizerState(&raster,&entry.clipped))) { s.failed=true; return; }
-					entry.original=original_raster; clipped=entry.clipped.Get(); break;
+					if (FAILED(s.graphics.device->CreateRasterizerState(&raster,&raster_slot->clipped))) { s.failed=true; return; }
 				}
-				if (!clipped) { s.failed=true; return; }
-				translated_scissors[0]=tile; translated_count=1; context->RSSetState(clipped);
+				translated_scissors[0]=tile; translated_count=1; context->RSSetState(raster_slot->clipped.Get());
 			}
 			auto* target = s.output->target.Get();
 			context->OMSetRenderTargets(1, &target, nullptr);
@@ -1002,14 +1070,14 @@ namespace vr::native_hud_capture
 				context->PSSetShader(shader.Get(),classes.data(),class_count);
 				for(UINT i=0;i<class_count;++i)if(classes[i])classes[i]->Release();
 			}
-			context->OMSetRenderTargets(8, targets.data(), depth.Get());
+			context->OMSetRenderTargets(1, targets.data(), depth.Get());
 			context->OMSetBlendState(blend.Get(), factors, mask);
 			context->RSSetViewports(viewport_count, viewports.data());
 			context->RSSetScissorRects(scissor_count, scissors.data());
 			if (s.is_marker) context->RSSetState(original_raster.Get());
-			++s.draws; ++copied_draws;
-			if(s.menu_index<menu_surface::surface_count)++menu_draws;
-			if (source.BlendOp == D3D11_BLEND_OP_REV_SUBTRACT) ++black_subtractive_draws;
+			++s.draws; copied_draws.fetch_add(1, std::memory_order_relaxed);
+			if(s.menu_index<menu_surface::surface_count)menu_draws.fetch_add(1, std::memory_order_relaxed);
+			if (source.BlendOp == D3D11_BLEND_OP_REV_SUBTRACT) black_subtractive_draws.fetch_add(1, std::memory_order_relaxed);
 		}
 		void copy_draw(ID3D11DeviceContext* context,UINT count,UINT start,INT base,
 			engine_stereo_draw_indexed::draw_original original) noexcept
@@ -1048,7 +1116,11 @@ namespace vr::native_hud_capture
 			// Shader binding is established by the native handler/flush, not here.
 			const auto* selected_command = *cursor;
 			copying_scope = selected;
-			const auto exit = gsl::finally([] { copying_scope = nullptr; });
+			engine_stereo_draw_indexed::set_draw_copy_observer(copy_draw);
+			const auto exit = gsl::finally([] {
+				engine_stereo_draw_indexed::set_draw_copy_observer(nullptr);
+				copying_scope = nullptr;
+			});
 			selected->copying_command = selected_command;
 			// Private scratch keeps the submitted stream immutable. Native handlers
 			// still shape and draw all glyphs, including localized text and shadows.
@@ -1579,7 +1651,6 @@ namespace vr::native_hud_capture
 			if(verify(0x14079c3e0,compass)&&*reinterpret_cast<const std::uintptr_t*>(0x1409b1ce0)==0x14079c3e0)
 				compass_quad_hook.create(0x14079c3e0,compass_quad_stub);
 			else console::error("[VR menus] native compass quad signature/table rejected\n");
-			engine_stereo_draw_indexed::set_draw_copy_observer(copy_draw);
 			// This native loop dispatches the unfiltered global UI directly through
 			// the same table. Frontend menus never enter the per-view HUD dispatcher.
 			constexpr std::uint8_t ui_begin[]{0x48,0x89,0x84,0x24,0xa8,0,0,0};

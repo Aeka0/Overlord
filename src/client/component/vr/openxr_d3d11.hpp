@@ -23,6 +23,7 @@ namespace vr::openxr
 		std::vector<Microsoft::WRL::ComPtr<ID3D11RenderTargetView>> render_targets;
 		bool acquired{};
 		bool waited{};
+		bool drawn{};
 		std::uint32_t acquired_index{};
 	};
 

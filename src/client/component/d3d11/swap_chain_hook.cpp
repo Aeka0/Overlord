@@ -355,10 +355,11 @@ namespace d3d11::swap_chain_hook
 			const wait_timing::context_scope timing_context({wait_timing::identity::present_frame,
 				event.frame_index, event.graphics.generation, sync_interval});
 			detail::notify_present_pre(event);
+			const UINT effective_sync_interval = detail::is_vr_present_paced() ? 0u : sync_interval;
 			const auto result = [&]
 			{
 				const wait_timing::scope timing(wait_timing::site::desktop_present);
-				return trampoline(swap_chain, sync_interval, flags);
+				return trampoline(swap_chain, effective_sync_interval, flags);
 			}();
 			const auto completed = std::chrono::steady_clock::now();
 			if (FAILED(result) && graphics.device != nullptr)

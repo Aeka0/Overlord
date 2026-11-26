@@ -359,5 +359,12 @@
   "settings.resetHandAngles": "Réinitialiser cette main",
   "settings.mirrorOtherHand": "Refléter l’autre main",
   "settings.debugSunShadowCapture": "Capture des ombres du soleil",
-  "settings.debugSunShadowCaptureHint": "Inclut les ombres du soleil dans le diagnostic Ctrl+Maj+F8. Environ 29 secondes. Actif au prochain lancement du jeu."
+  "settings.debugSunShadowCaptureHint": "Inclut les ombres du soleil dans le diagnostic Ctrl+Maj+F8. Environ 29 secondes. Actif au prochain lancement du jeu.",
+  "settings.performance": "Performances",
+  "settings.renderScale": "Échelle de rendu VR",
+  "settings.renderScaleHint": "Ajuste la résolution de rendu VR de 50 % à 120 % (par défaut : 100 %). Baissez à 80 %–90 % pour gagner en fluidité dans les grands niveaux en extérieur. S’applique au redémarrage du jeu ou avec vr_reinit.",
+  "settings.sharpening": "Netteté FidelityFX CAS",
+  "settings.sharpeningHint": "Applique l’affinage spatial AMD FidelityFX CAS pour restaurer les détails (0 % à 100 %, par défaut : 0 %). S’applique immédiatement.",
+  "settings.hiddenAreaMesh": "Masque de zone cachée OpenXR",
+  "settings.hiddenAreaMeshHint": "Masque en profondeur les coins invisibles des lentilles OpenXR afin d’ignorer les pixels hors champ lors du rendu. Améliore les performances GPU ; activé par défaut."
 }

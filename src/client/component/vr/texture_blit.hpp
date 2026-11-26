@@ -19,8 +19,10 @@ namespace vr::texture_blit
 		{
 			Microsoft::WRL::ComPtr<ID3D11Texture2D> texture;
 			Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> view;
+			D3D11_TEXTURE2D_DESC description{};
 			encoding format{};
 		};
+		Microsoft::WRL::ComPtr<ID3D11Device> validated_device_;
 		Microsoft::WRL::ComPtr<ID3D11Device> device_;
 		Microsoft::WRL::ComPtr<ID3D11DeviceContext> deferred_;
 		Microsoft::WRL::ComPtr<ID3D11VertexShader> vertex_;
@@ -43,6 +45,7 @@ namespace vr::texture_blit
 			unsigned width, height;
 			encoding source_encoding;
 			float dim{};
+			float sharpness{};
 		};
 		bool draw(const draw_request&, std::string& error);
 		void reset() noexcept;

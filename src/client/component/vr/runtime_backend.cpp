@@ -186,7 +186,6 @@ namespace vr
 		}
 		void poll_capture(const d3d11::device_snapshot& graphics)
 		{
-			const wait_timing::scoped_lock lock(mutex_, wait_timing::site::dispatch_poll);
 			if (choice_.valid)
 				visit([&](auto& backend) { return backend.poll_capture(graphics); });
 		}
@@ -214,13 +213,15 @@ namespace vr
 		}
 		bool requested_enabled() const
 		{
-			const wait_timing::scoped_lock lock(mutex_, wait_timing::site::dispatch_other);
-			return visit([&](auto& backend) { return backend.requested_enabled(); });
+			return visit([&](const auto& backend) { return backend.requested_enabled(); });
 		}
 		bool applied_enabled() const
 		{
-			const wait_timing::scoped_lock lock(mutex_, wait_timing::site::dispatch_enabled);
-			return choice_.valid && visit([&](auto& backend) { return backend.applied_enabled(); });
+			return choice_.valid && visit([&](const auto& backend) { return backend.applied_enabled(); });
+		}
+		bool is_session_running() const noexcept
+		{
+			return choice_.valid && visit([&](const auto& backend) { return backend.is_session_running(); });
 		}
 		bool requires_present_owner_execution() const noexcept
 		{
@@ -302,7 +303,6 @@ namespace vr
 	}
 	void runtime_backend::poll_capture(const d3d11::device_snapshot& value)
 	{
-		const wait_timing::scoped_lock lock(mutex_, wait_timing::site::facade_poll);
 		implementation_->poll_capture(value);
 	}
 	void runtime_backend::on_resize_before(const d3d11::resize_event& value) noexcept
@@ -327,13 +327,15 @@ namespace vr
 	}
 	bool runtime_backend::requested_enabled() const
 	{
-		const wait_timing::scoped_lock lock(mutex_, wait_timing::site::facade_other);
 		return implementation_->requested_enabled();
 	}
 	bool runtime_backend::applied_enabled() const
 	{
-		const wait_timing::scoped_lock lock(mutex_, wait_timing::site::facade_enabled);
 		return implementation_->applied_enabled();
+	}
+	bool runtime_backend::is_session_running() const noexcept
+	{
+		return implementation_->is_session_running();
 	}
 	bool runtime_backend::requires_present_owner_execution() const noexcept
 	{

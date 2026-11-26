@@ -60,15 +60,23 @@ namespace vr::spatial_panel
 			float outside_dim, ID3D11ShaderResourceView* caption=nullptr, const vec4& caption_pixels={}) noexcept;
 	private:
 		enum class blur_mode {none,alpha_mask,panel};
+		struct validated_surfaces
+		{
+			ID3D11Device* device{};
+			Microsoft::WRL::ComPtr<ID3D11Resource> output;
+			Microsoft::WRL::ComPtr<ID3D11Resource> background;
+			bool internal_background{};
+			bool internal_ink{};
+		};
 		bool ensure(ID3D11Device* device) noexcept;
-		bool prepare_background_copy(ID3D11DeviceContext*,ID3D11RenderTargetView*,unsigned,unsigned,bool mipmapped=false) noexcept;
+		bool prepare_background_copy(ID3D11DeviceContext*,ID3D11RenderTargetView*,unsigned,unsigned,bool mipmapped=false,validated_surfaces* out=nullptr) noexcept;
 		bool draw_internal(ID3D11DeviceContext*, ID3D11ShaderResourceView*, ID3D11ShaderResourceView*,
 			ID3D11RenderTargetView*, const projected_quad&, unsigned, unsigned, float, float,
 			const vec4& canvas, bool screen_layer, bool optic_layer = false,
 			ID3D11DepthStencilView* scene_depth = nullptr, const vec4& source_window = {0,0,1,1},
 			std::span<const blur_region> backdrops={},float pupil_radius=1.f,bool screen_scope=false,
 			ID3D11ShaderResourceView* shadow=nullptr,ID3D11ShaderResourceView* flash=nullptr,blur_mode blur=blur_mode::none,float eye_box_scale=1.f,
-			const vec4& screen_fade={}) noexcept;
+			const vec4& screen_fade={},const validated_surfaces& validated={}) noexcept;
 		Microsoft::WRL::ComPtr<ID3D11Device> device_;
 		Microsoft::WRL::ComPtr<ID3D11DeviceContext> deferred_;
 		Microsoft::WRL::ComPtr<ID3D11VertexShader> vs_;
@@ -92,6 +100,9 @@ namespace vr::spatial_panel
 		Microsoft::WRL::ComPtr<ID3D11DepthStencilState> depth_;
 		Microsoft::WRL::ComPtr<ID3D11DepthStencilState> scene_depth_;
 		Microsoft::WRL::ComPtr<ID3D11BlendState> blend_;
+		unsigned background_width_{}, background_height_{}, ink_width_{}, ink_height_{};
+		DXGI_FORMAT background_format_{DXGI_FORMAT_UNKNOWN}, background_view_format_{DXGI_FORMAT_UNKNOWN};
+		bool background_mipmapped_{};
 		bool ready_{};
 		scope_draw_status scope_status_;
 		scope_draw_status initialization_status_;

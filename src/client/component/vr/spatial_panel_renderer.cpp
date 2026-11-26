@@ -67,11 +67,12 @@ float4 screen_ps(Vertex v) : SV_Target {
     // before native source-over, then return to the linear eye target once.
     float3 bg = to_encoded(scene.Sample(linear_clamp, v.uv));
     if (blur_alpha > 0) {
-        float3 blurred = 0;
-        [unroll] for (int y=-1; y<=1; ++y)
-            [unroll] for (int x=-1; x<=1; ++x)
-                blurred += scene.Sample(linear_clamp,v.uv+float2(x,y)*settings.xy*radius)
-                    * (x==0 ? 2 : 1) * (y==0 ? 2 : 1) / 16.0;
+        float2 offset = settings.xy * (0.5 * radius);
+        float3 blurred = (
+            scene.Sample(linear_clamp, v.uv + float2(-offset.x, -offset.y)) +
+            scene.Sample(linear_clamp, v.uv + float2( offset.x, -offset.y)) +
+            scene.Sample(linear_clamp, v.uv + float2(-offset.x,  offset.y)) +
+            scene.Sample(linear_clamp, v.uv + float2( offset.x,  offset.y))) * 0.25;
         bg = lerp(bg,to_encoded(blurred),blur_alpha);
     }
     // Native tutorial borders precede their text and use reverse subtraction.
@@ -92,13 +93,14 @@ float4 ps(Vertex v) : SV_Target {
     float3 original = scene.Sample(linear_clamp, uv);
     float3 background = original;
     if (coverage > 0) {
-        // Bounded 3x3 tent kernel, only over the projected panel's pixels.
+        // Bilinear 4-tap tent kernel, only over the projected panel's pixels.
         // Sample the current EYE's display image, never a desktop/other-eye copy.
-        float3 blurred = 0;
-        [unroll] for (int y = -1; y <= 1; ++y)
-            [unroll] for (int x = -1; x <= 1; ++x)
-                blurred += scene.Sample(linear_clamp, uv + float2(x,y)*settings.xy*settings.z)
-                    * (x == 0 ? 2 : 1) * (y == 0 ? 2 : 1) / 16.0;
+        float2 offset = settings.xy * (0.5 * settings.z);
+        float3 blurred = (
+            scene.Sample(linear_clamp, uv + float2(-offset.x, -offset.y)) +
+            scene.Sample(linear_clamp, uv + float2( offset.x, -offset.y)) +
+            scene.Sample(linear_clamp, uv + float2(-offset.x,  offset.y)) +
+            scene.Sample(linear_clamp, uv + float2( offset.x,  offset.y))) * 0.25;
         // A native mask is independent of glyph/border ink: the clear area
         // behind the ammo counter still receives its authored background blur.
         background = lerp(original, blurred, coverage);
@@ -113,16 +115,14 @@ float4 mask_ps(Vertex v) : SV_Target {
     if (coverage <= 0) discard;
     float2 uv = v.position.xy*settings.xy;
     float3 original = scene.SampleLevel(linear_clamp,uv,0), blurred = 0;
-    // Five-tap binomial weights per axis: smoother low-frequency backing
-    // without the separated sharp copies produced by a wide 3x3 kernel.
-    static const float weights[5] = {1,4,6,4,1};
-    // Prefilter each tap's footprint before widening the kernel. Sparse
-    // full-resolution taps alone preserve/alias fine detail at even radii.
+    // Mip-prefiltered 3x3 binomial weights per axis: smooth low-frequency
+    // backing with 9 taps instead of 25 full-width fetches.
+    static const float weights[3] = {1,2,1};
     float lod = max(0,log2(max(settings.z,1)));
-    [unroll] for (int y=-2;y<=2;++y)
-        [unroll] for (int x=-2;x<=2;++x)
+    [unroll] for (int y=-1;y<=1;++y)
+        [unroll] for (int x=-1;x<=1;++x)
             blurred += scene.SampleLevel(linear_clamp,uv+float2(x,y)*settings.xy*settings.z,lod)
-                * weights[x+2] * weights[y+2] / 256.0;
+                * weights[x+1] * weights[y+1] / 16.0;
     return float4(lerp(original,blurred,coverage),1);
 }
 float4 optic_ps(Vertex v) : SV_Target {
@@ -324,27 +324,41 @@ float4 recording_ps(Vertex v) : SV_Target {
 	{
 		if (!context || context->GetType()!=D3D11_DEVICE_CONTEXT_IMMEDIATE || !destination || !layers ||
 			!count || count>64 || !texture_extent::valid(width,height)) return false;
-		Microsoft::WRL::ComPtr<ID3D11Device> device, owner; context->GetDevice(&device); destination->GetDevice(&owner);
-		if (owner.Get()!=device.Get() || !ensure(device.Get())) return false;
 		for (unsigned i=0;i<count;++i)
 		{
 			const auto& layer=layers[i];
 			if (!layer.ink) return false;
-			layer.ink->GetDevice(&owner); if (owner.Get()!=device.Get()) return false;
 			for (const auto& v:layer.corners) for (float x:v) if (!std::isfinite(x) || v[3]<=0) return false;
 			for (float x:layer.uv) if (!std::isfinite(x) || x<0 || x>1) return false;
 			if (layer.uv[2]<=0 || layer.uv[3]<=0 || layer.uv[0]+layer.uv[2]>1 || layer.uv[1]+layer.uv[3]>1) return false;
 		}
-		D3D11_TEXTURE2D_DESC desc{}; if (ink_copy_) ink_copy_->GetDesc(&desc);
-		if (!ink_view_ || desc.Width!=width || desc.Height!=height)
+		validated_surfaces surfaces;
+		if (!prepare_background_copy(context, destination, width, height, false, &surfaces)) return false;
+		if (surfaces.output.Get()==ink_copy_.Get()) return false;
+		Microsoft::WRL::ComPtr<ID3D11Device> owner;
+		ID3D11ShaderResourceView* validated_ink{};
+		for (unsigned i=0;i<count;++i)
 		{
-			ink_copy_.Reset(); ink_target_.Reset(); ink_view_.Reset(); desc={};
+			if (layers[i].ink==validated_ink) continue;
+			layers[i].ink->GetDevice(&owner); if (owner.Get()!=device_.Get()) return false;
+			validated_ink=layers[i].ink;
+		}
+		if (!ink_view_ || ink_width_!=width || ink_height_!=height)
+		{
+			ink_copy_.Reset(); ink_target_.Reset(); ink_view_.Reset();
+			ink_width_=ink_height_=0;
+			D3D11_TEXTURE2D_DESC desc{};
 			desc.Width=width; desc.Height=height; desc.ArraySize=desc.MipLevels=1;
 			desc.Format=DXGI_FORMAT_R8G8B8A8_UNORM; desc.SampleDesc.Count=1;
 			desc.BindFlags=D3D11_BIND_SHADER_RESOURCE|D3D11_BIND_RENDER_TARGET;
-			if (FAILED(device->CreateTexture2D(&desc,nullptr,&ink_copy_)) ||
-				FAILED(device->CreateRenderTargetView(ink_copy_.Get(),nullptr,&ink_target_)) ||
-				FAILED(device->CreateShaderResourceView(ink_copy_.Get(),nullptr,&ink_view_))) return false;
+			if (FAILED(device_->CreateTexture2D(&desc,nullptr,&ink_copy_)) ||
+				FAILED(device_->CreateRenderTargetView(ink_copy_.Get(),nullptr,&ink_target_)) ||
+				FAILED(device_->CreateShaderResourceView(ink_copy_.Get(),nullptr,&ink_view_)))
+			{
+				ink_copy_.Reset(); ink_target_.Reset(); ink_view_.Reset();
+				return false;
+			}
+			ink_width_=width; ink_height_=height;
 		}
 		const D3D11_VIEWPORT viewport{0,0,static_cast<float>(width),static_cast<float>(height),0,1};
 		const float transparent[4]{}; deferred_->ClearRenderTargetView(ink_target_.Get(),transparent);
@@ -355,6 +369,7 @@ float4 recording_ps(Vertex v) : SV_Target {
 		deferred_->VSSetShader(vs_.Get(),nullptr,0); deferred_->PSSetShader(ink_ps_.Get(),nullptr,0);
 		auto* cb=constants_.Get(); deferred_->VSSetConstantBuffers(0,1,&cb); deferred_->PSSetConstantBuffers(0,1,&cb);
 		auto* sampler=sampler_.Get(); deferred_->PSSetSamplers(0,1,&sampler);
+		ID3D11ShaderResourceView* bound_ink{};
 		for (unsigned i=0;i<count;++i)
 		{
 			D3D11_MAPPED_SUBRESOURCE mapped{};
@@ -362,14 +377,39 @@ float4 recording_ps(Vertex v) : SV_Target {
 			{ deferred_->ClearState(); return false; }
 			const constants data{layers[i].corners,{},{},layers[i].uv};
 			std::memcpy(mapped.pData,&data,sizeof(data)); deferred_->Unmap(constants_.Get(),0);
-			deferred_->PSSetShaderResources(1,1,&layers[i].ink); deferred_->Draw(4,0);
+			if (layers[i].ink!=bound_ink)
+			{
+				deferred_->PSSetShaderResources(1,1,&layers[i].ink);
+				bound_ink=layers[i].ink;
+			}
+			deferred_->Draw(4,0);
 		}
+		// Unbind ink_target_ before binding ink_view_ as PS SRV so D3D11 never
+		// observes the same resource bound simultaneously as RTV and SRV.
+		ID3D11RenderTargetView* null_rtv{};
+		deferred_->OMSetRenderTargets(1,&null_rtv,nullptr);
+		const D3D11_BOX full_box{0,0,0,width,height,1};
+		deferred_->CopySubresourceRegion(background_copy_.Get(),0,0,0,0,surfaces.output.Get(),0,&full_box);
+		constexpr projected_quad full{{{-1,1,0,1},{1,1,0,1},{-1,-1,0,1},{1,-1,0,1}}};
+		D3D11_MAPPED_SUBRESOURCE mapped{};
+		if (FAILED(deferred_->Map(constants_.Get(),0,D3D11_MAP_WRITE_DISCARD,0,&mapped)))
+		{ deferred_->ClearState(); return false; }
+		const constants composite{full,{1.f/width,1.f/height,0,0},{0,0,1,1},{},{0,0,1,1},{0,0,0,1}};
+		std::memcpy(mapped.pData,&composite,sizeof(composite)); deferred_->Unmap(constants_.Get(),0);
+		ID3D11ShaderResourceView* textures[]{background_view_.Get(),ink_view_.Get(),nullptr,nullptr};
+		deferred_->PSSetShaderResources(0,4,textures);
+		deferred_->OMSetRenderTargets(1,&destination,nullptr);
+		deferred_->OMSetBlendState(blend_.Get(),nullptr,UINT_MAX);
+		const D3D11_RECT full_rect{0,0,static_cast<LONG>(width),static_cast<LONG>(height)};
+		deferred_->RSSetState(clipped_raster_.Get());
+		deferred_->RSSetScissorRects(1,&full_rect);
+		deferred_->PSSetShader(screen_ps_.Get(),nullptr,0);
+		deferred_->Draw(4,0);
 		Microsoft::WRL::ComPtr<ID3D11CommandList> commands;
 		if (FAILED(deferred_->FinishCommandList(FALSE,&commands))) { deferred_->ClearState(); return false; }
 		if (!native_conversion_command_list::mark(commands.Get())) return false;
 		context->ExecuteCommandList(commands.Get(),TRUE);
-		constexpr projected_quad full{{{-1,1,0,1},{1,1,0,1},{-1,-1,0,1},{1,-1,0,1}}};
-		return draw_screen_layer(context,ink_view_.Get(),destination,full,width,height,{});
+		return true;
 	}
 	bool renderer::draw(ID3D11DeviceContext* context, ID3D11ShaderResourceView* background,
 		ID3D11ShaderResourceView* ink, ID3D11RenderTargetView* destination,
@@ -386,27 +426,28 @@ float4 recording_ps(Vertex v) : SV_Target {
 			blur_pixels, blur_strength, {}, false,false,nullptr,blur_window,{},1,false,blur_mask);
 	}
 	bool renderer::prepare_background_copy(ID3D11DeviceContext* context,ID3D11RenderTargetView* destination,
-		unsigned width,unsigned height,bool mipmapped) noexcept
+		unsigned width,unsigned height,bool mipmapped,validated_surfaces* out) noexcept
 	{
-		if(!context||!destination||!width||!height||width>16384||height>16384)return false;
-		Microsoft::WRL::ComPtr<ID3D11Device> device; context->GetDevice(&device);
-		if (!ensure(device.Get())) return false;
+		if(!context||context->GetType()!=D3D11_DEVICE_CONTEXT_IMMEDIATE||!destination||!texture_extent::valid(width,height))return false;
+		Microsoft::WRL::ComPtr<ID3D11Device> device,owner; context->GetDevice(&device); destination->GetDevice(&owner);
+		if (owner.Get()!=device.Get() || !ensure(device.Get())) return false;
 		Microsoft::WRL::ComPtr<ID3D11Resource> resource; destination->GetResource(&resource);
+		if (resource.Get() == background_copy_.Get()) return false;
 		Microsoft::WRL::ComPtr<ID3D11Texture2D> texture;
 		if (FAILED(resource.As(&texture))) return false;
 		D3D11_TEXTURE2D_DESC desc{}; texture->GetDesc(&desc);
 		D3D11_RENDER_TARGET_VIEW_DESC target_desc{}; destination->GetDesc(&target_desc);
 		if (desc.Width != width || desc.Height != height || desc.SampleDesc.Count != 1 || desc.ArraySize != 1 ||
 			desc.MipLevels != 1 || target_desc.ViewDimension != D3D11_RTV_DIMENSION_TEXTURE2D) return false;
-		D3D11_TEXTURE2D_DESC previous{};
-		if (background_copy_) background_copy_->GetDesc(&previous);
-		D3D11_SHADER_RESOURCE_VIEW_DESC previous_view{};
-		if (background_view_) background_view_->GetDesc(&previous_view);
-		if (!background_view_ || previous.Width != width || previous.Height != height ||
-			previous.Format != desc.Format || previous_view.Format != target_desc.Format ||
-			bool(previous.MiscFlags&D3D11_RESOURCE_MISC_GENERATE_MIPS)!=mipmapped)
+		if (!background_view_ || background_width_ != width || background_height_ != height ||
+			background_format_ != desc.Format || background_view_format_ != target_desc.Format ||
+			background_mipmapped_ != mipmapped)
 		{
 			background_copy_.Reset(); background_view_.Reset();
+			background_width_=background_height_=0;
+			background_format_=background_view_format_=DXGI_FORMAT_UNKNOWN;
+			background_mipmapped_=false;
+			const auto texture_format=desc.Format;
 			desc.BindFlags = D3D11_BIND_SHADER_RESOURCE; desc.Usage = D3D11_USAGE_DEFAULT;
 			desc.CPUAccessFlags = desc.MiscFlags = 0;
 			if(mipmapped)
@@ -418,7 +459,20 @@ float4 recording_ps(Vertex v) : SV_Target {
 			D3D11_SHADER_RESOURCE_VIEW_DESC srv{}; srv.Format = target_desc.Format;
 			srv.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2D; srv.Texture2D.MipLevels = mipmapped?UINT(-1):1;
 			if (FAILED(device->CreateTexture2D(&desc, nullptr, &background_copy_)) ||
-				FAILED(device->CreateShaderResourceView(background_copy_.Get(), &srv, &background_view_))) return false;
+				FAILED(device->CreateShaderResourceView(background_copy_.Get(), &srv, &background_view_)))
+			{
+				background_copy_.Reset(); background_view_.Reset();
+				return false;
+			}
+			background_width_=width; background_height_=height;
+			background_format_=texture_format; background_view_format_=target_desc.Format;
+			background_mipmapped_=mipmapped;
+		}
+		if (out)
+		{
+			out->device=device_.Get();
+			out->output=std::move(resource);
+			out->internal_background=true;
 		}
 		return true;
 	}
@@ -426,19 +480,22 @@ float4 recording_ps(Vertex v) : SV_Target {
 		const projected_quad& corners,unsigned width,unsigned height,float radius,float strength,ID3D11DepthStencilView* scene_depth) noexcept
 	{
 		if(presentation_options::blur_disabled())return true;
-		if(!mask||!prepare_background_copy(context,destination,width,height,true))return false;
+		validated_surfaces surfaces;
+		if(!mask||!prepare_background_copy(context,destination,width,height,true,&surfaces))return false;
 		for(const auto& v:corners)if(v[3]<=.001f)return false;
 		return draw_internal(context,background_view_.Get(),mask,destination,corners,width,height,radius,strength,
-			{},false,false,scene_depth,{0,0,1,1},{},1,false,nullptr,nullptr,blur_mode::alpha_mask);
+			{},false,false,scene_depth,{0,0,1,1},{},1,false,nullptr,nullptr,blur_mode::alpha_mask,1,{},surfaces);
 	}
 	bool renderer::draw_panel_blur(ID3D11DeviceContext* context,ID3D11RenderTargetView* destination,
 		const projected_quad& corners,unsigned width,unsigned height,float radius,ID3D11DepthStencilView* scene_depth) noexcept
 	{
 		if(presentation_options::blur_disabled())return true;
-		if(!prepare_background_copy(context,destination,width,height,true))return false;
+		validated_surfaces surfaces;
+		if(!prepare_background_copy(context,destination,width,height,true,&surfaces))return false;
 		if(std::none_of(corners.begin(),corners.end(),[](const auto& v){return v[3]>.001f;}))return false;
+		surfaces.internal_ink=true;
 		return draw_internal(context,background_view_.Get(),background_view_.Get(),destination,corners,width,height,radius,1,
-			{},false,false,scene_depth,{0,0,1,1},{},1,false,nullptr,nullptr,blur_mode::panel);
+			{},false,false,scene_depth,{0,0,1,1},{},1,false,nullptr,nullptr,blur_mode::panel,1,{},surfaces);
 	}
 	bool renderer::draw_screen_layer(ID3D11DeviceContext* context, ID3D11ShaderResourceView* ink,
 		ID3D11RenderTargetView* destination, const projected_quad& canvas,
@@ -447,7 +504,8 @@ float4 recording_ps(Vertex v) : SV_Target {
 		if(presentation_options::blur_disabled())backdrops={};
 		for(float value:fade)if(!std::isfinite(value)||value<0||value>1)return false;
 		for(unsigned i=0;i<3;++i)if(fade[i]>fade[3])return false;
-		if(!ink||!prepare_background_copy(context,destination,width,height))return false;
+		validated_surfaces surfaces;
+		if(!ink||!prepare_background_copy(context,destination,width,height,false,&surfaces))return false;
 		for (const auto& v : canvas)
 			for (float x : v) if (!std::isfinite(x) || v[3] <= .001f) return false;
 		// Head-relative canvas is parallel to the eye plane. Preserve binocular
@@ -458,7 +516,7 @@ float4 recording_ps(Vertex v) : SV_Target {
 		if (rect[2] <= .001f || rect[3] <= .001f) return false;
 		constexpr projected_quad full{{{-1,1,0,1},{1,1,0,1},{-1,-1,0,1},{1,-1,0,1}}};
 		return draw_internal(context, background_view_.Get(), ink, destination, full, width, height,
-			0, 0, rect, true,false,nullptr,{0,0,1,1},backdrops,1,false,subtractive,nullptr,blur_mode::none,1,fade);
+			0, 0, rect, true,false,nullptr,{0,0,1,1},backdrops,1,false,subtractive,nullptr,blur_mode::none,1,fade,surfaces);
 	}
 	bool renderer::draw_recording_frame(ID3D11DeviceContext* context, ID3D11RenderTargetView* target,
 		unsigned width,unsigned height,const vec4& protected_pixels,float line_pixels,
@@ -519,6 +577,7 @@ float4 recording_ps(Vertex v) : SV_Target {
 		unsigned width, unsigned height, const vec4& optic, ID3D11DepthStencilView* scene_depth,
 		const vec4& source_window,float pupil_radius,float eye_box_scale) noexcept
 	{
+		if (!context || context->GetType()!=D3D11_DEVICE_CONTEXT_IMMEDIATE || !background || !reticle || !target || !texture_extent::valid(width,height)) return false;
 		for(float x:source_window) if(!std::isfinite(x)) return false;
 		if(source_window[0]<0 || source_window[1]<0 || source_window[2]<.0001f || source_window[3]<.0001f ||
 			source_window[0]+source_window[2]>1 || source_window[1]+source_window[3]>1) return false;
@@ -527,11 +586,15 @@ float4 recording_ps(Vertex v) : SV_Target {
 		if(!std::isfinite(pupil_radius) || pupil_radius<=0 || pupil_radius>1)return false;
 		if(!std::isfinite(eye_box_scale) || eye_box_scale<1 || eye_box_scale>2)return false;
 		for (const auto& v:corners) if (v[3]<=.001f) return false;
-		if (!background || !target) return false;
+		Microsoft::WRL::ComPtr<ID3D11Device> device,owner;
+		context->GetDevice(&device);
+		background->GetDevice(&owner); if(owner.Get()!=device.Get()) return false;
+		target->GetDevice(&owner); if(owner.Get()!=device.Get()) return false;
+		if(!ensure(device.Get())) return false;
 		Microsoft::WRL::ComPtr<ID3D11Resource> source_resource,target_resource;
 		Microsoft::WRL::ComPtr<ID3D11Texture2D> source_texture,target_texture;
 		background->GetResource(&source_resource);target->GetResource(&target_resource);
-		if (FAILED(source_resource.As(&source_texture)) || FAILED(target_resource.As(&target_texture))) return false;
+		if (source_resource.Get()==target_resource.Get() || FAILED(source_resource.As(&source_texture)) || FAILED(target_resource.As(&target_texture))) return false;
 		D3D11_SHADER_RESOURCE_VIEW_DESC source_view{};background->GetDesc(&source_view);
 		D3D11_RENDER_TARGET_VIEW_DESC target_view{};target->GetDesc(&target_view);
 		if (source_view.ViewDimension!=D3D11_SRV_DIMENSION_TEXTURE2D || source_view.Texture2D.MostDetailedMip!=0 ||
@@ -543,14 +606,15 @@ float4 recording_ps(Vertex v) : SV_Target {
 		}
 		if(scene_depth)
 		{
-			Microsoft::WRL::ComPtr<ID3D11Device> owner,device;target->GetDevice(&device);scene_depth->GetDevice(&owner);
+			scene_depth->GetDevice(&owner);
 			Microsoft::WRL::ComPtr<ID3D11Resource> resource;scene_depth->GetResource(&resource);
 			Microsoft::WRL::ComPtr<ID3D11Texture2D> texture;
-			if(owner!=device || FAILED(resource.As(&texture))) return false;
+			if(owner.Get()!=device.Get() || FAILED(resource.As(&texture))) return false;
 			D3D11_TEXTURE2D_DESC desc{};texture->GetDesc(&desc);
 			if(desc.Width!=width || desc.Height!=height || desc.SampleDesc.Count!=1 || desc.ArraySize!=1) return false;
 		}
-		return draw_internal(context,background,reticle,target,corners,width,height,0,0,optic,false,true,scene_depth,source_window,{},pupil_radius,false,nullptr,nullptr,blur_mode::none,eye_box_scale);
+		validated_surfaces surfaces{device_.Get(), std::move(target_resource), std::move(source_resource), false, false};
+		return draw_internal(context,background,reticle,target,corners,width,height,0,0,optic,false,true,scene_depth,source_window,{},pupil_radius,false,nullptr,nullptr,blur_mode::none,eye_box_scale,{},surfaces);
 	}
 	bool renderer::draw_screen_scope(ID3D11DeviceContext* context,ID3D11ShaderResourceView* scene,ID3D11ShaderResourceView* ink,
 		ID3D11RenderTargetView* target,const projected_quad& canvas,unsigned width,unsigned height,ID3D11ShaderResourceView* shadow,ID3D11ShaderResourceView* flash) noexcept
@@ -566,7 +630,8 @@ float4 recording_ps(Vertex v) : SV_Target {
 		const projected_quad& corners, unsigned width, unsigned height,
 		float blur_pixels, float blur_strength, const vec4& canvas, bool screen_layer, bool optic_layer,
 		ID3D11DepthStencilView* scene_depth, const vec4& source_window,std::span<const blur_region> backdrops,float pupil_radius,bool screen_scope,
-		ID3D11ShaderResourceView* shadow,ID3D11ShaderResourceView* flash,blur_mode blur,float eye_box_scale,const vec4& screen_fade) noexcept
+		ID3D11ShaderResourceView* shadow,ID3D11ShaderResourceView* flash,blur_mode blur,float eye_box_scale,const vec4& screen_fade,
+		const validated_surfaces& validated) noexcept
 	{
 		const bool mask_only=blur!=blur_mode::none;
 		if(screen_scope)scope_status_={"inputs",0,false};
@@ -582,27 +647,61 @@ float4 recording_ps(Vertex v) : SV_Target {
 			if (region.bounds[2]<=region.bounds[0] || region.bounds[3]<=region.bounds[1] ||
 				!std::isfinite(region.alpha) || region.alpha<0 || region.alpha>1) return false;
 		}
-		Microsoft::WRL::ComPtr<ID3D11Device> device;
-		context->GetDevice(&device);
-		if(screen_scope)scope_status_.stage="resources";
-		if (!ensure(device.Get())) {if(screen_scope)scope_status_=initialization_status_;return false;}
-		if(screen_scope)scope_status_.stage="device_ownership";
-		for (ID3D11DeviceChild* child : {static_cast<ID3D11DeviceChild*>(background),
-			static_cast<ID3D11DeviceChild*>(ink), static_cast<ID3D11DeviceChild*>(destination)})
+		const bool prevalidated = validated.device && validated.device == device_.Get() && ready_ && validated.output;
+		if (!prevalidated)
 		{
-			if(!child)continue;
-			Microsoft::WRL::ComPtr<ID3D11Device> owner; child->GetDevice(&owner);
-			if (owner.Get() != device.Get()) return false;
+			Microsoft::WRL::ComPtr<ID3D11Device> device;
+			context->GetDevice(&device);
+			if(screen_scope)scope_status_.stage="resources";
+			if (!ensure(device.Get())) {if(screen_scope)scope_status_=initialization_status_;return false;}
 		}
-		Microsoft::WRL::ComPtr<ID3D11Resource> bg, fg, output;
-		if(screen_scope)scope_status_.stage="resource_alias";
-		background->GetResource(&bg); if(ink)ink->GetResource(&fg); destination->GetResource(&output);
-		if (bg.Get() == output.Get() || fg.Get() == output.Get()) return false;
+		Microsoft::WRL::ComPtr<ID3D11Resource> bg_storage, fg_storage, output_storage;
+		ID3D11Resource* output{};
+		if (prevalidated)
+		{
+			output = validated.output.Get();
+			if (!(validated.internal_background && background == background_view_.Get()))
+			{
+				if (validated.background)
+				{
+					if (validated.background.Get() == output) return false;
+				}
+				else
+				{
+					Microsoft::WRL::ComPtr<ID3D11Device> owner; background->GetDevice(&owner);
+					if (owner.Get() != device_.Get()) return false;
+					background->GetResource(&bg_storage);
+					if (bg_storage.Get() == output) return false;
+				}
+			}
+			if (ink && !(validated.internal_ink && ink == background_view_.Get()))
+			{
+				Microsoft::WRL::ComPtr<ID3D11Device> owner; ink->GetDevice(&owner);
+				if (owner.Get() != device_.Get()) return false;
+				ink->GetResource(&fg_storage);
+				if (fg_storage.Get() == output) return false;
+			}
+		}
+		else
+		{
+			if(screen_scope)scope_status_.stage="device_ownership";
+			for (ID3D11DeviceChild* child : {static_cast<ID3D11DeviceChild*>(background),
+				static_cast<ID3D11DeviceChild*>(ink), static_cast<ID3D11DeviceChild*>(destination)})
+			{
+				if(!child)continue;
+				Microsoft::WRL::ComPtr<ID3D11Device> owner; child->GetDevice(&owner);
+				if (owner.Get() != device_.Get()) return false;
+			}
+			if(screen_scope)scope_status_.stage="resource_alias";
+			background->GetResource(&bg_storage); if(ink)ink->GetResource(&fg_storage); destination->GetResource(&output_storage);
+			output = output_storage.Get();
+			if (bg_storage.Get() == output || fg_storage.Get() == output) return false;
+		}
 		for(auto* view:{shadow,flash})if(view)
 		{
 			Microsoft::WRL::ComPtr<ID3D11Device> owner;view->GetDevice(&owner);
 			Microsoft::WRL::ComPtr<ID3D11Resource> resource;view->GetResource(&resource);
-			if(owner!=device || resource==output)return false;
+			if(owner.Get()!=device_.Get() || resource.Get()==output)return false;
 		}
 		screen_region region;
 		if (screen_layer)
@@ -628,11 +727,11 @@ float4 recording_ps(Vertex v) : SV_Target {
 		const D3D11_VIEWPORT viewport{0, 0, static_cast<float>(width), static_cast<float>(height), 0, 1};
 		if(mask_only)
 		{
-			deferred_->CopySubresourceRegion(background_copy_.Get(),0,0,0,0,output.Get(),0,nullptr);
+			deferred_->CopySubresourceRegion(background_copy_.Get(),0,0,0,0,output,0,nullptr);
 			deferred_->GenerateMips(background_view_.Get());
 		}
 		else if(screen_layer)deferred_->CopySubresourceRegion(background_copy_.Get(),0,
-			region.copy.left,region.copy.top,0,output.Get(),0,&region.copy);
+			region.copy.left,region.copy.top,0,output,0,&region.copy);
 		if(screen_scope){const float black[]{0,0,0,1};deferred_->ClearRenderTargetView(destination,black);}
 		deferred_->RSSetViewports(1, &viewport); deferred_->RSSetState(raster_.Get());
 		if (screen_layer)

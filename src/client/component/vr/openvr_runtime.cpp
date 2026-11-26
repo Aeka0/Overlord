@@ -15,6 +15,7 @@
 #include "controller_input.hpp"
 #include "menu_overlay.hpp"
 #include "movie_presentation.hpp"
+#include "render_tuning.hpp"
 
 #include <openvr.h>
 
@@ -184,6 +185,7 @@ namespace vr::openvr
 			if (enabled) final_shutdown_ = false;
 			if (enabled && !status_.desired_enabled) auto_initialize_allowed_ = true;
 			status_.desired_enabled = enabled;
+			desired_enabled_atomic_.store(enabled, std::memory_order_release);
 			publish_status_locked();
 		}
 
@@ -241,11 +243,13 @@ namespace vr::openvr
 				publish_status_locked();
 				return;
 			}
+			const auto expected_width = scene_width_ != 0 ? scene_width_ : status_.eyes[0].width;
+			const auto expected_height = scene_height_ != 0 ? scene_height_ : status_.eyes[0].height;
 			const auto native_status = native_render_session::active().get_status();
 			if (!native_status.available ||
 				native_status.device_generation != graphics.generation ||
-				native_status.width != status_.eyes[0].width ||
-				native_status.height != status_.eyes[0].height ||
+				native_status.width != expected_width ||
+				native_status.height != expected_height ||
 				native_status.format != static_cast<std::uint32_t>(status_.color_format) ||
 				!native_status.copy_ring)
 			{
@@ -642,14 +646,17 @@ namespace vr::openvr
 
 		bool requested_enabled() const
 		{
-			const wait_timing::scoped_lock lock(mutex_, wait_timing::site::vr_other);
-			return status_.desired_enabled;
+			return desired_enabled_atomic_.load(std::memory_order_acquire);
 		}
 
 		bool applied_enabled() const
 		{
-			const wait_timing::scoped_lock lock(mutex_, wait_timing::site::vr_enabled);
-			return status_.applied_enabled;
+			return applied_enabled_atomic_.load(std::memory_order_acquire);
+		}
+
+		bool is_session_running() const noexcept
+		{
+			return session_running_atomic_.load(std::memory_order_acquire);
 		}
 
 		runtime_status get_status() const
@@ -774,6 +781,7 @@ namespace vr::openvr
 		{
 			if (present_transaction_.active) return;
 			status_.desired_enabled = false;
+			desired_enabled_atomic_.store(false, std::memory_order_release);
 			status_.reinitialize_pending = false;
 			final_shutdown_ = true;
 			shutdown_requested_ = false;
@@ -794,6 +802,10 @@ namespace vr::openvr
 			status_.present_owner_transaction_thread_id = present_transaction_.thread_id;
 			const std::lock_guard lock(status_mutex_);
 			status_snapshot_ = status_;
+			session_running_atomic_.store(status_.applied_enabled && status_.session_running,
+				std::memory_order_release);
+			desired_enabled_atomic_.store(status_.desired_enabled, std::memory_order_release);
+			applied_enabled_atomic_.store(status_.applied_enabled, std::memory_order_release);
 		}
 
 		bool fail(const runtime_state state, const std::string& operation, const std::int64_t result,
@@ -840,8 +852,11 @@ namespace vr::openvr
 			}
 			status_.recommended_eye_width = width;
 			status_.recommended_eye_height = height;
+			const auto scene = render_tuning::scale_extent(width, height, 16384u, 16384u);
+			scene_width_ = scene.width;
+			scene_height_ = scene.height;
 			std::string error;
-			if (!engine_scene_resolution::request({width, height}, error))
+			if (!engine_scene_resolution::request({scene_width_, scene_height_}, error))
 				return fail(runtime_state::fatal_for_vr, "native H2 scene resolution", -1, error);
 			status_.color_format = DXGI_FORMAT_R8G8B8A8_UNORM;
 			return true;
@@ -926,8 +941,8 @@ namespace vr::openvr
 				return false;
 			}
 			if (!engine_scene_resolution::accepts_source({format_probe_source_.Width, format_probe_source_.Height}) ||
-				format_probe_source_.Width != status_.recommended_eye_width ||
-				format_probe_source_.Height != status_.recommended_eye_height)
+				format_probe_source_.Width != scene_width_ ||
+				format_probe_source_.Height != scene_height_)
 			{
 				error = "native submit source is not the exact SteamVR-recommended eye size";
 				candidate.creation_error = error;
@@ -1061,7 +1076,7 @@ namespace vr::openvr
 			source.MiscFlags = proof.misc_flags;
 			if (!engine_stereo_owner_pass::supports_readback_source(source) ||
 				!engine_scene_resolution::accepts_source({source.Width, source.Height}) ||
-				source.Width != status_.recommended_eye_width || source.Height != status_.recommended_eye_height)
+				source.Width != scene_width_ || source.Height != scene_height_)
 			{
 				return fail(runtime_state::fatal_for_vr,
 					"native stereo target-4 contract", -1,
@@ -1561,6 +1576,7 @@ namespace vr::openvr
 			status_.effective_scene_mode = scene_mode::engine_stereo;
 			status_.session_running = true;
 			status_.applied_enabled = true;
+			applied_enabled_atomic_.store(true, std::memory_order_release);
 			status_.reinitialize_pending = false;
 			status_.state = runtime_state::session_idle;
 			status_.native_renderer_ready = false;
@@ -1695,6 +1711,7 @@ namespace vr::openvr
 			frame_phase_ = frame_phase::need_pose;
 			if (status_.session_running) ++status_.session_end_count;
 			status_.applied_enabled = false;
+			applied_enabled_atomic_.store(false, std::memory_order_release);
 			status_.loader_loaded = false;
 			status_.instance_created = false;
 			status_.session_created = false;
@@ -1703,6 +1720,8 @@ namespace vr::openvr
 			status_.color_format = 0;
 			status_.recommended_eye_width = 0;
 			status_.recommended_eye_height = 0;
+			scene_width_ = 0;
+			scene_height_ = 0;
 			status_.eyes = {};
 			status_.runtime_name.clear();
 			status_.system_name.clear();
@@ -1827,14 +1846,16 @@ namespace vr::openvr
 				direct_graphics_.generation == status_.device_generation;
 			for (std::size_t index{}; index < pair.size(); ++index)
 			{
+				const auto expected_width = scene_width_ != 0 ? scene_width_ : status_.eyes[index].width;
+				const auto expected_height = scene_height_ != 0 ? scene_height_ : status_.eyes[index].height;
 				D3D11_TEXTURE2D_DESC description{};
 				if (pair[index].color) pair[index].color->GetDesc(&description);
 				contract_valid = contract_valid && pair[index].color != nullptr &&
 					texture_uses_device(pair[index].color.Get(), direct_graphics_.device.Get()) &&
-					pair[index].width == status_.eyes[index].width &&
-					pair[index].height == status_.eyes[index].height &&
-					description.Width == status_.eyes[index].width &&
-					description.Height == status_.eyes[index].height &&
+					pair[index].width == expected_width &&
+					pair[index].height == expected_height &&
+					description.Width == expected_width &&
+					description.Height == expected_height &&
 					description.MipLevels == 1 && description.ArraySize == 1 &&
 					description.Format == static_cast<DXGI_FORMAT>(status_.color_format) &&
 					description.SampleDesc.Count == 1 &&
@@ -2223,6 +2244,10 @@ namespace vr::openvr
 		bool auto_initialize_allowed_{true};
 		std::uint64_t initialization_device_generation_{};
 		std::atomic_uint64_t resize_pending_generation_{};
+		std::atomic_bool session_running_atomic_{};
+		std::atomic_bool desired_enabled_atomic_{};
+		std::atomic_bool applied_enabled_atomic_{};
+		std::uint32_t scene_width_{}, scene_height_{};
 	};
 
 	runtime_backend::runtime_backend() : implementation_(std::make_unique<implementation>()) {}
@@ -2254,5 +2279,6 @@ namespace vr::openvr
 	bool runtime_backend::shutdown_complete() const noexcept { return implementation_->shutdown_complete(); }
 	bool runtime_backend::requested_enabled() const { return implementation_->requested_enabled(); }
 	bool runtime_backend::applied_enabled() const { return implementation_->applied_enabled(); }
+	bool runtime_backend::is_session_running() const noexcept { return implementation_->is_session_running(); }
 	runtime_status runtime_backend::get_status() const { return implementation_->get_status(); }
 }

@@ -66,6 +66,8 @@ namespace vr::engine_stereo_execution
 		static_cast<std::size_t>(invocation_observer_channel::count);
 	using opaque_state_observer_fn = void(*)(ID3D11DeviceContext*,
 		ID3D11CommandList*, bool, std::uintptr_t) noexcept;
+	using execute_command_list_observer_fn = void(*)(ID3D11DeviceContext*,
+		ID3D11CommandList*, bool) noexcept;
 	using draw_indexed_observer_fn = void(*)(ID3D11DeviceContext*,
 		std::uintptr_t, std::uint32_t) noexcept;
 	inline constexpr std::uint8_t classifier_scope_flag = 1u << 0;
@@ -325,6 +327,8 @@ namespace vr::engine_stereo_execution
 	// ExecuteCommandList is opaque to that tracker and is the only event routed
 	// through this callback.
 	void set_opaque_state_observer(opaque_state_observer_fn observer) noexcept;
+	// Lightweight observer for ExecuteCommandList that does not arm Draw* overhead.
+	void set_execute_command_list_observer(execute_command_list_observer_fn observer) noexcept;
 	void set_draw_indexed_observer(draw_indexed_observer_fn observer) noexcept;
 
 	void begin_draw_indexed(invocation_scope& output,

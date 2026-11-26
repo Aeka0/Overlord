@@ -3,6 +3,7 @@
 #include "component/vr/native_render_contract.hpp"
 
 #include "engine_stereo_owner_pass.hpp"
+#include "debug_options.hpp"
 #include "diagnostics/sun_shadow.hpp"
 #include "engine_scene_resolution.hpp"
 #include "diagnostics.hpp"
@@ -1079,7 +1080,7 @@ namespace vr::engine_stereo_owner_pass
 		}
 		// The claimed publication was validated by the binding ring. The clone
 		// boundary below also checks its inputs; do not scan the same pair twice.
-		engine_stereo_view::scene_record_pair cloned_records{};
+		output.records = {};
 		// No active eye transaction, private snapshot or MOD GPU lock exists yet.
 		// A frontend view publication is not proof its async surface payload is
 		// complete. Join H2's native CPU producers before the first record copy.
@@ -1090,10 +1091,10 @@ namespace vr::engine_stereo_owner_pass
 		}
 		engine_scene_job_capture::checkpoint(natural_record, claim.frontend, region_capture::phase::clone);
 		region_capture::phase_scope region_clone(region_capture::phase::clone, natural_record, claim.frontend);
-		const auto cloned = engine_stereo_view::clone_scene_records(natural_record, claim.views, cloned_records);
+		const auto cloned = engine_stereo_view::clone_scene_records(natural_record, claim.views, output.records);
 		region_clone.finish(cloned);
 		engine_scene_job_capture::checkpoint(natural_record, claim.frontend, region_capture::phase::clone,
-			cloned_records.pair_id);
+			output.records.pair_id);
 		if (!cloned)
 		{
 			return false;
@@ -1104,14 +1105,14 @@ namespace vr::engine_stereo_owner_pass
 			// OpenVR admits one immutable pose family at a time. A valid but older
 			// frontend publication must run through H2's original owner path without
 			// occupying a native ring slot that the compositor will never consume.
-			if (!native_render_session::active().accepts_pair(cloned_records.pair_id))
+			if (!native_render_session::active().accepts_pair(output.records.pair_id))
 			{
 				return false;
 			}
 			auto expected = false;
 			if (!production_active.compare_exchange_strong(expected, true,
 				std::memory_order_acq_rel, std::memory_order_acquire)) return false;
-			production_pair.store(cloned_records.pair_id, std::memory_order_release);
+			production_pair.store(output.records.pair_id, std::memory_order_release);
 		}
 		else
 		{
@@ -1137,7 +1138,7 @@ namespace vr::engine_stereo_owner_pass
 		if (output.material_reuse_left_diagnostic)
 		{
 			material_reuse_left_pairs.fetch_add(1, std::memory_order_relaxed);
-			material_reuse_left_last_pair.store(cloned_records.pair_id,
+			material_reuse_left_last_pair.store(output.records.pair_id,
 				std::memory_order_release);
 		}
 		output.production_transaction_timing_started_ns = production ?
@@ -1152,7 +1153,6 @@ namespace vr::engine_stereo_owner_pass
 		output.source_primary_origin = claim.views.source_origin();
 		output.claim = claim;
 		claim = {};
-		output.records = std::move(cloned_records);
 		region_capture::snapshot(output.records.pair_id, 0, 0, output.records.left.data());
 		region_capture::snapshot(output.records.pair_id, 1, 0, output.records.right.data());
 		if (production)
@@ -1625,11 +1625,11 @@ namespace vr::engine_stereo_owner_pass
 		{
 			return;
 		}
-		Microsoft::WRL::ComPtr<ID3D11RenderTargetView> view;
-		context->OMGetRenderTargets(1, view.GetAddressOf(), nullptr);
 		const auto target_index = native_display_contract::target_index(target_id);
 		if (target_index < native_display_contract::target_count)
 		{
+			Microsoft::WRL::ComPtr<ID3D11RenderTargetView> view;
+			context->OMGetRenderTargets(1, view.GetAddressOf(), nullptr);
 			if (!view) return;
 			Microsoft::WRL::ComPtr<ID3D11Resource> resource;
 			view->GetResource(&resource);
@@ -1782,12 +1782,15 @@ namespace vr::engine_stereo_owner_pass
 		// These fields are not yet mutated: the census distinguishes lists that H2
 		// finalized per eye from lists that retained the natural center/rebase, so one
 		// test run can decide whether a separate list-origin propagation is required.
-		const auto list_census = census_model_list_origins(record,
-			active.source_primary_origin);
-		active.model_list_eye_origin_matches[eye] = list_census.eye_matches;
-		active.model_list_center_origin_matches[eye] = list_census.center_matches;
-		active.model_list_zero_origins[eye] = list_census.zeros;
-		active.model_list_other_origins[eye] = list_census.other;
+		if (!active.production || debug_options::enabled(debug_options::probe::view))
+		{
+			const auto list_census = census_model_list_origins(record,
+				active.source_primary_origin);
+			active.model_list_eye_origin_matches[eye] = list_census.eye_matches;
+			active.model_list_center_origin_matches[eye] = list_census.center_matches;
+			active.model_list_zero_origins[eye] = list_census.zeros;
+			active.model_list_other_origins[eye] = list_census.other;
+		}
 		engine_stereo_view::camera_model_origin_census camera_model_census{};
 		if (!engine_stereo_view::census_camera_model_list_origins(record,
 			camera_model_census))
@@ -1880,42 +1883,84 @@ namespace vr::engine_stereo_owner_pass
 			std::memcpy(&scene_image, reinterpret_cast<const void*>(
 				native_render_contract::target_registry_base + route.source *
 				native_render_contract::target_registry_stride), sizeof(scene_image));
-			Microsoft::WRL::ComPtr<ID3D11Resource> scene_resource;
-			Microsoft::WRL::ComPtr<ID3D11Texture2D> scene_source;
-			if (scene_image && scene_image->texture.shaderView)
-				scene_image->texture.shaderView->GetResource(&scene_resource);
-			if (!scene_resource || scene_image->texture.map != active.sources[eye].Get() ||
-				FAILED(scene_resource.As(&scene_source)) ||
-				scene_source.Get() != active.sources[eye].Get())
-			{
-				fail_transaction(active, failure::source_contract);
-				return false;
-			}
-			// The outer scene owner ends BEFORE H2's final PostFX. Run the original
-			// display transform for this eye into its native-sized ping-pong target.
-			// Preserve the selected raw HDR source for the natural H2 tail.
 			ID3D11RenderTargetView* display_view{};
 			std::memcpy(&display_view, reinterpret_cast<const void*>(
 				native_render_contract::target_registry_base + route.destination *
 				native_render_contract::target_registry_stride + sizeof(void*)), sizeof(display_view));
-			Microsoft::WRL::ComPtr<ID3D11Resource> display_resource;
+
+			struct validated_route_cache_entry
+			{
+				std::uint64_t generation{};
+				ID3D11Texture2D* source_texture{};
+				ID3D11ShaderResourceView* scene_srv{};
+				ID3D11RenderTargetView* display_rtv{};
+				ID3D11Texture2D* display_texture{};
+				D3D11_TEXTURE2D_DESC display_description{};
+			};
+			static thread_local std::array<validated_route_cache_entry,
+				auxiliary_scene::view_count> route_cache{};
+			auto& cached_route = route_cache[eye];
+
 			Microsoft::WRL::ComPtr<ID3D11Texture2D> display_source;
 			D3D11_TEXTURE2D_DESC display_description{};
-			if (display_view) display_view->GetResource(&display_resource);
-			if (display_resource && SUCCEEDED(display_resource.As(&display_source)))
-				display_source->GetDesc(&display_description);
-			Microsoft::WRL::ComPtr<ID3D11Device> display_device;
-			Microsoft::WRL::ComPtr<ID3D11Device> scene_device;
-			if (display_source) display_source->GetDevice(&display_device);
-			active.sources[eye]->GetDevice(&scene_device);
-			display_format.store(display_description.Format, std::memory_order_relaxed);
-			display_bind_flags.store(display_description.BindFlags, std::memory_order_relaxed);
-			const char* display_error = !display_source ? "target_missing" :
-				display_source.Get() == active.sources[eye].Get() ? "source_alias" :
-				display_device.Get() != scene_device.Get() ? "device" :
-				!supports_display_source(display_description) ? "descriptor" :
-				display_description.Width != description.Width ||
-				display_description.Height != description.Height ? "extent" : nullptr;
+			const char* display_error{};
+
+			if (scene_image && scene_image->texture.shaderView && display_view &&
+				cached_route.generation == active.device_generation &&
+				cached_route.source_texture == active.sources[eye].Get() &&
+				scene_image->texture.map == cached_route.source_texture &&
+				scene_image->texture.shaderView == cached_route.scene_srv &&
+				display_view == cached_route.display_rtv &&
+				cached_route.display_texture != nullptr &&
+				cached_route.display_description.Width == description.Width &&
+				cached_route.display_description.Height == description.Height)
+			{
+				display_source = cached_route.display_texture;
+				display_description = cached_route.display_description;
+				display_format.store(display_description.Format, std::memory_order_relaxed);
+				display_bind_flags.store(display_description.BindFlags, std::memory_order_relaxed);
+			}
+			else
+			{
+				Microsoft::WRL::ComPtr<ID3D11Resource> scene_resource;
+				Microsoft::WRL::ComPtr<ID3D11Texture2D> scene_source;
+				if (scene_image && scene_image->texture.shaderView)
+					scene_image->texture.shaderView->GetResource(&scene_resource);
+				if (!scene_resource || scene_image->texture.map != active.sources[eye].Get() ||
+					FAILED(scene_resource.As(&scene_source)) ||
+					scene_source.Get() != active.sources[eye].Get())
+				{
+					fail_transaction(active, failure::source_contract);
+					return false;
+				}
+				Microsoft::WRL::ComPtr<ID3D11Resource> display_resource;
+				if (display_view) display_view->GetResource(&display_resource);
+				if (display_resource && SUCCEEDED(display_resource.As(&display_source)))
+					display_source->GetDesc(&display_description);
+				Microsoft::WRL::ComPtr<ID3D11Device> display_device;
+				Microsoft::WRL::ComPtr<ID3D11Device> scene_device;
+				if (display_source) display_source->GetDevice(&display_device);
+				active.sources[eye]->GetDevice(&scene_device);
+				display_format.store(display_description.Format, std::memory_order_relaxed);
+				display_bind_flags.store(display_description.BindFlags, std::memory_order_relaxed);
+				display_error = !display_source ? "target_missing" :
+					display_source.Get() == active.sources[eye].Get() ? "source_alias" :
+					display_device.Get() != scene_device.Get() ? "device" :
+					!supports_display_source(display_description) ? "descriptor" :
+					display_description.Width != description.Width ||
+					display_description.Height != description.Height ? "extent" : nullptr;
+				if (!display_error)
+				{
+					cached_route = {
+						active.device_generation,
+						active.sources[eye].Get(),
+						scene_image->texture.shaderView,
+						display_view,
+						display_source.Get(),
+						display_description,
+					};
+				}
+			}
 			if (!display_error && (!display_transform ||
 				!display_transform(const_cast<std::uint8_t*>(record), route,
 					{active.records.pair_id, active.device_generation, eye,

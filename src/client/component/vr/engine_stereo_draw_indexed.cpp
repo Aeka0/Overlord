@@ -267,7 +267,7 @@ namespace vr::engine_stereo_draw_indexed
 			const UINT index_count, const UINT start_index_location,
 			const INT base_vertex_location)
 		{
-			const auto original = draw_hooks[Index].original.load(std::memory_order_acquire);
+			const auto original = draw_hooks[Index].original.load(std::memory_order_relaxed);
 			if (original == nullptr) return;
 			if (inside_draw)
 			{
@@ -277,6 +277,12 @@ namespace vr::engine_stereo_draw_indexed
 				original(context, index_count, start_index_location, base_vertex_location);
 				return;
 			}
+			const auto observer = persistent_draw_observer.load(std::memory_order_relaxed);
+			const auto copy_candidate = copy_observer.load(std::memory_order_acquire);
+			const auto copy = (copy_candidate != nullptr &&
+				live_installed.load(std::memory_order_relaxed) &&
+				reinterpret_cast<std::uintptr_t>(context) == live_context.load(std::memory_order_relaxed)) ?
+				copy_candidate : nullptr;
 			inside_draw = true;
 			const auto exit = gsl::finally([] { inside_draw = false; });
 			region_capture::draw_indexed(index_count);
@@ -284,18 +290,15 @@ namespace vr::engine_stereo_draw_indexed
 			engine_stereo_execution::invocation_scope execution_scope{};
 			engine_stereo_execution::begin_draw_indexed(execution_scope, context,
 				index_count, start_index_location, base_vertex_location, caller);
-			if (const auto observer = persistent_draw_observer.load(
-				std::memory_order_acquire))
+			if (observer != nullptr)
 			{
 				observer(context, caller, 4);
 			}
 			original(context, index_count, start_index_location, base_vertex_location);
 			engine_stereo_execution::end_draw_indexed(execution_scope);
-			if (live_installed.load(std::memory_order_acquire) &&
-				reinterpret_cast<std::uintptr_t>(context) == live_context.load(std::memory_order_acquire))
+			if (copy != nullptr)
 			{
-				if (const auto copy = copy_observer.load(std::memory_order_acquire))
-					copy(context, index_count, start_index_location, base_vertex_location, original);
+				copy(context, index_count, start_index_location, base_vertex_location, original);
 			}
 			if (active_transaction != nullptr &&
 				static_cast<bool>(*active_transaction))
